@@ -1,0 +1,20 @@
+Processing megaatmega2560 (platform: atmelavr; board: megaatmega2560; framework: arduino)
+
+PlatformManager: Installing atmelavr
+Downloading
+Downloading
+Unpacking
+Unpacking
+atmelavr @ 1.14.0 has been successfully installed!
+The platform 'atmelavr' has been successfully installed!
+The rest of packages will be installed automatically depending on your build environment.
+PackageManager: Installing toolchain-atmelavr @ ~1.50400.0
+Downloading
+Downloading
+Unpacking
+Unpacking
+PackageManager: Installing framework-arduinoavr @ ~4.0.0
+Downloading
+Downloading
+Unpacking
+Unpacking
