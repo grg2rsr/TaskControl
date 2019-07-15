@@ -2,6 +2,7 @@ import scipy as sp
 import pandas as pd
 import os
 
+# this is the mapping from numpy letter codes to C style arduino compatible
 dtype_map = {
             'int':'i4',
             'unsigned int':'u4',
@@ -65,7 +66,7 @@ def parse_arduino_vars(path):
             name = elements[-1]
             dtype = ' '.join(elements[:-1])
             value = sp.array(value, dtype=dtype_map[dtype])
-            dfs.append(pd.DataFrame([[name, value, dtype]],columns=['name', 'value', 'dtype']))
+            dfs.append(pd.DataFrame([[name, value, dtype_map[dtype]]],columns=['name', 'value', 'dtype']))
         except:
             print('unreadable line: ',line)
             pass

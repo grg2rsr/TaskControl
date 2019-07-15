@@ -434,7 +434,7 @@ class StringChoiceWidget(QtWidgets.QComboBox):
 
 
 class ValueEdit(QtWidgets.QLineEdit):
-    """ a QLineEdit that keeps track of the dtype and returns accordingly """
+    """ a QLineEdit that keeps track of the numpy dtype and returns accordingly """
 
     def __init__(self, value, dtype, parent):
         super(ValueEdit, self).__init__(parent=parent)
@@ -453,13 +453,19 @@ class ValueEdit(QtWidgets.QLineEdit):
         self.setText(str(self.value))
 
 
-
 class ValueEditFormLayout(QtWidgets.QFormLayout):
-    """ a QFormLayout consisting of ValueEdit rows, to be initialized with a pd.DataFrame """
+    """ a QFormLayout consisting of ValueEdit rows, to be initialized with a pd.DataFrame 
+    with columns name and value, optional dtype (numpy letter codes) """
 
     def __init__(self, parent, DataFrame):
         super(ValueEditFormLayout,self).__init__(parent=parent)
         self.Df = DataFrame
+
+        # if DataFrame does not contain a dtype column, set it to strings
+        if 'dtype' not in self.Df.columns:
+            maxlen = max([len(el) for el in self.Df['name']])
+            self.Df['dtype'] = 'U'+str(maxlen)
+
         self.initUI()
     
     def initUI(self):
@@ -467,7 +473,9 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
         self.setLabelAlignment(QtCore.Qt.AlignRight)
 
         for i, row in self.Df.iterrows():
-            self.addRow(row['name'], ValueEdit(row['value'], functions.dtype_map[row['dtype']], self.parent()))
+            # dont't do this here because dtype map is for arduino!
+            # self.addRow(row['name'], ValueEdit(row['value'], functions.dtype_map[row['dtype']], self.parent()))
+            self.addRow(row['name'], ValueEdit(row['value'], row['dtype'], self.parent()))
 
     def set_entries(self, Df):
         """ sets all values with values according to Df """

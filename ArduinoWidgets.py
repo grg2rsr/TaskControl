@@ -405,7 +405,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         lines = []
         for i, row in Df.iterrows():
             elements = []
-            elements.append(dtype_map_inv[row['dtype']])
+            elements.append(dtype_map_inv[row['dtype']]) 
             elements.append(row['name'])
             elements.append('=')
             elements.append(str(row['value'])+';'+os.linesep)

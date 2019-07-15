@@ -3,7 +3,6 @@
 find a way that interface_generator.py does not need a copy of parse_arduino_vars ... 
 
 ## arduino variables
-after above is fixed - make sure that this still works (loading from previous day)
 write in header day of training, version of TaskControl, date of generation etc etc
 
 ## argparse
