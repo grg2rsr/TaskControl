@@ -12,7 +12,7 @@ dtype_map = {
             'double':'f8',
             }
 
-def parse_training_vars(path):
+def parse_arduino_vars(path):
     """ a hacky parser """  # FIXME this needs a new name as well
     with open(path, 'r') as fH:
         lines = fH.readlines()
@@ -59,7 +59,7 @@ def parse_training_vars(path):
 
 path = "./src/init_variables.h"
 
-init_vars = parse_training_vars(path)
+init_vars = parse_arduino_vars(path)
 
 getter_template = """
             if (strcmp(varname,"VARNAME")==0){

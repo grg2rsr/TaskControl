@@ -36,6 +36,8 @@ class TaskControlApp(QtWidgets.QApplication):
 
 # that fucking space in the path name kills non-abs paths ...
 if __name__ == "__main__":
+    # TODO argparse!
+
     # the fiber photometry computer downstairs in the viv
     # profiles_fpath = 'profiles_fphot.ini'
 

@@ -13,7 +13,8 @@ dtype_map = {
             }
 
 def parse_code_map(path):
-    """ a hacky parser """  # FIXME this needs a new name as well
+    # FIXME this needs a new name as well - and right now is unused!
+    """ a hacky parser """  
     with open(path, 'r') as fH:
         lines = fH.readlines()
         lines = [line.strip() for line in lines]
@@ -34,8 +35,8 @@ def parse_code_map(path):
     return code_map
 
 
-def parse_training_vars(path):
-    """ a hacky parser """  # FIXME this needs a new name as well
+def parse_arduino_vars(path):
+    """ a kind of hacky parser for init_variables.h """
     with open(path, 'r') as fH:
         lines = fH.readlines()
         lines = [line.strip() for line in lines]
@@ -62,14 +63,8 @@ def parse_training_vars(path):
             elements = elements.strip().split(' ')
             elements = [elem.strip() for elem in elements]
             name = elements[-1]
-            # if elements[0] == 'const':
-            #     const = True
-            #     dtype = ' '.join(elements[1:-1])
-            # else:
-            #     const = False
             dtype = ' '.join(elements[:-1])
             value = sp.array(value, dtype=dtype_map[dtype])
-            # dfs.append(pd.DataFrame([[name, value, dtype, const]],columns=['name', 'value', 'dtype', 'const']))
             dfs.append(pd.DataFrame([[name, value, dtype]],columns=['name', 'value', 'dtype']))
         except:
             print('unreadable line: ',line)
@@ -78,20 +73,6 @@ def parse_training_vars(path):
     arduino_vars = arduino_vars.reset_index(drop=True)
 
     return arduino_vars
-
-def Df_2_arduino_vars(Df):
-    """ Df to list with writeable lines """
-    lines = []
-    for i, row in Df.iterrows():
-        elements = []
-        # if row['const'] == True:
-        #     elements.append('const')
-        elements.append(row['dtype'])
-        elements.append(row['name'])
-        elements.append('=')
-        elements.append(str(row['value'])+';'+os.linesep)
-        lines.append(' '.join(elements))
-    return lines
 
 # UI layouting functinos
 def tile_Widgets(Widget, RefWidget, where='right', gap=50):

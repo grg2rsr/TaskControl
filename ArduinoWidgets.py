@@ -24,18 +24,27 @@ class Signals(QtCore.QObject):
     # FUTURE TODO read up on this at some point
     serial_data_available = QtCore.pyqtSignal()
 
+"""
+  ______   ______   .__   __. .___________..______        ______    __       __       _______ .______
+ /      | /  __  \  |  \ |  | |           ||   _  \      /  __  \  |  |     |  |     |   ____||   _  \
+|  ,----'|  |  |  | |   \|  | `---|  |----`|  |_)  |    |  |  |  | |  |     |  |     |  |__   |  |_)  |
+|  |     |  |  |  | |  . `  |     |  |     |      /     |  |  |  | |  |     |  |     |   __|  |      /
+|  `----.|  `--'  | |  |\   |     |  |     |  |\  \----.|  `--'  | |  `----.|  `----.|  |____ |  |\  \----.
+ \______| \______/  |__| \__|     |__|     | _| `._____| \______/  |_______||_______||_______|| _| `._____|
+
+"""
+
 class ArduinoController(QtWidgets.QWidget):
     def __init__(self, parent):
         super(ArduinoController, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
 
-        # for abbreviation bc if changed, this class is reinstantiated anyways
+        # for abbreviation bc if changed, objects are reinstantiated anyways
         self.task = self.parent().task
         self.task_folder = os.path.join(self.parent().profile['tasks_folder'],self.task)
         self.task_config = self.parent().task_config['Arduino']
 
-        # TODO FIXME refactor function name
-        Df = functions.parse_training_vars(os.path.join(self.task_folder,'Arduino','src',self.task_config['var_fname']))
+        Df = functions.parse_arduino_vars(os.path.join(self.task_folder,'Arduino','src',self.task_config['var_fname']))
 
         self.VariableController = ArduinoVariablesWidget(self,Df)
 
@@ -103,7 +112,9 @@ class ArduinoController(QtWidgets.QWidget):
         return_value = subprocess.check_output(command,shell=True)
         # lines = return_value.decode('utf-8').split('\n')
 
-        # TODO check on linux system
+        # TODO check on linux system - works
+        # check downstairs!
+
         if os.name == 'nt':
             lines = return_value.decode('utf-8').split('\r\r\n\r\r\n')
 
@@ -122,6 +133,7 @@ class ArduinoController(QtWidgets.QWidget):
                 descr = line.split('\n')[-1]
                 com_ports.append(':'.join([com_port,descr]))
                     
+        # old parser - remove me when done checking above
         # com_ports = []
         # for i,line in enumerate(lines):
         #     if line.startswith('Description'):
@@ -142,8 +154,8 @@ class ArduinoController(QtWidgets.QWidget):
     #     # TODO implement - necessary?
     #     pass
 
-
     def send(self,command):
+        """ sends string command interface to arduino, interface compatible """
         if hasattr(self,'connection'):
             cmd = '<CMD '+command+'>'
             bytestr = str.encode(cmd)
@@ -151,12 +163,11 @@ class ArduinoController(QtWidgets.QWidget):
         else:
             print("Arduino is not connected")
 
-
-
     def stop_btn_clicked(self):
         self.send('STOP')
 
     def send_btn_clicked(self):
+        """ send command entered in LineEdit """
         command = self.SendLine.text()
         self.send(command)
         
@@ -182,27 +193,49 @@ class ArduinoController(QtWidgets.QWidget):
         with open("platformio.ini", 'w') as fH:
             pio_config.write(fH)
         
-        # os.chdir(os.path.join(folder,self.task,'Arduino'))
+        # get current UI arduino variables, backup defaults,
+        # write the UI derived and upload those, revert after upload
+        # this is a terrible workaround ...
+        src = os.path.join('src',self.task_config['var_fname'])
+        target = os.path.join('src',self.task_config['var_fname']+'_default')
+        shutil.copy(src,target)
+        self.VariableController.write_variables(os.path.join('src',self.task_config['var_fname']))
+
+        # upload
         fH = open('platformio_build_log.txt','w')
         platformio_cmd = self.parent().profiles['General']['platformio_cmd']
         cmd = ' '.join([platformio_cmd,'run','--target','upload'])
         proc = subprocess.Popen(cmd,shell=True,stdout=fH)
         proc.communicate()
         fH.close()
+
+        # restore default variables in the task folder
+        src = os.path.join('src',self.task_config['var_fname']+'_default')
+        target = os.path.join('src',self.task_config['var_fname'])
+        shutil.copy(src,target)
+        os.remove(src)
+
+        # back to previous directory
         os.chdir(prev_cwd)
 
     def log_task(self,folder):
-        # copy the entire task folder
+        """ copy the entire arduino folder to the logging folder """
+
         print("logging arduino code")
         src = os.path.join(self.parent().profile['tasks_folder'],self.parent().task)
         target = os.path.join(folder,self.parent().task)
         shutil.copytree(src,target)
+
+        """
+        log_task is called once, during the run() call. That means, all changed variables during the time are lost
+        so -> this stuff should be done upon closing
+        """
         
         # overwriting the copied default values with the values from the UI
         # TODO think about this: this essentially only leaves out all other incremental
         # changes that could have been done during the task
         # but since log is available - this could be recovered from the log
-        self.VariableController.write_variables(os.path.join(target,'Arduino','src',self.task_config['var_fname']))
+        # self.VariableController.write_variables(os.path.join(target,'Arduino','src',self.task_config['var_fname']))
 
     def connect(self):
         """ establish connection with the board """
@@ -220,8 +253,6 @@ class ArduinoController(QtWidgets.QWidget):
             self.connected = True
             return ser
 
-            # implement: make stuff clickable
-
         except:
             print("could not connect to the Arduino!")
             sys.exit()
@@ -229,6 +260,7 @@ class ArduinoController(QtWidgets.QWidget):
 
     def Run(self,folder):
         """ folder is the logging folder """
+        self.run_folder = folder # to be kept for the close_event
 
         # log code
         self.log_task(folder)
@@ -269,15 +301,18 @@ class ArduinoController(QtWidgets.QWidget):
         thread = threading.Thread(target=read_from_port, args=(self.connection, self.queue))
         thread.start()
 
-
     def closeEvent(self, event):
+        # overwrite logged arduino vars file
+        target = os.path.join(self.run_folder,self.parent().task)
+        self.VariableController.write_variables(os.path.join(target,'Arduino','src',self.task_config['var_fname']))        
+
         # if serial connection is open, close it
         if hasattr(self,'connection'):
             self.connection.close()
             self.SerialMonitor.close()
         self.VariableController.close()
 
-        # read in original config
+        # read in original task config
         task_config = configparser.ConfigParser()
         task_config_path = os.path.join(self.task_folder,"task_config.ini")
         task_config.read(task_config_path)
@@ -295,9 +330,20 @@ class ArduinoController(QtWidgets.QWidget):
         
         print("logging arduino section of task config to :", task_config_path)
 
+
         self.close()
     pass
 
+
+"""
+____    ____  ___      .______       __       ___      .______    __       _______     _______.
+\   \  /   / /   \     |   _  \     |  |     /   \     |   _  \  |  |     |   ____|   /       |
+ \   \/   / /  ^  \    |  |_)  |    |  |    /  ^  \    |  |_)  | |  |     |  |__     |   (----`
+  \      / /  /_\  \   |      /     |  |   /  /_\  \   |   _  <  |  |     |   __|     \   \
+   \    / /  _____  \  |  |\  \----.|  |  /  _____  \  |  |_)  | |  `----.|  |____.----)   |
+    \__/ /__/     \__\ | _| `._____||__| /__/     \__\ |______/  |_______||_______|_______/
+
+"""
 
 class ArduinoVariablesWidget(QtWidgets.QWidget):
     """ displayes and allows for online editing of variables """
@@ -314,13 +360,10 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.ScrollWidget = QtWidgets.QWidget()
 
         # scroll widget has the layout etc
-        self.FormLayout = QtWidgets.QFormLayout()
-        self.FormLayout.setVerticalSpacing(10)
-        self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
-        self.set_entries(self.Df)
+        self.VariableEditWidget = Widgets.ValueEditFormLayout(self,DataFrame=self.Df)
 
         # note: the order of this seems to be of utmost importance ... 
-        self.ScrollWidget.setLayout(self.FormLayout)
+        self.ScrollWidget.setLayout(self.VariableEditWidget)
         self.ScrollArea.setWidget(self.ScrollWidget)
 
         self.Layout = QtWidgets.QVBoxLayout(self)
@@ -341,64 +384,56 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.setWindowTitle("Arduino variables")
         self.show()
 
-    def set_entries(self, Df):
-        # TODO move this to utilities - a Df 2 Formlayout function
-        # TODO this is not a set_entries, but ini_entries function!!!
-        for i, row in Df.iterrows():
-            self.FormLayout.addRow(row['name'], Widgets.LineEditWidget(row['value'], functions.dtype_map[row['dtype']], self))
-
-    def get_entries(self):
-        """ returns a pd.DataFrame of the current entries """
-
-        # TODO again here: FormLayout2Df function could be useful
-        rows = []
-
-        for i in range(self.FormLayout.rowCount()):
-            label = self.FormLayout.itemAt(i, 0).widget()
-            widget = self.FormLayout.itemAt(i, 1).widget()
-            rows.append([label.text(), widget.get_value()])
-
-        Df = pd.DataFrame(rows, columns=['name', 'value'])
-        # NOTE: this only works when order of entries is guaranteed to stay equal, better would be to use merge
-        Df = pd.concat([Df,self.Df[['dtype','const']]],axis=1) 
-        return Df
-
     def write_variables(self,path):
         """ writes current arduino variables to the path """
-        # FIXME this requires at standard for the arduino to replace
-        # left as is right now to test functionality
-        # I don't understand my comments anymore yay
-
         # TODO add some interesting header info
-        # for future - this header info could be used to set the correct variables
-        # for example, could contain day of training ...
+        # day of training
+        # day / time of writing this should already be in file?
+        # animal ID
 
         header = []
-        header.append("//file automatically generated by TaskControl.py")
+        header.append("// ---  file automatically generated by TaskControl --- ")
+        header.append("//Animal: "+self.parent().parent().animal)
         header = [line+os.linesep for line in header]
 
-        Df = self.get_entries()
-        lines = functions.Df_2_arduino_vars(Df)
+        # get vars from UI
+        Df = self.VariableEditWidget.get_entries()
+
+        # convert them into something that arduino lang understands
+        dtype_map_inv = dict(zip(functions.dtype_map.values(),functions.dtype_map.keys()))
+
+        lines = []
+        for i, row in Df.iterrows():
+            elements = []
+            elements.append(dtype_map_inv[row['dtype']])
+            elements.append(row['name'])
+            elements.append('=')
+            elements.append(str(row['value'])+';'+os.linesep)
+            lines.append(' '.join(elements))
+
+        # write it
         with open(path, 'w') as fH:
             fH.write(''.join(header+lines))
 
     def send_variables(self):
         """ sends all current variables to arduino """
-        Df = self.get_entries()
-        for i,row in Df.iterrows():
+        if hasattr(self.parent(),'connection'):
+            Df = self.VariableEditWidget.get_entries()
+            for i,row in Df.iterrows():
 
-            # this is the hardcoded command sending definition
-            cmd = ' '.join(['SET',str(row['name']),str(row['value'])])
-            cmd = '<'+cmd+'>'
+                # this is the hardcoded command sending definition
+                cmd = ' '.join(['SET',str(row['name']),str(row['value'])])
+                cmd = '<'+cmd+'>'
 
-            bytestr = str.encode(cmd)
-            # reading and writing from different threads apparently threadsafe
-            # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
-            self.parent().connection.write(bytestr)
+                bytestr = str.encode(cmd)
+                # reading and writing from different threads apparently threadsafe
+                # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
+                self.parent().connection.write(bytestr)
+        else:
+            print("Arduino is not connected")
 
     def use_last_vars(self):
-        # TODO HERE is the point where the check for the last used variables could be
-        # also ... this is hideous code ... 
+        """ try to get arduino variables from last run for the task """
         try:
             current_animal_folder = os.path.join(self.parent().parent().profile['animals_folder'],self.parent().parent().animal)
             sessions_df = utils.get_sessions(current_animal_folder)
@@ -407,17 +442,22 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             prev_session_path = previous_sessions.iloc[-1]['path']
             prev_vars_path = os.path.join(prev_session_path,self.parent().parent().task,self.parent().task_config['pio_project_folder'],'src',self.parent().task_config['var_fname'])
             
-            prev_vars = functions.parse_training_vars(prev_vars_path)
+            prev_vars = functions.parse_arduino_vars(prev_vars_path)
 
-            from pdb import set_trace
-            QtCore.pyqtRemoveInputHook()
-            set_trace()
-
-            self.set_entries(prev_vars)
-            self.send_variables()
-            
+            self.VariableEditWidget.set_entries(prev_vars)
+           
         except KeyError:
             print("trying to use last vars, but animal has not been run on this task before.")
+
+"""
+.___  ___.   ______   .__   __.  __  .___________.  ______   .______
+|   \/   |  /  __  \  |  \ |  | |  | |           | /  __  \  |   _  \
+|  \  /  | |  |  |  | |   \|  | |  | `---|  |----`|  |  |  | |  |_)  |
+|  |\/|  | |  |  |  | |  . `  | |  |     |  |     |  |  |  | |      /
+|  |  |  | |  `--'  | |  |\   | |  |     |  |     |  `--'  | |  |\  \----.
+|__|  |__|  \______/  |__| \__| |__|     |__|      \______/  | _| `._____|
+
+"""
 
 class SerialMonitorWidget(QtWidgets.QWidget):
     """ just print the lines from the arduino into this window
@@ -459,6 +499,15 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             sb = self.TextBrowser.verticalScrollBar()
             sb.setValue(sb.maximum())
 
+"""
+ __  ___  ___________    ____ .______     ______        ___      .______       _______
+|  |/  / |   ____\   \  /   / |   _  \   /  __  \      /   \     |   _  \     |       \
+|  '  /  |  |__   \   \/   /  |  |_)  | |  |  |  |    /  ^  \    |  |_)  |    |  .--.  |
+|    <   |   __|   \_    _/   |   _  <  |  |  |  |   /  /_\  \   |      /     |  |  |  |
+|  .  \  |  |____    |  |     |  |_)  | |  `--'  |  /  _____  \  |  |\  \----.|  '--'  |
+|__|\__\ |_______|   |__|     |______/   \______/  /__/     \__\ | _| `._____||_______/
+
+"""
 
 class KeyboardInteractionWidget(QtWidgets.QWidget):
     def __init__(self, parent):

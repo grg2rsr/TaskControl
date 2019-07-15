@@ -1,3 +1,5 @@
+# - this software is not useable yet -
+
 # A unified task control program
 ## the problem:
 A task has a range of different hardware that needs to communicate with each other and each task has a range of different visualizers.

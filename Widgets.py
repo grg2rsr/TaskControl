@@ -295,9 +295,9 @@ class RunInfoWidget(QtWidgets.QWidget):
         self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
 
         # Fields
-        self.EarTagWidget = LineEditWidget('??', 'S', self)
+        self.EarTagWidget = ValueEdit('??', 'S', self)
         self.FormLayout.addRow("Ear tag", self.EarTagWidget)
-        self.WeigthEditWidget = LineEditWidget(30, 'f4', self)
+        self.WeigthEditWidget = ValueEdit(30, 'f4', self)
         self.FormLayout.addRow("Weight (g)", self.WeigthEditWidget)
 
         FormWidget = QtWidgets.QWidget()
@@ -342,15 +342,15 @@ class RunInfoWidget(QtWidgets.QWidget):
 #         Df = pd.read_csv(os.path.join(self.parent().profiles[self.parent().user]['animals_folder'],'animal_meta_template.csv'))
 
 #         for i, row in Df.iterrows():
-#             self.FormLayout.addRow(row['name'], LineEditWidget(str(row['value']), row['dtype'], self))
+#             self.FormLayout.addRow(row['name'], ValueEdit(str(row['value']), row['dtype'], self))
 
 #         # old code
-#         # self.FormLayout.addRow("ID", LineEditWidget(0, 'i4', self))
-#         # self.FormLayout.addRow("Ear tag", LineEditWidget('LF', 'U', self))
-#         # self.FormLayout.addRow("Genotype", LineEditWidget('-cre', 'U', self))
-#         # self.FormLayout.addRow("Date of birth", LineEditWidget('YYYY_MM_DD', 'U', self))
-#         # self.FormLayout.addRow("Initial weight", LineEditWidget(30, 'f4', self))
-#         # self.FormLayout.addRow("Current weight", LineEditWidget(30, 'f4', self))
+#         # self.FormLayout.addRow("ID", ValueEdit(0, 'i4', self))
+#         # self.FormLayout.addRow("Ear tag", ValueEdit('LF', 'U', self))
+#         # self.FormLayout.addRow("Genotype", ValueEdit('-cre', 'U', self))
+#         # self.FormLayout.addRow("Date of birth", ValueEdit('YYYY_MM_DD', 'U', self))
+#         # self.FormLayout.addRow("Initial weight", ValueEdit(30, 'f4', self))
+#         # self.FormLayout.addRow("Current weight", ValueEdit(30, 'f4', self))
 
 #         FormWidget = QtWidgets.QWidget()
 #         FormWidget.setLayout(self.FormLayout)
@@ -412,6 +412,7 @@ class RunInfoWidget(QtWidgets.QWidget):
 
 """
 
+
 class StringChoiceWidget(QtWidgets.QComboBox):
     """ A QComboBox with convenience setter and getter """
 
@@ -431,11 +432,12 @@ class StringChoiceWidget(QtWidgets.QComboBox):
         except ValueError:
             self.setCurrentIndex(0)
 
-class LineEditWidget(QtWidgets.QLineEdit):
+
+class ValueEdit(QtWidgets.QLineEdit):
     """ a QLineEdit that keeps track of the dtype and returns accordingly """
 
     def __init__(self, value, dtype, parent):
-        super(LineEditWidget, self).__init__(parent=parent)
+        super(ValueEdit, self).__init__(parent=parent)
         self.dtype = dtype
         self.set_value(value)
 
@@ -443,15 +445,20 @@ class LineEditWidget(QtWidgets.QLineEdit):
         self.value = sp.array(self.text(), dtype=self.dtype)
         return self.value
 
+    def get_dtype(self):
+        return self.dtype
+
     def set_value(self, value):
         self.value = value
         self.setText(str(self.value))
 
-class MyFormLayout(QtWidgets.QFormLayout):
-    """ ... TODO write something meaningful here """
+
+
+class ValueEditFormLayout(QtWidgets.QFormLayout):
+    """ a QFormLayout consisting of ValueEdit rows, to be initialized with a pd.DataFrame """
 
     def __init__(self, parent, DataFrame):
-        super(MyFormLayout,self).__init__(parent=parent)
+        super(ValueEditFormLayout,self).__init__(parent=parent)
         self.Df = DataFrame
         self.initUI()
     
@@ -460,37 +467,37 @@ class MyFormLayout(QtWidgets.QFormLayout):
         self.setLabelAlignment(QtCore.Qt.AlignRight)
 
         for i, row in self.Df.iterrows():
-            self.addRow(row['name'], LineEditWidget(row['value'], functions.dtype_map[row['dtype']], self))
+            self.addRow(row['name'], ValueEdit(row['value'], functions.dtype_map[row['dtype']], self.parent()))
 
     def set_entries(self, Df):
-        # TODO implement
-        for i, row in self.Df.iterrows():
-            pass
-        pass
+        """ sets all values with values according to Df """
+
+        if not sp.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
+            print("can't set entries bc they are not equal ... this indicates some major bug")
+            sys.exit()
+
+        else:
+            # Df sorted according to self.Df['name']
+            Df_sorted = Df.set_index('name').loc[self.Df['name'].values]
+            Df_sorted.reset_index(level=0,inplace=True)
+            
+            for i, row in Df_sorted.iterrows():
+                self.itemAt(i,1).widget().set_value(row['value'])
 
     def get_entries(self):
         """ returns a pd.DataFrame of the current entries """
-
-        # TODO again here: FormLayout2Df function could be useful
         rows = []
 
         for i in range(self.rowCount()):
             label = self.itemAt(i, 0).widget()
             widget = self.itemAt(i, 1).widget()
-            rows.append([label.text(), widget.get_value()])
+            rows.append([label.text(), widget.get_value(), widget.get_dtype()])
 
-        Df = pd.DataFrame(rows, columns=['name', 'value'])
-        # NOTE: this only works when order of entries is guaranteed to stay equal, better would be to use merge
-        Df = pd.concat([Df,self.Df[['dtype','const']]],axis=1) # this now here has the const field, that is only used in the arduino var case
-        # TODO drop it alltogether - simply no const init_variables - defies the purpose actually
+        Df = pd.DataFrame(rows, columns=['name', 'value', 'dtype'])
         return Df
 
-
-# TODO implement a FormLayout that uses the LineEditWidgets
-# and has getters and setters
-
 class ErrorWidget(QtWidgets.QMessageBox):
-
+    # TODO implement me
     def __init__(self, error_msg, parent=None):
         super(ErrorWidget,self).__init__(parent=parent)
         self.setText(error_msg)
@@ -502,6 +509,7 @@ class ErrorWidget(QtWidgets.QMessageBox):
     def crash(self):
         # TODO log crash error msg
         sys.exit()
+
 
 class PandasModel(QtCore.QAbstractTableModel):
     """
