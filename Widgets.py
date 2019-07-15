@@ -27,8 +27,6 @@ import HardwareWidgets
 
 """
 
-
-
 class AnimalInfoWidget(QtWidgets.QWidget):
     """ displays some interesing info about the animal: list of previous sessions """
     def __init__(self, parent):
@@ -54,19 +52,14 @@ class AnimalInfoWidget(QtWidgets.QWidget):
     def update(self):
         # TODO get a list of past sessions and parse them
         current_animal_folder = os.path.join(self.parent().profile['animals_folder'],self.parent().animal)
-        sessions_df = utils.get_sessions(current_animal_folder)
-
-        lines = sessions_df['task'].to_list()
-        lines = '\n'.join(lines)
-
-        # print lines in window
-        # self.TextBrowser.setPlainText(lines)
-        model = PandasModel(sessions_df[['date','time','task']])
-        self.Table.setModel(model)
-
-        # scroll to end - TODO implement pausing
-        # sb = self.TextBrowser.verticalScrollBar()
-        # sb.setValue(sb.maximum())
+        try:
+            sessions_df = utils.get_sessions(current_animal_folder)
+            lines = sessions_df['task'].to_list()
+            lines = '\n'.join(lines)
+            model = PandasModel(sessions_df[['date','time','task']])
+            self.Table.setModel(model)
+        except ValueError:
+            pass
 
 
 class SettingsWidget(QtWidgets.QWidget):
@@ -115,7 +108,7 @@ class SettingsWidget(QtWidgets.QWidget):
         # NewAnimalBtn.setText('New animal')
         # FormLayout.addRow(NewAnimalBtn)
         # NewAnimalBtn.clicked.connect(self.new_animal)
-        # self.animal_changed() # TODO why is this commented out? does not seem to harm
+        # self.animal_changed()
 
         # task selector
         tasks = utils.get_tasks(self.profile['tasks_folder'])
@@ -453,6 +446,45 @@ class LineEditWidget(QtWidgets.QLineEdit):
     def set_value(self, value):
         self.value = value
         self.setText(str(self.value))
+
+class MyFormLayout(QtWidgets.QFormLayout):
+    """ ... TODO write something meaningful here """
+
+    def __init__(self, parent, DataFrame):
+        super(MyFormLayout,self).__init__(parent=parent)
+        self.Df = DataFrame
+        self.initUI()
+    
+    def initUI(self):
+        self.setVerticalSpacing(10)
+        self.setLabelAlignment(QtCore.Qt.AlignRight)
+
+        for i, row in self.Df.iterrows():
+            self.addRow(row['name'], LineEditWidget(row['value'], functions.dtype_map[row['dtype']], self))
+
+    def set_entries(self, Df):
+        # TODO implement
+        for i, row in self.Df.iterrows():
+            pass
+        pass
+
+    def get_entries(self):
+        """ returns a pd.DataFrame of the current entries """
+
+        # TODO again here: FormLayout2Df function could be useful
+        rows = []
+
+        for i in range(self.rowCount()):
+            label = self.itemAt(i, 0).widget()
+            widget = self.itemAt(i, 1).widget()
+            rows.append([label.text(), widget.get_value()])
+
+        Df = pd.DataFrame(rows, columns=['name', 'value'])
+        # NOTE: this only works when order of entries is guaranteed to stay equal, better would be to use merge
+        Df = pd.concat([Df,self.Df[['dtype','const']]],axis=1) # this now here has the const field, that is only used in the arduino var case
+        # TODO drop it alltogether - simply no const init_variables - defies the purpose actually
+        return Df
+
 
 # TODO implement a FormLayout that uses the LineEditWidgets
 # and has getters and setters

@@ -39,8 +39,8 @@ Compiling .pio\build\megaatmega2560\FrameworkArduino\wiring_pulse.c.o
 Compiling .pio\build\megaatmega2560\FrameworkArduino\wiring_shift.c.o
 Archiving .pio\build\megaatmega2560\libFrameworkArduino.a
 Linking .pio\build\megaatmega2560\firmware.elf
-Checking size .pio\build\megaatmega2560\firmware.elf
 Building .pio\build\megaatmega2560\firmware.hex
+Checking size .pio\build\megaatmega2560\firmware.elf
 Memory Usage -> http://bit.ly/pio-memory-usage
 DATA:    [=         ]   7.1% (used 579 bytes from 8192 bytes)
 PROGRAM: [          ]   4.3% (used 10890 bytes from 253952 bytes)
@@ -50,4 +50,4 @@ CURRENT: upload_protocol = wiring
 Looking for upload port...
 Use manually specified: COM4
 Uploading .pio\build\megaatmega2560\firmware.hex
- [SUCCESS] Took 6.78 seconds 
+ [SUCCESS] Took 6.81 seconds 

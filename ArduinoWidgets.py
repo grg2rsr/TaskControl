@@ -332,7 +332,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.Layout.addWidget(SendBtn)
 
         LastVarsBtn = QtWidgets.QPushButton(self)
-        LastVarsBtn.setText('use variables from last sesion')
+        LastVarsBtn.setText('use variables from last session')
         LastVarsBtn.clicked.connect(self.use_last_vars)
         self.Layout.addWidget(LastVarsBtn)
 
@@ -381,8 +381,6 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         lines = functions.Df_2_arduino_vars(Df)
         with open(path, 'w') as fH:
             fH.write(''.join(header+lines))
-
-
 
     def send_variables(self):
         """ sends all current variables to arduino """

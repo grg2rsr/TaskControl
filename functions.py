@@ -62,14 +62,15 @@ def parse_training_vars(path):
             elements = elements.strip().split(' ')
             elements = [elem.strip() for elem in elements]
             name = elements[-1]
-            if elements[0] == 'const':
-                const = True
-                dtype = ' '.join(elements[1:-1])
-            else:
-                const = False
-                dtype = ' '.join(elements[:-1])
+            # if elements[0] == 'const':
+            #     const = True
+            #     dtype = ' '.join(elements[1:-1])
+            # else:
+            #     const = False
+            dtype = ' '.join(elements[:-1])
             value = sp.array(value, dtype=dtype_map[dtype])
-            dfs.append(pd.DataFrame([[name, value, dtype, const]],columns=['name', 'value', 'dtype', 'const']))
+            # dfs.append(pd.DataFrame([[name, value, dtype, const]],columns=['name', 'value', 'dtype', 'const']))
+            dfs.append(pd.DataFrame([[name, value, dtype]],columns=['name', 'value', 'dtype']))
         except:
             print('unreadable line: ',line)
             pass
@@ -83,15 +84,14 @@ def Df_2_arduino_vars(Df):
     lines = []
     for i, row in Df.iterrows():
         elements = []
-        if row['const'] == True:
-            elements.append('const')
+        # if row['const'] == True:
+        #     elements.append('const')
         elements.append(row['dtype'])
         elements.append(row['name'])
         elements.append('=')
         elements.append(str(row['value'])+';'+os.linesep)
         lines.append(' '.join(elements))
     return lines
-
 
 # UI layouting functinos
 def tile_Widgets(Widget, RefWidget, where='right', gap=50):
@@ -111,30 +111,26 @@ def scale_Widgets(Widgets, how='vertical'):
         [widget.resize(max_width,widget.height()) for widget in Widgets]
         
 
+# if __name__ == '__main__':
+#     codes = '/home/georg/Dropbox/Projects/headfixed/data/02_event_codes.h'
+#     behav = '/home/georg/Dropbox/Projects/headfixed/data/15_Lollypop_181205_Mauro.txt'
 
+#     code_map = parse_code_map(codes)
+#     data_ard = pd.read_csv(behav, delimiter='\t', names=['code', 't', 'values'])
 
+#     code_name = 'TRIAL_NUM_IN_SESSION'
+#     code = code_map[code_map['name'] == code_name]['code'].values[0]
+#     code = sp.int32(code)
+#     times = data_ard.groupby('code').get_group(code)['t']
+#     trial_ind = data_ard.groupby('code').get_group(code)['values']
 
-if __name__ == '__main__':
-    codes = '/home/georg/Dropbox/Projects/headfixed/data/02_event_codes.h'
-    behav = '/home/georg/Dropbox/Projects/headfixed/data/15_Lollypop_181205_Mauro.txt'
+#     import matplotlib.pyplot as plt
+#     fig, axes = plt.subplots()
+#     axes.plot(times,trial_ind)
 
-    code_map = parse_code_map(codes)
-    data_ard = pd.read_csv(behav, delimiter='\t', names=['code', 't', 'values'])
-
-    code_name = 'TRIAL_NUM_IN_SESSION'
-    code = code_map[code_map['name'] == code_name]['code'].values[0]
-    code = sp.int32(code)
-    times = data_ard.groupby('code').get_group(code)['t']
-    trial_ind = data_ard.groupby('code').get_group(code)['values']
-
-    import matplotlib.pyplot as plt
-    fig, axes = plt.subplots()
-    axes.plot(times,trial_ind)
-
-    names = [name for name in code_map.name]
-    for name in names:
-        print(name)
-
+#     names = [name for name in code_map.name]
+#     for name in names:
+#         print(name)
 
 # code_name = 'MISS_REPORT_EVENT'
 # code = code_map[code_map['name'] == code_name]['code'].values[0]
