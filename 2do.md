@@ -13,19 +13,10 @@ Generalize hardware widgets: com port widget
 dict for both animal and task
 animal = {ID, path, meta ... }
 
-refactoring
-
-Df 2 table exists
-reverse function would be nice
-
-
 ## clean utils
-
 
 ## error popup
 
 ## run popup!!
 
 ## new animal
-
-## test with real animals actually

@@ -35,7 +35,6 @@ def parse_code_map(path):
 
     return code_map
 
-
 def parse_arduino_vars(path):
     """ a kind of hacky parser for init_variables.h """
     with open(path, 'r') as fH:

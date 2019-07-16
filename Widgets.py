@@ -48,7 +48,6 @@ class AnimalInfoWidget(QtWidgets.QWidget):
 
         functions.tile_Widgets(self, self.parent(), where='below',gap=100)
 
-
     def update(self):
         # TODO get a list of past sessions and parse them
         current_animal_folder = os.path.join(self.parent().profile['animals_folder'],self.parent().animal)
@@ -63,9 +62,7 @@ class AnimalInfoWidget(QtWidgets.QWidget):
 
 
 class SettingsWidget(QtWidgets.QWidget):
-
     # FIXME does not have parent? - fix inheritance from TaskControl
-
     def __init__(self, main, profiles):
         super(SettingsWidget, self).__init__()
         self.profiles = profiles
@@ -98,7 +95,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.AnimalChoiceWidget = StringChoiceWidget(self, choices=animals)
         self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
         self.AnimalChoiceWidget.set_value(self.animal)
-        if animals.index(self.animal) == 0:
+        if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
             self.animal_changed()
         FormLayout.addRow('Animal', self.AnimalChoiceWidget)
 
@@ -119,7 +116,6 @@ class SettingsWidget(QtWidgets.QWidget):
         if tasks.index(self.task) == 0:
             self.task_changed()
         FormLayout.addRow('Task', self.TaskChoiceWidget)
-        # self.task_changed() # this leads to task changed being called twice ... 
 
         # run button
         RunBtn = QtWidgets.QPushButton(self)
@@ -133,6 +129,7 @@ class SettingsWidget(QtWidgets.QWidget):
         Plot_button.clicked.connect(self.update_plot)
         Plot_button.setText('Plot performance')
         FormLayout.addRow(Plot_button)
+
         # TODO register a range of task specific plotters
         # or clicking this fires all plotters associated to the task
 
@@ -222,7 +219,6 @@ class SettingsWidget(QtWidgets.QWidget):
         return pd.read_csv(meta_path)
 
     def animal_changed(self):
-        print("animal change called")
         self.animal = self.AnimalChoiceWidget.get_value()
         self.profile['last_animal'] = self.animal
         self.animal_meta = self.get_animal_meta()
@@ -238,7 +234,6 @@ class SettingsWidget(QtWidgets.QWidget):
         print("Animal: ", self.animal)
 
     def task_changed(self):
-        print('task changed called')
         # TODO include all controllers
         """ read external_variables.h and reopen the window """
 
@@ -284,6 +279,11 @@ class SettingsWidget(QtWidgets.QWidget):
 class RunInfoWidget(QtWidgets.QWidget):
     """ collects all that is left required manual input by the user upon run """
     # TODO Implement this!!
+    # idea: also this logs stuff about the session
+    # after each run, a session_meta df is created containing
+    # animal id, task, date, start, stop, duration, ntrials
+    # 
+
     def __init__(self, parent):
         super(RunInfoWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
