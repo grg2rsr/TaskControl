@@ -157,14 +157,14 @@ class ArduinoController(QtWidgets.QWidget):
     def send(self,command):
         """ sends string command interface to arduino, interface compatible """
         if hasattr(self,'connection'):
-            cmd = '<CMD '+command+'>'
+            cmd = '<'+command+'>'
             bytestr = str.encode(cmd)
             self.connection.write(bytestr)
         else:
             print("Arduino is not connected")
 
     def stop_btn_clicked(self):
-        self.send('STOP')
+        self.send('CMD STOP')
 
     def send_btn_clicked(self):
         """ send command entered in LineEdit """
@@ -225,17 +225,6 @@ class ArduinoController(QtWidgets.QWidget):
         src = os.path.join(self.parent().profile['tasks_folder'],self.parent().task)
         target = os.path.join(folder,self.parent().task)
         shutil.copytree(src,target)
-
-        """
-        log_task is called once, during the run() call. That means, all changed variables during the time are lost
-        so -> this stuff should be done upon closing
-        """
-        
-        # overwriting the copied default values with the values from the UI
-        # TODO think about this: this essentially only leaves out all other incremental
-        # changes that could have been done during the task
-        # but since log is available - this could be recovered from the log
-        # self.VariableController.write_variables(os.path.join(target,'Arduino','src',self.task_config['var_fname']))
 
     def connect(self):
         """ establish connection with the board """
@@ -510,6 +499,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
 """
 
 class KeyboardInteractionWidget(QtWidgets.QWidget):
+    """ captures single keystrokes and sends them to the arduino """
     def __init__(self, parent):
         super(KeyboardInteractionWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
@@ -527,4 +517,4 @@ class KeyboardInteractionWidget(QtWidgets.QWidget):
         functions.scale_Widgets([self, self.parent()])
 
     def keyPressEvent(self, event):
-        self.parent().send(event.text())
+        self.parent().send("CMD "+event.text())
