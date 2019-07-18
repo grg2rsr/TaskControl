@@ -271,6 +271,10 @@ class ArduinoController(QtWidgets.QWidget):
 
         # multithreading taken from
         # https://stackoverflow.com/questions/17553543/pyserial-non-blocking-read-loop
+        # general idea:
+        # read from serial if data available put into queue
+        # emit a signal that data came in
+        # everybody that needs to do sth when new data arrives listens to that signal
 
         self.queue = queue.Queue()
 
@@ -288,7 +292,7 @@ class ArduinoController(QtWidgets.QWidget):
                     break
 
         thread = threading.Thread(target=read_from_port, args=(self.connection, self.queue))
-        thread.start()
+        thread.start() # apparently this line is not passed, thread hangs here? if yes,then why multithreading at all???
 
     def closeEvent(self, event):
         # overwrite logged arduino vars file

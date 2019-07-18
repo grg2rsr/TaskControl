@@ -37,7 +37,7 @@ class TaskControlApp(QtWidgets.QApplication):
 # that fucking space in the path name kills non-abs paths ...
 if __name__ == "__main__":
     # TODO argparse!
-    
+
     if len(sys.argv) == 2:
         profiles_fpath = sys.argv[1]
     else:
@@ -45,7 +45,7 @@ if __name__ == "__main__":
         # profiles_fpath = 'profiles_fphot.ini'
 
         # my ccu desktop in the open lab
-        profiles_fpathles_fpath = 'profiles_ccu.ini'
+        profiles_fpath = 'profiles_ccu.ini'
 
     # run the application
     TaskControl = TaskControlApp([], profiles_fpath=profiles_fpath)
