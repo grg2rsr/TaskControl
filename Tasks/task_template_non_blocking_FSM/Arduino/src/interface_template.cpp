@@ -4,13 +4,14 @@
 #include <Arduino.h>
 #include <string.h>
 
-#include "init_variables.h"
+#include "interface_variables.h"
 
-// this line limits total command length to 200 chars - adjust if necessary
+// this line limits total command length to 200 chars - adjust if necessary (very long var names)
 const byte numChars = 200;
 char receivedChars[numChars];
 boolean newData = false;
 bool verbose = true;
+bool run = false;
 
 void getSerialData() {
     // check if command data is available and if yes read it
@@ -78,22 +79,6 @@ void processSerialData() {
 
             // INSERT_GETTERS
 
-            if (strcmp(varname,"b_low")==0){
-                Serial.println(String(varname)+String("=")+String(b_low));
-            }
-
-            if (strcmp(varname,"t_low")==0){
-                Serial.println(String(varname)+String("=")+String(t_low));
-            }
-
-            if (strcmp(varname,"f_low")==0){
-                Serial.println(String(varname)+String("=")+String(f_low));
-            }
-
-            if (strcmp(varname,"t_high")==0){
-                Serial.println(String(varname)+String("=")+String(t_high));
-            }
-
         }
 
         // SET
@@ -142,40 +127,25 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
-            if (dtype == "bool") {
-                if (strcmp(varname,"b_low")==0){
-                    if (strcmp(varvalue,"false")==0) {
-                        b_low = false;
-                    }
-                    else {
-                        b_low = true;
-                    }
-                }
-            }
-
-            if (dtype == "int") {
-                if (strcmp(varname,"t_low")==0){
-                    t_low = atoi(varvalue);
-                }
-            }
-
-            if (dtype == "int") {
-                if (strcmp(varname,"t_high")==0){
-                    t_high = atoi(varvalue);
-                }
-            }
-
-            if (dtype == "float") {
-                if (strcmp(varname,"f_low")==0){
-                    f_low = atof(varvalue);
-                }
-            }
-
         }
 
         // CMD
         if (strcmp(mode,"CMD")==0){
+            char CMD[len-4+1];
+            strlcpy(CMD, receivedChars+4, len-4+1);
+
             // manually implement functions here
+
+            // Stop and Go functionality
+            if (strcmp(CMD,"RUN")==0){
+                run = true;
+                Serial.println("Arduino is running");
+            }
+
+            if (strcmp(CMD,"HALT")==0){
+                run = false;
+                Serial.println("Arduino is halted");
+            }
         }
 
         newData = false;

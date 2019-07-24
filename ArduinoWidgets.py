@@ -64,6 +64,7 @@ class ArduinoController(QtWidgets.QWidget):
         self.ComPortChoiceWidget = Widgets.StringChoiceWidget(self, choices=com_ports) # TODO is this UI element required? Yes if you want to run multiple box from one computer
         self.ComPortChoiceWidget.currentIndexChanged.connect(self.com_port_changed)
         
+        # try to set with previously used port
         try:
             last_port = self.task_config['com_port']
             ind = [s.split(':')[0] for s in com_ports].index(last_port)
@@ -85,11 +86,13 @@ class ArduinoController(QtWidgets.QWidget):
         # Btn.clicked.connect(self.reset_board)
         # Full_Layout.addWidget(Btn)
 
-        # stop button
-        Btn = QtWidgets.QPushButton()
-        Btn.setText('Stop Arduino')
-        Btn.clicked.connect(self.stop_btn_clicked)
-        Full_Layout.addWidget(Btn)
+        # start/stop button
+        self.RunBtn = QtWidgets.QPushButton()
+        self.RunBtn.setStyleSheet("background-color: green")
+        self.RunBtn.setCheckable(True)
+        self.RunBtn.setText('Run')
+        self.RunBtn.clicked.connect(self.run_btn_clicked)
+        Full_Layout.addWidget(self.RunBtn)
 
         # direct interaction
         self.SendLine = QtWidgets.QLineEdit()
@@ -163,8 +166,16 @@ class ArduinoController(QtWidgets.QWidget):
         else:
             print("Arduino is not connected")
 
-    def stop_btn_clicked(self):
-        self.send('CMD STOP')
+    def run_btn_clicked(self):
+        if self.RunBtn.isChecked():
+            # after being activated
+            self.send('CMD RUN')
+            self.RunBtn.setText('HALT')
+            self.RunBtn.setStyleSheet("background-color: red")
+        else: 
+            self.send('CMD HALT')
+            self.RunBtn.setText('RUN')
+            self.RunBtn.setStyleSheet("background-color: green")
 
     def send_btn_clicked(self):
         """ send command entered in LineEdit """
@@ -176,9 +187,21 @@ class ArduinoController(QtWidgets.QWidget):
         which is in turn specified in the task_config.ini """
           
         # build and log
-        print("uploading code on arduino")
+        print("--- uploading code on arduino --- ")
         prev_cwd = os.getcwd()
         os.chdir(os.path.join(self.task_folder,self.task_config['pio_project_folder']))
+
+        # check existence of interface.cpp, and if not, build it
+        if not os.path.exists(os.path.join('src','interface.cpp')):
+            print("interface.cpp not found, attempting to build it")
+            os.chdir("src")
+            try:
+                cmd = " ".join(["python","interface_generator.py",self.task_config['var_fname']])
+                subprocess.check_output(cmd,shell=True)
+            except:
+                print("failed at building interface.cpp. Exiting ... ")
+                sys.exit()
+            os.chdir(os.path.normpath(os.getcwd() + os.sep + os.pardir))
 
         # replace whatever com port is in the platformio.ini
         # with the one from task config
@@ -296,8 +319,12 @@ class ArduinoController(QtWidgets.QWidget):
 
     def closeEvent(self, event):
         # overwrite logged arduino vars file
-        target = os.path.join(self.run_folder,self.parent().task)
-        self.VariableController.write_variables(os.path.join(target,'Arduino','src',self.task_config['var_fname']))        
+        try:
+            target = os.path.join(self.run_folder,self.parent().task)
+            self.VariableController.write_variables(os.path.join(target,'Arduino','src',self.task_config['var_fname']))        
+        except AttributeError:
+            # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
+            pass
 
         # if serial connection is open, close it
         if hasattr(self,'connection'):
@@ -401,7 +428,15 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             elements.append(dtype_map_inv[row['dtype']]) 
             elements.append(row['name'])
             elements.append('=')
-            elements.append(str(row['value'])+';'+os.linesep)
+            if row['dtype']=='?':
+                if row['value'] == True:
+                    value = "true"
+                if row['value'] == False:
+                    value = "false"
+            else:
+                value = str(row['value'])
+
+            elements.append(value + ';' + os.linesep)
             lines.append(' '.join(elements))
 
         # write it

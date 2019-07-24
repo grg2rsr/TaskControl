@@ -117,6 +117,11 @@ class SettingsWidget(QtWidgets.QWidget):
             self.task_changed()
         FormLayout.addRow('Task', self.TaskChoiceWidget)
 
+        # logging checkbox
+        self.logCheckBox = QtWidgets.QCheckBox("logging enabled")
+        self.logCheckBox.setChecked(True)
+        FormLayout.addRow(self.logCheckBox)
+
         # run button
         RunBtn = QtWidgets.QPushButton(self)
         RunBtn.setStyleSheet("background-color: yellow")
@@ -234,12 +239,10 @@ class SettingsWidget(QtWidgets.QWidget):
         print("Animal: ", self.animal)
 
     def task_changed(self):
-        # TODO include all controllers
-        """ read external_variables.h and reopen the window """
-
         self.task = self.TaskChoiceWidget.get_value()
         self.task_folder = os.path.join(self.profile['tasks_folder'],self.task)
 
+        # parse task config file
         self.task_config = configparser.ConfigParser()
         self.task_config.read(os.path.join(self.task_folder, 'task_config.ini'))
 

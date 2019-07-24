@@ -1,5 +1,4 @@
-// basic outline of the reader taken from
-// http://forum.arduino.cc/index.php?topic=396450.0
+// a template for a FSM based task with a nonblocking state machine
 
 #include <Arduino.h>
 #include <string.h>
@@ -72,14 +71,19 @@ unsigned long state_entry = 2147483647; // max future
 // log_state()
 // log_value()
 
+void log_current_state(){
+    // Serial.println(String(UP_STATE) + '\t' + String(millis()) + '\t' + ' '); // three column version
+    Serial.println(String(current_state) + '\t' + String(millis()));  // two column version
+}
+
 void finite_state_machine() {
     switch (current_state) {
         case UP_STATE:
             // state entry
             if (current_state != last_state){
                 // log state entry
-                Serial.println(millis());
                 last_state = current_state;
+                log_current_state();
 
                 // entry actions
                 digitalWrite(pin, HIGH);
@@ -89,7 +93,6 @@ void finite_state_machine() {
             // update
             if (last_state == current_state){
                 // state actions
-                // delay(t_high);
             }
 
             // exit condition
@@ -101,8 +104,8 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 // log state entry
-                Serial.println(millis());
                 last_state = current_state;
+                log_current_state();
 
                 // entry actions
                 digitalWrite(pin, LOW);
@@ -127,15 +130,29 @@ void setup() {
     Serial.println("<Arduino is ready to receive commands>");
 }
 
+void check_running(){
+    // if run is false get stuck here
+    if (run == false){
+        while (true){
+            delay(100);
+            getSerialData();
+            processSerialData();
+        }
+    }
+}
+
 void loop() {
-    // put state machine(s) here
+    // check if running
+    check_running();
+
+    // execute state machine(s)
     finite_state_machine();
 
     // sample sensors
     // sample_rotary_encoder();
     // read_lick_IR();
 
-    // and finish loop with those two commands
+    // serial communication
     getSerialData();
     processSerialData();
 }

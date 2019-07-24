@@ -20,3 +20,7 @@ animal = {ID, path, meta ... }
 ## run popup!!
 
 ## new animal
+
+## start stop
+CMD GO
+CMD STOP

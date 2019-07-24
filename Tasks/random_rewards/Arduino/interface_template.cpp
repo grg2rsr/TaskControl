@@ -11,6 +11,7 @@ const byte numChars = 200;
 char receivedChars[numChars];
 boolean newData = false;
 bool verbose = true;
+bool go = false;
 
 void getSerialData() {
     // check if command data is available and if yes read it
@@ -131,17 +132,21 @@ void processSerialData() {
         // CMD
         // manually implement functions here
 
-        // the exit block
+
+        // Stop and Go functionality
         if (strcmp(mode,"CMD")==0){
             char CMD[len-4+1];
             strlcpy(CMD, receivedChars+4, len-4+1);
-            if (strcmp(CMD,"STOP")==0){
-                Serial.println("Arduino stopped");
-                while (true){
-                    delay(1000);
-                }
+
+            if (strcmp(CMD,"GO")==0){
+                go = true;
+                Serial.println("Arduino started");
             }
-            
+
+            if (strcmp(CMD,"STOP")==0){
+                go = false;
+                Serial.println("Arduino stopped");
+            }
         }
 
         newData = false;
