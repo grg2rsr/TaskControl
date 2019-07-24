@@ -428,7 +428,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             elements.append(dtype_map_inv[row['dtype']]) 
             elements.append(row['name'])
             elements.append('=')
-            if row['dtype']=='?':
+            if row['dtype'] == '?':
                 if row['value'] == True:
                     value = "true"
                 if row['value'] == False:
