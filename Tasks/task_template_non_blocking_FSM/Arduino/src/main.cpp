@@ -130,27 +130,15 @@ void setup() {
     Serial.println("<Arduino is ready to receive commands>");
 }
 
-void check_running(){
-    // if run is false get stuck here
-    if (run == false){
-        while (true){
-            delay(100);
-            getSerialData();
-            processSerialData();
-        }
-    }
-}
-
 void loop() {
-    // check if running
-    check_running();
+    if (run == true){
+        // execute state machine(s)
+        finite_state_machine();
 
-    // execute state machine(s)
-    finite_state_machine();
-
-    // sample sensors
-    // sample_rotary_encoder();
-    // read_lick_IR();
+        // sample sensors
+        // sample_rotary_encoder();
+        // read_lick_IR();
+    }
 
     // serial communication
     getSerialData();

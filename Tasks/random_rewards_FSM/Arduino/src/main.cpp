@@ -2,52 +2,16 @@
 
 #include <Arduino.h>
 #include <string.h>
-#include <event_codes.h>
 
+#include <event_codes.h> // check if ""
 #include "interface.cpp"
+#include "pin_map.h"
 
-
-int pin = 52;
-int current_state = UP_STATE;
+int current_state = IDLE_STATE;
 int last_state = INI_STATE;
+int t_exit;
 
-unsigned long state_entry = 2147483647; // max future
-
-// example sensor read (copied from treadmill task)
-// void sample_rotary_encoder(){
-//   if ( (float)(millis() - t_last_sample_RE) > dt_RE) {
-//     // checks if it is time to measure, if yes, do so and update current speed and pos
-//     v = read_RE_calc_v();
-//     v_avg = calc_v_avg();
-//     // v_avg = v_avg + 0.3;
-//     x = x + v_avg * dt_RE;
-//     // log treadmill values
-//     if (log_RE == true) {
-//       print_RE();
-//     }
-//     t_last_sample_RE = millis();
-//   }
-// }
-
-// float read_RE_calc_v() {
-//   /* samples the rotary encoder, deals with the wraparound of the output pos
-//   signals */
-//   analog_val = analogRead(rot_enc_pin);
-//   wlast = w;
-//   w = ((analog_val - RE_min) / (RE_max-RE_min)) * 2*pi; // in [rad]
-//   dw = (w - wlast) / (dt_RE/1000); // [rad/s] division by 1k because dt is in ms
-
-//   // both possible wraparounds
-//   if (dw < -1*dw_max){ // this happens during forward walking
-//     dw = w - (wlast - 2*pi);
-//   }
-//   if (dw > dw_max){ // this happens during backward walking
-//     dw = (w - 2*pi) - wlast;
-//   }
-//   // calculate current speed and pos from angular speed
-//   v = dw * gear_radius; // v on circle = w'[rad/s] * r[m] * 2pi // [2pi/rad]
-//   return v; // [m/s]
-// }
+unsigned long state_entry = 2147483647; // max future - why?
 
 // void read_lick_IR(){
 //   // samples the IR beam for licks
@@ -66,19 +30,29 @@ unsigned long state_entry = 2147483647; // max future
 //   }
 // }
 
+float expon_dist(float lam){
+    // return a draw x from an expon distr with rate param lam
+    // inversion method
+
+    float res = 10000.0;  // hardcoded resolution
+    float r = random(res) / res;
+    float x = log(1-r) / (-1 * lam);
+    return x;
+}
+
 // TODO
 // logging functions: tstamp, state, value (opt)
 // log_state()
 // log_value()
 
+// TODO -> commons.cpp
 void log_current_state(){
-    // Serial.println(String(UP_STATE) + '\t' + String(millis()) + '\t' + ' '); // three column version
     Serial.println(String(current_state) + '\t' + String(millis()));  // two column version
 }
 
 void finite_state_machine() {
     switch (current_state) {
-        case UP_STATE:
+        case REWARD_STATE:
             // state entry
             if (current_state != last_state){
                 // log state entry
@@ -86,7 +60,8 @@ void finite_state_machine() {
                 log_current_state();
 
                 // entry actions
-                digitalWrite(pin, HIGH);
+                digitalWrite(REWARD_VALVE_PIN, HIGH);
+                digitalWrite(NI_COM_PIN, HIGH);
                 state_entry = millis();
             }
 
@@ -96,11 +71,13 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (millis() - state_entry > t_high) {
-                current_state = DOWN_STATE;
+            if (millis() - state_entry > reward_valve_time) {
+                digitalWrite(REWARD_VALVE_PIN, LOW);
+                digitalWrite(NI_COM_PIN, LOW);
+                current_state = IDLE_STATE;
             }
             
-        case DOWN_STATE:
+        case IDLE_STATE:
             // state entry
             if (current_state != last_state){
                 // log state entry
@@ -108,19 +85,18 @@ void finite_state_machine() {
                 log_current_state();
 
                 // entry actions
-                digitalWrite(pin, LOW);
                 state_entry = millis();
+                t_exit = state_entry + expon_dist(reward_poisson_lambda) * 1000;
             }
 
             // update
             if (last_state == current_state){
                 // state actions
-                // delay(t_high);
             }
 
             // exit condition
-            if (millis() - state_entry > t_low) {
-                current_state = UP_STATE;
+            if (millis() > t_exit) {
+                current_state = REWARD_STATE;
             }
     }
 }
@@ -130,27 +106,15 @@ void setup() {
     Serial.println("<Arduino is ready to receive commands>");
 }
 
-void check_running(){
-    // if run is false get stuck here
-    if (run == false){
-        while (true){
-            delay(100);
-            getSerialData();
-            processSerialData();
-        }
-    }
-}
-
 void loop() {
-    // check if running
-    check_running();
+    if (run == true){
+        // execute state machine(s)
+        finite_state_machine();
 
-    // execute state machine(s)
-    finite_state_machine();
-
-    // sample sensors
-    // sample_rotary_encoder();
-    // read_lick_IR();
+        // sample sensors
+        // sample_rotary_encoder();
+        // read_lick_IR();
+    }
 
     // serial communication
     getSerialData();

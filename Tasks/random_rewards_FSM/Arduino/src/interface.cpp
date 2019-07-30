@@ -79,20 +79,12 @@ void processSerialData() {
 
             // INSERT_GETTERS
 
-            if (strcmp(varname,"b_low")==0){
-                Serial.println(String(varname)+String("=")+String(b_low));
+            if (strcmp(varname,"reward_valve_time")==0){
+                Serial.println(String(varname)+String("=")+String(reward_valve_time));
             }
     
-            if (strcmp(varname,"t_low")==0){
-                Serial.println(String(varname)+String("=")+String(t_low));
-            }
-    
-            if (strcmp(varname,"f_low")==0){
-                Serial.println(String(varname)+String("=")+String(f_low));
-            }
-    
-            if (strcmp(varname,"t_high")==0){
-                Serial.println(String(varname)+String("=")+String(t_high));
+            if (strcmp(varname,"reward_poisson_lambda")==0){
+                Serial.println(String(varname)+String("=")+String(reward_poisson_lambda));
             }
     
         }
@@ -143,32 +135,15 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
-            if (dtype == "bool") {
-                if (strcmp(varname,"b_low")==0){
-                    if (strcmp(varvalue,"false")==0) {
-                        b_low = false;
-                    }
-                    else {
-                        b_low = true;
-                    }
-                }
-            }
-    
             if (dtype == "int") {
-                if (strcmp(varname,"t_low")==0){
-                    t_low = atoi(varvalue);
-                }
-            }
-    
-            if (dtype == "int") {
-                if (strcmp(varname,"t_high")==0){
-                    t_high = atoi(varvalue);
+                if (strcmp(varname,"reward_valve_time")==0){
+                    reward_valve_time = atoi(varvalue);
                 }
             }
     
             if (dtype == "float") {
-                if (strcmp(varname,"f_low")==0){
-                    f_low = atof(varvalue);
+                if (strcmp(varname,"reward_poisson_lambda")==0){
+                    reward_poisson_lambda = atof(varvalue);
                 }
             }
     
@@ -185,11 +160,14 @@ void processSerialData() {
             if (strcmp(CMD,"RUN")==0){
                 run = true;
                 Serial.println("Arduino is running");
+                Serial.println(String(run));
+
             }
 
             if (strcmp(CMD,"HALT")==0){
                 run = false;
                 Serial.println("Arduino is halted");
+                Serial.println(String(run));
             }
         }
 

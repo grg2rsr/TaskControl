@@ -6,7 +6,7 @@ find a way that interface_generator.py does not need a copy of parse_arduino_var
 write in header day of training, version of TaskControl, date of generation etc etc
 
 ## interface generator
-+ is to be distributed with task control actually
++ template and generator is to be distributed with task control actually
 
 make function with settable return type!
 
