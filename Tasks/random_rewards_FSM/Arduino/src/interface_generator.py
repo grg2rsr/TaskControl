@@ -78,6 +78,7 @@ def parse_arduino_vars(path):
             continue
         if '//' in line: # remove everything after comment
             line = line.split('//')[0]
+            print(line)
         
         line = line.strip()
         try:
@@ -93,7 +94,6 @@ def parse_arduino_vars(path):
         except:
             print('unreadable line: ',line)
             pass
-            
     arduino_vars = pd.concat(dfs, axis=0)
     arduino_vars = arduino_vars.reset_index(drop=True)
 

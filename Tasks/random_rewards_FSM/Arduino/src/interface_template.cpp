@@ -139,16 +139,12 @@ void processSerialData() {
             // Stop and Go functionality
             if (strcmp(CMD,"RUN")==0){
                 run = true;
-                if (verbose==true){
-                    Serial.println("Arduino is running");
-                }
+                Serial.println("Arduino is running");
             }
 
             if (strcmp(CMD,"HALT")==0){
                 run = false;
-                if (verbose==true){
-                    Serial.println("Arduino is halted");
-                }
+                Serial.println("Arduino is halted");
             }
         }
 

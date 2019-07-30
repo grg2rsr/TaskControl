@@ -5,6 +5,11 @@ find a way that interface_generator.py does not need a copy of parse_arduino_var
 ## arduino variables
 write in header day of training, version of TaskControl, date of generation etc etc
 
+## interface generator
++ is to be distributed with task control actually
+
+make function with settable return type!
+
 ## argparse
 for ini files
 
@@ -20,3 +25,4 @@ animal = {ID, path, meta ... }
 ## run popup!!
 
 ## new animal
+

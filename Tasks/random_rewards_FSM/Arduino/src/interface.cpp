@@ -79,6 +79,22 @@ void processSerialData() {
 
             // INSERT_GETTERS
 
+            if (strcmp(varname,"b_low")==0){
+                Serial.println(String(varname)+String("=")+String(b_low));
+            }
+    
+            if (strcmp(varname,"t_low")==0){
+                Serial.println(String(varname)+String("=")+String(t_low));
+            }
+    
+            if (strcmp(varname,"f_low")==0){
+                Serial.println(String(varname)+String("=")+String(f_low));
+            }
+    
+            if (strcmp(varname,"t_high")==0){
+                Serial.println(String(varname)+String("=")+String(t_high));
+            }
+    
         }
 
         // SET
@@ -127,6 +143,35 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
+            if (dtype == "bool") {
+                if (strcmp(varname,"b_low")==0){
+                    if (strcmp(varvalue,"false")==0) {
+                        b_low = false;
+                    }
+                    else {
+                        b_low = true;
+                    }
+                }
+            }
+    
+            if (dtype == "int") {
+                if (strcmp(varname,"t_low")==0){
+                    t_low = atoi(varvalue);
+                }
+            }
+    
+            if (dtype == "int") {
+                if (strcmp(varname,"t_high")==0){
+                    t_high = atoi(varvalue);
+                }
+            }
+    
+            if (dtype == "float") {
+                if (strcmp(varname,"f_low")==0){
+                    f_low = atof(varvalue);
+                }
+            }
+    
         }
 
         // CMD
@@ -139,16 +184,12 @@ void processSerialData() {
             // Stop and Go functionality
             if (strcmp(CMD,"RUN")==0){
                 run = true;
-                if (verbose==true){
-                    Serial.println("Arduino is running");
-                }
+                Serial.println("Arduino is running");
             }
 
             if (strcmp(CMD,"HALT")==0){
                 run = false;
-                if (verbose==true){
-                    Serial.println("Arduino is halted");
-                }
+                Serial.println("Arduino is halted");
             }
         }
 
