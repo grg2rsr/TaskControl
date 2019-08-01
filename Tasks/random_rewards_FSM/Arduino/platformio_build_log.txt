@@ -52,3 +52,4 @@ CURRENT: upload_protocol = wiring
 Looking for upload port...
 Use manually specified: /dev/ttyACM0
 Uploading .pio/build/megaatmega2560/firmware.hex
+========================= [SUCCESS] Took 4.68 seconds =========================

@@ -70,6 +70,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.user = None
         self.task = None
         self.main = main
+        self.logging = True
         self.initUI()
 
     def initUI(self):
@@ -120,6 +121,7 @@ class SettingsWidget(QtWidgets.QWidget):
         # logging checkbox
         self.logCheckBox = QtWidgets.QCheckBox("logging enabled")
         self.logCheckBox.setChecked(True)
+        self.logCheckBox.stateChanged.connect(self.logCheckBox_changed)
         FormLayout.addRow(self.logCheckBox)
 
         # run button
@@ -206,6 +208,12 @@ class SettingsWidget(QtWidgets.QWidget):
                 self.BonsaiController.Run(folder)
                 print("initializing BonsaiController")
 
+    def logCheckBox_changed(self):
+        if self.logCheckBox.checkState() == 2:
+            self.logging = True
+        else:
+            self.logging = False
+
     def user_changed(self):
         self.user = self.UserChoiceWidget.get_value()
         self.AnimalChoiceWidget.set_value(self.profile['last_animal'])
@@ -218,8 +226,8 @@ class SettingsWidget(QtWidgets.QWidget):
     #     """ open the new animal popup """
     #     self.NewAnimal = NewAnimalWidget(self)
 
-    def get_animal_meta(self): # make a function of Animal object
-        # of last session
+    def get_animal_meta(self):
+        # TODO FUTURE make a function of Animal object
         meta_path = os.path.join(self.profile['animals_folder'],self.animal,'animal_meta.csv')
         return pd.read_csv(meta_path)
 
@@ -246,9 +254,10 @@ class SettingsWidget(QtWidgets.QWidget):
         self.task_config = configparser.ConfigParser()
         self.task_config.read(os.path.join(self.task_folder, 'task_config.ini'))
 
-        # TODO generalize!!!
+        # TODO generalize
         for section in self.task_config.sections():
             # place here all possible controllers ...
+            # closes present controllers and reopens
             if section == 'Arduino':
                 if hasattr(self,'ArduinoController'):
                     self.ArduinoController.close()
@@ -285,7 +294,6 @@ class RunInfoWidget(QtWidgets.QWidget):
     # idea: also this logs stuff about the session
     # after each run, a session_meta df is created containing
     # animal id, task, date, start, stop, duration, ntrials
-    # 
 
     def __init__(self, parent):
         super(RunInfoWidget, self).__init__(parent=parent)

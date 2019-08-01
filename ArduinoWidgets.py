@@ -213,19 +213,22 @@ class ArduinoController(QtWidgets.QWidget):
                 pio_config.set(section,"upload_port",self.task_config['com_port'].split(':')[0])
 
         # also write this
-        with open("platformio.ini", 'w') as fH:
-            pio_config.write(fH)
+        if self.parent().logging:
+            with open("platformio.ini", 'w') as fH:
+                pio_config.write(fH)
         
         # get current UI arduino variables, backup defaults,
         # write the UI derived and upload those, revert after upload
-        # this is a terrible workaround ...
+        # this workaround is necessary to use the get previous variables
+        # functionality ... 
         src = os.path.join('src',self.task_config['var_fname'])
         target = os.path.join('src',self.task_config['var_fname']+'_default')
         shutil.copy(src,target)
-        self.VariableController.write_variables(os.path.join('src',self.task_config['var_fname']))
+        if self.parent().logging:
+            self.VariableController.write_variables(os.path.join('src',self.task_config['var_fname']))
 
         # upload
-        fH = open('platformio_build_log.txt','w')
+        fH = open(os.path.join(self.run_folder,'platformio_build_log.txt'),'w')
         platformio_cmd = self.parent().profiles['General']['platformio_cmd']
         cmd = ' '.join([platformio_cmd,'run','--target','upload'])
         proc = subprocess.Popen(cmd,shell=True,stdout=fH)
@@ -243,8 +246,7 @@ class ArduinoController(QtWidgets.QWidget):
 
     def log_task(self,folder):
         """ copy the entire arduino folder to the logging folder """
-
-        print("logging arduino code")
+        print(" - logging arduino code")
         src = os.path.join(self.parent().profile['tasks_folder'],self.parent().task)
         target = os.path.join(folder,self.parent().task)
         shutil.copytree(src,target)
@@ -268,14 +270,14 @@ class ArduinoController(QtWidgets.QWidget):
         except:
             print("could not connect to the Arduino!")
             sys.exit()
-            return 1
 
     def Run(self,folder):
         """ folder is the logging folder """
         self.run_folder = folder # to be kept for the close_event
 
         # log code
-        self.log_task(folder)
+        if self.parent().logging:
+            self.log_task(folder)
 
         # upload
         self.upload()
@@ -290,7 +292,8 @@ class ArduinoController(QtWidgets.QWidget):
         self.KeyboardInteraction = KeyboardInteractionWidget(self)
 
         # open file for writing
-        fH = open(os.path.join(folder,'arduino_log.txt'),'w')
+        if self.parent().logging:
+            fH = open(os.path.join(folder,'arduino_log.txt'),'w')
 
         # multithreading taken from
         # https://stackoverflow.com/questions/17553543/pyserial-non-blocking-read-loop
@@ -306,7 +309,8 @@ class ArduinoController(QtWidgets.QWidget):
                 try:
                     raw_read = ser.readline()
                     line = raw_read.decode('utf-8').strip()
-                    fH.write(line+os.linesep) # external logging
+                    if self.parent().logging:
+                        fH.write(line+os.linesep) # external logging
                     q.put(line) # for threadsafe passing data to the SerialMonitor
                     self.Signals.serial_data_available.emit()
                 except:
@@ -319,12 +323,13 @@ class ArduinoController(QtWidgets.QWidget):
 
     def closeEvent(self, event):
         # overwrite logged arduino vars file
-        try:
-            target = os.path.join(self.run_folder,self.parent().task)
-            self.VariableController.write_variables(os.path.join(target,'Arduino','src',self.task_config['var_fname']))        
-        except AttributeError:
-            # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
-            pass
+        if self.parent().logging:
+            try:
+                target = os.path.join(self.run_folder,self.parent().task)
+                self.VariableController.write_variables(os.path.join(target,'Arduino','src',self.task_config['var_fname']))        
+            except AttributeError:
+                # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
+                pass
 
         # if serial connection is open, close it
         if hasattr(self,'connection'):
@@ -345,11 +350,13 @@ class ArduinoController(QtWidgets.QWidget):
         task_config.set('Arduino','com_port',self.task_config['com_port'].split(':')[0])
 
         # write it
-        with open(task_config_path, 'w') as task_config_fH:
-            task_config.write(task_config_fH)
-        
-        print("logging arduino section of task config to :", task_config_path)
+        if self.parent().logging:
+            with open(task_config_path, 'w') as task_config_fH:
+                task_config.write(task_config_fH)
+            print("logging arduino section of task config to :", task_config_path)
 
+        # remove everything that is written nontheless
+        shutil.rmtree(self.run_folder)
 
         self.close()
     pass
@@ -396,7 +403,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
         LastVarsBtn = QtWidgets.QPushButton(self)
         LastVarsBtn.setText('use variables from last session')
-        LastVarsBtn.clicked.connect(self.use_last_vars)
+        LastVarsBtn.clicked.connect(self.load_last_vars)
         self.Layout.addWidget(LastVarsBtn)
 
         self.setLayout(self.Layout)
@@ -460,8 +467,9 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         else:
             print("Arduino is not connected")
 
-    def use_last_vars(self):
-        """ try to get arduino variables from last run for the task """
+    def load_last_vars(self):
+        """ try to get arduino variables from last run for the task 
+        only loads, does not send! """
         try:
             current_animal_folder = os.path.join(self.parent().parent().profile['animals_folder'],self.parent().parent().animal)
             sessions_df = utils.get_sessions(current_animal_folder)
@@ -526,6 +534,8 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             # scroll to end - TODO implement pausing
             sb = self.TextBrowser.verticalScrollBar()
             sb.setValue(sb.maximum())
+
+# TODO FUTURE implement here: state machine monitor
 
 """
  __  ___  ___________    ____ .______     ______        ___      .______       _______
