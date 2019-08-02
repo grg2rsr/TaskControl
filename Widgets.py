@@ -27,40 +27,6 @@ import HardwareWidgets
 
 """
 
-class AnimalInfoWidget(QtWidgets.QWidget):
-    """ displays some interesing info about the animal: list of previous sessions """
-    def __init__(self, parent):
-        super(AnimalInfoWidget, self).__init__(parent=parent)
-        self.setWindowFlags(QtCore.Qt.Window)
-        self.initUI()
-
-    def initUI(self):
-        # self.TextBrowser = QtWidgets.QTextBrowser(self)
-        self.Table = QtWidgets.QTableView()
-
-        self.Layout = QtWidgets.QHBoxLayout()
-        # self.Layout.addWidget(self.TextBrowser)
-        self.Layout.addWidget(self.Table)
-        self.setLayout(self.Layout)
-        self.setWindowTitle("Animal info")
-        self.show()
-        self.update()
-
-        functions.tile_Widgets(self, self.parent(), where='below',gap=100)
-
-    def update(self):
-        # TODO get a list of past sessions and parse them
-        current_animal_folder = os.path.join(self.parent().profile['animals_folder'],self.parent().animal)
-        try:
-            sessions_df = utils.get_sessions(current_animal_folder)
-            lines = sessions_df['task'].to_list()
-            lines = '\n'.join(lines)
-            model = PandasModel(sessions_df[['date','time','task']])
-            self.Table.setModel(model)
-        except ValueError:
-            pass
-
-
 class SettingsWidget(QtWidgets.QWidget):
     # FIXME does not have parent? - fix inheritance from TaskControl
     def __init__(self, main, profiles):
@@ -146,6 +112,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
         self.show()
 
+        # FIXME this contains hardcoding stuff ... 
         # window scaling
         if hasattr(self, 'ArduinoController'):
             functions.tile_Widgets(self.ArduinoController, self, where='right',gap=25)
@@ -157,7 +124,6 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # needs to be called - again
         functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=50)
-
 
     def update_plot(self):
         # TODO deal with this entire functionality
@@ -263,9 +229,9 @@ class SettingsWidget(QtWidgets.QWidget):
                 if hasattr(self,'ArduinoController'):
                     self.ArduinoController.close()
                 self.ArduinoController = ArduinoWidgets.ArduinoController(self)
-                functions.tile_Widgets(self.ArduinoController, self,where='right',gap=25)
-                functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=50)
-                functions.scale_Widgets([self.ArduinoController.VariableController, self.ArduinoController])
+                # functions.tile_Widgets(self.ArduinoController, self,where='right',gap=25)
+                # functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=50)
+                # functions.scale_Widgets([self.ArduinoController.VariableController, self.ArduinoController])
 
             if section == 'Bonsai':
                 if hasattr(self,'BonsaiController'):
@@ -277,6 +243,41 @@ class SettingsWidget(QtWidgets.QWidget):
 
         self.profile['last_task'] = self.task
         print("Task: ", self.task)
+
+
+class AnimalInfoWidget(QtWidgets.QWidget):
+    """ displays some interesing info about the animal: list of previous sessions """
+    def __init__(self, parent):
+        super(AnimalInfoWidget, self).__init__(parent=parent)
+        self.setWindowFlags(QtCore.Qt.Window)
+        self.initUI()
+
+    def initUI(self):
+        # self.TextBrowser = QtWidgets.QTextBrowser(self)
+        self.Table = QtWidgets.QTableView()
+
+        self.Layout = QtWidgets.QHBoxLayout()
+        # self.Layout.addWidget(self.TextBrowser)
+        self.Layout.addWidget(self.Table)
+        self.setLayout(self.Layout)
+        self.setWindowTitle("Animal info")
+        self.show()
+        self.update()
+
+        functions.tile_Widgets(self, self.parent(), where='below',gap=100)
+
+    def update(self):
+        # TODO get a list of past sessions and parse them
+        current_animal_folder = os.path.join(self.parent().profile['animals_folder'],self.parent().animal)
+        try:
+            sessions_df = utils.get_sessions(current_animal_folder)
+            lines = sessions_df['task'].to_list()
+            lines = '\n'.join(lines)
+            model = PandasModel(sessions_df[['date','time','task']])
+            self.Table.setModel(model)
+        except ValueError:
+            pass
+
 
 """
 .______     ______   .______    __    __  .______     _______.

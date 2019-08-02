@@ -76,6 +76,7 @@ def parse_arduino_vars(path):
 # UI layouting functinos
 def tile_Widgets(Widget, RefWidget, where='right', gap=50):
     """ where can be left right above below """
+    # print("adjusting",Widget,RefWidget)
     if where == 'right':
         x = RefWidget.pos().x() + RefWidget.size().width() + gap
         y = RefWidget.pos().y()

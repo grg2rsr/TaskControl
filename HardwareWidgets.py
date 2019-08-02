@@ -10,29 +10,6 @@ import shutil
 
 import functions
 
-# FUTURE TODO - unify serial port and serial port monitor
-# class SerialMonitorWidget(QtWidgets.QWidget):
-#     """ just print the lines from the arduino into this window
-#     open upon connect and received data
-#     """
-
-#     def __init__(self, parent, COM_port):
-#         super(SerialMonitorWidget, self).__init__(parent=parent)
-#         self.init_UI()
-#         self.lines = []
-
-#     def init_UI(self):
-#         self.TextBrowser = QtWidgets.QTextBrowser(self)
-#         self.Layout = QtWidgets.QHBoxLayout()
-#         self.Layout.addWidget(self.TextBrowser)
-#         self.setLayout(self.Layout)
-
-#     def add_line(self,line):
-#         self.lines.append(line)
-#         self.TextBrowser.setText(self.lines)
-
-# quite hacky ... 
-
 class BonsaiController(QtWidgets.QWidget):
     def __init__(self, parent):
         super(BonsaiController, self).__init__(parent=parent)
