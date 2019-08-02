@@ -26,8 +26,6 @@ animal = {ID, path, meta ... }
 
 ## error popup
 
-## run popup!!
-
 ## new animal
 
 ## argparse

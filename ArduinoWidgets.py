@@ -13,6 +13,7 @@ import threading
 import queue
 
 import pandas as pd
+import scipy as sp
 
 import Widgets
 import functions
@@ -293,6 +294,9 @@ class ArduinoController(QtWidgets.QWidget):
         # open keyboard interaction
         self.KeyboardInteraction = KeyboardInteractionWidget(self)
 
+        # Statemachine Monitor
+        self.StateMachineMonitor = StateMachineMonitorWidget(self)
+
         # open file for writing
         if self.parent().logging:
             fH = open(os.path.join(folder,'arduino_log.txt'),'w')
@@ -521,8 +525,9 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.TextBrowser.setPlainText('initialized\n')
         self.setWindowTitle("Arduino monitor")
         self.show()
-        # functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=50)
-        # functions.scale_Widgets([self, self.parent()])
+
+        functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=150)
+        functions.scale_Widgets([self, self.parent()])
 
     def update(self):
         # get data from other thread
@@ -539,7 +544,57 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             sb = self.TextBrowser.verticalScrollBar()
             sb.setValue(sb.maximum())
 
-# TODO FUTURE implement here: state machine monitor
+
+class StateMachineMonitorWidget(QtWidgets.QWidget):
+    """ has colored fields for the states """
+    def __init__(self,parent):
+        super(StateMachineMonitorWidget, self).__init__(parent=parent)
+
+        # get all possible states
+        self.states = []
+        path = os.path.join(self.parent().task_folder,'Arduino','src','event_codes.h')
+        self.Df = functions.parse_code_map(path)
+        for i, row in self.Df.iterrows():
+            name, kind = row['name'].split('_')
+            if kind == 'STATE':
+                self.states.append(name)
+
+        # connect to parent signals
+        parent.Signals.serial_data_available.connect(self.update)
+
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowFlags(QtCore.Qt.Window)
+        self.state_btns = []
+        self.Layout = QtWidgets.QHBoxLayout()
+        for state in self.states:
+            Btn = QtWidgets.QPushButton()
+            # Btn.setCheckable(True)
+            Btn.setText(state)
+            self.state_btns.append(Btn)
+            self.Layout.addWidget(Btn)
+
+        self.setLayout(self.Layout)
+        self.setWindowTitle("State Machine Monitor")
+
+        functions.tile_Widgets(self, self.parent().KeyboardInteraction, where='below',gap=50)
+        functions.scale_Widgets([self, self.parent()])
+
+        self.show()
+
+    def update(self):
+        # SerialMonitor already empties queue, so get the last line from here
+        line = self.parent().SerialMonitor.lines[-1]
+        # utils.debug_trace()
+        try:
+            code, time = line.split('\t')
+            ind = sp.where(self.Df['code'] == code)[0][0]
+            for Btn in self.state_btns:
+                Btn.setStyleSheet("background-color: gray")
+            self.state_btns[ind].setStyleSheet("background-color: green")
+        except:
+            pass
 
 """
  __  ___  ___________    ____ .______     ______        ___      .______       _______

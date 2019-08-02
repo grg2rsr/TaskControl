@@ -93,29 +93,3 @@ def scale_Widgets(Widgets, how='vertical'):
         [widget.resize(max_width,widget.height()) for widget in Widgets]
         
 
-# if __name__ == '__main__':
-#     codes = '/home/georg/Dropbox/Projects/headfixed/data/02_event_codes.h'
-#     behav = '/home/georg/Dropbox/Projects/headfixed/data/15_Lollypop_181205_Mauro.txt'
-
-#     code_map = parse_code_map(codes)
-#     data_ard = pd.read_csv(behav, delimiter='\t', names=['code', 't', 'values'])
-
-#     code_name = 'TRIAL_NUM_IN_SESSION'
-#     code = code_map[code_map['name'] == code_name]['code'].values[0]
-#     code = sp.int32(code)
-#     times = data_ard.groupby('code').get_group(code)['t']
-#     trial_ind = data_ard.groupby('code').get_group(code)['values']
-
-#     import matplotlib.pyplot as plt
-#     fig, axes = plt.subplots()
-#     axes.plot(times,trial_ind)
-
-#     names = [name for name in code_map.name]
-#     for name in names:
-#         print(name)
-
-# code_name = 'MISS_REPORT_EVENT'
-# code = code_map[code_map['name'] == code_name]['code'].values[0]
-# code = sp.int32(code)
-# times = data_ard.groupby('code').get_group(code)['t']
-# trial_ind = data_ard.groupby('code').get_group(code)['values']

@@ -114,16 +114,17 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # FIXME this contains hardcoding stuff ... 
         # window scaling
-        # if hasattr(self, 'ArduinoController'):
-        #     functions.tile_Widgets(self.ArduinoController, self, where='right',gap=25)
-        #     functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=50)
-        #     functions.scale_Widgets([self.ArduinoController.VariableController, self.ArduinoController])
+        if hasattr(self, 'ArduinoController'):
+            functions.tile_Widgets(self.ArduinoController, self, where='right',gap=25)
+            functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=50)
+            functions.scale_Widgets([self.ArduinoController.VariableController, self.ArduinoController])
         
-        # if hasattr(self, 'BonsaiController'):
-        #     functions.tile_Widgets(self.BonsaiController, self.ArduinoController, where='right',gap=25)
+        if hasattr(self, 'BonsaiController'):
+            functions.tile_Widgets(self.BonsaiController, self.ArduinoController, where='right',gap=25)
 
         # needs to be called - again
-        # functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=50)
+        functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=50)
+        functions.scale_Widgets([self.AnimalInfoWidget,self])
 
     def update_plot(self):
         # TODO deal with this entire functionality
