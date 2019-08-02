@@ -8,11 +8,7 @@ write in header day of training, version of TaskControl, date of generation etc 
 
 ## interface generator
 + template and generator is to be distributed with task control actually
-
 make function with settable return type!
-
-## logging
-implement
 
 ## state machine montitor
 fully implement
@@ -25,8 +21,6 @@ animal = {ID, path, meta ... }
 ## clean utils
 
 ## error popup
-
-## run popup!!
 
 ## new animal
 
