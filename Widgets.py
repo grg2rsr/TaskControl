@@ -112,6 +112,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
         self.show()
 
+        # FIXME this contains hardcoding stuff ... 
         # window scaling
         # if hasattr(self, 'ArduinoController'):
         #     functions.tile_Widgets(self.ArduinoController, self, where='right',gap=25)
@@ -123,7 +124,6 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # needs to be called - again
         # functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=50)
-
 
     def update_plot(self):
         # TODO deal with this entire functionality

@@ -107,6 +107,8 @@ class ArduinoController(QtWidgets.QWidget):
         self.setLayout(Full_Layout)
         self.setWindowTitle("Arduino controller")
 
+        # functions.tile_Widgets(self, self.parent(), where='right',gap=25)
+
         self.show()
 
     def get_com_ports(self):
@@ -410,6 +412,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.setLayout(self.Layout)
 
         self.setWindowTitle("Arduino variables")
+        
         self.show()
 
     def write_variables(self,path):
@@ -518,8 +521,8 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.TextBrowser.setPlainText('initialized\n')
         self.setWindowTitle("Arduino monitor")
         self.show()
-        functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=50)
-        functions.scale_Widgets([self, self.parent()])
+        # functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=50)
+        # functions.scale_Widgets([self, self.parent()])
 
     def update(self):
         # get data from other thread
