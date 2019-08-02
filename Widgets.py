@@ -192,6 +192,7 @@ class SettingsWidget(QtWidgets.QWidget):
         print("Animal: ",self.animal)
         
         # TODO runanimal popup here
+        self.RunInfo = RunInfoWidget(self)
 
         # make folder structure
         date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
@@ -288,7 +289,7 @@ class SettingsWidget(QtWidgets.QWidget):
 """
 
 
-class RunInfoWidget(QtWidgets.QWidget):
+class RunInfoWidget(QtWidgets.QDialog):
     """ collects all that is left required manual input by the user upon run """
     # TODO Implement this!!
     # idea: also this logs stuff about the session
@@ -306,7 +307,7 @@ class RunInfoWidget(QtWidgets.QWidget):
         self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
 
         # Fields
-        self.EarTagWidget = ValueEdit('??', 'S', self)
+        self.EarTagWidget = ValueEdit('', 'U', self)
         self.FormLayout.addRow("Ear tag", self.EarTagWidget)
         self.WeigthEditWidget = ValueEdit(30, 'f4', self)
         self.FormLayout.addRow("Weight (g)", self.WeigthEditWidget)
@@ -316,25 +317,24 @@ class RunInfoWidget(QtWidgets.QWidget):
 
         Btn = QtWidgets.QPushButton()
         Btn.setText('Done')
-        Btn.clicked.connect(self.done)
+        Btn.clicked.connect(self.done_btn_clicked)
 
         Full_Layout = QtWidgets.QVBoxLayout()
         Full_Layout.addWidget(FormWidget)
         Full_Layout.addWidget(Btn)
         self.setLayout(Full_Layout)
 
-        self.setWindowTitle(" ... ")
-        self.show()
+        self.setWindowTitle(" Run info ")
+        self.exec()
 
-    def done(self):
-        correct_ear_tag = self.parent().animal_meta['ear_tag']
-        if self.EarTagWidget.get_value() != correct_ear_tag:
-            # TODO non-crashing error popup
-            # block all UI
-            # try again
-            pass
-
-        self.close()
+    def done_btn_clicked(self):
+        meta = self.parent().animal_meta
+        correct_ear_tag = meta.set_index('name').loc['Ear tag'].value
+        entered_ear_tag = str(self.EarTagWidget.get_value()).upper()
+        if  entered_ear_tag != correct_ear_tag:
+            print("wrong ear tag or wrong mouse!")
+        else:
+            self.accept()
 
 
 # class NewAnimalWidget(QtWidgets.QWidget):

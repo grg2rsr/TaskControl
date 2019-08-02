@@ -356,7 +356,8 @@ class ArduinoController(QtWidgets.QWidget):
             print("logging arduino section of task config to :", task_config_path)
 
         # remove everything that is written nontheless
-        shutil.rmtree(self.run_folder)
+        if not self.parent().logging:
+            shutil.rmtree(self.run_folder)
 
         self.close()
     pass
