@@ -623,14 +623,10 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
             for name, btn in self.Btns:
                 btn.setStyleSheet("background-color: gray")
 
-            # utils.debug_trace()
             # color active green
             btn = [btn for name,btn in self.Btns if name==full_name][0]
             btn.setStyleSheet("background-color: green")
             
-            # for Btn in self.state_btns:
-            #     Btn.setStyleSheet("background-color: gray")
-            # self.state_btns[ind].setStyleSheet("background-color: green")
         except:
             pass
 
