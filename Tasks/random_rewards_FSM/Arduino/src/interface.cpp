@@ -160,14 +160,11 @@ void processSerialData() {
             if (strcmp(CMD,"RUN")==0){
                 run = true;
                 Serial.println("Arduino is running");
-                Serial.println(String(run));
-
             }
 
             if (strcmp(CMD,"HALT")==0){
                 run = false;
                 Serial.println("Arduino is halted");
-                Serial.println(String(run));
             }
         }
 

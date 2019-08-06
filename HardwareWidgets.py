@@ -23,6 +23,7 @@ class BonsaiController(QtWidgets.QWidget):
 
         # dummy button
         Btn = QtWidgets.QPushButton('dummy')
+        # sketch selector? not really wanted actually ... 
         
         self.Layout.addWidget(Btn)
         self.setLayout(self.Layout)

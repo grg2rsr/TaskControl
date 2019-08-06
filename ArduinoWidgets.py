@@ -518,9 +518,17 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         parent.Signals.serial_data_available.connect(self.update)
 
     def initUI(self):
+        # logging checkbox
+        self.Layout = QtWidgets.QVBoxLayout()
+        self.update_CheckBox = QtWidgets.QCheckBox("update")
+        self.update_CheckBox.setChecked(True)
+        self.Layout.addWidget(self.update_CheckBox)
+        
+        # textbrowser
         self.TextBrowser = QtWidgets.QTextBrowser(self)
-        self.Layout = QtWidgets.QHBoxLayout()
         self.Layout.addWidget(self.TextBrowser)
+
+        # all
         self.setLayout(self.Layout)
         self.TextBrowser.setPlainText('initialized\n')
         self.setWindowTitle("Arduino monitor")
@@ -538,11 +546,15 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             self.lines.append(line)
 
             # print lines in window
+            sb = self.TextBrowser.verticalScrollBar()
+            sb_prev_value = sb.value()
             self.TextBrowser.setPlainText('\n'.join(self.lines))
 
             # scroll to end - TODO implement pausing
-            sb = self.TextBrowser.verticalScrollBar()
-            sb.setValue(sb.maximum())
+            if self.update_CheckBox.checkState() == 2:
+                sb.setValue(sb.maximum())
+            else:
+                sb.setValue(sb_prev_value)
 
 
 class StateMachineMonitorWidget(QtWidgets.QWidget):
@@ -550,30 +562,46 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
     def __init__(self,parent):
         super(StateMachineMonitorWidget, self).__init__(parent=parent)
 
-        # get all possible states
-        self.states = []
         path = os.path.join(self.parent().task_folder,'Arduino','src','event_codes.h')
         self.Df = functions.parse_code_map(path)
-        for i, row in self.Df.iterrows():
-            name, kind = row['name'].split('_')
-            if kind == 'STATE':
-                self.states.append(name)
+        self.code_map = dict(zip(self.Df['code'].values, self.Df['name'].values))
 
         # connect to parent signals
         parent.Signals.serial_data_available.connect(self.update)
-
         self.initUI()
 
     def initUI(self):
         self.setWindowFlags(QtCore.Qt.Window)
-        self.state_btns = []
-        self.Layout = QtWidgets.QHBoxLayout()
-        for state in self.states:
+
+        # layouting
+        self.Layout = QtWidgets.QVBoxLayout()
+        self.States_Layout = QtWidgets.QHBoxLayout()
+        self.Spans_Layout = QtWidgets.QHBoxLayout()
+        self.Events_Layout = QtWidgets.QHBoxLayout()
+        self.Btns = []
+
+        for code, full_name in self.code_map.items():
+            splits = full_name.split('_')
+            name = '_'.join(splits[:-1])
+            kind = splits[-1]
+
             Btn = QtWidgets.QPushButton()
-            # Btn.setCheckable(True)
-            Btn.setText(state)
-            self.state_btns.append(Btn)
-            self.Layout.addWidget(Btn)
+            Btn.setText(name)
+            if kind == 'STATE':
+                # Btn.setCheckable(True)
+                self.States_Layout.addWidget(Btn)
+            if kind == 'ON':
+                Btn.setCheckable(False)
+                self.Spans_Layout.addWidget(Btn)
+            if kind == 'EVENT':
+                Btn.setCheckable(False)
+                self.Events_Layout.addWidget(Btn)
+
+            self.Btns.append((full_name,Btn))
+
+        self.Layout.addLayout(self.States_Layout)
+        self.Layout.addLayout(self.Spans_Layout)
+        self.Layout.addLayout(self.Events_Layout)
 
         self.setLayout(self.Layout)
         self.setWindowTitle("State Machine Monitor")
@@ -586,13 +614,23 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
     def update(self):
         # SerialMonitor already empties queue, so get the last line from here
         line = self.parent().SerialMonitor.lines[-1]
-        # utils.debug_trace()
         try:
+            # utils.debug_trace()
             code, time = line.split('\t')
-            ind = sp.where(self.Df['code'] == code)[0][0]
-            for Btn in self.state_btns:
-                Btn.setStyleSheet("background-color: gray")
-            self.state_btns[ind].setStyleSheet("background-color: green")
+            full_name = self.code_map[code]
+
+            # color all gray
+            for name, btn in self.Btns:
+                btn.setStyleSheet("background-color: gray")
+
+            # utils.debug_trace()
+            # color active green
+            btn = [btn for name,btn in self.Btns if name==full_name][0]
+            btn.setStyleSheet("background-color: green")
+            
+            # for Btn in self.state_btns:
+            #     Btn.setStyleSheet("background-color: gray")
+            # self.state_btns[ind].setStyleSheet("background-color: green")
         except:
             pass
 

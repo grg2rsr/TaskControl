@@ -11,3 +11,5 @@
 const unsigned int INI_STATE = 0;
 const unsigned int REWARD_STATE = 1;
 const unsigned int IDLE_STATE = 2;
+const unsigned int LICK_ON = 10;
+const unsigned int LICK_OFF = 11;

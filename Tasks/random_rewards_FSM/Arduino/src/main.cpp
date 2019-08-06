@@ -7,28 +7,30 @@
 #include "interface.cpp"
 #include "pin_map.h"
 
+/*
+ _______   _______   ______  __          ___      .______          ___   .___________. __    ______   .__   __.      _______.
+|       \ |   ____| /      ||  |        /   \     |   _  \        /   \  |           ||  |  /  __  \  |  \ |  |     /       |
+|  .--.  ||  |__   |  ,----'|  |       /  ^  \    |  |_)  |      /  ^  \ `---|  |----`|  | |  |  |  | |   \|  |    |   (----`
+|  |  |  ||   __|  |  |     |  |      /  /_\  \   |      /      /  /_\  \    |  |     |  | |  |  |  | |  . `  |     \   \
+|  '--'  ||  |____ |  `----.|  `----./  _____  \  |  |\  \----./  _____  \   |  |     |  | |  `--'  | |  |\   | .----)   |
+|_______/ |_______| \______||_______/__/     \__\ | _| `._____/__/     \__\  |__|     |__|  \______/  |__| \__| |_______/
+
+*/
 int current_state = IDLE_STATE;
 int last_state = INI_STATE;
-int t_exit;
+long t_exit;
+long state_entry = 2147483647; // max future - why?
+bool lick_in = false;
 
-unsigned long state_entry = 2147483647; // max future - why?
+/*
+.___  ___.      ___   .___________. __    __
+|   \/   |     /   \  |           ||  |  |  |
+|  \  /  |    /  ^  \ `---|  |----`|  |__|  |
+|  |\/|  |   /  /_\  \    |  |     |   __   |
+|  |  |  |  /  _____  \   |  |     |  |  |  |
+|__|  |__| /__/     \__\  |__|     |__|  |__|
 
-// void read_lick_IR(){
-//   // samples the IR beam for licks
-//   if (lick_in == false && digitalRead(lick_pin) == true){
-//     print_code(lick_code);
-//     lick_in = true;
-//     digitalWrite(lick_monitor_pin,HIGH);
-//     if (reward_collected == false){
-//       reward_collected = true;
-//     }
-//   }
-//   if (lick_in == true && digitalRead(lick_pin) == false){
-//     print_code(lick_code+1);
-//     lick_in = false;
-//     digitalWrite(lick_monitor_pin,LOW);
-//   }
-// }
+*/
 
 float expon_dist(float lam){
     // return a draw x from an expon distr with rate param lam
@@ -45,11 +47,56 @@ float expon_dist(float lam){
 // log_state()
 // log_value()
 
-// TODO -> commons.cpp
+/*
+ __        ______     _______
+|  |      /  __  \   /  _____|
+|  |     |  |  |  | |  |  __
+|  |     |  |  |  | |  | |_ |
+|  `----.|  `--'  | |  |__| |
+|_______| \______/   \______|
+
+*/
 void log_current_state(){
-    Serial.println(String(current_state) + '\t' + String(millis()));  // two column version
+    Serial.println(String(current_state) + '\t' + String(millis()));
 }
 
+void log_code(int code){
+    Serial.println(String(code) + '\t' + String(millis()));
+}
+
+/*
+     _______. _______ .__   __.      _______.  ______   .______          _______.
+    /       ||   ____||  \ |  |     /       | /  __  \  |   _  \        /       |
+   |   (----`|  |__   |   \|  |    |   (----`|  |  |  | |  |_)  |      |   (----`
+    \   \    |   __|  |  . `  |     \   \    |  |  |  | |      /        \   \
+.----)   |   |  |____ |  |\   | .----)   |   |  `--'  | |  |\  \----.----)   |
+|_______/    |_______||__| \__| |_______/     \______/  | _| `._____|_______/
+
+*/
+void read_lick_IR(){
+  // samples the IR beam for licks
+  if (lick_in == false && digitalRead(LICK_PIN) == true){
+    log_code(LICK_ON);
+    lick_in = true;
+    // if (reward_collected == false){
+    //   reward_collected = true;
+    // }
+  }
+  if (lick_in == true && digitalRead(LICK_PIN) == false){
+    log_code(LICK_OFF);
+    lick_in = false;
+  }
+}
+
+/*
+ _______     _______..___  ___.
+|   ____|   /       ||   \/   |
+|  |__     |   (----`|  \  /  |
+|   __|     \   \    |  |\/|  |
+|  |    .----)   |   |  |  |  |
+|__|    |_______/    |__|  |__|
+
+*/
 void finite_state_machine() {
     switch (current_state) {
         case REWARD_STATE:
@@ -58,11 +105,11 @@ void finite_state_machine() {
                 // log state entry
                 last_state = current_state;
                 log_current_state();
+                state_entry = millis();
 
                 // entry actions
                 digitalWrite(REWARD_VALVE_PIN, HIGH);
                 digitalWrite(NI_COM_PIN, HIGH);
-                state_entry = millis();
             }
 
             // update
@@ -83,10 +130,15 @@ void finite_state_machine() {
                 // log state entry
                 last_state = current_state;
                 log_current_state();
+                state_entry = millis();
 
                 // entry actions
-                state_entry = millis();
                 t_exit = state_entry + expon_dist(reward_poisson_lambda) * 1000;
+                // if (t_exit <= state_entry) {
+                //     Serial.println("it happened!");
+                //     t_exit = millis()+1;
+                //     current_state = REWARD_STATE;
+                // }
             }
 
             // update
@@ -101,6 +153,15 @@ void finite_state_machine() {
     }
 }
 
+/*
+.___  ___.      ___       __  .__   __.
+|   \/   |     /   \     |  | |  \ |  |
+|  \  /  |    /  ^  \    |  | |   \|  |
+|  |\/|  |   /  /_\  \   |  | |  . `  |
+|  |  |  |  /  _____  \  |  | |  |\   |
+|__|  |__| /__/     \__\ |__| |__| \__|
+
+*/
 void setup() {
     Serial.begin(9600);
     Serial.println("<Arduino is ready to receive commands>");
@@ -113,7 +174,7 @@ void loop() {
 
         // sample sensors
         // sample_rotary_encoder();
-        // read_lick_IR();
+        read_lick_IR();
     }
 
     // serial communication

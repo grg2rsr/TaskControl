@@ -37,6 +37,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.task = None
         self.main = main
         self.logging = True
+        self.running = False
         self.initUI()
 
     def initUI(self):
@@ -154,27 +155,35 @@ class SettingsWidget(QtWidgets.QWidget):
         + upload code to arduino
         + listen to port
         """
-        print(" --- RUN --- ")
-        print("Task: ",self.task)
-        print("Animal: ",self.animal)
-        
-        # TODO runanimal popup here
-        self.RunInfo = RunInfoWidget(self)
 
-        # make folder structure
-        date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
-        folder = os.path.join(self.profile['animals_folder'],self.animal,date_time+'_'+self.task)
-        os.makedirs(folder,exist_ok=True)
+        if self.running == False:
+            print(" --- RUN --- ")
+            print("Task: ",self.task)
+            print("Animal: ",self.animal)
+            
+            # TODO runanimal popup here
+            self.RunInfo = RunInfoWidget(self)
 
-        # TODO generalize this section. Currently all possible hardware controllers need to be called seperately
-        for section in self.task_config.sections():
-            if section == 'Arduino':
-                self.ArduinoController.Run(folder)
-                print("initializing ArduinoController")
+            # make folder structure
+            date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
+            folder = os.path.join(self.profile['animals_folder'],self.animal,date_time+'_'+self.task)
+            os.makedirs(folder,exist_ok=True)
 
-            if section == 'Bonsai':
-                self.BonsaiController.Run(folder)
-                print("initializing BonsaiController")
+            # TODO generalize this section. Currently all possible hardware controllers need to be called seperately
+            for section in self.task_config.sections():
+                if section == 'Arduino':
+                    self.ArduinoController.Run(folder)
+                    print("initializing ArduinoController")
+
+                if section == 'Bonsai':
+                    self.BonsaiController.Run(folder)
+                    print("initializing BonsaiController")
+
+            self.running = True
+            # gray out button, set to running
+        else:
+            # Here - change button to stop
+            print("Task is already running! ")
 
     def logCheckBox_changed(self):
         if self.logCheckBox.checkState() == 2:
