@@ -16,8 +16,6 @@ Generalize hardware widgets: com port widget
 dict for both animal and task
 animal = {ID, path, meta ... }
 
-## fix line scrolling bug
-
 ## clean utils
 
 ## new animal
