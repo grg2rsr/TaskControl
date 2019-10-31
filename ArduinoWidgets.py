@@ -313,16 +313,16 @@ class ArduinoController(QtWidgets.QWidget):
 
         # def read_from_port(ser,q):
         def read_from_port(ser):
-            # Also FIXME: take care of empty reads at this level already
             while True:
                 try:
                     raw_read = ser.readline()
                     line = raw_read.decode('utf-8').strip()
-                    if self.parent().logging:
-                        fH.write(line+os.linesep) # external logging
-                    # now commented out - signal is emitted with the data
-                    # q.put(line) # for threadsafe passing data to the SerialMonitor
-                    self.Signals.serial_data_available.emit(line)
+                    if line is not '':
+                        if self.parent().logging:
+                            fH.write(line+os.linesep) # external logging
+                        # now commented out - signal is emitted with the data
+                        # q.put(line) # for threadsafe passing data to the SerialMonitor
+                        self.Signals.serial_data_available.emit(line)
                 except:
                     # fails when port not open
                     # FIXME CHECK if this will also fail on failed reads!
@@ -549,19 +549,18 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         # filter out empty reads # see FIXME above this has to be captured earlier
         # TODO if this still works fine, remove the superfluous comments here
         # and then serial_data_available can be read in other widgets (such as the displaycontroller)
-        if line is not '':
-            self.lines.append(line)
+        self.lines.append(line)
 
-            # print lines in window
-            sb = self.TextBrowser.verticalScrollBar()
-            sb_prev_value = sb.value()
-            self.TextBrowser.setPlainText('\n'.join(self.lines))
+        # print lines in window
+        sb = self.TextBrowser.verticalScrollBar()
+        sb_prev_value = sb.value()
+        self.TextBrowser.setPlainText('\n'.join(self.lines))
 
-            # scroll to end - TODO implement pausing
-            if self.update_CheckBox.checkState() == 2:
-                sb.setValue(sb.maximum())
-            else:
-                sb.setValue(sb_prev_value)
+        # scroll to end - TODO implement pausing
+        if self.update_CheckBox.checkState() == 2:
+            sb.setValue(sb.maximum())
+        else:
+            sb.setValue(sb_prev_value)
 
 
 class StateMachineMonitorWidget(QtWidgets.QWidget):
