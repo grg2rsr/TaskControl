@@ -23,7 +23,7 @@ class Signals(QtCore.QObject):
     # not entirely clear why this needs to be within a QObject
     # type shows difference to be signal vs bounded signal
     # FUTURE TODO read up on this at some point
-    serial_data_available = QtCore.pyqtSignal()
+    serial_data_available = QtCore.pyqtSignal(str)
 
 """
   ______   ______   .__   __. .___________..______        ______    __       __       _______ .______
@@ -308,23 +308,28 @@ class ArduinoController(QtWidgets.QWidget):
         # emit a signal that data came in
         # everybody that needs to do sth when new data arrives listens to that signal
 
-        self.queue = queue.Queue()
+        # now commented out, not needed when data is attached to the signal directly
+        # self.queue = queue.Queue()
 
-        def read_from_port(ser,q):
+        # def read_from_port(ser,q):
+        def read_from_port(ser):
+            # Also FIXME: take care of empty reads at this level already
             while True:
                 try:
                     raw_read = ser.readline()
                     line = raw_read.decode('utf-8').strip()
                     if self.parent().logging:
                         fH.write(line+os.linesep) # external logging
-                    q.put(line) # for threadsafe passing data to the SerialMonitor
-                    self.Signals.serial_data_available.emit()
+                    # now commented out - signal is emitted with the data
+                    # q.put(line) # for threadsafe passing data to the SerialMonitor
+                    self.Signals.serial_data_available.emit(line)
                 except:
                     # fails when port not open
                     # FIXME CHECK if this will also fail on failed reads!
                     break
 
-        thread = threading.Thread(target=read_from_port, args=(self.connection, self.queue))
+        # thread = threading.Thread(target=read_from_port, args=(self.connection, self.queue))
+        thread = threading.Thread(target=read_from_port, args=(self.connection))
         thread.start() # apparently this line is not passed, thread hangs here? if yes,then why multithreading at all???
 
     def closeEvent(self, event):
@@ -537,11 +542,13 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=150)
         functions.scale_Widgets([self, self.parent()])
 
-    def update(self):
+    def update(self,line):
         # get data from other thread
-        line = self.parent().queue.get()
+        # line = self.parent().queue.get()
         
-        # filter out empty reads
+        # filter out empty reads # see FIXME above this has to be captured earlier
+        # TODO if this still works fine, remove the superfluous comments here
+        # and then serial_data_available can be read in other widgets (such as the displaycontroller)
         if line is not '':
             self.lines.append(line)
 
