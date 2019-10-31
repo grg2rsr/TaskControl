@@ -304,31 +304,25 @@ class ArduinoController(QtWidgets.QWidget):
         # multithreading taken from
         # https://stackoverflow.com/questions/17553543/pyserial-non-blocking-read-loop
         # general idea:
-        # read from serial if data available put into queue
-        # emit a signal that data came in
+
+        # emit a signal that data came in, signal carries string of the data
         # everybody that needs to do sth when new data arrives listens to that signal
 
-        # now commented out, not needed when data is attached to the signal directly
-        # self.queue = queue.Queue()
-
-        # def read_from_port(ser,q):
         def read_from_port(ser):
             while True:
                 try:
-                    raw_read = ser.readline()
-                    line = raw_read.decode('utf-8').strip()
-                    if line is not '':
+                    line = ser.readline().decode('utf-8').strip()
+                    if line is not '': # filtering out empty reads
                         if self.parent().logging:
                             fH.write(line+os.linesep) # external logging
-                        # now commented out - signal is emitted with the data
-                        # q.put(line) # for threadsafe passing data to the SerialMonitor
+                        
+                        # publishing data
                         self.Signals.serial_data_available.emit(line)
                 except:
                     # fails when port not open
                     # FIXME CHECK if this will also fail on failed reads!
                     break
 
-        # thread = threading.Thread(target=read_from_port, args=(self.connection, self.queue))
         thread = threading.Thread(target=read_from_port, args=(self.connection))
         thread.start() # apparently this line is not passed, thread hangs here? if yes,then why multithreading at all???
 
@@ -543,12 +537,6 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         functions.scale_Widgets([self, self.parent()])
 
     def update(self,line):
-        # get data from other thread
-        # line = self.parent().queue.get()
-        
-        # filter out empty reads # see FIXME above this has to be captured earlier
-        # TODO if this still works fine, remove the superfluous comments here
-        # and then serial_data_available can be read in other widgets (such as the displaycontroller)
         self.lines.append(line)
 
         # print lines in window
