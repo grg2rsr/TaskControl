@@ -77,30 +77,38 @@ class LoadCellController(QtWidgets.QWidget):
 
     def __init__(self, parent):
         super(LoadCellController, self).__init__(parent=parent, udp_addr, udp_port)
-        self.Signals = Signals()
-        self.udp_connection = self.connect(udp_addr,udp_port)
-        self.run()
+        self.setWindowFlags(QtCore.Qt.Window)
+        
+        self.udp_info = (udp_addr, udp_port)
 
-    def connect(self,addr,port):
-        # maybe some form of handshake, verify incoming loadcell data or similar
+        self.Signals = Signals()
+        self.Signals.process_signal.connect(self.process_data) # potential FIXME - put data on the signal?
+
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle("Loadcell controller")
+        self.Layout = QtWidgets.QHBoxLayout()
+        self.setMinimumWidth(300) # FIXME hardcoded!
+
+        # dummy button
+        Btn = QtWidgets.QPushButton('dummy')
+        # sketch selector? not really wanted actually ... 
+        
+        self.Layout.addWidget(Btn)
+        self.setLayout(self.Layout)
+        self.show()        
+
+    def Run(self):
+        # needs to be called after the Run of BonsaiController running Harp
+        addr,port = self.udp_info
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
         sock.bind((UDP_IP, UDP_PORT))
         sock.setblocking(False) # non-blocking mode: recv doesn't receive data, exception is raised
         # well this might in the end be a bit pointless: first I set it to non-blocking to raise and 
         # exception and then I let it pass w/o doing anything. Verify if necessary
-        return sock
-
-    def process_data(self):
-        F,t = self.queue.get()
-        # physical cursor goes here
-        x,y = F # for now just unpack
-        self.Signals.loadcell_data_available.emit(x,y)
-        pass
-
-    def run(self):
-        # this still should be in a seperate thread. Otherwise this can't be taken down.
-
+        
         self.queue = queue.Queue()
 
         def udp_reader(queue):
@@ -119,60 +127,87 @@ class LoadCellController(QtWidgets.QWidget):
         th_read = threading.Thread(target=udp_reader, args=(self.queue, ))
         th_read.start()
 
+    def process_data(self):
+        F,t = self.queue.get()
+        # TODO physical cursor goes here
+        x,y = F # for now just unpack
+        self.Signals.loadcell_data_available.emit(x,y)
+
+        # also: pack it and send it to the arduino
+        # first attempt: use SET variable structure
+        # if too slow: pass as bytes
+        # if too slow ... see doc
+        cmd = "SET X "+str(sp.around(x,5))
+        self.parent.ArduinoController.send(cmd)
+        cmd = "SET Y "+str(sp.around(y,5))
+        self.parent.ArduinoController.send(cmd)
+
+
         
 class DisplayController(QtWidgets.QWidget):
     """
-
+    brainstorm states:
+    idle: dark screen, discarding any command that is not setting it into run
+    run: listen to serial port and update the circle according to received x and y
     """
+
     def __init__(self, parent):
         super(DisplayController, self).__init__(parent=parent)
+        self.setWindowFlags(QtCore.Qt.Window)
+
+        # here all the other stuff goes in from the computer downstairs ... 
+
+
+
+        parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
+        parent.LoadCellController.Signals.loadcell_data_available.connect(#FIXME) # potential FIXME - put data on the signal?
 
         self.state = "IDLE"
 
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle("Display controller")
+        self.Layout = QtWidgets.QHBoxLayout()
+        self.setMinimumWidth(300) # FIXME hardcoded!
+
+        # dummy button
+        Btn = QtWidgets.QPushButton('dummy')
+        # sketch selector? not really wanted actually ... 
         
+        self.Layout.addWidget(Btn)
+        self.setLayout(self.Layout)
+        self.show()        
 
-        # connections
-        # without an explicit connect function this widget becomes sensitive to the 
-        # order of instantiation (has to be after LC controller)
-
-        parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
-        parent.LoadCellController.Signals.lc_data_available.connect(self.on_lc_data)
-
-        def set_state(self, state):
-            if state == "IDLE":
-                pass
-            if state == "RUN":
-                pass
-            if state == "CLEAR":
-                pass
-
-        def on_lc_data(x,y):
-            """ update display """
-            if self.state == "RUN":
-                # update cursor pos
-                pass
+    def on_lc_data(x,y):
+        """ update display """
+        if self.state == "RUN":
+            # update cursor pos
             pass
+        pass
 
-        def on_serial(line):
-            """
-            define how command sent from arduino to here should look like
-            GET SET CMD RET
-            OR: replys go flanked by [ ]
-            if line.split() ... 
-            """
-            if line.startswith('<') and line.endswith('>'):
-                read = line[1:-1].split(' ')
-                if read[0] == "RET" and read[1] == "DISPLAY":
-                    if read[2] == "STATE":
-                        self.set_state(read[3])
-                    if read[2] == "TARGET":
-                        x,y = read[3:]
-                        self.draw_target(x,y)
-                    if read[2] == "RGB":
-                        R,G,B = read[3:]
-                        self.set_monochrome(r,g,b)
-                    if read[2] == "GRATING":
-                        f,phi,v = read[3:]
-                        self.draw_grating(f,phi,v)
-    
-            pass
+    def on_serial(line):
+        """
+        define how command sent from arduino to here should look like
+        GET SET CMD RET
+        OR: replys go flanked by [ ]
+        if line.split() ... 
+        """
+        if line.startswith('<') and line.endswith('>'):
+            read = line[1:-1].split(' ')
+            if read[0] == "RET" and read[1] == "DISPLAY":
+                if read[2] == "STATE":
+                    self.state = read[3]
+                    # self.set_state(read[3])
+
+                # if read[2] == "TARGET":
+                #     x,y = read[3:]
+                #     self.draw_target(x,y)
+                # if read[2] == "RGB":
+                #     R,G,B = read[3:]
+                #     self.set_monochrome(r,g,b)
+                # if read[2] == "GRATING":
+                #     f,phi,v = read[3:]
+                #     self.draw_grating(f,phi,v)
+
+        pass

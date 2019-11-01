@@ -179,6 +179,8 @@ class SettingsWidget(QtWidgets.QWidget):
                     self.BonsaiController.Run(folder)
                     print("initializing BonsaiController")
 
+                # place here other controllers
+
             self.running = True
             # gray out button, set to running
         else:
@@ -249,7 +251,7 @@ class SettingsWidget(QtWidgets.QWidget):
                         self.BonsaiController.close()
                 self.BonsaiController = HardwareWidgets.BonsaiController(self)
 
-            # if section == 'LoadCell':
+            # if section == 'LoadCell': # here: this 
             #     self.BonsaiController = HardwareWidgets.LoadCellController(self)
 
             # if section == 'Display':
