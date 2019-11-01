@@ -144,6 +144,12 @@ class LoadCellController(QtWidgets.QWidget):
 
         # this will likely clog the line
         # started to implement raw reader (see raw_interface.cpp)
+        # https://stackoverflow.com/a/36894176
+
+        import struct
+        # struct.pack("ff") etc
+
+        self.parent.ArduinoController.send(cmd)
 
 
         
@@ -160,13 +166,10 @@ class DisplayController(QtWidgets.QWidget):
 
         # here all the other stuff goes in from the computer downstairs ... 
 
-
-
         parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
-        parent.LoadCellController.Signals.loadcell_data_available.connect(#FIXME) # potential FIXME - put data on the signal?
+        parent.LoadCellController.Signals.loadcell_data_available.connect(self.on_lc_data)
 
         self.state = "IDLE"
-
         self.initUI()
 
     def initUI(self):
@@ -182,7 +185,7 @@ class DisplayController(QtWidgets.QWidget):
         self.setLayout(self.Layout)
         self.show()        
 
-    def on_lc_data(x,y):
+    def on_lc_data(self,x,y):
         """ update display """
         if self.state == "RUN":
             # update cursor pos
@@ -193,7 +196,7 @@ class DisplayController(QtWidgets.QWidget):
         """
         define how command sent from arduino to here should look like
         GET SET CMD RET
-        OR: replys go flanked by [ ]
+        OR: replys go flanked by [ ] // alrady used by sending raw data now
         if line.split() ... 
         """
         if line.startswith('<') and line.endswith('>'):
