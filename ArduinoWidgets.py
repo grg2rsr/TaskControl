@@ -19,10 +19,13 @@ import Widgets
 import functions
 import utils 
 
+# TODO  not necessarily here ... could be moved elsewhere
 class Signals(QtCore.QObject):
     # not entirely clear why this needs to be within a QObject
     # type shows difference to be signal vs bounded signal
     # FUTURE TODO read up on this at some point
+    # update: explained here
+    # https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html
     serial_data_available = QtCore.pyqtSignal(str)
 
 """

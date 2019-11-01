@@ -224,6 +224,7 @@ class SettingsWidget(QtWidgets.QWidget):
         print("Animal: ", self.animal)
 
     def task_changed(self):
+        """ upon task change: look for required controllers, take all present down and instantiate the new ones """
         self.task = self.TaskChoiceWidget.get_value()
         self.task_folder = os.path.join(self.profile['tasks_folder'],self.task)
 
@@ -231,7 +232,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.task_config = configparser.ConfigParser()
         self.task_config.read(os.path.join(self.task_folder, 'task_config.ini'))
 
-        # TODO generalize
+        # TODO generalize - make a list of controllers
         for section in self.task_config.sections():
             # place here all possible controllers ...
             # closes present controllers and reopens
@@ -249,6 +250,9 @@ class SettingsWidget(QtWidgets.QWidget):
                 self.BonsaiController = HardwareWidgets.BonsaiController(self)
 
             # if section == 'LoadCell':
+            #     self.BonsaiController = HardwareWidgets.LoadCellController(self)
+
+            # if section == 'Display':
             #     self.BonsaiController = HardwareWidgets.LoadCellController(self)
 
         self.profile['last_task'] = self.task

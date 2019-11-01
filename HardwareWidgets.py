@@ -10,6 +10,10 @@ import shutil
 
 import functions
 
+class Signals(QtCore.QObject):
+    loadcell_data_available = QtCore.pyqtSignal(float,float) # FIXME see what is here the syntax
+    process_signal = QtCore.pyqtSignal()
+
 class BonsaiController(QtWidgets.QWidget):
     def __init__(self, parent):
         super(BonsaiController, self).__init__(parent=parent)
@@ -56,17 +60,119 @@ class BonsaiController(QtWidgets.QWidget):
 
     pass
 
-# FUTURE TODO implementation will depend on harp
+
+"""
+notes: the performance of this has to be verified. if harp bonsai downsamples to 100Hz
+alternative to this strategy: not emitting a signal but again writing to a local udp
+"""
+import threading 
+import queue 
+
 class LoadCellController(QtWidgets.QWidget):
+    """ as this is entirely a processing 'node' it can have a central run method that is put in a seperate thread
+    this run listens continuously on incoming data, on udp, rescales the values and puts it to other upd port 
+    OR attempt first: put is on a signal 
+    DisplayController then connects to this
+    """
+
     def __init__(self, parent):
-        super(LoadCellController, self).__init__(parent=parent)
+        super(LoadCellController, self).__init__(parent=parent, udp_addr, udp_port)
+        self.Signals = Signals()
+        self.udp_connection = self.connect(udp_addr,udp_port)
+        self.run()
 
+    def connect(self,addr,port):
+        # maybe some form of handshake, verify incoming loadcell data or similar
 
-        # self.LoadCellComPortChoiceWidget = StringChoiceWidget(self, choices=com_ports)
-        # self.LoadCellComPortChoiceWidget.currentIndexChanged.connect(self.load_cell_com_port_changed)
-        # self.LoadCellComPortChoiceWidget.set_value(self.profiles['General']['last_lc_com_port'])
-        # FormLayout.addRow('Load Cell COM port',self.LoadCellComPortChoiceWidget)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+        sock.bind((UDP_IP, UDP_PORT))
+        sock.setblocking(False) # non-blocking mode: recv doesn't receive data, exception is raised
+        # well this might in the end be a bit pointless: first I set it to non-blocking to raise and 
+        # exception and then I let it pass w/o doing anything. Verify if necessary
+        return sock
 
-    # def load_cell_com_port_changed(self):
-    #     self.profiles['General']['last_lc_com_port'] = self.LoadCellComPortChoiceWidget.get_value()
-    pass
+    def process_data(self):
+        F,t = self.queue.get()
+        # physical cursor goes here
+        x,y = F # for now just unpack
+        self.Signals.loadcell_data_available.emit(x,y)
+        pass
+
+    def run(self):
+        # this still should be in a seperate thread. Otherwise this can't be taken down.
+
+        self.queue = queue.Queue()
+
+        def udp_reader(queue):
+            while True:
+                try:
+                    t,Fx,Fy = self.upd_connection.recv(int,float,float) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
+                    F = sp.array([Fx,Fy])
+                    queue.put((F,t))
+                    self.Signals.process_signal.emit()
+                    # TODO this could also be solved with passing the data with the signal instead of the queue,
+                    # but this is expected to be faster as less overhead
+
+                except BlockingIOError:
+                    pass
+        
+        th_read = threading.Thread(target=udp_reader, args=(self.queue, ))
+        th_read.start()
+
+        
+class DisplayController(QtWidgets.QWidget):
+    """
+
+    """
+    def __init__(self, parent):
+        super(DisplayController, self).__init__(parent=parent)
+
+        self.state = "IDLE"
+
+        
+
+        # connections
+        # without an explicit connect function this widget becomes sensitive to the 
+        # order of instantiation (has to be after LC controller)
+
+        parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
+        parent.LoadCellController.Signals.lc_data_available.connect(self.on_lc_data)
+
+        def set_state(self, state):
+            if state == "IDLE":
+                pass
+            if state == "RUN":
+                pass
+            if state == "CLEAR":
+                pass
+
+        def on_lc_data(x,y):
+            """ update display """
+            if self.state == "RUN":
+                # update cursor pos
+                pass
+            pass
+
+        def on_serial(line):
+            """
+            define how command sent from arduino to here should look like
+            GET SET CMD RET
+            OR: replys go flanked by [ ]
+            if line.split() ... 
+            """
+            if line.startswith('<') and line.endswith('>'):
+                read = line[1:-1].split(' ')
+                if read[0] == "RET" and read[1] == "DISPLAY":
+                    if read[2] == "STATE":
+                        self.set_state(read[3])
+                    if read[2] == "TARGET":
+                        x,y = read[3:]
+                        self.draw_target(x,y)
+                    if read[2] == "RGB":
+                        R,G,B = read[3:]
+                        self.set_monochrome(r,g,b)
+                    if read[2] == "GRATING":
+                        f,phi,v = read[3:]
+                        self.draw_grating(f,phi,v)
+    
+            pass
