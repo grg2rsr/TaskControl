@@ -142,6 +142,9 @@ class LoadCellController(QtWidgets.QWidget):
         cmd = "SET Y "+str(sp.around(y,5))
         self.parent.ArduinoController.send(cmd)
 
+        # this will likely clog the line
+        # started to implement raw reader (see raw_interface.cpp)
+
 
         
 class DisplayController(QtWidgets.QWidget):
