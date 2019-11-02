@@ -218,3 +218,47 @@ class DisplayController(QtWidgets.QWidget):
                 # flash corner for sync
                 
         pass
+
+
+""" copy paste working script from the computer downstairs """
+# ###
+# import sys, os
+# import configparser
+
+# # from PyQt5 import QtWidgets
+# # run the application
+
+# from pyqtgraph.Qt import QtGui, QtCore
+# import pyqtgraph as pg
+
+# display_for_mouse = True
+
+# app = QtGui.QApplication([])
+
+# pg.setConfigOptions(antialias=True)
+
+# # cont view
+# Plot_Cont_Widget = pg.PlotWidget() # A GraphicsView
+# Plot_Cont = Plot_Cont_Widget.window() # a PlotWindow
+
+# # yes, this is weird and I don't get it. This was empirically done ... 
+# Plot_Cont.show()
+# if display_for_mouse==False:
+
+#     # get screens
+#     displays = app.screens()
+
+#     x = displays[0].geometry().width()
+#     Plot_Cont.move(QtCore.QPoint(x,0))
+#     Plot_Cont.windowHandle().setScreen(displays[1])
+#     Plot_Cont_Widget.showFullScreen() # maximises on screen 1
+
+# # deco
+# Plot_Cont.hideAxis('left')
+# Plot_Cont.hideAxis('bottom')
+# Plot_Cont.setAspectLocked(True)
+# Plot_Cont.setYRange(-10,10)
+# Plot_Cont.showGrid(x=True,y=True,alpha=0.5)
+# Plot_Cont.plot(x=[0],y=[0], pen=(200,200,200), symbolBrush=(100,100,100), symbolPen='w',symbolSize=50)
+
+# app.exec_()
