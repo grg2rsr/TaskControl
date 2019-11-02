@@ -93,8 +93,7 @@ class LoadCellController(QtWidgets.QWidget):
 
         # dummy button
         Btn = QtWidgets.QPushButton('dummy')
-        # sketch selector? not really wanted actually ... 
-        
+
         self.Layout.addWidget(Btn)
         self.setLayout(self.Layout)
         self.show()        
@@ -215,5 +214,7 @@ class DisplayController(QtWidgets.QWidget):
                 # if read[2] == "GRATING":
                 #     f,phi,v = read[3:]
                 #     self.draw_grating(f,phi,v)
-
+                # if read[2] == "SYNC":
+                # flash corner for sync
+                
         pass

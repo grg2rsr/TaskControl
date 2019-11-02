@@ -1,5 +1,4 @@
 # python me to generate an interface.cpp based on the variables in `init_variables.h`
-# MAJOR FIXME this file contains unix specific stuff ... 
 
 import pandas as pd
 import scipy as sp

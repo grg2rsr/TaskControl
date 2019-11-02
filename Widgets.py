@@ -28,13 +28,18 @@ import HardwareWidgets
 """
 
 class SettingsWidget(QtWidgets.QWidget):
+    """
+    The main toplevel widget. Is parent of all controllers. Brings together all animal and task related information
+    some design notes:
+    each user has a profile which points to the folder of tasks and animals
+    """
     # FIXME does not have parent? - fix inheritance from TaskControl
     def __init__(self, main, profiles):
         super(SettingsWidget, self).__init__()
-        self.profiles = profiles
+        self.profiles = profiles # a configparser dict
         self.profile = None
         self.user = None
-        self.task = None
+        self.task = None # the task that is being run
         self.main = main
         self.logging = True
         self.running = False

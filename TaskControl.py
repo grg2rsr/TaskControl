@@ -34,7 +34,6 @@ class TaskControlApp(QtWidgets.QApplication):
             profiles.write(profiles_fH)
         self.exit()
 
-# that fucking space in the path name kills non-abs paths ...
 if __name__ == "__main__":
     # TODO argparse!
 
