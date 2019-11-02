@@ -167,7 +167,7 @@ class SettingsWidget(QtWidgets.QWidget):
             print("Animal: ",self.animal)
             
             # TODO runanimal popup here
-            self.RunInfo = RunInfoWidget(self)
+            # self.RunInfo = RunInfoWidget(self)s
 
             # make folder structure
             date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...

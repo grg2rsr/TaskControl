@@ -21,10 +21,7 @@ import utils
 
 # TODO  not necessarily here ... could be moved elsewhere
 class Signals(QtCore.QObject):
-    # not entirely clear why this needs to be within a QObject
-    # type shows difference to be signal vs bounded signal
-    # FUTURE TODO read up on this at some point
-    # update: explained here
+    # explained here why this has to be within a QObject
     # https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html
     serial_data_available = QtCore.pyqtSignal(str)
 
@@ -326,7 +323,7 @@ class ArduinoController(QtWidgets.QWidget):
                     # FIXME CHECK if this will also fail on failed reads!
                     break
 
-        thread = threading.Thread(target=read_from_port, args=(self.connection))
+        thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         thread.start() # apparently this line is not passed, thread hangs here? if yes,then why multithreading at all???
 
     def closeEvent(self, event):
