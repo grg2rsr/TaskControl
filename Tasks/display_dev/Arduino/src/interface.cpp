@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "interface_variables.h"
-// #include "interface_writeables.h"
 
 
 // this line limits total command length to 200 chars - adjust if necessary (very long var names)
@@ -169,35 +168,6 @@ void processSerialData() {
                 Serial.println("Arduino is halted");
             }
         }
-
-        // // RAW
-        // if (strcmp(mode,"RAW")==0){
-        //     char CMD[len-4+1];
-        //     strlcpy(CMD, receivedChars+4, len-4+1);
-        //     Serial.println(CMD);
-        //     // manually implement functions here
-        //     // the illegal union hack after  
-        //     // https://stackoverflow.com/questions/17732630/cast-byte-array-to-float/17732822#17732822
-
-        //     //Create instances of the union
-        //     // bfloat Xb;
-        //     // Xb.b[3] = receivedChars[0+3]; 
-        //     // Xb.b[2] = receivedChars[1+3]; 
-        //     // Xb.b[1] = receivedChars[2+3]; 
-        //     // Xb.b[0] = receivedChars[3+3]; 
-
-        //     // bfloat Yb;
-        //     // Yb.b[3] = receivedChars[4+3]; 
-        //     // Yb.b[2] = receivedChars[5+3]; 
-        //     // Yb.b[1] = receivedChars[6+3]; 
-        //     // Yb.b[0] = receivedChars[7+3]; 
-
-        //     // X = (float) Xb.f;
-        //     // Y = (float) Yb.f;
-
-        //     // Serial.println(String(X)+String(Y));
-        // }
-
         newData = false;
     }
 }

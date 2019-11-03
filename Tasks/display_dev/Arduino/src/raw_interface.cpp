@@ -87,18 +87,3 @@ void processRawData() {
     }
     RawNewData = false;
 }
-
-
-// this also looks promising
-// https://stackoverflow.com/a/3991665
-// float bytesToFloatA(uchar b0, uchar b1, uchar b2, uchar b3)
-// {
-//     float output;
-
-//     *((uchar*)(&output) + 3) = b0;
-//     *((uchar*)(&output) + 2) = b1;
-//     *((uchar*)(&output) + 1) = b2;
-//     *((uchar*)(&output) + 0) = b3;
-
-//     return output;
-// }

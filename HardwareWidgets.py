@@ -182,22 +182,7 @@ class LoadCellController(QtWidgets.QWidget):
         # x,y = F # for now just unpack
         self.Signals.loadcell_data_available.emit(Fx,Fy)
 
-        # also: pack it and send it to the arduino
-        # first attempt: use SET variable structure
-        # if too slow: pass as bytes
-        # if too slow ... see doc
-        # cmd = "SET X "+str(sp.around(x,5))
-        # self.parent.ArduinoController.send(cmd)
-        # cmd = "SET Y "+str(sp.around(y,5))
-        # self.parent.ArduinoController.send(cmd)
-
-        # this will likely clog the line
-        # started to implement raw reader (see raw_interface.cpp)
-        # https://stackoverflow.com/a/36894176
-
         if self.transmission:
-            # cmd = str.encode("<RAW")+struct.pack("ff",Fx,Fy)+str.encode(">")
-            # cmd = str.encode("<")+struct.pack("ff",Fx,Fy)+str.encode(">")
             cmd = struct.pack("ff",Fx,Fy)
             cmd = str.encode('[') + cmd + str.encode(']')
             self.arduino_bridge.write(cmd)
