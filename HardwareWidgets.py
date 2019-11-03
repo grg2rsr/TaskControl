@@ -16,6 +16,8 @@ import serial
 import scipy as sp
 import time
 
+import pyqtgraph as pg 
+
 class Signals(QtCore.QObject):
     loadcell_data_available = QtCore.pyqtSignal(float,float) # FIXME see what is here the syntax
     process_signal = QtCore.pyqtSignal()
@@ -121,6 +123,8 @@ class LoadCellController(QtWidgets.QWidget):
 
     def connect(self):
         """ establish connection with the arduino bridge """
+        # FIXME hardcode included! this needs to be fixed
+        # likely in the future: seperate uart line
         
         com_port = '/dev/ttyACM1'
         baud_rate = 115200
@@ -180,81 +184,98 @@ class LoadCellController(QtWidgets.QWidget):
         Fx,Fy = self.queue.get()
         # TODO physical cursor goes here
         # x,y = F # for now just unpack
-        self.Signals.loadcell_data_available.emit(Fx,Fy)
 
         if self.transmission:
+            # TODO check the order of these two - delays wrt timing
+            # emit signal for DisplayController
+            self.Signals.loadcell_data_available.emit(Fx,Fy)
+            # send coordinates to Arduino via second serial (currently arduino uart bridge)
             cmd = struct.pack("ff",Fx,Fy)
             cmd = str.encode('[') + cmd + str.encode(']')
             self.arduino_bridge.write(cmd)
 
 
         
-# class DisplayController(QtWidgets.QWidget):
-#     """
-#     brainstorm states:
-#     idle: dark screen, discarding any command that is not setting it into run
-#     run: listen to serial port and update the circle according to received x and y
-#     """
+class DisplayController(QtWidgets.QWidget):
+    """
+    brainstorm states:
+    idle: dark screen, discarding any command that is not setting it into run
+    run: listen to serial port and update the circle according to received x and y
+    """
 
-#     def __init__(self, parent):
-#         super(DisplayController, self).__init__(parent=parent)
-#         self.setWindowFlags(QtCore.Qt.Window)
+    def __init__(self, parent):
+        super(DisplayController, self).__init__(parent=parent)
+        self.setWindowFlags(QtCore.Qt.Window)
 
-#         # here all the other stuff goes in from the computer downstairs ... 
+        # here all the other stuff goes in from the computer downstairs ... 
 
-#         parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
-#         parent.LoadCellController.Signals.loadcell_data_available.connect(self.on_lc_data)
+        parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
+        parent.LoadCellController.Signals.loadcell_data_available.connect(self.on_lc_data)
 
-#         self.state = "IDLE"
-#         self.initUI()
+        self.state = "IDLE"
+        self.initUI()
 
-#     def initUI(self):
-#         self.setWindowTitle("Display controller")
-#         self.Layout = QtWidgets.QHBoxLayout()
-#         self.setMinimumWidth(300) # FIXME hardcoded!
+    def initUI(self):
+        self.setWindowTitle("Display controller")
+        self.Layout = QtWidgets.QHBoxLayout()
+        self.setMinimumWidth(300) # FIXME hardcoded!
 
-#         # dummy button
-#         Btn = QtWidgets.QPushButton('dummy')
-#         # sketch selector? not really wanted actually ... 
+        # dummy button
+        Btn = QtWidgets.QPushButton('dummy')
+        # sketch selector? not really wanted actually ... 
         
-#         self.Layout.addWidget(Btn)
-#         self.setLayout(self.Layout)
-#         self.show()        
+        # Display and aesthetics
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.disableAutoRange()
+        # self.plot_widget.hideAxis('left')
+        # self.plot_widget.hideAxis('bottom')
+        self.plot_widget.setYRange(-10,10)
+        self.plot_widget.setAspectLocked(True)
+        # self.plot_widget.showGrid(x=True,y=True,alpha=0.5)
+        self.plot_widget.showGrid(x=True,y=True)
+        self.cursor = self.plot_widget.plot(x=[0],y=[0], pen=(200,200,200), symbolBrush=(100,100,100), symbolPen='w',symbolSize=50)
 
-#     def on_lc_data(self,x,y):
-#         """ update display """
-#         if self.state == "RUN":
-#             # update cursor pos
-#             pass
-#         pass
+        self.Layout.addWidget(Btn)
+        self.Layout.addWidget(self.plot_widget)
+        self.setLayout(self.Layout)
+        self.show()        
 
-#     def on_serial(line):
-#         """
-#         define how command sent from arduino to here should look like
-#         GET SET CMD RET
-#         OR: replys go flanked by [ ] // alrady used by sending raw data now
-#         if line.split() ... 
-#         """
-#         if line.startswith('<') and line.endswith('>'):
-#             read = line[1:-1].split(' ')
-#             if read[0] == "RET" and read[1] == "DISPLAY":
-#                 if read[2] == "STATE":
-#                     self.state = read[3]
-#                     # self.set_state(read[3])
+    def on_lc_data(self,x,y):
+        """ update display """
+        # if self.state == "RUN":
+        self.cursor.setData(x=[x],y=[y])
+        pass
 
-#                 # if read[2] == "TARGET":
-#                 #     x,y = read[3:]
-#                 #     self.draw_target(x,y)
-#                 # if read[2] == "RGB":
-#                 #     R,G,B = read[3:]
-#                 #     self.set_monochrome(r,g,b)
-#                 # if read[2] == "GRATING":
-#                 #     f,phi,v = read[3:]
-#                 #     self.draw_grating(f,phi,v)
-#                 # if read[2] == "SYNC":
-#                 # flash corner for sync
+    def on_serial(self,line):
+        """
+        define how command sent from arduino to here should look like
+        GET SET CMD RET
+        OR: replys go flanked by [ ] // alrady used by sending raw data now
+        if line.split() ... 
+        """
+        if line.startswith('<') and line.endswith('>'):
+            read = line[1:-1].split(' ')
+            if read[0] == "RET" and read[1] == "DISPLAY":
+                if read[2] == "STATE":
+                    self.state = read[3]
+                    # self.set_state(read[3])
+
+                # if read[2] == "TARGET":
+                #     x,y = read[3:]
+                #     self.draw_target(x,y)
+                # if read[2] == "RGB":
+                #     R,G,B = read[3:]
+                #     self.set_monochrome(r,g,b)
+                # if read[2] == "GRATING":
+                #     f,phi,v = read[3:]
+                #     self.draw_grating(f,phi,v)
+                # if read[2] == "SYNC":
+                # flash corner for sync
                 
-#         pass
+        pass
+
+    def Run(self, folder):
+        pass
 
 
 """ copy paste working script from the computer downstairs """

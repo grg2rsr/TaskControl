@@ -150,6 +150,12 @@ class SettingsWidget(QtWidgets.QWidget):
         if hasattr(self, 'BonsaiController'):
             self.BonsaiController.close()
 
+        if hasattr(self, 'LoadCellController'):
+            self.LoadCellController.close()
+
+        if hasattr(self, 'DisplayController'):
+            self.DisplayController.close()
+
         self.main.exit()
 
 
@@ -187,6 +193,10 @@ class SettingsWidget(QtWidgets.QWidget):
                 if section == 'LoadCell':
                     self.LoadCellController.Run(folder)
                     print("running BonsaiController")
+
+                if section == 'Display':
+                    self.DisplayController.Run(folder)
+                    print("running DisplayController")
 
                 # place here other controllers
 
@@ -266,8 +276,8 @@ class SettingsWidget(QtWidgets.QWidget):
                 self.LoadCellController = HardwareWidgets.LoadCellController(self)
                 print("initializing LoadCellController")
 
-            # if section == 'Display':
-            #     self.BonsaiController = HardwareWidgets.LoadCellController(self)
+            if section == 'Display':
+                self.DisplayController = HardwareWidgets.DisplayController(self)
 
         self.profile['last_task'] = self.task
         print("Task: ", self.task)
