@@ -92,6 +92,10 @@ class LoadCellController(QtWidgets.QWidget):
         self.Signals = Signals()
         self.Signals.process_signal.connect(self.process_data) # potential FIXME - put data on the signal?
 
+        self.X_last = sp.zeros(2)
+        self.t_last = 0
+        self.v_last = sp.zeros(2)
+
         self.initUI()
 
     def initUI(self):
@@ -163,16 +167,17 @@ class LoadCellController(QtWidgets.QWidget):
                     # F = sp.array([Fx,Fy])
                     # queue.put((F,t))
 
-                    raw_read = sock.recv(8) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
+                    raw_read = sock.recv(12) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
 
                     # utils.debug_trace()
-                    Fx,Fy = struct.unpack('ff',raw_read)
+                    t,Fx,Fy = struct.unpack('fff',raw_read)
 
-                    queue.put((Fx,Fy))
+                    queue.put((t,sp.array([Fx,Fy])))
 
                     self.Signals.process_signal.emit()
                     # TODO this could also be solved with passing the data with the signal instead of the queue,
-                    # but this is expected to be faster as less overhead
+                    # but this is intuitively xpected to be faster as less overhead
+                    # and nobody needs to have access to the raw data anyways (really?)
 
                 except BlockingIOError:
                     pass
@@ -181,16 +186,39 @@ class LoadCellController(QtWidgets.QWidget):
         th_read.start()
 
     def process_data(self):
-        Fx,Fy = self.queue.get()
-        # TODO physical cursor goes here
-        # x,y = F # for now just unpack
+        t,Fm = self.queue.get()
+        
+        # physical cursor implementation
+        m = 1 # mass
+        lam = 0.5 # friction factor
+
+        dt = t - self.t_last
+        dv = Fm/m * dt
+
+        v = self.v_last + dv
+
+        # friction
+        Ff = v*-1*lam
+        dv = Ff/m * dt
+
+        v = v + dv
+
+        self.X = self.X_last + v * dt
+
+        self.t_last = t
+        self.v_last = v
+
+        
+        # friction as a force acting in the opposite direction of F and proportional to v
+        # F_f = mu * v
+        # F_ges = F_f + F_meas
 
         if self.transmission:
             # TODO check the order of these two - delays wrt timing
             # emit signal for DisplayController
-            self.Signals.loadcell_data_available.emit(Fx,Fy)
+            self.Signals.loadcell_data_available.emit(self.X[0],self.X[1])
             # send coordinates to Arduino via second serial (currently arduino uart bridge)
-            cmd = struct.pack("ff",Fx,Fy)
+            cmd = struct.pack("ff",self.X[0],self.X[1])
             cmd = str.encode('[') + cmd + str.encode(']')
             self.arduino_bridge.write(cmd)
 
