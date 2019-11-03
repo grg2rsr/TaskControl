@@ -23,7 +23,7 @@
 */
 int current_state = IDLE_STATE;
 int last_state = INI_STATE;
-long t_state_duration;
+unsigned long t_state_duration;
 unsigned long state_entry = 2147483647; // max future - why?
 bool lick_in = false;
 
@@ -137,7 +137,7 @@ void finite_state_machine() {
 
                 // entry actions
                 // t_exit = state_entry + expon_dist(reward_poisson_lambda) * 1000;
-                t_state_duration = 10000;
+                t_state_duration = 1000000;
                 // t_exit = state_entry + 10000;
 
                 // if (t_exit <= state_entry) {

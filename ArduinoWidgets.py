@@ -11,7 +11,7 @@ import serial
 import time
 import threading
 import queue
-
+from functools import partial
 import pandas as pd
 import scipy as sp
 
@@ -547,12 +547,14 @@ class SerialMonitorWidget(QtWidgets.QWidget):
     def update(self,line):
         self.lines.append(line)
 
+        history_len = 100 # FIXME expose this property? or remove it. for now for debugging
+
         # print lines in window
         sb = self.TextBrowser.verticalScrollBar()
         sb_prev_value = sb.value()
-        self.TextBrowser.setPlainText('\n'.join(self.lines))
+        self.TextBrowser.setPlainText('\n'.join(self.lines[-history_len:]))
 
-        # scroll to end - TODO implement pausing
+        # scroll to end
         if self.update_CheckBox.checkState() == 2:
             sb.setValue(sb.maximum())
         else:
@@ -602,6 +604,11 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
             self.Btns.append((full_name,Btn))
 
         self.Layout.addLayout(self.States_Layout)
+        for i in range(self.States_Layout.count()):
+            state = self.States_Layout.itemAt(i).widget().text()
+            # https://stackoverflow.com/a/42945033/4749250
+            self.States_Layout.itemAt(i).widget().clicked.connect(partial(self.set_state,state))
+
         self.Layout.addLayout(self.Spans_Layout)
         self.Layout.addLayout(self.Events_Layout)
 
@@ -612,12 +619,19 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         functions.scale_Widgets([self, self.parent()])
 
         self.show()
+    
+    def set_state(self, state):
+        # fugly
+        # does not fully work bc the state entry function is not called
+        code = self.Df.loc[self.Df['name'] == state+'_STATE']['code'].values[0]
+        # cmd = "SET current_state "+state+'_STATE'
+        cmd = "SET current_state "+code
+        self.parent().send(cmd)
 
-    def update(self):
-        # SerialMonitor already empties queue, so get the last line from here
-        line = self.parent().SerialMonitor.lines[-1]
+    def update(self,line):
+        # TODO: how to find out if this is a valid line to update the buttons?
+        # something is def wrong here but also it seems other things are getting stuck
         try:
-            # utils.debug_trace()
             code, time = line.split('\t')
             full_name = self.code_map[code]
 

@@ -6,7 +6,6 @@
 
 #include "interface_variables.h"
 
-
 // this line limits total command length to 200 chars - adjust if necessary (very long var names)
 const byte numChars = 200;
 char receivedChars[numChars];
@@ -134,6 +133,10 @@ void processSerialData() {
                 dtype = "int";
             }
 
+            if (strcmp(varname,"current_state")==0){
+                reward_valve_time = atoi(varvalue);
+            }
+
             // INSERT_SETTERS
 
             if (dtype == "int") {
@@ -168,6 +171,7 @@ void processSerialData() {
                 Serial.println("Arduino is halted");
             }
         }
+
         newData = false;
     }
 }
