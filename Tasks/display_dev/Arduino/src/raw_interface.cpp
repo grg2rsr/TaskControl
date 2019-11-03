@@ -9,6 +9,7 @@ float Y;
 
 const byte numBytes = 8; // for two floats
 char receivedBytes[numBytes];
+boolean RawNewData = false;
 
 void getRawData() {
     // check if raw data is available and if yes read it
@@ -20,38 +21,38 @@ void getRawData() {
 
     // also https://www.microchip.com/forums/m590535.aspx
 
-    static boolean recvInProgress = false;
-    static byte ndx = 0;
-    char startMarker = '[';
-    char endMarker = ']';
+    static boolean RawRecvInProgress = false;
+    static int raw_ndx = 0;
+    char RawStartMarker = '[';
+    char RawEndMarker = ']';
     int rc;
  
     // loop that reads the entire command
-    while (Serial.available() > 0 && newData == false) {
-        rc = Serial.read();
+    while (Serial1.available() > 0 && RawNewData == false) {
+        rc = Serial1.read();
 
         // read until end marker
-        if (recvInProgress == true) {
-            if (rc != endMarker) {
-                if (ndx > numBytes-1) { // this should be resistent to failed [ reads
-                    recvInProgress = false;
-                    newData = true;
+        if (RawRecvInProgress == true) {
+            if (rc != RawEndMarker) {
+                if (raw_ndx > numBytes-1) { // this should be resistent to failed [ reads
+                    RawRecvInProgress = false;
+                    RawNewData = true;
                 }
                 else {
-                    receivedBytes[ndx] = rc;
-                    ndx++;
+                    receivedBytes[raw_ndx] = rc;
+                    raw_ndx++;
                 }
             }
             else {
-                recvInProgress = false;
-                ndx = 0;
-                newData = true;
+                RawRecvInProgress = false;
+                raw_ndx = 0;
+                RawNewData = true;
             }
         }
 
         // enter reading if startmarker received
-        else if (rc == startMarker) {
-            recvInProgress = true;
+        else if (rc == RawStartMarker) {
+            RawRecvInProgress = true;
         }
     }
 }
@@ -62,7 +63,7 @@ typedef union {
 } bfloat;
 
 void processRawData() {
-    if (newData == true) {
+    if (RawNewData == true) {
         // in here split into two floats and store them in the corresponding arduino variables
 
         // the illegal union hack after  
@@ -70,22 +71,21 @@ void processRawData() {
 
         //Create instances of the union
         bfloat Xb;
-        Xb.b[3] = receivedBytes[0]; 
-        Xb.b[2] = receivedBytes[1]; 
-        Xb.b[1] = receivedBytes[2]; 
-        Xb.b[0] = receivedBytes[3]; 
+        Xb.b[0] = receivedBytes[0]; 
+        Xb.b[1] = receivedBytes[1]; 
+        Xb.b[2] = receivedBytes[2]; 
+        Xb.b[3] = receivedBytes[3]; 
 
         bfloat Yb;
-        Yb.b[3] = receivedBytes[4]; 
-        Yb.b[2] = receivedBytes[5]; 
-        Yb.b[1] = receivedBytes[6]; 
-        Yb.b[0] = receivedBytes[7]; 
+        Yb.b[0] = receivedBytes[4]; 
+        Yb.b[1] = receivedBytes[5]; 
+        Yb.b[2] = receivedBytes[6]; 
+        Yb.b[3] = receivedBytes[7]; 
 
-        X = (float) X.f;
-        Y = (float) Y.f;
-
+        X = (float) Xb.f;
+        Y = (float) Yb.f;
     }
-    newData = false;
+    RawNewData = false;
 }
 
 

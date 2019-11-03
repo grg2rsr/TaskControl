@@ -2,13 +2,19 @@ import sys, os
 from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 import Widgets
-
+import utils
 import subprocess
 import datetime
 from pathlib import Path
 import shutil
-
+import socket 
+import struct
+import threading
+import queue
 import functions
+import serial
+import scipy as sp
+import time
 
 class Signals(QtCore.QObject):
     loadcell_data_available = QtCore.pyqtSignal(float,float) # FIXME see what is here the syntax
@@ -65,90 +71,136 @@ class BonsaiController(QtWidgets.QWidget):
 notes: the performance of this has to be verified. if harp bonsai downsamples to 100Hz
 alternative to this strategy: not emitting a signal but again writing to a local udp
 """
-import threading 
-import queue 
 
-# class LoadCellController(QtWidgets.QWidget):
-#     """ as this is entirely a processing 'node' it can have a central run method that is put in a seperate thread
-#     this run listens continuously on incoming data, on udp, rescales the values and puts it to other upd port 
-#     OR attempt first: put is on a signal 
-#     DisplayController then connects to this
-#     """
+class LoadCellController(QtWidgets.QWidget):
+    """ as this is entirely a processing 'node' it can have a central run method that is put in a seperate thread
+    this run listens continuously on incoming data, on udp, rescales the values and puts it to other upd port 
+    OR attempt first: put is on a signal 
+    DisplayController then connects to this
+    """
 
-#     def __init__(self, parent):
-#         super(LoadCellController, self).__init__(parent=parent, udp_addr, udp_port)
-#         self.setWindowFlags(QtCore.Qt.Window)
+    def __init__(self, parent):
+        super(LoadCellController, self).__init__(parent=parent)
+        print("LC initialized")
+        self.setWindowFlags(QtCore.Qt.Window)
+        self.parent = parent
         
-#         self.udp_info = (udp_addr, udp_port)
-
-#         self.Signals = Signals()
-#         self.Signals.process_signal.connect(self.process_data) # potential FIXME - put data on the signal?
-
-#         self.initUI()
-
-#     def initUI(self):
-#         self.setWindowTitle("Loadcell controller")
-#         self.Layout = QtWidgets.QHBoxLayout()
-#         self.setMinimumWidth(300) # FIXME hardcoded!
-
-#         # dummy button
-#         Btn = QtWidgets.QPushButton('dummy')
-
-#         self.Layout.addWidget(Btn)
-#         self.setLayout(self.Layout)
-#         self.show()        
-
-#     def Run(self):
-#         # needs to be called after the Run of BonsaiController running Harp
-#         addr,port = self.udp_info
-
-#         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-#         sock.bind((UDP_IP, UDP_PORT))
-#         sock.setblocking(False) # non-blocking mode: recv doesn't receive data, exception is raised
-#         # well this might in the end be a bit pointless: first I set it to non-blocking to raise and 
-#         # exception and then I let it pass w/o doing anything. Verify if necessary
+        self.task_config = parent.task_config['LoadCell']
         
-#         self.queue = queue.Queue()
+        self.Signals = Signals()
+        self.Signals.process_signal.connect(self.process_data) # potential FIXME - put data on the signal?
 
-#         def udp_reader(queue):
-#             while True:
-#                 try:
-#                     t,Fx,Fy = self.upd_connection.recv(int,float,float) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
-#                     F = sp.array([Fx,Fy])
-#                     queue.put((F,t))
-#                     self.Signals.process_signal.emit()
-#                     # TODO this could also be solved with passing the data with the signal instead of the queue,
-#                     # but this is expected to be faster as less overhead
+        self.initUI()
 
-#                 except BlockingIOError:
-#                     pass
+    def initUI(self):
+        self.setWindowTitle("Loadcell controller")
+        self.Layout = QtWidgets.QHBoxLayout()
+        self.setMinimumWidth(300) # FIXME hardcoded!
+
+        self.transmission = False
+        self.arduino_bridge = self.connect()
+
+        # dummy button
+        self.Btn = QtWidgets.QPushButton()
+        self.Btn.setText('transmission is off')
+        self.Btn.setCheckable(True)
+        # self.Btn.setStyleSheet("background-color:  red")
+        self.Btn.clicked.connect(self.toggle_transmission)
+
+        self.Layout.addWidget(self.Btn)
+        self.setLayout(self.Layout)
+        self.show()        
+
+    def toggle_transmission(self):
+        if self.transmission:
+            self.transmission = False
+            self.Btn.setText('transmission is off')
+        else: 
+            self.transmission = True
+            self.Btn.setText('transmission is on')
+
+    def connect(self):
+        """ establish connection with the arduino bridge """
         
-#         th_read = threading.Thread(target=udp_reader, args=(self.queue, ))
-#         th_read.start()
+        com_port = '/dev/ttyACM1'
+        baud_rate = 115200
+        try:
+            print("initializing serial port: "+com_port)
+            ser = serial.Serial(port=com_port, baudrate=baud_rate,timeout=2)
+            ser.setDTR(False) # reset: https://stackoverflow.com/questions/21073086/wait-on-arduino-auto-reset-using-pyserial
+            time.sleep(1) # sleep timeout length to drop all data
+            ser.flushInput() # 
+            ser.setDTR(True)
+            print(" ... done")
+            return ser
 
-#     def process_data(self):
-#         F,t = self.queue.get()
-#         # TODO physical cursor goes here
-#         x,y = F # for now just unpack
-#         self.Signals.loadcell_data_available.emit(x,y)
+        except:
+            print("could not connect to the Arduino bridge!")
+            sys.exit()
 
-#         # also: pack it and send it to the arduino
-#         # first attempt: use SET variable structure
-#         # if too slow: pass as bytes
-#         # if too slow ... see doc
-#         cmd = "SET X "+str(sp.around(x,5))
-#         self.parent.ArduinoController.send(cmd)
-#         cmd = "SET Y "+str(sp.around(y,5))
-#         self.parent.ArduinoController.send(cmd)
 
-#         # this will likely clog the line
-#         # started to implement raw reader (see raw_interface.cpp)
-#         # https://stackoverflow.com/a/36894176
+    def Run(self, folder):
+        # needs to be called after the Run of BonsaiController running Harp
 
-#         import struct
-#         # struct.pack("ff") etc
+        UDP_IP, UDP_PORT = self.task_config['udp'].split(':')
 
-#         self.parent.ArduinoController.send(cmd)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+        sock.bind((UDP_IP, int(UDP_PORT)))
+        sock.setblocking(False) # non-blocking mode: recv doesn't receive data, exception is raised
+        # well this might in the end be a bit pointless: first I set it to non-blocking to raise and 
+        # exception and then I let it pass w/o doing anything. Verify if necessary
+        
+        self.queue = queue.Queue()
+
+        def udp_reader(queue):
+            while True:
+                try:
+                    # t,Fx,Fy = self.upd_connection.recv(int,float,float) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
+                    # F = sp.array([Fx,Fy])
+                    # queue.put((F,t))
+
+                    raw_read = sock.recv(8) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
+
+                    # utils.debug_trace()
+                    Fx,Fy = struct.unpack('ff',raw_read)
+
+                    queue.put((Fx,Fy))
+
+                    self.Signals.process_signal.emit()
+                    # TODO this could also be solved with passing the data with the signal instead of the queue,
+                    # but this is expected to be faster as less overhead
+
+                except BlockingIOError:
+                    pass
+        
+        th_read = threading.Thread(target=udp_reader, args=(self.queue, ))
+        th_read.start()
+
+    def process_data(self):
+        Fx,Fy = self.queue.get()
+        # TODO physical cursor goes here
+        # x,y = F # for now just unpack
+        self.Signals.loadcell_data_available.emit(Fx,Fy)
+
+        # also: pack it and send it to the arduino
+        # first attempt: use SET variable structure
+        # if too slow: pass as bytes
+        # if too slow ... see doc
+        # cmd = "SET X "+str(sp.around(x,5))
+        # self.parent.ArduinoController.send(cmd)
+        # cmd = "SET Y "+str(sp.around(y,5))
+        # self.parent.ArduinoController.send(cmd)
+
+        # this will likely clog the line
+        # started to implement raw reader (see raw_interface.cpp)
+        # https://stackoverflow.com/a/36894176
+
+        if self.transmission:
+            # cmd = str.encode("<RAW")+struct.pack("ff",Fx,Fy)+str.encode(">")
+            # cmd = str.encode("<")+struct.pack("ff",Fx,Fy)+str.encode(">")
+            cmd = struct.pack("ff",Fx,Fy)
+            cmd = str.encode('[') + cmd + str.encode(']')
+            self.arduino_bridge.write(cmd)
 
 
         

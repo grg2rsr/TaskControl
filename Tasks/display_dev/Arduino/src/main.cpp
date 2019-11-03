@@ -1,5 +1,8 @@
 // a template for a FSM based task with a nonblocking state machine
 
+// think about this
+// https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
+
 #include <Arduino.h>
 #include <string.h>
 
@@ -7,6 +10,8 @@
 #include "interface.cpp"
 #include "raw_interface.cpp"
 #include "pin_map.h"
+
+
 
 /*
  _______   _______   ______  __          ___      .______          ___   .___________. __    ______   .__   __.      _______.
@@ -19,8 +24,8 @@
 */
 int current_state = IDLE_STATE;
 int last_state = INI_STATE;
-long t_exit;
-long state_entry = 2147483647; // max future - why?
+long t_state_duration;
+unsigned long state_entry = 2147483647; // max future - why?
 bool lick_in = false;
 
 /*
@@ -58,11 +63,11 @@ float expon_dist(float lam){
 
 */
 void log_current_state(){
-    Serial.println(String(current_state) + '\t' + String(millis()));
+    Serial.println(String(current_state) + '\t' + String(micros()));
 }
 
 void log_code(int code){
-    Serial.println(String(code) + '\t' + String(millis()));
+    Serial.println(String(code) + '\t' + String(micros()));
 }
 
 /*
@@ -106,7 +111,7 @@ void finite_state_machine() {
                 // log state entry
                 last_state = current_state;
                 log_current_state();
-                state_entry = millis();
+                state_entry = micros();
 
                 // entry actions
                 digitalWrite(REWARD_VALVE_PIN, HIGH);
@@ -118,7 +123,7 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (millis() - state_entry > reward_valve_time) {
+            if (micros() - state_entry > reward_valve_time) {
                 digitalWrite(REWARD_VALVE_PIN, LOW);
                 current_state = IDLE_STATE;
             }
@@ -129,13 +134,16 @@ void finite_state_machine() {
                 // log state entry
                 last_state = current_state;
                 log_current_state();
-                state_entry = millis();
+                state_entry = micros();
 
                 // entry actions
-                t_exit = state_entry + expon_dist(reward_poisson_lambda) * 1000;
+                // t_exit = state_entry + expon_dist(reward_poisson_lambda) * 1000;
+                t_state_duration = 10000;
+                // t_exit = state_entry + 10000;
+
                 // if (t_exit <= state_entry) {
                 //     Serial.println("it happened!");
-                //     t_exit = millis()+1;
+                //     t_exit = micros()+1;
                 //     current_state = REWARD_STATE;
                 // }
             }
@@ -146,7 +154,7 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (millis() > t_exit) {
+            if (micros() - state_entry > t_state_duration) {
                 current_state = REWARD_STATE;
             }
     }
@@ -162,7 +170,8 @@ void finite_state_machine() {
 
 */
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
+    Serial1.begin(115200);
     Serial.println("<Arduino is ready to receive commands>");
 }
 

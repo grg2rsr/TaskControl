@@ -178,11 +178,15 @@ class SettingsWidget(QtWidgets.QWidget):
             for section in self.task_config.sections():
                 if section == 'Arduino':
                     self.ArduinoController.Run(folder)
-                    print("initializing ArduinoController")
+                    print("running ArduinoController")
 
                 if section == 'Bonsai':
                     self.BonsaiController.Run(folder)
-                    print("initializing BonsaiController")
+                    print("running BonsaiController")
+
+                if section == 'LoadCell':
+                    self.LoadCellController.Run(folder)
+                    print("running BonsaiController")
 
                 # place here other controllers
 
@@ -247,6 +251,7 @@ class SettingsWidget(QtWidgets.QWidget):
                 if hasattr(self,'ArduinoController'):
                     self.ArduinoController.close()
                 self.ArduinoController = ArduinoWidgets.ArduinoController(self)
+                print("initializing ArduinoController")
                 # functions.tile_Widgets(self.ArduinoController, self,where='right',gap=25)
                 # functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=50)
                 # functions.scale_Widgets([self.ArduinoController.VariableController, self.ArduinoController])
@@ -255,9 +260,11 @@ class SettingsWidget(QtWidgets.QWidget):
                 if hasattr(self,'BonsaiController'):
                         self.BonsaiController.close()
                 self.BonsaiController = HardwareWidgets.BonsaiController(self)
+                print("initializing BonsaiController")
 
-            # if section == 'LoadCell': # here: this 
-            #     self.BonsaiController = HardwareWidgets.LoadCellController(self)
+            if section == 'LoadCell': # here: this 
+                self.LoadCellController = HardwareWidgets.LoadCellController(self)
+                print("initializing LoadCellController")
 
             # if section == 'Display':
             #     self.BonsaiController = HardwareWidgets.LoadCellController(self)

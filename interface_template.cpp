@@ -148,6 +148,11 @@ void processSerialData() {
             }
         }
 
+        // RAW
+        if (strcmp(mode,"RAW")==0){
+            // manually implement functions here
+        }
+
         newData = false;
     }
 }

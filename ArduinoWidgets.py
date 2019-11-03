@@ -169,6 +169,14 @@ class ArduinoController(QtWidgets.QWidget):
         else:
             print("Arduino is not connected")
 
+    def send_raw(self,bytestr):
+        """ sends bytestring """
+        if hasattr(self,'connection'):
+            self.connection.write(bytestr)
+            print(bytestr)
+        else:
+            print("Arduino is not connected")
+
     def run_btn_clicked(self):
         if self.RunBtn.isChecked():
             # after being activated

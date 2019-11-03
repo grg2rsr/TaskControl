@@ -1,4 +1,11 @@
 # 2do
+
+now: first is to make sure it runs again - checkout
+
+
+
+
+
 ## fix the const/newline/init_variables problem
 find a way that interface_generator.py does not need a copy of parse_arduino_vars ... 
 -> move it! con: makes it less standalone
