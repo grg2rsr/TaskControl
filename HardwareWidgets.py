@@ -22,6 +22,16 @@ class Signals(QtCore.QObject):
     loadcell_data_available = QtCore.pyqtSignal(float,float)
     udp_data_available = QtCore.pyqtSignal(float,float,float)
 
+"""
+.______     ______   .__   __.      _______.     ___       __
+|   _  \   /  __  \  |  \ |  |     /       |    /   \     |  |
+|  |_)  | |  |  |  | |   \|  |    |   (----`   /  ^  \    |  |
+|   _  <  |  |  |  | |  . `  |     \   \      /  /_\  \   |  |
+|  |_)  | |  `--'  | |  |\   | .----)   |    /  _____  \  |  |
+|______/   \______/  |__| \__| |_______/    /__/     \__\ |__|
+
+"""
+
 class BonsaiController(QtWidgets.QWidget):
     def __init__(self, parent):
         super(BonsaiController, self).__init__(parent=parent)
@@ -67,7 +77,15 @@ class BonsaiController(QtWidgets.QWidget):
 
     pass
 
+"""
+ __        ______        ___       _______   ______  _______  __       __
+|  |      /  __  \      /   \     |       \ /      ||   ____||  |     |  |
+|  |     |  |  |  |    /  ^  \    |  .--.  |  ,----'|  |__   |  |     |  |
+|  |     |  |  |  |   /  /_\  \   |  |  |  |  |     |   __|  |  |     |  |
+|  `----.|  `--'  |  /  _____  \  |  '--'  |  `----.|  |____ |  `----.|  `----.
+|_______| \______/  /__/     \__\ |_______/ \______||_______||_______||_______|
 
+"""
 class LoadCellController(QtWidgets.QWidget):
 
     def __init__(self, parent):
@@ -174,15 +192,15 @@ class LoadCellController(QtWidgets.QWidget):
         
         # physical cursor implementation
         m = 0.01 # mass
-        lam = 0.01 # friction factor
+        lam = 0.02 # friction factor
 
         # friction as a force acting in the opposite direction of F and proportional to v
         Ff = self.v_last*lam*-1
 
         Fges = Fm+Ff
 
-        dt = t - self.t_last
-        if dt > 0.02:
+        dt = t - self.t_last # to catch first data sample error
+        if dt > 0.05:
             dt = 0.01
 
         dv = Fges/m * dt
@@ -190,9 +208,11 @@ class LoadCellController(QtWidgets.QWidget):
         v = self.v_last + dv
 
         self.X = self.X_last + v * dt
+        self.X = sp.clip(self.X,-10,10)
 
         self.t_last = t
         self.v_last = v
+        self.X_last = self.X
 
         if self.transmission:
             # TODO check the order of these two - delays wrt timing
@@ -210,87 +230,68 @@ class LoadCellController(QtWidgets.QWidget):
         self.LoadCellMonitor.close()
         self.close()
 
-        
-class DisplayController(QtWidgets.QWidget):
-    """
-    brainstorm states:
-    idle: dark screen, discarding any command that is not setting it into run
-    run: listen to serial port and update the circle according to received x and y
-    """
+"""
+.___  ___.   ______   .__   __.  __  .___________.  ______   .______
+|   \/   |  /  __  \  |  \ |  | |  | |           | /  __  \  |   _  \
+|  \  /  | |  |  |  | |   \|  | |  | `---|  |----`|  |  |  | |  |_)  |
+|  |\/|  | |  |  |  | |  . `  | |  |     |  |     |  |  |  | |      /
+|  |  |  | |  `--'  | |  |\   | |  |     |  |     |  `--'  | |  |\  \----.
+|__|  |__|  \______/  |__| \__| |__|     |__|      \______/  | _| `._____|
 
+"""
+
+class LoadCellMonitor(QtWidgets.QWidget):
+    """
+    
+    """
     def __init__(self, parent):
-        super(DisplayController, self).__init__(parent=parent)
+        super(LoadCellMonitor, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
 
-        # here all the other stuff goes in from the computer downstairs ... 
+        parent.Signals.udp_data_available.connect(self.on_udp_data)
+        parent.Signals.loadcell_data_available.connect(self.on_lc_data)
 
-        parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
-        parent.LoadCellController.Signals.loadcell_data_available.connect(self.on_lc_data)
+        # self.N_history = 100
+        self.lc_raw_data = sp.zeros((300,3)) # FIXME hardcode hardcode
+        self.lc_data = sp.zeros((300,2))
 
-        self.state = "IDLE"
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle("Display controller")
+        self.setWindowTitle("LoadCell Monitor")
         self.Layout = QtWidgets.QHBoxLayout()
         self.setMinimumWidth(300) # FIXME hardcoded!
-        
-        # Display and aesthetics # TODO !!!
-        self.plot_widget = pg.PlotWidget()
-        self.plot_widget.disableAutoRange()
-        # self.plot_widget.hideAxis('left')
-        # self.plot_widget.hideAxis('bottom')
-        self.plot_widget.setYRange(-10,10)
-        self.plot_widget.setAspectLocked(True)
-        # self.plot_widget.showGrid(x=True,y=True,alpha=0.5)
-        self.plot_widget.showGrid(x=True,y=True)
-        self.cursor = self.plot_widget.plot(x=[0],y=[0], pen=(200,200,200), symbolBrush=(100,100,100), symbolPen='w',symbolSize=50)
 
-        self.Layout.addWidget(self.plot_widget)
+        # Display and aesthetics
+        self.PlotWindow = pg.GraphicsWindow(title="LoadCell raw data monitor")
+        self.PlotItemFB = self.PlotWindow.addPlot(title='front / back')
+        self.LineFB = self.PlotItemFB.plot(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,1], pen=(200,200,200))
+        self.LineFB_pp = pg.PlotCurveItem(x=self.lc_raw_data[:,0], y=self.lc_data[:,0], pen=(200,100,100))
+        self.PlotItemFB.addItem(self.LineFB_pp)
+
+        self.PlotWindow.nextRow()
+        self.PlotItemLR = self.PlotWindow.addPlot(title='left / right')
+        self.LineLR = self.PlotItemLR.plot(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,2], pen=(200,200,200))
+        self.LineLR_pp = pg.PlotCurveItem(x=self.lc_raw_data[:,0], y=self.lc_data[:,1], pen=(200,100,100))
+        self.PlotItemLR.addItem(self.LineLR_pp)
+
+        self.Layout.addWidget(self.PlotWindow)
         self.setLayout(self.Layout)
         self.show()        
 
-    def on_lc_data(self,x,y):
+    def on_udp_data(self,t,x,y):
         """ update display """
-        # if self.state == "RUN":
-        self.cursor.setData(x=[x],y=[y])
-        pass
+        self.lc_raw_data = sp.roll(self.lc_raw_data,-1,0)
+        self.lc_raw_data[-1,:] = [t,x,y]
+        self.LineFB.setData(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,1])
+        self.LineLR.setData(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,2])
 
-    def on_serial(self,line):
-        """
-        define how command sent from arduino to here should look like
-        GET SET CMD RET
-        OR: replys go flanked by [ ] // alrady used by sending raw data now
-        if line.split() ... 
-        """
-        if line.startswith('<') and line.endswith('>'):
-            read = line[1:-1].split(' ')
-            if read[0] == "RET" and read[1] == "DISPLAY":
-                if read[2] == "STATE":
-                    self.state = read[3]
-                    # self.set_state(read[3])
+    def on_lc_data(self,x,y):
+        self.lc_data = sp.roll(self.lc_data,-1,0)
+        self.lc_data[-1,:] = [x,y]
+        self.LineFB_pp.setData(x=self.lc_raw_data[:,0], y=self.lc_data[:,0])
+        self.LineLR_pp.setData(x=self.lc_raw_data[:,0], y=self.lc_data[:,1])
 
-                # if read[2] == "TARGET":
-                #     x,y = read[3:]
-                #     self.draw_target(x,y)
-                # if read[2] == "RGB":
-                #     R,G,B = read[3:]
-                #     self.set_monochrome(r,g,b)
-                # if read[2] == "GRATING":
-                #     f,phi,v = read[3:]
-                #     self.draw_grating(f,phi,v)
-                # if read[2] == "SYNC":
-                # flash corner for sync
-                
-        pass
-
-    def Run(self, folder):
-        # stub
-        pass
-
-    def closeEvent(self, event):
-        # stub
-        self.close()
 
 
 """ copy paste working script from the computer downstairs """
@@ -337,41 +338,99 @@ class DisplayController(QtWidgets.QWidget):
 # app.exec_()
 
 
-class LoadCellMonitor(QtWidgets.QWidget):
+
+
+
+
+"""
+ _______   __       _______..______    __          ___   ____    ____
+|       \ |  |     /       ||   _  \  |  |        /   \  \   \  /   /
+|  .--.  ||  |    |   (----`|  |_)  | |  |       /  ^  \  \   \/   /
+|  |  |  ||  |     \   \    |   ___/  |  |      /  /_\  \  \_    _/
+|  '--'  ||  | .----)   |   |  |      |  `----./  _____  \   |  |
+|_______/ |__| |_______/    | _|      |_______/__/     \__\  |__|
+
+"""
+        
+class DisplayController(QtWidgets.QWidget):
     """
-    
+    brainstorm states:
+    idle: dark screen, discarding any command that is not setting it into run
+    run: listen to serial port and update the circle according to received x and y
     """
+
     def __init__(self, parent):
-        super(LoadCellMonitor, self).__init__(parent=parent)
+        super(DisplayController, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
 
-        parent.Signals.udp_data_available.connect(self.on_udp_data)
-        # self.N_history = 100
-        self.lc_data = sp.zeros((100,2)) # FIXME hardcode hardcode
+        # here all the other stuff goes in from the computer downstairs ... 
 
+        parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
+        parent.LoadCellController.Signals.loadcell_data_available.connect(self.on_lc_data)
+
+        self.state = "IDLE"
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle("LoadCell Monitor")
+        self.setWindowTitle("Display controller")
         self.Layout = QtWidgets.QHBoxLayout()
         self.setMinimumWidth(300) # FIXME hardcoded!
+        
+        # Display and aesthetics # TODO !!!
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.disableAutoRange()
+        # self.plot_widget.hideAxis('left')
+        # self.plot_widget.hideAxis('bottom')
+        self.plot_widget.setYRange(-10,10)
+        self.plot_widget.setAspectLocked(True)
+        # self.plot_widget.showGrid(x=True,y=True,alpha=0.5)
+        self.plot_widget.showGrid(x=True,y=True)
+        self.cursor = self.plot_widget.plot(x=[self.parent().LoadCellController.X_last[0]],y=[self.parent().LoadCellController.X_last[1]], pen=(200,200,200), symbolBrush=(100,100,100), symbolPen='w',symbolSize=50)
 
-        # Display and aesthetics
-        self.PlotWindow = pg.GraphicsWindow(title="LoadCell raw data monitor")
-        self.PlotItemFB = self.PlotWindow.addPlot(title='front / back')
-        self.LineFB = self.PlotItemFB.plot(x=sp.arange(100), y=self.lc_data[:,0], pen=(200,200,200))
-        self.PlotWindow.nextRow()
-        self.PlotItemLR = self.PlotWindow.addPlot(title='left / right')
-        self.LineLR = self.PlotItemLR.plot(x=sp.arange(100), y=self.lc_data[:,1], pen=(200,200,200))
-
-        self.Layout.addWidget(self.PlotWindow)
+        self.Layout.addWidget(self.plot_widget)
         self.setLayout(self.Layout)
         self.show()        
 
-    def on_udp_data(self,t,x,y):
+    def on_lc_data(self,x,y):
         """ update display """
-        self.lc_data = sp.roll(self.lc_data,-1,0)
-        self.lc_data[-1,0] = x
-        self.lc_data[-1,1] = y
-        self.LineFB.setData(y=self.lc_data[:,0])
-        self.LineLR.setData(y=self.lc_data[:,1])
+        # if self.state == "RUN":
+        self.cursor.setData(x=[x],y=[y])
+        pass
+
+    def on_serial(self,line):
+        """
+        define how command sent from arduino to here should look like
+        GET SET CMD RET
+        OR: replys go flanked by [ ] // alrady used by sending raw data now
+        if line.split() ... 
+        """
+        if line.startswith('<') and line.endswith('>'):
+            read = line[1:-1].split(' ')
+            if read[0] == "RET" and read[1] == "DISPLAY":
+                if read[2] == "STATE":
+                    self.state = read[3]
+                    # self.set_state(read[3])
+
+                # if read[2] == "TARGET":
+                #     x,y = read[3:]
+                #     self.draw_target(x,y)
+                # if read[2] == "RGB":
+                #     R,G,B = read[3:]
+                #     self.set_monochrome(r,g,b)
+                # if read[2] == "GRATING":
+                #     f,phi,v = read[3:]
+                #     self.draw_grating(f,phi,v)
+                # if read[2] == "SYNC":
+                # flash corner for sync
+                
+        pass
+
+    def Run(self, folder):
+        # stub
+        # 
+        pass
+
+    def closeEvent(self, event):
+        # stub
+        self.close()
+
