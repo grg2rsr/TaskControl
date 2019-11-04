@@ -93,8 +93,10 @@ class LoadCellController(QtWidgets.QWidget):
         self.Signals.process_signal.connect(self.process_data) # potential FIXME - put data on the signal?
 
         self.X_last = sp.zeros(2)
-        self.t_last = 0
         self.v_last = sp.zeros(2)
+        self.t_last = 0
+
+        self.Monitor = LoadCellMonitor(self)
 
         self.initUI()
 
@@ -192,26 +194,24 @@ class LoadCellController(QtWidgets.QWidget):
         m = 1 # mass
         lam = 0.9 # friction factor
 
+        # friction as a force acting in the opposite direction of F and proportional to v
+        Ff = self.v_last*lam*-1
+
+        Fges = Fm+Ff
+
         dt = t - self.t_last
-        dv = Fm/m * dt
+        if dt > 0.02:
+            dt = 0.01
+            print('yeah')
+
+        dv = Fges/m * dt
 
         v = self.v_last + dv
-
-        # friction
-        Ff = v*-1*lam
-        dv = Ff/m * dt
-
-        v = v + dv
 
         self.X = self.X_last + v * dt
 
         self.t_last = t
         self.v_last = v
-
-        
-        # friction as a force acting in the opposite direction of F and proportional to v
-        # F_f = mu * v
-        # F_ges = F_f + F_meas
 
         if self.transmission:
             # TODO check the order of these two - delays wrt timing
@@ -348,3 +348,58 @@ class DisplayController(QtWidgets.QWidget):
 # Plot_Cont.plot(x=[0],y=[0], pen=(200,200,200), symbolBrush=(100,100,100), symbolPen='w',symbolSize=50)
 
 # app.exec_()
+
+
+class LoadCellMonitor(QtWidgets.QWidget):
+    """
+
+    """
+    def __init__(self, parent):
+        super(LoadCellMonitor, self).__init__(parent=parent)
+        self.setWindowFlags(QtCore.Qt.Window)
+
+        parent.Signals.loadcell_data_available.connect(self.on_lc_data)
+        # self.N_history = 100
+        self.lc_data = sp.zeros((100,2)) # FIXME hardcode hardcode
+
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle("LoadCell Monitor")
+        self.Layout = QtWidgets.QHBoxLayout()
+        self.setMinimumWidth(300) # FIXME hardcoded!
+
+        # Display and aesthetics
+        self.PlotWindow = pg.GraphicsWindow(title="LoadCell raw data monitor")
+        self.PlotItemFB = self.PlotWindow.addPlot(title='front / back')
+        self.LineFB = self.PlotItemFB.plot(x=sp.arange(100), y=self.lc_data[:,0], pen=(200,200,200))
+
+        self.PlotWindow.nextRow()
+        self.PlotItemLR = self.PlotWindow.addPlot(title='left / right')
+        self.LineLR = self.PlotItemLR.plot(x=sp.arange(100), y=self.lc_data[:,1], pen=(200,200,200))
+        # self.lr_plot = self.PlotWindow.addPlot(title='left / right')
+        # self.lf_line = self.lr_plot.plot(x=range(100),y=self.lc_data[:,1], pen=(200,200,200))
+
+        # self.plot_widget = pg.PlotWidget()
+        # self.plot_widget.addPlot()
+        # self.plot_widget.disableAutoRange()
+        # self.plot_widget.hideAxis('left')
+        # self.plot_widget.hideAxis('bottom')
+        # self.plot_widget.setYRange(-10,10)
+        # self.plot_widget.setAspectLocked(True)
+        # self.plot_widget.showGrid(x=True,y=True,alpha=0.5)
+        # self.plot_widget.showGrid(x=True,y=True)
+        # self.cursor = self.plot_widget.plot(x=[0],y=[0], pen=(200,200,200), symbolBrush=(100,100,100), symbolPen='w',symbolSize=50)
+
+        self.Layout.addWidget(self.PlotWindow)
+        self.setLayout(self.Layout)
+        self.show()        
+
+    def on_lc_data(self,x,y):
+        """ update display """
+        self.lc_data = sp.roll(self.lc_data,-1,0)
+        self.lc_data[-1,0] = x
+        self.lc_data[-1,1] = y
+        self.LineFB.setData(y=self.lc_data[:,0])
+        self.LineLR.setData(y=self.lc_data[:,1])
+        # self.fb_line.setData(y=self.lc_data[:,1])

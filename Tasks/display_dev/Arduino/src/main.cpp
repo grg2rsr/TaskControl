@@ -1,7 +1,7 @@
 // a template for a FSM based task with a nonblocking state machine
 
 // think about this
-// https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
+
 
 #include <Arduino.h>
 #include <string.h>
@@ -101,6 +101,11 @@ void read_lick_IR(){
 |  |    .----)   |   |  |  |  |
 |__|    |_______/    |__|  |__|
 
+to be taken into account when these are written 
+https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
+exit condition has to include condition || last_state != current_state
+so it can get called when state is manually changed
+will not work as exit functions contain transition to next state ... 
 */
 void finite_state_machine() {
     switch (current_state) {
