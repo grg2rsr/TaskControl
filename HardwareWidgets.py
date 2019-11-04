@@ -19,8 +19,8 @@ import time
 import pyqtgraph as pg 
 
 class Signals(QtCore.QObject):
-    loadcell_data_available = QtCore.pyqtSignal(float,float) # FIXME see what is here the syntax
-    process_signal = QtCore.pyqtSignal()
+    loadcell_data_available = QtCore.pyqtSignal(float,float)
+    udp_data_available = QtCore.pyqtSignal(float,float,float)
 
 class BonsaiController(QtWidgets.QWidget):
     def __init__(self, parent):
@@ -90,7 +90,7 @@ class LoadCellController(QtWidgets.QWidget):
         self.task_config = parent.task_config['LoadCell']
         
         self.Signals = Signals()
-        self.Signals.process_signal.connect(self.process_data) # potential FIXME - put data on the signal?
+        self.Signals.udp_data_available.connect(self.process_data) # potential FIXME - put data on the signal?
 
         self.X_last = sp.zeros(2)
         self.v_last = sp.zeros(2)
@@ -160,7 +160,7 @@ class LoadCellController(QtWidgets.QWidget):
         # well this might in the end be a bit pointless: first I set it to non-blocking to raise and 
         # exception and then I let it pass w/o doing anything. Verify if necessary
         
-        self.queue = queue.Queue()
+        # self.queue = queue.Queue()
 
         def udp_reader(queue):
             while True:
@@ -174,9 +174,9 @@ class LoadCellController(QtWidgets.QWidget):
                     # utils.debug_trace()
                     t,Fx,Fy = struct.unpack('fff',raw_read)
 
-                    queue.put((t,sp.array([Fx,Fy])))
+                    # queue.put((t,sp.array([Fx,Fy])))
 
-                    self.Signals.process_signal.emit()
+                    self.Signals.udp_data_available.emit(t,Fx,Fy)
                     # TODO this could also be solved with passing the data with the signal instead of the queue,
                     # but this is intuitively xpected to be faster as less overhead
                     # and nobody needs to have access to the raw data anyways (really?)
@@ -187,8 +187,9 @@ class LoadCellController(QtWidgets.QWidget):
         th_read = threading.Thread(target=udp_reader, args=(self.queue, ))
         th_read.start()
 
-    def process_data(self):
-        t,Fm = self.queue.get()
+    def process_data(self,t,Fx,Fy):
+        # t,Fm = self.queue.get()
+        Fm = sp.array([Fx,Fy])
         
         # physical cursor implementation
         m = 1 # mass
@@ -358,7 +359,7 @@ class LoadCellMonitor(QtWidgets.QWidget):
         super(LoadCellMonitor, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
 
-        parent.Signals.loadcell_data_available.connect(self.on_lc_data)
+        parent.Signals.udp_data_available.connect(self.on_udp_data)
         # self.N_history = 100
         self.lc_data = sp.zeros((100,2)) # FIXME hardcode hardcode
 
@@ -395,7 +396,7 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.setLayout(self.Layout)
         self.show()        
 
-    def on_lc_data(self,x,y):
+    def on_udp_data(self,t,x,y):
         """ update display """
         self.lc_data = sp.roll(self.lc_data,-1,0)
         self.lc_data[-1,0] = x
