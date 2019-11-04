@@ -35,7 +35,6 @@ class BonsaiController(QtWidgets.QWidget):
 
         # dummy button
         Btn = QtWidgets.QPushButton('dummy')
-        # sketch selector? not really wanted actually ... 
         
         self.Layout.addWidget(Btn)
         self.setLayout(self.Layout)
@@ -49,7 +48,7 @@ class BonsaiController(QtWidgets.QWidget):
         task_config = self.parent().task_config['Bonsai']
         task_folder = os.path.join(self.parent().profile['tasks_folder'], task)
        
-        fname = animal+'.raw'
+        fname = animal+'.raw' # FIXME there is a thing with _ and 0 appended, check this
         
         folder = Path(folder)
         out_path = folder.joinpath(animal+'.raw') # this needs to be fixed in bonsai
@@ -69,17 +68,7 @@ class BonsaiController(QtWidgets.QWidget):
     pass
 
 
-"""
-notes: the performance of this has to be verified. if harp bonsai downsamples to 100Hz
-alternative to this strategy: not emitting a signal but again writing to a local udp
-"""
-
 class LoadCellController(QtWidgets.QWidget):
-    """ as this is entirely a processing 'node' it can have a central run method that is put in a seperate thread
-    this run listens continuously on incoming data, on udp, rescales the values and puts it to other upd port 
-    OR attempt first: put is on a signal 
-    DisplayController then connects to this
-    """
 
     def __init__(self, parent):
         super(LoadCellController, self).__init__(parent=parent)
@@ -96,7 +85,7 @@ class LoadCellController(QtWidgets.QWidget):
         self.v_last = sp.zeros(2)
         self.t_last = 0
 
-        self.Monitor = LoadCellMonitor(self)
+        self.LoadCellMonitor = LoadCellMonitor(self)
 
         self.initUI()
 
@@ -105,14 +94,16 @@ class LoadCellController(QtWidgets.QWidget):
         self.Layout = QtWidgets.QHBoxLayout()
         self.setMinimumWidth(300) # FIXME hardcoded!
 
-        self.transmission = False
+        # FIXME this will likely be replaced in the future by a dedicated UART
+        # from the perspective of this program the two are identical: serial connections
         self.arduino_bridge = self.connect()
 
-        # dummy button
+        # transmission toggle button
+        self.transmission = False
         self.Btn = QtWidgets.QPushButton()
         self.Btn.setText('transmission is off')
         self.Btn.setCheckable(True)
-        # self.Btn.setStyleSheet("background-color:  red")
+        self.Btn.setStyleSheet("background-color:  gray")
         self.Btn.clicked.connect(self.toggle_transmission)
 
         self.Layout.addWidget(self.Btn)
@@ -123,9 +114,11 @@ class LoadCellController(QtWidgets.QWidget):
         if self.transmission:
             self.transmission = False
             self.Btn.setText('transmission is off')
+            self.Btn.setStyleSheet("background-color:  gray")
         else: 
             self.transmission = True
             self.Btn.setText('transmission is on')
+            self.Btn.setStyleSheet("background-color:  green")
 
     def connect(self):
         """ establish connection with the arduino bridge """
@@ -160,40 +153,28 @@ class LoadCellController(QtWidgets.QWidget):
         # well this might in the end be a bit pointless: first I set it to non-blocking to raise and 
         # exception and then I let it pass w/o doing anything. Verify if necessary
         
-        # self.queue = queue.Queue()
-
-        def udp_reader(queue):
+        def udp_reader():
             while True:
                 try:
-                    # t,Fx,Fy = self.upd_connection.recv(int,float,float) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
-                    # F = sp.array([Fx,Fy])
-                    # queue.put((F,t))
-
+                    # read data and publish it via a qt signal
                     raw_read = sock.recv(12) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
-
-                    # utils.debug_trace()
                     t,Fx,Fy = struct.unpack('fff',raw_read)
-
-                    # queue.put((t,sp.array([Fx,Fy])))
-
                     self.Signals.udp_data_available.emit(t,Fx,Fy)
-                    # TODO this could also be solved with passing the data with the signal instead of the queue,
-                    # but this is intuitively xpected to be faster as less overhead
-                    # and nobody needs to have access to the raw data anyways (really?)
 
                 except BlockingIOError:
                     pass
         
-        th_read = threading.Thread(target=udp_reader, args=(self.queue, ))
+        th_read = threading.Thread(target=udp_reader)
         th_read.start()
 
     def process_data(self,t,Fx,Fy):
-        # t,Fm = self.queue.get()
+        # FIXME this needs to be tested / reworked ... 
+
         Fm = sp.array([Fx,Fy])
         
         # physical cursor implementation
-        m = 1 # mass
-        lam = 0.9 # friction factor
+        m = 0.01 # mass
+        lam = 0.01 # friction factor
 
         # friction as a force acting in the opposite direction of F and proportional to v
         Ff = self.v_last*lam*-1
@@ -203,7 +184,6 @@ class LoadCellController(QtWidgets.QWidget):
         dt = t - self.t_last
         if dt > 0.02:
             dt = 0.01
-            print('yeah')
 
         dv = Fges/m * dt
 
@@ -223,6 +203,12 @@ class LoadCellController(QtWidgets.QWidget):
             cmd = str.encode('[') + cmd + str.encode(']')
             self.arduino_bridge.write(cmd)
 
+    def closeEvent(self, event):
+        # if serial connection is open, close it
+        if hasattr(self,'arduino_bridge'):
+            self.arduino_bridge.close()
+        self.LoadCellMonitor.close()
+        self.close()
 
         
 class DisplayController(QtWidgets.QWidget):
@@ -248,12 +234,8 @@ class DisplayController(QtWidgets.QWidget):
         self.setWindowTitle("Display controller")
         self.Layout = QtWidgets.QHBoxLayout()
         self.setMinimumWidth(300) # FIXME hardcoded!
-
-        # dummy button
-        Btn = QtWidgets.QPushButton('dummy')
-        # sketch selector? not really wanted actually ... 
         
-        # Display and aesthetics
+        # Display and aesthetics # TODO !!!
         self.plot_widget = pg.PlotWidget()
         self.plot_widget.disableAutoRange()
         # self.plot_widget.hideAxis('left')
@@ -264,7 +246,6 @@ class DisplayController(QtWidgets.QWidget):
         self.plot_widget.showGrid(x=True,y=True)
         self.cursor = self.plot_widget.plot(x=[0],y=[0], pen=(200,200,200), symbolBrush=(100,100,100), symbolPen='w',symbolSize=50)
 
-        self.Layout.addWidget(Btn)
         self.Layout.addWidget(self.plot_widget)
         self.setLayout(self.Layout)
         self.show()        
@@ -304,7 +285,12 @@ class DisplayController(QtWidgets.QWidget):
         pass
 
     def Run(self, folder):
+        # stub
         pass
+
+    def closeEvent(self, event):
+        # stub
+        self.close()
 
 
 """ copy paste working script from the computer downstairs """
@@ -353,7 +339,7 @@ class DisplayController(QtWidgets.QWidget):
 
 class LoadCellMonitor(QtWidgets.QWidget):
     """
-
+    
     """
     def __init__(self, parent):
         super(LoadCellMonitor, self).__init__(parent=parent)
@@ -374,23 +360,9 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.PlotWindow = pg.GraphicsWindow(title="LoadCell raw data monitor")
         self.PlotItemFB = self.PlotWindow.addPlot(title='front / back')
         self.LineFB = self.PlotItemFB.plot(x=sp.arange(100), y=self.lc_data[:,0], pen=(200,200,200))
-
         self.PlotWindow.nextRow()
         self.PlotItemLR = self.PlotWindow.addPlot(title='left / right')
         self.LineLR = self.PlotItemLR.plot(x=sp.arange(100), y=self.lc_data[:,1], pen=(200,200,200))
-        # self.lr_plot = self.PlotWindow.addPlot(title='left / right')
-        # self.lf_line = self.lr_plot.plot(x=range(100),y=self.lc_data[:,1], pen=(200,200,200))
-
-        # self.plot_widget = pg.PlotWidget()
-        # self.plot_widget.addPlot()
-        # self.plot_widget.disableAutoRange()
-        # self.plot_widget.hideAxis('left')
-        # self.plot_widget.hideAxis('bottom')
-        # self.plot_widget.setYRange(-10,10)
-        # self.plot_widget.setAspectLocked(True)
-        # self.plot_widget.showGrid(x=True,y=True,alpha=0.5)
-        # self.plot_widget.showGrid(x=True,y=True)
-        # self.cursor = self.plot_widget.plot(x=[0],y=[0], pen=(200,200,200), symbolBrush=(100,100,100), symbolPen='w',symbolSize=50)
 
         self.Layout.addWidget(self.PlotWindow)
         self.setLayout(self.Layout)
@@ -403,4 +375,3 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.lc_data[-1,1] = y
         self.LineFB.setData(y=self.lc_data[:,0])
         self.LineLR.setData(y=self.lc_data[:,1])
-        # self.fb_line.setData(y=self.lc_data[:,1])
