@@ -190,7 +190,7 @@ class LoadCellController(QtWidgets.QWidget):
         
         # physical cursor implementation
         m = 1 # mass
-        lam = 0.5 # friction factor
+        lam = 0.9 # friction factor
 
         dt = t - self.t_last
         dv = Fm/m * dt
