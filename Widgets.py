@@ -127,6 +127,13 @@ class SettingsWidget(QtWidgets.QWidget):
         
         if hasattr(self, 'BonsaiController'):
             functions.tile_Widgets(self.BonsaiController, self.ArduinoController, where='right',gap=25)
+        
+        if hasattr(self, 'LoadCellController'):
+            functions.tile_Widgets(self.LoadCellController, self.ArduinoController, where='right',gap=25)
+            functions.tile_Widgets(self.LoadCellController.LoadCellMonitor, self.LoadCellController, where='below',gap=50)
+
+        if hasattr(self, 'DisplayController'):
+            functions.tile_Widgets(self.DisplayController, self.LoadCellController, where='right',gap=25)
 
         # needs to be called - again
         functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=50)
@@ -134,7 +141,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
     def update_plot(self):
         # TODO deal with this entire functionality
-        # https: // matplotlib.org/2.1.0/gallery/user_interfaces/embedding_in_qt5_sgskip.html
+        # https://matplotlib.org/2.1.0/gallery/user_interfaces/embedding_in_qt5_sgskip.html
         self.PlotWidget = VisWidgets.MyMplCanvas(self)
 
     def closeEvent(self,event):
@@ -143,6 +150,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # FIXME this works if arduino is not connected!
         # if it is, Arduinocontroller is not taken down
+        
         # FIXME this can be written generally for all controllers
         if hasattr(self, 'ArduinoController'):
             self.ArduinoController.close()

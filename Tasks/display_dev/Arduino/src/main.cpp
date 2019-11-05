@@ -21,8 +21,8 @@
 |_______/ |_______| \______||_______/__/     \__\ | _| `._____/__/     \__\  |__|     |__|  \______/  |__| \__| |_______/
 
 */
-int current_state = IDLE_STATE;
-int last_state = INI_STATE;
+int current_state = IDLE_STATE; // starting at this
+int last_state = INI_STATE; // whatever other state
 unsigned long t_state_duration;
 unsigned long state_entry = 2147483647; // max future - why?
 bool lick_in = false;

@@ -547,6 +547,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
     def update(self,line):
         self.lines.append(line)
 
+        # TODO make sure this doesn't stay like this ... 
         history_len = 100 # FIXME expose this property? or remove it. for now for debugging
 
         # print lines in window

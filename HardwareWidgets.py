@@ -217,7 +217,7 @@ class LoadCellController(QtWidgets.QWidget):
         if self.transmission:
             # TODO check the order of these two - delays wrt timing
             # emit signal for DisplayController
-            self.Signals.loadcell_data_available.emit(self.X[0],self.X[1])
+            self.Signals.loadcell_data_available.emit(*self.X)
             # send coordinates to Arduino via second serial (currently arduino uart bridge)
             cmd = struct.pack("ff",self.X[0],self.X[1])
             cmd = str.encode('[') + cmd + str.encode(']')
@@ -336,11 +336,6 @@ class LoadCellMonitor(QtWidgets.QWidget):
 # Plot_Cont.plot(x=[0],y=[0], pen=(200,200,200), symbolBrush=(100,100,100), symbolPen='w',symbolSize=50)
 
 # app.exec_()
-
-
-
-
-
 
 """
  _______   __       _______..______    __          ___   ____    ____
