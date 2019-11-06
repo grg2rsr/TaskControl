@@ -1,12 +1,8 @@
-// a template for a FSM based task with a nonblocking state machine
-
-// think about this
-
-
 #include <Arduino.h>
 #include <string.h>
+#include <Tone.h>
 
-#include <event_codes.h>
+#include <event_codes.h> // <>?
 #include "interface.cpp"
 #include "raw_interface.cpp"
 #include "pin_map.h"
@@ -21,15 +17,16 @@
 |_______/ |_______| \______||_______/__/     \__\ | _| `._____/__/     \__\  |__|     |__|  \______/  |__| \__| |_______/
 
 */
-int current_state = HOLD_STATE; // starting at this
+int current_state = TRIAL_AVAILABLE_STATE; // starting at this
 int last_state = ITI_STATE; // whatever other state
-unsigned long max_future = 2147483647;
-unsigned long state_entry = max_future
-// this is max future actually 4294967295
+unsigned long max_future = 4294967295; // 2**32 -1
+unsigned long state_entry = max_future;
+unsigned long current_fixation_time = 0;
 
 // flow control flags
 bool lick_in = false;
 bool on_target = false;
+unsigned long target_enter_time = max_future;
 
 // distance between target and cursor
 float D; 
@@ -39,6 +36,9 @@ float D_Y;
 // target coordinates (could also be exposed to have them offcenter)
 float T_X = 0.0;
 float T_Y = 0.0;
+
+// speakers
+Tone tone_controller;
 
 /*
 .___  ___.      ___   .___________. __    __
@@ -86,6 +86,10 @@ void log_code(int code){
     Serial.println(String(code) + '\t' + String(micros()));
 }
 
+// void log_msg(String Message){
+
+// }
+
 /*
      _______. _______ .__   __.      _______.  ______   .______          _______.
     /       ||   ____||  \ |  |     /       | /  __  \  |   _  \        /       |
@@ -107,6 +111,8 @@ void read_lick(){
   }
 }
 
+
+
 void process_LoadCell(){
     // calculate distance between target and current cursor pos
     D_X = T_X - X;
@@ -115,6 +121,7 @@ void process_LoadCell(){
 
     if (D < max_dist && on_target == false){
         on_target = true;
+        target_enter_time = micros();
         log_code(ON_TARGET_ON);
     }
 
@@ -186,6 +193,7 @@ void finite_state_machine() {
             //state entry
             if (current_state != last_state){
                 state_entry_common();
+                // turn screen on or similar
             }
 
             // update
@@ -194,13 +202,13 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (micros() - state_entry > ...) {
+            if (on_target == true && micros() - target_enter_time > trial_entry_fix_dur) {
                 // successfully withhold movement for enough time:
-                // go to reward available state
-                current_state = HOLD_STATE;
+                // go to fixation period
+                current_state = FIXATE_STATE;
             }
 
-        case HOLD_STATE:
+        case FIXATE_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
@@ -221,10 +229,14 @@ void finite_state_machine() {
                     current_state = TIMEOUT_STATE;
                     log_code(BROKEN_FIXATION);
                 }
+                // else record current fixation duration
+                current_fixation_time = micros() - state_entry;
+                // potentially: progress bar report for training
+                // then shut off to make sure they are timing
             }
 
             // exit condition
-            if (micros() - state_entry > hold_dur) {
+            if (micros() - state_entry > fix_dur) {
                 // successfully withhold movement for enough time:
                 // go to reward available state
                 current_state = REWARD_AVAILABLE_STATE;
@@ -236,7 +248,8 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 // entry actions
-                // play sound
+                // play sound check up on nonblocking tone library
+                tone_controller.play(reward_tone_freq, 200);
 
             }
 
@@ -277,7 +290,7 @@ void finite_state_machine() {
 
             // exit condition
             if (micros() - state_entry > ITI_dur) {
-                // after ITI, transit to hold
+                // after ITI, transit to trial available
                 current_state = TRIAL_AVAILABLE_STATE;
             }
 
@@ -288,7 +301,7 @@ void finite_state_machine() {
 
                 // entry actions
                 // play punish sound
-
+                tone_controller.play(punish_tone_freq, 200);
             }
 
             // update
@@ -298,7 +311,7 @@ void finite_state_machine() {
 
             // exit condition
             if (micros() - state_entry > timeout_dur) {
-                // after ITI, transit to hold
+                // after timeout, transit to trial available again
                 current_state = TRIAL_AVAILABLE_STATE;
             }
     }
@@ -316,6 +329,8 @@ void finite_state_machine() {
 void setup() {
     Serial.begin(115200);
     Serial1.begin(115200);
+    tone_controller.begin(SPEAKER_PIN);
+
     Serial.println("<Arduino is ready to receive commands>");
 }
 
@@ -326,6 +341,7 @@ void loop() {
 
         // sample sensors
         read_lick();
+        process_LoadCell();
 
         // valve controllers
         RewardValveController();
