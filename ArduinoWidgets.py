@@ -545,6 +545,16 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         functions.scale_Widgets([self, self.parent()])
 
     def update(self,line):
+        # utils.debug_trace()
+        # if decode
+        try:
+            code = line.split('\t')[0]
+            # decoded = self.parent().VariableController.Df.loc[code]['name']
+            decoded = self.parent().StateMachineMonitor.code_map[code]
+            line = '\t'.join([decoded,line.split('\t')[1]])
+        except:
+            pass
+
         self.lines.append(line)
 
         # TODO make sure this doesn't stay like this ... 

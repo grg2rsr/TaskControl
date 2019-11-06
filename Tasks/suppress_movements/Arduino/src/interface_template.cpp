@@ -13,6 +13,8 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 
+int current_state = 0;
+
 void getSerialData() {
     // check if command data is available and if yes read it
     // all commands are flanked by <>
@@ -125,8 +127,9 @@ void processSerialData() {
                 dtype = "int";
             }
 
+            // for the state machine "force state" buttons
             if (strcmp(varname,"current_state")==0){
-                reward_valve_time = atoi(varvalue);
+                current_state = atoi(varvalue);
             }
 
             // INSERT_SETTERS

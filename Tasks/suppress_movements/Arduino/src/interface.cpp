@@ -13,6 +13,8 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 
+int current_state; // fwd declare
+
 void getSerialData() {
     // check if command data is available and if yes read it
     // all commands are flanked by <>
@@ -79,12 +81,40 @@ void processSerialData() {
 
             // INSERT_GETTERS
 
-            if (strcmp(varname,"reward_valve_time")==0){
-                Serial.println(String(varname)+String("=")+String(reward_valve_time));
+            if (strcmp(varname,"fix_dur")==0){
+                Serial.println(String(varname)+String("=")+String(fix_dur));
             }
     
-            if (strcmp(varname,"reward_poisson_lambda")==0){
-                Serial.println(String(varname)+String("=")+String(reward_poisson_lambda));
+            if (strcmp(varname,"trial_entry_fix_dur")==0){
+                Serial.println(String(varname)+String("=")+String(trial_entry_fix_dur));
+            }
+    
+            if (strcmp(varname,"max_dist")==0){
+                Serial.println(String(varname)+String("=")+String(max_dist));
+            }
+    
+            if (strcmp(varname,"reward_valve_dur")==0){
+                Serial.println(String(varname)+String("=")+String(reward_valve_dur));
+            }
+    
+            if (strcmp(varname,"reward_available_dur")==0){
+                Serial.println(String(varname)+String("=")+String(reward_available_dur));
+            }
+    
+            if (strcmp(varname,"ITI_dur")==0){
+                Serial.println(String(varname)+String("=")+String(ITI_dur));
+            }
+    
+            if (strcmp(varname,"timeout_dur")==0){
+                Serial.println(String(varname)+String("=")+String(timeout_dur));
+            }
+    
+            if (strcmp(varname,"reward_tone_freq")==0){
+                Serial.println(String(varname)+String("=")+String(reward_tone_freq));
+            }
+    
+            if (strcmp(varname,"punish_tone_freq")==0){
+                Serial.println(String(varname)+String("=")+String(punish_tone_freq));
             }
     
         }
@@ -133,21 +163,16 @@ void processSerialData() {
                 dtype = "int";
             }
 
+            // for the state machine "force state" buttons
             if (strcmp(varname,"current_state")==0){
-                reward_valve_time = atoi(varvalue);
+                current_state = atoi(varvalue);
             }
 
             // INSERT_SETTERS
 
-            if (dtype == "int") {
-                if (strcmp(varname,"reward_valve_time")==0){
-                    reward_valve_time = atoi(varvalue);
-                }
-            }
-    
             if (dtype == "float") {
-                if (strcmp(varname,"reward_poisson_lambda")==0){
-                    reward_poisson_lambda = atof(varvalue);
+                if (strcmp(varname,"max_dist")==0){
+                    max_dist = atof(varvalue);
                 }
             }
     

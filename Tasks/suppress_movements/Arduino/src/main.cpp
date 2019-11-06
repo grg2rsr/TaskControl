@@ -17,7 +17,7 @@
 
 */
 
-int current_state = TRIAL_AVAILABLE_STATE; // starting at this
+// int current_state = TRIAL_AVAILABLE_STATE; // starting at this, aleady declared in interface.cpp
 int last_state = ITI_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
@@ -27,6 +27,7 @@ unsigned long current_fixation_time = 0;
 bool lick_in = false;
 bool on_target = false;
 unsigned long target_enter_time = max_future;
+bool reward_collected = false;
 
 // distance between target and cursor
 float D; 
@@ -62,7 +63,7 @@ unsigned long tone_duration = 200;
 // }
 
 float euclid_dist(float X, float Y){
-    return sqrt(X**2 + Y**2);
+    return sqrt(pow(X,2) + pow(Y,2));
 }
 
 // TODO

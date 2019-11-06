@@ -130,6 +130,14 @@ def run(variables_path):
             }
     """
 
+    long_setter_template = """
+            if (dtype == "long") {
+                if (strcmp(varname,"VARNAME")==0){
+                    VARNAME = atol(varvalue);
+                }
+            }
+    """
+
     float_setter_template = """
             if (dtype == "float") {
                 if (strcmp(varname,"VARNAME")==0){
@@ -163,6 +171,14 @@ def run(variables_path):
     except KeyError:
         # no ints found
         pass
+
+    try:
+        for i, row in init_vars.groupby('dtype').get_group('long').iterrows():
+            all_setters.append(long_setter_template.replace("VARNAME",row['name']))
+    except KeyError:
+        # no longs found
+        pass
+
 
     try:
         for i, row in init_vars.groupby('dtype').get_group('float').iterrows():
