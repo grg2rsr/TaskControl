@@ -7,7 +7,6 @@
 #include "raw_interface.cpp"
 #include "pin_map.h"
 
-
 /*
  _______   _______   ______  __          ___      .______          ___   .___________. __    ______   .__   __.      _______.
 |       \ |   ____| /      ||  |        /   \     |   _  \        /   \  |           ||  |  /  __  \  |  \ |  |     /       |
@@ -17,6 +16,7 @@
 |_______/ |_______| \______||_______/__/     \__\ | _| `._____/__/     \__\  |__|     |__|  \______/  |__| \__| |_______/
 
 */
+
 int current_state = TRIAL_AVAILABLE_STATE; // starting at this
 int last_state = ITI_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
@@ -39,6 +39,7 @@ float T_Y = 0.0;
 
 // speakers
 Tone tone_controller;
+unsigned long tone_duration = 200;
 
 /*
 .___  ___.      ___   .___________. __    __
@@ -90,6 +91,15 @@ void log_code(int code){
 
 // }
 
+// for future implementation: do all time based things on float base?
+// should be the same in memory, one operation more per micros() call
+// more human readable times to set
+// take care that vars taken from the UI are cast correctly
+
+// float now(){
+//     return (float) micros() / 1000.0;
+// }
+
 /*
      _______. _______ .__   __.      _______.  ______   .______          _______.
     /       ||   ____||  \ |  |     /       | /  __  \  |   _  \        /       |
@@ -111,8 +121,6 @@ void read_lick(){
   }
 }
 
-
-
 void process_LoadCell(){
     // calculate distance between target and current cursor pos
     D_X = T_X - X;
@@ -129,7 +137,6 @@ void process_LoadCell(){
         on_target = false;
         log_code(ON_TARGET_OFF);
     }
-
 }
 
 /*
@@ -161,7 +168,6 @@ void RewardValveController(){
         reward_valve_closed = true;
     }
 }
-
 
 /*
  _______     _______..___  ___.
@@ -248,9 +254,9 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 // entry actions
+                reward_collected = false;
                 // play sound check up on nonblocking tone library
-                tone_controller.play(reward_tone_freq, 200);
-
+                tone_controller.play(reward_tone_freq, tone_duration);
             }
 
             // update
@@ -271,7 +277,6 @@ void finite_state_machine() {
             if (micros() - state_entry > reward_available_dur) {
                 // transit to ITI after certain time
                 current_state = ITI_STATE;
-                reward_collected = false;
             }
             
 
@@ -301,7 +306,7 @@ void finite_state_machine() {
 
                 // entry actions
                 // play punish sound
-                tone_controller.play(punish_tone_freq, 200);
+                tone_controller.play(punish_tone_freq, tone_duration);
             }
 
             // update
