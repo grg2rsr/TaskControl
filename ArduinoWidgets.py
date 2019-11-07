@@ -637,7 +637,6 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         # fugly
         # does not fully work bc the state entry function is not called
         code = self.Df.loc[self.Df['name'] == state+'_STATE']['code'].values[0]
-        # cmd = "SET current_state "+state+'_STATE'
         cmd = "SET current_state "+code
         self.parent().send(cmd)
 
@@ -645,6 +644,13 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         try:
             code, time = line.split('\t')
             full_name = self.code_map[code]
+
+            # remove all color from events
+            if full_name.endswith("_EVENT"):
+                # color all state buttons gray
+                for name, btn in self.Btns:
+                    if name.endswith('_EVENT'):
+                        btn.setStyleSheet("background-color: light gray")
 
             # for states
             if full_name.endswith("_STATE"):
@@ -665,11 +671,15 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
                     btn.setStyleSheet("background-color: green")
 
             if  full_name.endswith("_OFF"):
-
                 btn = [btn for name,btn in self.Btns if name==full_name[:-3]+'ON'][0]
                 btn.setStyleSheet("background-color: light gray")
             
-            # for events TODO
+            # for events stay green until next line read
+            if  full_name.endswith("_EVENT"):
+                btn = [btn for name,btn in self.Btns if name==full_name][0]
+                btn.setStyleSheet("background-color: green")
+            
+
         except:
             pass
 

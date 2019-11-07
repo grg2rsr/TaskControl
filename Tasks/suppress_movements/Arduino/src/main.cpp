@@ -263,7 +263,6 @@ void finite_state_machine() {
                 // entry actions
                 reward_collected = false;
                 // play sound check up on nonblocking tone library
-                Serial.println("sweet sounds");
                 tone_controller.play(reward_tone_freq, tone_duration);
             }
 
@@ -315,8 +314,6 @@ void finite_state_machine() {
                 state_entry_common();
                 // entry actions
                 // play punish sound
-                Serial.println("punishing");
-
                 tone_controller.play(punish_tone_freq, tone_duration);
             }
 

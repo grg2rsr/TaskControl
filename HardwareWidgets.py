@@ -122,7 +122,7 @@ class LoadCellController(QtWidgets.QWidget):
         self.Btn = QtWidgets.QPushButton()
         self.Btn.setText('transmission is off')
         self.Btn.setCheckable(True)
-        self.Btn.setStyleSheet("background-color:  gray")
+        self.Btn.setStyleSheet("background-color:  light gray")
         self.Btn.clicked.connect(self.toggle_transmission)
 
         self.Layout.addWidget(self.Btn)
@@ -133,7 +133,7 @@ class LoadCellController(QtWidgets.QWidget):
         if self.transmission:
             self.transmission = False
             self.Btn.setText('transmission is off')
-            self.Btn.setStyleSheet("background-color:  gray")
+            self.Btn.setStyleSheet("background-color:  light gray")
         else: 
             self.transmission = True
             self.Btn.setText('transmission is on')
@@ -183,8 +183,8 @@ class LoadCellController(QtWidgets.QWidget):
                 except BlockingIOError:
                     pass
         
-        th_read = threading.Thread(target=udp_reader)
-        th_read.start()
+        self.th_read = threading.Thread(target=udp_reader)
+        self.th_read.start()
 
     def process_data(self,t,Fx,Fy):
         # FIXME this needs to be tested / reworked ... 
@@ -243,6 +243,7 @@ class LoadCellController(QtWidgets.QWidget):
         if hasattr(self,'arduino_bridge'):
             self.arduino_bridge.close()
         self.LoadCellMonitor.close()
+        self.th_read.join()
         self.close()
 
 """
