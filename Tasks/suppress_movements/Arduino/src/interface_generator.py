@@ -110,39 +110,37 @@ def run(variables_path):
     """
 
     bool_setter_template = """
-            if (dtype == "bool") {
-                if (strcmp(varname,"VARNAME")==0){
-                    if (strcmp(varvalue,"false")==0) {
-                        VARNAME = false;
-                    }
-                    else {
-                        VARNAME = true;
-                    }
+            if (strcmp(varname,"VARNAME")==0){
+                if (strcmp(varvalue,"false")==0) {
+                    VARNAME = false;
+                }
+                else {
+                    VARNAME = true;
                 }
             }
     """
 
     int_setter_template = """
-            if (dtype == "int") {
-                if (strcmp(varname,"VARNAME")==0){
-                    VARNAME = atoi(varvalue);
-                }
+            if (strcmp(varname,"VARNAME")==0){
+                VARNAME = atoi(varvalue);
             }
     """
 
     long_setter_template = """
-            if (dtype == "long") {
-                if (strcmp(varname,"VARNAME")==0){
-                    VARNAME = atol(varvalue);
-                }
+            if (strcmp(varname,"VARNAME")==0){
+                VARNAME = atol(varvalue);
+            }
+    """
+
+    unsigned_long_setter_template = """
+            if (strcmp(varname,"VARNAME")==0){
+                VARNAME = strtoul(varvalue,NULL,10);
             }
     """
 
     float_setter_template = """
-            if (dtype == "float") {
-                if (strcmp(varname,"VARNAME")==0){
-                    VARNAME = atof(varvalue);
-                }
+            if (strcmp(varname,"VARNAME")==0){
+                VARNAME = atof(varvalue);
             }
     """
 
@@ -179,6 +177,12 @@ def run(variables_path):
         # no longs found
         pass
 
+    try:
+        for i, row in init_vars.groupby('dtype').get_group('unsigned long').iterrows():
+            all_setters.append(unsigned_long_setter_template.replace("VARNAME",row['name']))
+    except KeyError:
+        # no unsigned longs found
+        pass
 
     try:
         for i, row in init_vars.groupby('dtype').get_group('float').iterrows():

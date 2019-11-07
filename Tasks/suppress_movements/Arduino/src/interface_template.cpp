@@ -105,28 +105,6 @@ void processSerialData() {
             char varvalue[len-split+1];
             strlcpy(varvalue, line+split+1, len-split+1);
 
-            // parse dtype
-            String dtype = "unset";
-
-            // test for bool 
-            if ((dtype == "true") || (dtype == "false")) {
-                dtype = "bool";
-            }
-
-            // test for float (has decimal point)
-            unsigned int num_len = sizeof(varvalue)/sizeof(char);
-            for (unsigned int i = 0; i < num_len; i++) {
-                if (varvalue[i] == '.') {
-                    // isFloat = true;
-                    dtype = "float";
-                }
-            }
-
-            // else must be int
-            if (dtype == "unset"){
-                dtype = "int";
-            }
-
             // for the state machine "force state" buttons
             if (strcmp(varname,"current_state")==0){
                 current_state = atoi(varvalue);

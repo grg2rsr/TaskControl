@@ -88,9 +88,9 @@ void log_code(int code){
     Serial.println(String(code) + '\t' + String(micros()));
 }
 
-// void log_msg(String Message){
-
-// }
+void log_msg(String Message){
+    Serial.println(Message);
+}
 
 // for future implementation: do all time based things on float base?
 // should be the same in memory, one operation more per micros() call
@@ -196,11 +196,19 @@ void finite_state_machine() {
     // the main FSM
     switch (current_state) {
 
+        case INI_STATE:
+
         case TRIAL_AVAILABLE_STATE:
             //state entry
             if (current_state != last_state){
                 state_entry_common();
                 // turn screen on or similar
+
+                // reset cursor
+                // replace with "request cursor reset"
+                log_msg("<RET LOADCELL CURSOR_RESET>");
+                // X = 0;
+                // Y = 0;
             }
 
             // update

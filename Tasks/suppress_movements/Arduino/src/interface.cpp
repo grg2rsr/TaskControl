@@ -13,7 +13,7 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 
-int current_state; // fwd declare
+int current_state = 0;
 
 void getSerialData() {
     // check if command data is available and if yes read it
@@ -141,28 +141,6 @@ void processSerialData() {
             char varvalue[len-split+1];
             strlcpy(varvalue, line+split+1, len-split+1);
 
-            // parse dtype
-            String dtype = "unset";
-
-            // test for bool 
-            if ((dtype == "true") || (dtype == "false")) {
-                dtype = "bool";
-            }
-
-            // test for float (has decimal point)
-            unsigned int num_len = sizeof(varvalue)/sizeof(char);
-            for (unsigned int i = 0; i < num_len; i++) {
-                if (varvalue[i] == '.') {
-                    // isFloat = true;
-                    dtype = "float";
-                }
-            }
-
-            // else must be int
-            if (dtype == "unset"){
-                dtype = "int";
-            }
-
             // for the state machine "force state" buttons
             if (strcmp(varname,"current_state")==0){
                 current_state = atoi(varvalue);
@@ -170,10 +148,40 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
-            if (dtype == "float") {
-                if (strcmp(varname,"max_dist")==0){
-                    max_dist = atof(varvalue);
-                }
+            if (strcmp(varname,"reward_tone_freq")==0){
+                reward_tone_freq = atoi(varvalue);
+            }
+    
+            if (strcmp(varname,"punish_tone_freq")==0){
+                punish_tone_freq = atoi(varvalue);
+            }
+    
+            if (strcmp(varname,"fix_dur")==0){
+                fix_dur = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"trial_entry_fix_dur")==0){
+                trial_entry_fix_dur = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"reward_valve_dur")==0){
+                reward_valve_dur = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"reward_available_dur")==0){
+                reward_available_dur = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"ITI_dur")==0){
+                ITI_dur = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"timeout_dur")==0){
+                timeout_dur = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"max_dist")==0){
+                max_dist = atof(varvalue);
             }
     
         }

@@ -203,7 +203,9 @@ class ArduinoController(QtWidgets.QWidget):
         os.chdir(os.path.join(self.task_folder,self.task_config['pio_project_folder']))
 
         # check existence of interface.cpp, and if not, build it
-        if not os.path.exists(os.path.join('src','interface.cpp')):
+        # if not os.path.exists(os.path.join('src','interface.cpp')):
+        # DEBUG - force redo the interface template
+        if 1:
             print("interface.cpp not found, attempting to build it")
             os.chdir("src")
             try:
@@ -648,7 +650,7 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
 
             # color all gray
             for name, btn in self.Btns:
-                btn.setStyleSheet("background-color: gray")
+                btn.setStyleSheet("background-color: light gray")
 
             # color active green
             btn = [btn for name,btn in self.Btns if name==full_name][0]

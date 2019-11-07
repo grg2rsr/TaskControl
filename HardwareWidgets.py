@@ -97,7 +97,8 @@ class LoadCellController(QtWidgets.QWidget):
         self.task_config = parent.task_config['LoadCell']
         
         self.Signals = Signals()
-        self.Signals.udp_data_available.connect(self.process_data) # potential FIXME - put data on the signal?
+        self.Signals.udp_data_available.connect(self.process_data)
+        self.parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
 
         self.X_last = sp.zeros(2)
         self.v_last = sp.zeros(2)
@@ -214,6 +215,9 @@ class LoadCellController(QtWidgets.QWidget):
         self.v_last = v
         self.X_last = self.X
 
+        self.send()
+
+    def send(self):
         if self.transmission:
             # TODO check the order of these two - delays wrt timing
             # emit signal for DisplayController
@@ -222,6 +226,17 @@ class LoadCellController(QtWidgets.QWidget):
             cmd = struct.pack("ff",self.X[0],self.X[1])
             cmd = str.encode('[') + cmd + str.encode(']')
             self.arduino_bridge.write(cmd)
+
+    def on_serial(self,line):
+        if line.startswith('<') and line.endswith('>'):
+                    read = line[1:-1].split(' ')
+                    if read[0] == "RET" and read[1] == "LOADCELL":
+                        if read[2] == "CURSOR_RESET":
+                            self.v_last = sp.array([0,0])
+                            self.X_last = sp.array([0,0])
+                            self.X = sp.array([0,0])
+                            self.send()
+                            
 
     def closeEvent(self, event):
         # if serial connection is open, close it

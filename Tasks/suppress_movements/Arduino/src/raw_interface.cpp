@@ -84,6 +84,8 @@ void processRawData() {
 
         X = (float) Xb.f;
         Y = (float) Yb.f;
+
+        // Serial.println(String(X));
+        RawNewData = false;
     }
-    RawNewData = false;
 }
