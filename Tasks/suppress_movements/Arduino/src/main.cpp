@@ -218,8 +218,8 @@ void finite_state_machine() {
                 // successfully withhold movement for enough time:
                 // go to fixation period
                 current_state = FIXATE_STATE;
-                break;
             }
+            break;
 
         case FIXATE_STATE:
             // state entry
@@ -253,8 +253,8 @@ void finite_state_machine() {
                 // go to reward available state
                 current_state = REWARD_AVAILABLE_STATE;
                 log_code(SUCCESSFUL_FIXATION);
-                break;
             }
+            break;
             
         case REWARD_AVAILABLE_STATE:
             // state entry
@@ -263,6 +263,7 @@ void finite_state_machine() {
                 // entry actions
                 reward_collected = false;
                 // play sound check up on nonblocking tone library
+                Serial.println("sweet sounds");
                 tone_controller.play(reward_tone_freq, tone_duration);
             }
 
@@ -284,8 +285,8 @@ void finite_state_machine() {
             if (micros() - state_entry > reward_available_dur) {
                 // transit to ITI after certain time
                 current_state = ITI_STATE;
-                break;
             }
+            break;
             
 
         case ITI_STATE:
@@ -305,8 +306,8 @@ void finite_state_machine() {
             if (micros() - state_entry > ITI_dur) {
                 // after ITI, transit to trial available
                 current_state = TRIAL_AVAILABLE_STATE;
-                break;
             }
+            break;
 
         case TIMEOUT_STATE:
             // state entry
@@ -314,6 +315,7 @@ void finite_state_machine() {
                 state_entry_common();
                 // entry actions
                 // play punish sound
+                Serial.println("punishing");
 
                 tone_controller.play(punish_tone_freq, tone_duration);
             }
@@ -327,14 +329,8 @@ void finite_state_machine() {
             if (micros() - state_entry > timeout_dur) {
                 // after timeout, transit to trial available again
                 current_state = TRIAL_AVAILABLE_STATE;
-                break;
             }
-
-        default:
             break;
-            // Serial.println("default called");
-
-        
     }
 }
 
