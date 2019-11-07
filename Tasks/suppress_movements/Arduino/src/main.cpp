@@ -197,18 +197,15 @@ void finite_state_machine() {
     switch (current_state) {
 
         case INI_STATE:
+            break;
 
         case TRIAL_AVAILABLE_STATE:
             //state entry
             if (current_state != last_state){
                 state_entry_common();
                 // turn screen on or similar
-
                 // reset cursor
-                // replace with "request cursor reset"
                 log_msg("<RET LOADCELL CURSOR_RESET>");
-                // X = 0;
-                // Y = 0;
             }
 
             // update
@@ -221,6 +218,7 @@ void finite_state_machine() {
                 // successfully withhold movement for enough time:
                 // go to fixation period
                 current_state = FIXATE_STATE;
+                break;
             }
 
         case FIXATE_STATE:
@@ -235,19 +233,18 @@ void finite_state_machine() {
             if (last_state == current_state){
                 // state actions
                 // if movement exceeds bounds, timeout
-                if (on_target == false){
-                    current_state = TIMEOUT_STATE;
-                    log_code(BROKEN_FIXATION);
-                }
                 // if premature lick, timeout
-                if (lick_in == true){
+                if (on_target == false || lick_in == true){
                     current_state = TIMEOUT_STATE;
                     log_code(BROKEN_FIXATION);
                 }
-                // else record current fixation duration
-                current_fixation_time = micros() - state_entry;
-                // potentially: progress bar report for training
-                // then shut off to make sure they are timing
+                else {
+                    // else record current fixation duration
+                    current_fixation_time = micros() - state_entry;
+                    // potentially: progress bar report for training
+                    // then shut off to make sure they are timing
+                    // another serial line for streaming raw data back to the computer?
+                }
             }
 
             // exit condition
@@ -256,6 +253,7 @@ void finite_state_machine() {
                 // go to reward available state
                 current_state = REWARD_AVAILABLE_STATE;
                 log_code(SUCCESSFUL_FIXATION);
+                break;
             }
             
         case REWARD_AVAILABLE_STATE:
@@ -286,6 +284,7 @@ void finite_state_machine() {
             if (micros() - state_entry > reward_available_dur) {
                 // transit to ITI after certain time
                 current_state = ITI_STATE;
+                break;
             }
             
 
@@ -306,15 +305,16 @@ void finite_state_machine() {
             if (micros() - state_entry > ITI_dur) {
                 // after ITI, transit to trial available
                 current_state = TRIAL_AVAILABLE_STATE;
+                break;
             }
 
         case TIMEOUT_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-
                 // entry actions
                 // play punish sound
+
                 tone_controller.play(punish_tone_freq, tone_duration);
             }
 
@@ -327,7 +327,14 @@ void finite_state_machine() {
             if (micros() - state_entry > timeout_dur) {
                 // after timeout, transit to trial available again
                 current_state = TRIAL_AVAILABLE_STATE;
+                break;
             }
+
+        default:
+            break;
+            // Serial.println("default called");
+
+        
     }
 }
 

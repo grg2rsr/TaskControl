@@ -642,20 +642,34 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         self.parent().send(cmd)
 
     def update(self,line):
-        # TODO: how to find out if this is a valid line to update the buttons?
-        # something is def wrong here but also it seems other things are getting stuck
         try:
             code, time = line.split('\t')
             full_name = self.code_map[code]
 
-            # color all gray
-            for name, btn in self.Btns:
-                btn.setStyleSheet("background-color: light gray")
+            # for states
+            if full_name.endswith("_STATE"):
+                # color all state buttons gray
+                for name, btn in self.Btns:
+                    if name.endswith("_STATE"):
+                        btn.setStyleSheet("background-color: light gray")
 
-            # color active green
-            btn = [btn for name,btn in self.Btns if name==full_name][0]
-            btn.setStyleSheet("background-color: green")
+                # and color only active green
+                btn = [btn for name,btn in self.Btns if name==full_name][0]
+                btn.setStyleSheet("background-color: green")
+
+            # for spans
+            if full_name.endswith("_ON"):
+                btn = [btn for name,btn in self.Btns if name==full_name][0]
+
+                if full_name.endswith("_ON"):
+                    btn.setStyleSheet("background-color: green")
+
+            if  full_name.endswith("_OFF"):
+
+                btn = [btn for name,btn in self.Btns if name==full_name[:-3]+'ON'][0]
+                btn.setStyleSheet("background-color: light gray")
             
+            # for events TODO
         except:
             pass
 
