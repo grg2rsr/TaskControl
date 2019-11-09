@@ -114,14 +114,14 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # positioning and deco
         self.setWindowTitle("Settings")
-        self.move(150, 150) # some corner of the screen ... 
+        self.move(10, 10) # some corner of the screen ... 
 
         self.show()
 
         # FIXME this contains hardcoding stuff ... 
         # window scaling
         if hasattr(self, 'ArduinoController'):
-            functions.tile_Widgets(self.ArduinoController, self, where='right',gap=25)
+            functions.tile_Widgets(self.ArduinoController, self, where='right',gap=100)
             functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=50)
             functions.scale_Widgets([self.ArduinoController.VariableController, self.ArduinoController])
         
@@ -317,7 +317,8 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         current_animal_folder = os.path.join(self.parent().profile['animals_folder'],self.parent().animal)
         try:
             sessions_df = utils.get_sessions(current_animal_folder)
-            lines = sessions_df['task'].to_list()
+            # lines = sessions_df['task'].to_list()
+            lines = sessions_df['task'].tolist()
             lines = '\n'.join(lines)
             model = PandasModel(sessions_df[['date','time','task']])
             self.Table.setModel(model)

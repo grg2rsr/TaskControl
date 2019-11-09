@@ -585,6 +585,7 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
 
         # connect to parent signals
         parent.Signals.serial_data_available.connect(self.update)
+
         self.initUI()
 
     def initUI(self):
@@ -628,7 +629,7 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         self.setLayout(self.Layout)
         self.setWindowTitle("State Machine Monitor")
 
-        functions.tile_Widgets(self, self.parent().KeyboardInteraction, where='below',gap=50)
+        functions.tile_Widgets(self, self.parent().KeyboardInteraction, where='below',gap=25)
         functions.scale_Widgets([self, self.parent()])
 
         self.show()
@@ -708,7 +709,7 @@ class KeyboardInteractionWidget(QtWidgets.QWidget):
         self.setWindowTitle("Keyboard interface")
         self.show()
 
-        functions.tile_Widgets(self, self.parent().SerialMonitor, where='below',gap=50)
+        functions.tile_Widgets(self, self.parent().SerialMonitor, where='below',gap=25)
         functions.scale_Widgets([self, self.parent()])
 
     def keyPressEvent(self, event):

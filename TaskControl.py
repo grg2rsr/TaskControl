@@ -19,7 +19,7 @@ class TaskControlApp(QtWidgets.QApplication):
         print("using profile: ", profiles_fpath)
 
         # launch GUI
-        self.Settings_Widget = SettingsWidget(self,profiles)
+        self.Settings_Widget = SettingsWidget(self, profiles)
 
         # on close - TODO check if obsolete with proper QT parent child structure
         self.setQuitOnLastWindowClosed(False)
@@ -41,10 +41,10 @@ if __name__ == "__main__":
         profiles_fpath = sys.argv[1]
     else:
         # the fiber photometry computer downstairs in the viv
-        # profiles_fpath = 'profiles_fphot.ini'
+        profiles_fpath = 'profiles_fphot.ini'
 
         # my ccu desktop in the open lab
-        profiles_fpath = 'profiles_ccu.ini'
+        # profiles_fpath = 'profiles_ccu.ini'
 
     # run the application
     TaskControl = TaskControlApp([], profiles_fpath=profiles_fpath)

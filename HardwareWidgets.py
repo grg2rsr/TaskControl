@@ -103,6 +103,10 @@ class LoadCellController(QtWidgets.QWidget):
         self.X_last = sp.zeros(2)
         self.v_last = sp.zeros(2)
         self.t_last = 0
+        self.Fx_off = 0
+        self.Fy_off = 0
+
+        self.Buffer = sp.zeros((500,2))
 
         self.LoadCellMonitor = LoadCellMonitor(self)
 
@@ -125,9 +129,17 @@ class LoadCellController(QtWidgets.QWidget):
         self.Btn.setStyleSheet("background-color:  light gray")
         self.Btn.clicked.connect(self.toggle_transmission)
 
+        self.ZeroBtn = QtWidgets.QPushButton()
+        self.ZeroBtn.setText("read baseline values")
+        self.ZeroBtn.clicked.connect(self.zero)
+
         self.Layout.addWidget(self.Btn)
+        self.Layout.addWidget(self.ZeroBtn)
         self.setLayout(self.Layout)
         self.show()        
+
+    def zero(self):
+        self.Fx_off, self.Fy_off = sp.average(self.Buffer,0)
 
     def toggle_transmission(self):
         if self.transmission:
@@ -144,7 +156,7 @@ class LoadCellController(QtWidgets.QWidget):
         # FIXME hardcode included! this needs to be fixed
         # likely in the future: seperate uart line
         
-        com_port = '/dev/ttyACM1'
+        com_port = 'COM8'
         baud_rate = 115200
         try:
             print("initializing serial port: "+com_port)
@@ -176,8 +188,10 @@ class LoadCellController(QtWidgets.QWidget):
             while True:
                 try:
                     # read data and publish it via a qt signal
-                    raw_read = sock.recv(12) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
-                    t,Fx,Fy = struct.unpack('fff',raw_read)
+                    # raw_read = sock.recv(12) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
+                    raw_read = sock.recv(24) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
+                    t,Fx,Fy = struct.unpack('>ddd',raw_read)
+                    Fx *= -1
                     self.Signals.udp_data_available.emit(t,Fx,Fy)
 
                 except BlockingIOError:
@@ -189,20 +203,27 @@ class LoadCellController(QtWidgets.QWidget):
     def process_data(self,t,Fx,Fy):
         # FIXME this needs to be tested / reworked ... 
 
+        self.Buffer = sp.roll(self.Buffer,-1,0)
+        self.Buffer[-1,:] = [Fx,Fy]
+
+        Fx -= self.Fx_off
+        Fy -= self.Fy_off
+
         Fm = sp.array([Fx,Fy])
         
         # physical cursor implementation
-        m = 0.01 # mass
-        lam = 0.02 # friction factor
+        m = 100 # mass
+        lam = 1000 # friction factor
 
         # friction as a force acting in the opposite direction of F and proportional to v
         Ff = self.v_last*lam*-1
 
         Fges = Fm+Ff
 
-        dt = t - self.t_last # to catch first data sample error
-        if dt > 0.05:
-            dt = 0.01
+        # dt = t - self.t_last # to catch first data sample error
+        # if dt > 0.05:
+        #     dt = 0.01
+        dt = 0.01
 
         dv = Fges/m * dt
 
@@ -243,7 +264,7 @@ class LoadCellController(QtWidgets.QWidget):
         if hasattr(self,'arduino_bridge'):
             self.arduino_bridge.close()
         self.LoadCellMonitor.close()
-        self.th_read.join()
+        # self.th_read.join()
         self.close()
 
 """
@@ -281,14 +302,16 @@ class LoadCellMonitor(QtWidgets.QWidget):
         # Display and aesthetics
         self.PlotWindow = pg.GraphicsWindow(title="LoadCell raw data monitor")
         self.PlotItemFB = self.PlotWindow.addPlot(title='front / back')
-        self.LineFB = self.PlotItemFB.plot(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,1], pen=(200,200,200))
-        self.LineFB_pp = pg.PlotCurveItem(x=self.lc_raw_data[:,0], y=self.lc_data[:,0], pen=(200,100,100))
+        # self.LineFB = self.PlotItemFB.plot(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,1], pen=(200,200,200))
+        # self.LineFB_pp = pg.PlotCurveItem(x=self.lc_raw_data[:,0], y=self.lc_data[:,0], pen=(200,100,100))
+        self.LineFB = self.PlotItemFB.plot(x=sp.arange(300), y=self.lc_raw_data[:,1], pen=(200,200,200))
+        self.LineFB_pp = pg.PlotCurveItem(x=sp.arange(300), y=self.lc_data[:,0], pen=(200,100,100))
         self.PlotItemFB.addItem(self.LineFB_pp)
 
         self.PlotWindow.nextRow()
         self.PlotItemLR = self.PlotWindow.addPlot(title='left / right')
-        self.LineLR = self.PlotItemLR.plot(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,2], pen=(200,200,200))
-        self.LineLR_pp = pg.PlotCurveItem(x=self.lc_raw_data[:,0], y=self.lc_data[:,1], pen=(200,100,100))
+        self.LineLR = self.PlotItemLR.plot(x=sp.arange(300), y=self.lc_raw_data[:,2], pen=(200,200,200))
+        self.LineLR_pp = pg.PlotCurveItem(x=sp.arange(300), y=self.lc_data[:,1], pen=(200,100,100))
         self.PlotItemLR.addItem(self.LineLR_pp)
 
         self.Layout.addWidget(self.PlotWindow)
@@ -299,14 +322,20 @@ class LoadCellMonitor(QtWidgets.QWidget):
         """ update display """
         self.lc_raw_data = sp.roll(self.lc_raw_data,-1,0)
         self.lc_raw_data[-1,:] = [t,x,y]
-        self.LineFB.setData(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,1])
-        self.LineLR.setData(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,2])
+
+        self.lc_raw_data[-1,1] -= self.parent().Fx_off
+        self.lc_raw_data[-1,2] -= self.parent().Fy_off
+
+        # self.LineFB.setData(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,1])
+        # self.LineLR.setData(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,2])
+        self.LineLR.setData(y=self.lc_raw_data[:,2])
+        self.LineFB.setData(y=self.lc_raw_data[:,1])
 
     def on_lc_data(self,x,y):
         self.lc_data = sp.roll(self.lc_data,-1,0)
         self.lc_data[-1,:] = [x,y]
-        self.LineFB_pp.setData(x=self.lc_raw_data[:,0], y=self.lc_data[:,0])
-        self.LineLR_pp.setData(x=self.lc_raw_data[:,0], y=self.lc_data[:,1])
+        self.LineFB_pp.setData(y=self.lc_data[:,0])
+        self.LineLR_pp.setData(y=self.lc_data[:,1])
 
 
 
@@ -380,6 +409,7 @@ class DisplayController(QtWidgets.QWidget):
         parent.LoadCellController.Signals.loadcell_data_available.connect(self.on_lc_data)
 
         self.state = "IDLE"
+        self.display_for_mouse = True
         self.initUI()
 
     def initUI(self):
@@ -400,7 +430,21 @@ class DisplayController(QtWidgets.QWidget):
 
         self.Layout.addWidget(self.plot_widget)
         self.setLayout(self.Layout)
-        self.show()        
+        
+        self.show()
+
+        if self.display_for_mouse==True:
+            # get screens
+            app = self.parent().main
+            displays = app.screens()
+
+            x = displays[0].geometry().width()
+            # utils.debug_trace()
+            
+            # self.move(QtCore.QPoint(x,0))
+            self.windowHandle().setScreen(displays[1])
+            # self.showFullScreen() # maximises on screen 1
+
 
     def on_lc_data(self,x,y):
         """ update display """
