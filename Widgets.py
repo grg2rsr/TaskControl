@@ -285,7 +285,7 @@ class SettingsWidget(QtWidgets.QWidget):
                 print("initializing LoadCellController")
 
             if section == 'Display':
-                self.DisplayController = HardwareWidgets.DisplayController(self)
+                self.DisplayController = HardwareWidgets.DisplayControllerPP(self)
 
         self.profile['last_task'] = self.task
         print("Task: ", self.task)
