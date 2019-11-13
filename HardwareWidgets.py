@@ -109,8 +109,13 @@ class LoadCellController(QtWidgets.QWidget):
         self.Buffer = sp.zeros((500,2))
 
         self.LoadCellMonitor = LoadCellMonitor(self)
-
+        self.init_udp_server()
         self.initUI()
+
+    def init_udp_server(self):
+        self.UDP_IP_out, self.UDP_PORT_out = self.task_config['udp_out'].split(':')
+        self.udp_out_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # sock.bind((UDP_IP, int(UDP_PORT)))
 
     def initUI(self):
         self.setWindowTitle("Loadcell controller")
@@ -123,6 +128,7 @@ class LoadCellController(QtWidgets.QWidget):
 
         # transmission toggle button
         self.transmission = False
+        self.udp_out_transmission = True
         self.Btn = QtWidgets.QPushButton()
         self.Btn.setText('transmission is off')
         self.Btn.setCheckable(True)
@@ -176,7 +182,7 @@ class LoadCellController(QtWidgets.QWidget):
     def Run(self, folder):
         # needs to be called after the Run of BonsaiController running Harp
 
-        UDP_IP, UDP_PORT = self.task_config['udp'].split(':')
+        UDP_IP, UDP_PORT = self.task_config['udp_in'].split(':')
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
         sock.bind((UDP_IP, int(UDP_PORT)))
@@ -239,14 +245,19 @@ class LoadCellController(QtWidgets.QWidget):
         self.send()
 
     def send(self):
+        ba = struct.pack("ff",self.X[0],self.X[1])
         if self.transmission:
             # TODO check the order of these two - delays wrt timing
             # emit signal for DisplayController
             self.Signals.loadcell_data_available.emit(*self.X)
             # send coordinates to Arduino via second serial (currently arduino uart bridge)
-            cmd = struct.pack("ff",self.X[0],self.X[1])
-            cmd = str.encode('[') + cmd + str.encode(']')
+            cmd = str.encode('[') + ba + str.encode(']')
             self.arduino_bridge.write(cmd)
+
+        # TODO implement here: dump on udp port
+        if self.udp_out_transmission:
+            self.udp_out_sock.sendto(ba, (self.UDP_IP_out, int(self.UDP_PORT_out)))
+
 
     def on_serial(self,line):
         if line.startswith('<') and line.endswith('>'):
@@ -433,17 +444,17 @@ class DisplayController(QtWidgets.QWidget):
         
         self.show()
 
-        if self.display_for_mouse==True:
-            # get screens
-            app = self.parent().main
-            displays = app.screens()
+        # if self.display_for_mouse==True:
+        #     # get screens
+        #     app = self.parent().main
+        #     displays = app.screens()
 
-            x = displays[0].geometry().width()
-            # utils.debug_trace()
+        #     x = displays[0].geometry().width()
+        #     # utils.debug_trace()
             
-            # self.move(QtCore.QPoint(x,0))
-            self.windowHandle().setScreen(displays[1])
-            # self.showFullScreen() # maximises on screen 1
+        #     # self.move(QtCore.QPoint(x,0))
+        #     self.windowHandle().setScreen(displays[1])
+        #     # self.showFullScreen() # maximises on screen 1
 
 
     def on_lc_data(self,x,y):
