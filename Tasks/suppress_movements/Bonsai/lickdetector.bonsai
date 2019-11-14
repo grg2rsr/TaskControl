@@ -1,80 +1,55 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<WorkflowBuilder Version="2.3.0">
-  <Workflow xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:q1="clr-namespace:Bonsai.Vision;assembly=Bonsai.Vision" xmlns:q2="clr-namespace:Bonsai.Dsp;assembly=Bonsai.Dsp" xmlns:q3="clr-namespace:Bonsai.Scripting;assembly=Bonsai.Scripting" xmlns:q4="clr-namespace:Bonsai.Arduino;assembly=Bonsai.Arduino" xmlns="https://horizongir.org/bonsai">
+<WorkflowBuilder Version="2.4.0"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xmlns:cv="clr-namespace:Bonsai.Vision;assembly=Bonsai.Vision"
+                 xmlns:dsp="clr-namespace:Bonsai.Dsp;assembly=Bonsai.Dsp"
+                 xmlns:q1="clr-namespace:Bonsai.Scripting;assembly=Bonsai.Scripting"
+                 xmlns:q2="clr-namespace:Bonsai.Arduino;assembly=Bonsai.Arduino"
+                 xmlns="https://bonsai-rx.org/2018/workflow">
+  <Workflow>
     <Nodes>
       <Expression xsi:type="Combinator">
-        <Combinator xsi:type="q1:CameraCapture">
-          <q1:Index>0</q1:Index>
-          <q1:CaptureProperties />
+        <Combinator xsi:type="cv:CameraCapture">
+          <cv:Index>0</cv:Index>
+          <cv:CaptureProperties />
         </Combinator>
       </Expression>
       <Expression xsi:type="Combinator">
-        <Combinator xsi:type="q1:Grayscale" />
+        <Combinator xsi:type="cv:Grayscale" />
       </Expression>
       <Expression xsi:type="Combinator">
-        <Combinator xsi:type="q1:Crop">
-          <q1:RegionOfInterest>
-            <q1:X>0</q1:X>
-            <q1:Y>0</q1:Y>
-            <q1:Width>0</q1:Width>
-            <q1:Height>0</q1:Height>
-          </q1:RegionOfInterest>
+        <Combinator xsi:type="cv:Crop">
+          <cv:RegionOfInterest>
+            <cv:X>0</cv:X>
+            <cv:Y>0</cv:Y>
+            <cv:Width>0</cv:Width>
+            <cv:Height>0</cv:Height>
+          </cv:RegionOfInterest>
         </Combinator>
       </Expression>
       <Expression xsi:type="Combinator">
-        <Combinator xsi:type="q2:Sum" />
-      </Expression>
-      <Expression xsi:type="q3:ExpressionTransform">
-        <q3:Expression>it &gt; 5000</q3:Expression>
+        <Combinator xsi:type="dsp:Sum" />
       </Expression>
       <Expression xsi:type="MemberSelector">
-        <Selector>Source.Val0</Selector>
+        <Selector>Val0</Selector>
+      </Expression>
+      <Expression xsi:type="q1:ExpressionTransform">
+        <q1:Expression>it &gt; 5000</q1:Expression>
       </Expression>
       <Expression xsi:type="Combinator">
-        <Combinator xsi:type="q4:DigitalOutput">
-          <q4:Pin>0</q4:Pin>
+        <Combinator xsi:type="q2:DigitalOutput">
+          <q2:PortName>COM5</q2:PortName>
+          <q2:Pin>0</q2:Pin>
         </Combinator>
       </Expression>
     </Nodes>
     <Edges>
-      <Edge>
-        <From>0</From>
-        <To>1</To>
-        <Label>Source1</Label>
-      </Edge>
-      <Edge>
-        <From>1</From>
-        <To>2</To>
-        <Label>Source1</Label>
-      </Edge>
-      <Edge>
-        <From>2</From>
-        <To>3</To>
-        <Label>Source1</Label>
-      </Edge>
-      <Edge>
-        <From>3</From>
-        <To>5</To>
-        <Label>Source1</Label>
-      </Edge>
-      <Edge>
-        <From>4</From>
-        <To>6</To>
-        <Label>Source1</Label>
-      </Edge>
-      <Edge>
-        <From>5</From>
-        <To>4</To>
-        <Label>Source1</Label>
-      </Edge>
+      <Edge From="0" To="1" Label="Source1" />
+      <Edge From="1" To="2" Label="Source1" />
+      <Edge From="2" To="3" Label="Source1" />
+      <Edge From="3" To="4" Label="Source1" />
+      <Edge From="4" To="5" Label="Source1" />
+      <Edge From="5" To="6" Label="Source1" />
     </Edges>
   </Workflow>
-  <ExtensionTypes>
-    <Type>Bonsai.Vision.CameraCapture, Bonsai.Vision, Version=2.3.0.0, Culture=neutral, PublicKeyToken=null</Type>
-    <Type>Bonsai.Vision.Grayscale, Bonsai.Vision, Version=2.3.0.0, Culture=neutral, PublicKeyToken=null</Type>
-    <Type>Bonsai.Vision.Crop, Bonsai.Vision, Version=2.3.0.0, Culture=neutral, PublicKeyToken=null</Type>
-    <Type>Bonsai.Dsp.Sum, Bonsai.Dsp, Version=2.3.0.0, Culture=neutral, PublicKeyToken=null</Type>
-    <Type>Bonsai.Scripting.ExpressionTransform, Bonsai.Scripting, Version=2.3.0.0, Culture=neutral, PublicKeyToken=null</Type>
-    <Type>Bonsai.Arduino.DigitalOutput, Bonsai.Arduino, Version=2.3.0.0, Culture=neutral, PublicKeyToken=null</Type>
-  </ExtensionTypes>
 </WorkflowBuilder>

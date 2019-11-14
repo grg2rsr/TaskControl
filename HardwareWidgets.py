@@ -58,10 +58,10 @@ class BonsaiController(QtWidgets.QWidget):
         task_config = self.parent().task_config['Bonsai']
         task_folder = os.path.join(self.parent().profile['tasks_folder'], task)
        
-        fname = animal+'.raw' # FIXME there is a thing with _ and 0 appended, check this
+        # fname = animal+'.raw' # FIXME there is a thing with _ and 0 appended, check this
         
         folder = Path(folder)
-        out_path = folder.joinpath(animal+'.raw') # this needs to be fixed in bonsai
+        out_path = folder.joinpath('bonsai_') # this needs to be fixed in bonsai
 
         # constructing the bonsai exe string
         parameters = "-p:save_path=\""+str(out_path)+"\""
@@ -71,6 +71,9 @@ class BonsaiController(QtWidgets.QWidget):
         bonsai_workflow = "\""+bonsai_workflow+"\""
 
         command = ' '.join([str(Path(bonsai_exe)),str(Path(bonsai_workflow)),"--start",parameters,"&"])
+
+        print("bonsai command:")
+        print(command)
 
         theproc = subprocess.Popen(command, shell = True)
         # theproc.communicate() # this hangs shell on windows machines, TODO check if this is true for linux
@@ -106,7 +109,7 @@ class LoadCellController(QtWidgets.QWidget):
         self.Fx_off = 0
         self.Fy_off = 0
 
-        self.Buffer = sp.zeros((500,2))
+        self.Buffer = sp.zeros((100,2))
 
         self.LoadCellMonitor = LoadCellMonitor(self)
         self.init_udp_server()
@@ -197,7 +200,7 @@ class LoadCellController(QtWidgets.QWidget):
                     # raw_read = sock.recv(12) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
                     raw_read = sock.recv(24) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
                     t,Fx,Fy = struct.unpack('>ddd',raw_read)
-                    Fx *= -1
+                    # Fx *= -1
                     self.Signals.udp_data_available.emit(t,Fx,Fy)
 
                 except BlockingIOError:
@@ -312,18 +315,33 @@ class LoadCellMonitor(QtWidgets.QWidget):
 
         # Display and aesthetics
         self.PlotWindow = pg.GraphicsWindow(title="LoadCell raw data monitor")
+
         self.PlotItemFB = self.PlotWindow.addPlot(title='front / back')
-        # self.LineFB = self.PlotItemFB.plot(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,1], pen=(200,200,200))
-        # self.LineFB_pp = pg.PlotCurveItem(x=self.lc_raw_data[:,0], y=self.lc_data[:,0], pen=(200,100,100))
         self.LineFB = self.PlotItemFB.plot(x=sp.arange(300), y=self.lc_raw_data[:,1], pen=(200,200,200))
-        self.LineFB_pp = pg.PlotCurveItem(x=sp.arange(300), y=self.lc_data[:,0], pen=(200,100,100))
-        self.PlotItemFB.addItem(self.LineFB_pp)
+        self.PlotItemFB_pp = self.PlotWindow.addPlot(title='front / back')
+        self.LineFB_pp = self.PlotItemFB_pp.plot(x=sp.arange(300), y=self.lc_data[:,0], pen=(200,100,100))
 
         self.PlotWindow.nextRow()
+
         self.PlotItemLR = self.PlotWindow.addPlot(title='left / right')
         self.LineLR = self.PlotItemLR.plot(x=sp.arange(300), y=self.lc_raw_data[:,2], pen=(200,200,200))
-        self.LineLR_pp = pg.PlotCurveItem(x=sp.arange(300), y=self.lc_data[:,1], pen=(200,100,100))
-        self.PlotItemLR.addItem(self.LineLR_pp)
+        self.PlotItemLR_pp = self.PlotWindow.addPlot(title='left / right')
+        self.LineLR_pp = self.PlotItemLR_pp.plot(x=sp.arange(300), y=self.lc_data[:,1], pen=(200,100,100))
+
+        # # Display and aesthetics
+        # self.PlotWindow = pg.GraphicsWindow(title="LoadCell raw data monitor")
+        # self.PlotItemFB = self.PlotWindow.addPlot(title='front / back')
+        # # self.LineFB = self.PlotItemFB.plot(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,1], pen=(200,200,200))
+        # # self.LineFB_pp = pg.PlotCurveItem(x=self.lc_raw_data[:,0], y=self.lc_data[:,0], pen=(200,100,100))
+        # self.LineFB = self.PlotItemFB.plot(x=sp.arange(300), y=self.lc_raw_data[:,1], pen=(200,200,200))
+        # self.LineFB_pp = pg.PlotCurveItem(x=sp.arange(300), y=self.lc_data[:,0], pen=(200,100,100))
+        # self.PlotItemFB.addItem(self.LineFB_pp)
+
+        # self.PlotWindow.nextRow()
+        # self.PlotItemLR = self.PlotWindow.addPlot(title='left / right')
+        # self.LineLR = self.PlotItemLR.plot(x=sp.arange(300), y=self.lc_raw_data[:,2], pen=(200,200,200))
+        # self.LineLR_pp = pg.PlotCurveItem(x=sp.arange(300), y=self.lc_data[:,1], pen=(200,100,100))
+        # self.PlotItemLR.addItem(self.LineLR_pp)
 
         self.Layout.addWidget(self.PlotWindow)
         self.setLayout(self.Layout)
@@ -436,8 +454,9 @@ class DisplayController(QtWidgets.QWidget):
         self.plot_widget.setYRange(-10,10)
         self.plot_widget.setAspectLocked(True)
         # self.plot_widget.showGrid(x=True,y=True,alpha=0.5)
-        self.plot_widget.showGrid(x=True,y=True)
-        self.cursor = self.plot_widget.plot(x=[self.parent().LoadCellController.X_last[0]],y=[self.parent().LoadCellController.X_last[1]], pen=(200,200,200), symbolBrush=(100,100,100), symbolPen='w',symbolSize=50)
+        # self.plot_widget.showGrid(x=True,y=True)
+        self.cursor = self.plot_widget.plot(x=[self.parent().LoadCellController.X_last[0]],y=[self.parent().LoadCellController.X_last[1]],
+                                            pen=(255,255,255), symbolBrush=(255,255,255), symbolPen='w',symbolSize=150)
 
         self.Layout.addWidget(self.plot_widget)
         self.setLayout(self.Layout)
@@ -452,9 +471,9 @@ class DisplayController(QtWidgets.QWidget):
         #     x = displays[0].geometry().width()
         #     # utils.debug_trace()
             
-        #     # self.move(QtCore.QPoint(x,0))
+        #     self.move(QtCore.QPoint(x,0))
         #     self.windowHandle().setScreen(displays[1])
-        #     # self.showFullScreen() # maximises on screen 1
+        #     self.showFullScreen() # maximises on screen 1
 
 
     def on_lc_data(self,x,y):
