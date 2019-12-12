@@ -221,7 +221,7 @@ class LoadCellController(QtWidgets.QWidget):
         Fm = sp.array([Fx,Fy])
         
         # physical cursor implementation
-        m = 100 # mass
+        m = 50 # mass
         lam = 1000 # friction factor
 
         # friction as a force acting in the opposite direction of F and proportional to v
@@ -449,8 +449,8 @@ class DisplayController(QtWidgets.QWidget):
         # Display and aesthetics # TODO !!!
         self.plot_widget = pg.PlotWidget()
         self.plot_widget.disableAutoRange()
-        # self.plot_widget.hideAxis('left')
-        # self.plot_widget.hideAxis('bottom')
+        self.plot_widget.hideAxis('left')
+        self.plot_widget.hideAxis('bottom')
         self.plot_widget.setYRange(-10,10)
         self.plot_widget.setAspectLocked(True)
         # self.plot_widget.showGrid(x=True,y=True,alpha=0.5)
@@ -522,91 +522,91 @@ class DisplayController(QtWidgets.QWidget):
 
 # psychopy
   
-from psychopy import visual, core, monitors
-from psychopy.visual.windowwarp import Warper
+# from psychopy import visual, core, monitors
+# from psychopy.visual.windowwarp import Warper
 
-class DisplayControllerPP(QtWidgets.QWidget):
+# class DisplayControllerPP(QtWidgets.QWidget):
 
-    def __init__(self, parent):
+#     def __init__(self, parent):
 
-        super(DisplayControllerPP, self).__init__(parent=parent)
-        self.setWindowFlags(QtCore.Qt.Window)
+#         super(DisplayControllerPP, self).__init__(parent=parent)
+#         self.setWindowFlags(QtCore.Qt.Window)
 
-        # here all the other stuff goes in from the computer downstairs ... 
+#         # here all the other stuff goes in from the computer downstairs ... 
 
-        parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
-        parent.LoadCellController.Signals.loadcell_data_available.connect(self.on_lc_data)
+#         parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
+#         parent.LoadCellController.Signals.loadcell_data_available.connect(self.on_lc_data)
 
-        self.state = "IDLE"
-        self.display_for_mouse = True
-        self.initUI()
+#         self.state = "IDLE"
+#         self.display_for_mouse = True
+#         self.initUI()
 
-    def initUI(self):
-        self.setWindowTitle("Display controller")
-        self.Layout = QtWidgets.QHBoxLayout()
-        self.setMinimumWidth(300) # FIXME hardcoded!
+#     def initUI(self):
+#         self.setWindowTitle("Display controller")
+#         self.Layout = QtWidgets.QHBoxLayout()
+#         self.setMinimumWidth(300) # FIXME hardcoded!
 
-        # self.Layout.addWidget(self.plot_widget)
-        self.setLayout(self.Layout)
+#         # self.Layout.addWidget(self.plot_widget)
+#         self.setLayout(self.Layout)
         
         
-        self.mon = monitors.Monitor(name="display",width=10,distance=5)#fetch the most recent calib for this monitor
+#         self.mon = monitors.Monitor(name="display",width=10,distance=5)#fetch the most recent calib for this monitor
 
-        self.win = visual.Window(size=[1024,768], monitor=self.mon, screen=0, fullscr=False, useFBO=True)
+#         self.win = visual.Window(size=[1024,768], monitor=self.mon, screen=0, fullscr=False, useFBO=True)
 
-        # warper = Warper(win,
-        #                 warp='spherical',
-        #                 warpfile = "",
-        #                 warpGridsize = 128,
-        #                 eyepoint = [0.5, 0.5],
-        #                 flipHorizontal = False,
-        #                 flipVertical = False)
+#         # warper = Warper(win,
+#         #                 warp='spherical',
+#         #                 warpfile = "",
+#         #                 warpGridsize = 128,
+#         #                 eyepoint = [0.5, 0.5],
+#         #                 flipHorizontal = False,
+#         #                 flipVertical = False)
 
-        # Setup stimulus
-        self.gabor = visual.GratingStim(self.win, tex='sin', mask='gauss', sf=5, name='gabor', autoLog=False, size=3)
+#         # Setup stimulus
+#         self.gabor = visual.GratingStim(self.win, tex='sin', mask='gauss', sf=5, name='gabor', autoLog=False, size=3)
 
-        self.show()
+#         self.show()
 
-    def on_lc_data(self,x,y):
-        """ update display """
-        self.gabor.pos = [x,y]
-        self.gabor.draw()
-        self.win.flip()
-        pass
+#     def on_lc_data(self,x,y):
+#         """ update display """
+#         self.gabor.pos = [x,y]
+#         self.gabor.draw()
+#         self.win.flip()
+#         pass
 
-    def on_serial(self,line):
-        """
-        define how command sent from arduino to here should look like
-        GET SET CMD RET
-        OR: replys go flanked by [ ] // alrady used by sending raw data now
-        if line.split() ... 
-        """
-        if line.startswith('<') and line.endswith('>'):
-            read = line[1:-1].split(' ')
-            if read[0] == "RET" and read[1] == "DISPLAY":
-                if read[2] == "STATE":
-                    self.state = read[3]
-                    # self.set_state(read[3])
+#     def on_serial(self,line):
+#         """
+#         define how command sent from arduino to here should look like
+#         GET SET CMD RET
+#         OR: replys go flanked by [ ] // alrady used by sending raw data now
+#         if line.split() ... 
+#         """
+#         if line.startswith('<') and line.endswith('>'):
+#             read = line[1:-1].split(' ')
+#             if read[0] == "RET" and read[1] == "DISPLAY":
+#                 if read[2] == "STATE":
+#                     self.state = read[3]
+#                     # self.set_state(read[3])
 
-                # if read[2] == "TARGET":
-                #     x,y = read[3:]
-                #     self.draw_target(x,y)
-                # if read[2] == "RGB":
-                #     R,G,B = read[3:]
-                #     self.set_monochrome(r,g,b)
-                # if read[2] == "GRATING":
-                #     f,phi,v = read[3:]
-                #     self.draw_grating(f,phi,v)
-                # if read[2] == "SYNC":
-                # flash corner for sync
+#                 # if read[2] == "TARGET":
+#                 #     x,y = read[3:]
+#                 #     self.draw_target(x,y)
+#                 # if read[2] == "RGB":
+#                 #     R,G,B = read[3:]
+#                 #     self.set_monochrome(r,g,b)
+#                 # if read[2] == "GRATING":
+#                 #     f,phi,v = read[3:]
+#                 #     self.draw_grating(f,phi,v)
+#                 # if read[2] == "SYNC":
+#                 # flash corner for sync
                 
-        pass
+#         pass
 
-    def Run(self, folder):
-        # stub
-        # 
-        pass
+#     def Run(self, folder):
+#         # stub
+#         # 
+#         pass
 
-    def closeEvent(self, event):
-        # stub
-        self.close()
+#     def closeEvent(self, event):
+#         # stub
+#         self.close()

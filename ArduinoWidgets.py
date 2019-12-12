@@ -115,29 +115,37 @@ class ArduinoController(QtWidgets.QWidget):
     def get_com_ports(self):
         """ returns com ports with descriptors : separated """
         command = ' '.join([self.parent().profiles['General']['platformio_cmd'],"device","list"])
-        return_value = subprocess.check_output(command,shell=True)
-        # lines = return_value.decode('utf-8').split('\n')
+        return_value = subprocess.check_output(command,shell=True).decode('utf-8')
 
-        # TODO check on linux system - works
-        # check downstairs!
+        lines = [line.strip() for line in return_value.split(os.linesep)]
 
-        if os.name == 'nt':
-            lines = return_value.decode('utf-8').split('\r\r\n\r\r\n')
-
-            com_ports = []
-            for line in lines[:-1]:
-                com_port = line.split('\r\r\n')[0]
-                descr = line.split('\r\r\n')[1].split('Description: ')[1]
+        # os agnostic parser? TODO check
+        com_ports = []
+        for i,line in enumerate(lines):
+            if line.startswith('COM'):
+                com_port = line
+                descr = lines[i+3].split('Description: ')[1]
                 com_ports.append(':'.join([com_port,descr]))
 
-        if os.name == 'posix':
-            lines = return_value.decode('utf-8').split('\n\n')
+        # this parser broke, potentially bc of pio update? 
+        # if os.name == 'nt':
+        #     raw = return_value.decode('utf-8')
+        #     lines = return_value.decode('utf-8').split('\r\r\n\r\r\n')
 
-            com_ports = []
-            for line in lines[:-1]:
-                com_port = line.split('\n')[0]
-                descr = line.split('\n')[-1]
-                com_ports.append(':'.join([com_port,descr]))
+        #     com_ports = []
+        #     for line in lines[:-1]:
+        #         com_port = line.split('\r\r\n')[0]
+        #         descr = line.split('\r\r\n')[1].split('Description: ')[1]
+        #         com_ports.append(':'.join([com_port,descr]))
+
+        # if os.name == 'posix':
+        #     lines = return_value.decode('utf-8').split('\n\n')
+
+        #     com_ports = []
+        #     for line in lines[:-1]:
+        #         com_port = line.split('\n')[0]
+        #         descr = line.split('\n')[-1]
+        #         com_ports.append(':'.join([com_port,descr]))
                     
         # old parser - remove me when done checking above
         # com_ports = []

@@ -91,7 +91,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="dsp:MatrixWriter">
-          <dsp:Path>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-13_16-07-11_suppress_movements\bonsai_harp_log.bin</dsp:Path>
+          <dsp:Path>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-14_17-25-33_suppress_movements\bonsai_harp_log.bin</dsp:Path>
           <dsp:Suffix>None</dsp:Suffix>
           <dsp:Overwrite>true</dsp:Overwrite>
           <dsp:Layout>ColumnMajor</dsp:Layout>
@@ -108,7 +108,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-13_16-07-11_suppress_movements\bonsai_</Value>
+          <Value>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-14_17-25-33_suppress_movements\bonsai_</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">
@@ -117,7 +117,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="q4:FlyCapture">
-          <q4:Index>1</q4:Index>
+          <q4:Index>0</q4:Index>
           <q4:ColorProcessing>Default</q4:ColorProcessing>
         </Combinator>
       </Expression>
@@ -152,33 +152,41 @@
           <q5:Pin>0</q5:Pin>
         </Combinator>
       </Expression>
-      <Expression xsi:type="SubscribeSubject">
-        <Name>base_name</Name>
+      <Expression xsi:type="Disable">
+        <Builder xsi:type="SubscribeSubject">
+          <Name>base_name</Name>
+        </Builder>
       </Expression>
-      <Expression xsi:type="Add">
-        <Operand xsi:type="StringProperty">
-          <Value>video.avi</Value>
-        </Operand>
+      <Expression xsi:type="Disable">
+        <Builder xsi:type="Add">
+          <Operand xsi:type="StringProperty">
+            <Value>video.avi</Value>
+          </Operand>
+        </Builder>
       </Expression>
-      <Expression xsi:type="PropertyMapping">
-        <PropertyMappings>
-          <Property Name="FileName" />
-        </PropertyMappings>
+      <Expression xsi:type="Disable">
+        <Builder xsi:type="PropertyMapping">
+          <PropertyMappings>
+            <Property Name="FileName" />
+          </PropertyMappings>
+        </Builder>
       </Expression>
-      <Expression xsi:type="Combinator">
-        <Combinator xsi:type="cv:VideoWriter">
-          <cv:FileName>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-13_16-07-11_suppress_movements\bonsai_video.avi</cv:FileName>
-          <cv:Suffix>None</cv:Suffix>
-          <cv:Buffered>true</cv:Buffered>
-          <cv:Overwrite>true</cv:Overwrite>
-          <cv:FourCC>FMP4</cv:FourCC>
-          <cv:FrameRate>150</cv:FrameRate>
-          <cv:FrameSize>
-            <cv:Width>0</cv:Width>
-            <cv:Height>0</cv:Height>
-          </cv:FrameSize>
-          <cv:ResizeInterpolation>NearestNeighbor</cv:ResizeInterpolation>
-        </Combinator>
+      <Expression xsi:type="Disable">
+        <Builder xsi:type="Combinator">
+          <Combinator xsi:type="cv:VideoWriter">
+            <cv:FileName>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-14_17-25-33_suppress_movements\bonsai_video.avi</cv:FileName>
+            <cv:Suffix>None</cv:Suffix>
+            <cv:Buffered>true</cv:Buffered>
+            <cv:Overwrite>true</cv:Overwrite>
+            <cv:FourCC>FMP4</cv:FourCC>
+            <cv:FrameRate>150</cv:FrameRate>
+            <cv:FrameSize>
+              <cv:Width>0</cv:Width>
+              <cv:Height>0</cv:Height>
+            </cv:FrameSize>
+            <cv:ResizeInterpolation>NearestNeighbor</cv:ResizeInterpolation>
+          </Combinator>
+        </Builder>
       </Expression>
       <Expression xsi:type="MemberSelector">
         <Selector>Metadata.embeddedFrameCounter,Metadata.embeddedTimeStamp,Metadata.embeddedGPIOPinState</Selector>
@@ -197,7 +205,7 @@
         </PropertyMappings>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-13_16-07-11_suppress_movements\bonsai_frame_stamps.csv</io:FileName>
+        <io:FileName>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-14_17-25-33_suppress_movements\bonsai_frame_stamps.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
