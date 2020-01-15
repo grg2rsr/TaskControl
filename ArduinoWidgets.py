@@ -119,7 +119,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         lines = [line.strip() for line in return_value.split(os.linesep)]
 
-        # os agnostic parser? TODO check
+        # os agnostic parser
         com_ports = []
         for i,line in enumerate(lines):
             if line.startswith('COM'):
@@ -127,34 +127,6 @@ class ArduinoController(QtWidgets.QWidget):
                 descr = lines[i+3].split('Description: ')[1]
                 com_ports.append(':'.join([com_port,descr]))
 
-        # this parser broke, potentially bc of pio update? 
-        # if os.name == 'nt':
-        #     raw = return_value.decode('utf-8')
-        #     lines = return_value.decode('utf-8').split('\r\r\n\r\r\n')
-
-        #     com_ports = []
-        #     for line in lines[:-1]:
-        #         com_port = line.split('\r\r\n')[0]
-        #         descr = line.split('\r\r\n')[1].split('Description: ')[1]
-        #         com_ports.append(':'.join([com_port,descr]))
-
-        # if os.name == 'posix':
-        #     lines = return_value.decode('utf-8').split('\n\n')
-
-        #     com_ports = []
-        #     for line in lines[:-1]:
-        #         com_port = line.split('\n')[0]
-        #         descr = line.split('\n')[-1]
-        #         com_ports.append(':'.join([com_port,descr]))
-                    
-        # old parser - remove me when done checking above
-        # com_ports = []
-        # for i,line in enumerate(lines):
-        #     if line.startswith('Description'):
-        #         com_port = lines[i-3]
-        #         descr = line.split(':')[1][1:]
-        #         com_ports.append(':'.join([com_port,descr]))
-                # com_ports.append(com_port)
         return com_ports
 
     def com_port_changed(self):
@@ -234,6 +206,7 @@ class ArduinoController(QtWidgets.QWidget):
                 pio_config.set(section,"upload_port",self.task_config['com_port'].split(':')[0])
 
         # also write this
+        # should be irrespective of logging?!
         if self.parent().logging:
             with open("platformio.ini", 'w') as fH:
                 pio_config.write(fH)

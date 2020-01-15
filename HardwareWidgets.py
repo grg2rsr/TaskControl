@@ -77,6 +77,7 @@ class BonsaiController(QtWidgets.QWidget):
 
         theproc = subprocess.Popen(command, shell = True)
         # theproc.communicate() # this hangs shell on windows machines, TODO check if this is true for linux
+        # curious, it should do the opposite ... 
 
     pass
 
@@ -95,13 +96,13 @@ class LoadCellController(QtWidgets.QWidget):
         super(LoadCellController, self).__init__(parent=parent)
         print("LC initialized")
         self.setWindowFlags(QtCore.Qt.Window)
-        self.parent = parent
+        # self.parent = parent
         
         self.task_config = parent.task_config['LoadCell']
         
         self.Signals = Signals()
         self.Signals.udp_data_available.connect(self.process_data)
-        self.parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
+        self.parent().ArduinoController.Signals.serial_data_available.connect(self.on_serial)
 
         self.X_last = sp.zeros(2)
         self.v_last = sp.zeros(2)
@@ -161,15 +162,13 @@ class LoadCellController(QtWidgets.QWidget):
             self.Btn.setStyleSheet("background-color:  green")
 
     def connect(self):
-        """ establish connection with the arduino bridge """
-        # FIXME hardcode included! this needs to be fixed
-        # likely in the future: seperate uart line
-        
-        com_port = 'COM8'
-        baud_rate = 115200
+        """ establish connection for raw serial data sending to the arduino via com_port2 """
+        com_port = self.parent().task_config['Arduino']['com_port2']
+        baud_rate = self.parent().task_config['Arduino']['baud_rate']
+
         try:
-            print("initializing serial port: "+com_port)
-            ser = serial.Serial(port=com_port, baudrate=baud_rate,timeout=2)
+            print("initializing 2nd serial port to arduino: " + com_port)
+            ser = serial.Serial(port=com_port, baudrate=baud_rate, timeout=2)
             ser.setDTR(False) # reset: https://stackoverflow.com/questions/21073086/wait-on-arduino-auto-reset-using-pyserial
             time.sleep(1) # sleep timeout length to drop all data
             ser.flushInput() # 
@@ -178,7 +177,7 @@ class LoadCellController(QtWidgets.QWidget):
             return ser
 
         except:
-            print("could not connect to the Arduino bridge!")
+            print("could not open 2nd serial connection to the arduino!")
             sys.exit()
 
 

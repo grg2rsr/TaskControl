@@ -2,7 +2,7 @@
 
 now: first is to make sure it runs again - checkout
 
-
+raw interface sits fixed on serial1
 
 
 
