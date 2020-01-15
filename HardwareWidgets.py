@@ -126,9 +126,8 @@ class LoadCellController(QtWidgets.QWidget):
         self.Layout = QtWidgets.QHBoxLayout()
         self.setMinimumWidth(300) # FIXME hardcoded!
 
-        # FIXME this will likely be replaced in the future by a dedicated UART
-        # from the perspective of this program the two are identical: serial connections
-        self.arduino_bridge = self.connect()
+        # the 2nd serial (uart) serial connection to the arduino for writing raw data back
+        self.arduino_2nd_ser = self.connect()
 
         # transmission toggle button
         self.transmission = False
@@ -249,17 +248,16 @@ class LoadCellController(QtWidgets.QWidget):
     def send(self):
         ba = struct.pack("ff",self.X[0],self.X[1])
         if self.transmission:
-            # TODO check the order of these two - delays wrt timing
             # emit signal for DisplayController
             self.Signals.loadcell_data_available.emit(*self.X)
-            # send coordinates to Arduino via second serial (currently arduino uart bridge)
+            # send coordinates to Arduino via second serial
             cmd = str.encode('[') + ba + str.encode(']')
-            self.arduino_bridge.write(cmd)
+            self.arduino_2nd_ser.write(cmd)
+            # TODO check the order of these two - delays wrt timing
 
-        # TODO implement here: dump on udp port
+        # send via udp
         if self.udp_out_transmission:
             self.udp_out_sock.sendto(ba, (self.UDP_IP_out, int(self.UDP_PORT_out)))
-
 
     def on_serial(self,line):
         if line.startswith('<') and line.endswith('>'):
@@ -271,11 +269,10 @@ class LoadCellController(QtWidgets.QWidget):
                             self.X = sp.array([0,0])
                             self.send()
                             
-
     def closeEvent(self, event):
         # if serial connection is open, close it
-        if hasattr(self,'arduino_bridge'):
-            self.arduino_bridge.close()
+        if hasattr(self,'arduino_2nd_ser'):
+            self.arduino_2nd_ser.close()
         self.LoadCellMonitor.close()
         # self.th_read.join()
         self.close()
@@ -302,7 +299,7 @@ class LoadCellMonitor(QtWidgets.QWidget):
         parent.Signals.loadcell_data_available.connect(self.on_lc_data)
 
         # self.N_history = 100
-        self.lc_raw_data = sp.zeros((300,3)) # FIXME hardcode hardcode
+        self.lc_raw_data = sp.zeros((300,3)) # FIXME hardcode hardcode history length
         self.lc_data = sp.zeros((300,2))
 
         self.initUI()
@@ -364,8 +361,6 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.lc_data[-1,:] = [x,y]
         self.LineFB_pp.setData(y=self.lc_data[:,0])
         self.LineLR_pp.setData(y=self.lc_data[:,1])
-
-
 
 """ copy paste working script from the computer downstairs """
 # ###
@@ -431,8 +426,7 @@ class DisplayController(QtWidgets.QWidget):
         super(DisplayController, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
 
-        # here all the other stuff goes in from the computer downstairs ... 
-
+        # connecting to the relevant signals
         parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
         parent.LoadCellController.Signals.loadcell_data_available.connect(self.on_lc_data)
 
@@ -454,8 +448,10 @@ class DisplayController(QtWidgets.QWidget):
         self.plot_widget.setAspectLocked(True)
         # self.plot_widget.showGrid(x=True,y=True,alpha=0.5)
         # self.plot_widget.showGrid(x=True,y=True)
-        self.cursor = self.plot_widget.plot(x=[self.parent().LoadCellController.X_last[0]],y=[self.parent().LoadCellController.X_last[1]],
-                                            pen=(255,255,255), symbolBrush=(255,255,255), symbolPen='w',symbolSize=150)
+        self.cursor = self.plot_widget.plot(x=[self.parent().LoadCellController.X_last[0]],
+                                            y=[self.parent().LoadCellController.X_last[1]],
+                                            pen=(255,255,255), symbolBrush=(255,255,255),
+                                            symbolPen='w', symbolSize=150)
 
         self.Layout.addWidget(self.plot_widget)
         self.setLayout(self.Layout)
@@ -473,7 +469,6 @@ class DisplayController(QtWidgets.QWidget):
         #     self.move(QtCore.QPoint(x,0))
         #     self.windowHandle().setScreen(displays[1])
         #     self.showFullScreen() # maximises on screen 1
-
 
     def on_lc_data(self,x,y):
         """ update display """

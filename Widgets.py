@@ -146,12 +146,8 @@ class SettingsWidget(QtWidgets.QWidget):
 
     def closeEvent(self,event):
         # TODO iterate over controllers and close all
-        # task should have a list of registered controllers and visualizers
+        # for this, a list of registered task needs list of registered controllers and visualizers
 
-        # FIXME this works if arduino is not connected!
-        # if it is, Arduinocontroller is not taken down
-        
-        # FIXME this can be written generally for all controllers
         if hasattr(self, 'ArduinoController'):
             self.ArduinoController.close()
         
@@ -181,7 +177,7 @@ class SettingsWidget(QtWidgets.QWidget):
             print("Animal: ",self.animal)
             
             # TODO runanimal popup here
-            # self.RunInfo = RunInfoWidget(self)s
+            # self.RunInfo = RunInfoWidget(self)
 
             # make folder structure
             date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
