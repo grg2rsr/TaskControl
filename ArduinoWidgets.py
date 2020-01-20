@@ -41,13 +41,10 @@ class ArduinoController(QtWidgets.QWidget):
 
         # for abbreviation bc if changed, objects are reinstantiated anyways
         self.task = self.parent().task
-        # self.task_folder = os.path.join(self.parent().profile['tasks_folder'],self.task)
         self.task_folder = Path(self.parent().profile['tasks_folder']).joinpath(self.task)
         self.task_config = self.parent().task_config['Arduino']
 
-        # Df = functions.parse_arduino_vars(os.path.join(self.task_folder,'Arduino','src',self.task_config['var_fname']))
         self.vars_path = self.task_folder.joinpath('Arduino','src',self.task_config['var_fname'])
-
         Df = functions.parse_arduino_vars(self.vars_path)
 
         self.VariableController = ArduinoVariablesWidget(self,Df)
@@ -64,19 +61,20 @@ class ArduinoController(QtWidgets.QWidget):
         self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
 
         # get com ports and ini selector
-        com_ports = self.get_com_ports()
-        self.ComPortChoiceWidget = Widgets.StringChoiceWidget(self, choices=com_ports) # TODO is this UI element required? Yes if you want to run multiple box from one computer
-        self.ComPortChoiceWidget.currentIndexChanged.connect(self.com_port_changed)
+        # com_ports = self.get_com_ports()
+        # TODO is this UI element required? Yes if you want to run multiple box from one computer
+        # self.ComPortChoiceWidget = Widgets.StringChoiceWidget(self, choices=com_ports) 
+        # self.ComPortChoiceWidget.currentIndexChanged.connect(self.com_port_changed)
         
         # try to set with previously used port
-        try:
-            last_port = self.task_config['com_port']
-            ind = [s.split(':')[0] for s in com_ports].index(last_port)
-            self.ComPortChoiceWidget.set_value(com_ports[ind])
-        except ValueError:
-            pass
+        # try:
+        #     last_port = self.task_config['com_port']
+        #     ind = [s.split(':')[0] for s in com_ports].index(last_port)
+        #     self.ComPortChoiceWidget.set_value(com_ports[ind])
+        # except ValueError:
+        #     pass
         
-        self.FormLayout.addRow('Arduino COM port', self.ComPortChoiceWidget)
+        # self.FormLayout.addRow('Arduino COM port', self.ComPortChoiceWidget)
 
         FormWidget = QtWidgets.QWidget()
         FormWidget.setLayout(self.FormLayout)
@@ -115,27 +113,27 @@ class ArduinoController(QtWidgets.QWidget):
 
         self.show()
 
-    def get_com_ports(self):
-        """ returns com ports with descriptors : separated """
-        command = ' '.join([self.parent().profiles['General']['platformio_cmd'],"device","list"])
-        return_value = subprocess.check_output(command,shell=True).decode('utf-8')
+    # def get_com_ports(self):
+    #     """ returns com ports with descriptors : separated """
+    #     command = ' '.join([self.parent().profiles['General']['platformio_cmd'],"device","list"])
+    #     return_value = subprocess.check_output(command,shell=True).decode('utf-8')
 
-        lines = [line.strip() for line in return_value.split(os.linesep)]
+    #     lines = [line.strip() for line in return_value.split(os.linesep)]
 
-        # os agnostic parser
-        com_ports = []
-        for i,line in enumerate(lines):
-            if line.startswith('COM'):
-                com_port = line
-                descr = lines[i+3].split('Description: ')[1]
-                com_ports.append(':'.join([com_port,descr]))
+    #     # os agnostic parser - not really bc
+    #     com_ports = []
+    #     for i,line in enumerate(lines):
+    #         if line.startswith('COM') or '/dev/tty' in line:
+    #             com_port = line
+    #             descr = lines[i+3].split('Description: ')[1]
+    #             com_ports.append(':'.join([com_port,descr]))
 
-        return com_ports
+    #     return com_ports
 
-    def com_port_changed(self):
-        # for logging only
-        self.task_config['com_port'] = self.ComPortChoiceWidget.get_value()
-        print("Arduino COM port: "+self.task_config['com_port'])
+    # def com_port_changed(self):
+    #     # for logging only
+    #     self.task_config['com_port'] = self.ComPortChoiceWidget.get_value()
+    #     print("Arduino COM port: "+self.task_config['com_port'])
 
     # FUTURE TODO implement baud rate selector
 
@@ -217,11 +215,6 @@ class ArduinoController(QtWidgets.QWidget):
         # write the UI derived and upload those, revert after upload
         # this workaround is necessary to use the get previous variables
         # functionality ... 
-        # src = os.path.join('src',self.task_config['var_fname'])
-        
-        # src = os.path.join('src',self.task_config['var_fname'])
-        # target = os.path.join('src',self.task_config['var_fname']+'_default')
-        # shutil.copy(src,target)
 
         # backing up original values
         shutil.copy(self.vars_path,self.vars_path.with_suffix('.default'))
@@ -235,7 +228,6 @@ class ArduinoController(QtWidgets.QWidget):
         prev_dir = Path.cwd()
         os.chdir(self.task_folder.joinpath(self.task_config['pio_project_folder']))
 
-        # fH = open(os.path.join(self.run_folder,'platformio_build_log.txt'),'w')
         fH = open(self.run_folder.joinpath('platformio_build_log.txt'),'w')
         platformio_cmd = self.parent().profiles['General']['platformio_cmd']
         cmd = ' '.join([platformio_cmd,'run','--target','upload'])
@@ -245,23 +237,13 @@ class ArduinoController(QtWidgets.QWidget):
 
         os.chdir(prev_dir)
 
-        # restore default variables in the task folder
-        # src = os.path.join('src',self.task_config['var_fname']+'_default')
-        # target = os.path.join('src',self.task_config['var_fname'])
-        # shutil.copy(src,target)
-
         # restoring original variables
         shutil.copy(self.vars_path.with_suffix('.default'),self.vars_path)
         os.remove(self.vars_path.with_suffix('.default'))
 
-        # back to previous directory
-        # os.chdir(prev_cwd)
-
     def log_task(self,folder):
         """ copy the entire arduino folder to the logging folder """
         print(" - logging arduino code")
-        # src = os.path.join(self.parent().profile['tasks_folder'],self.parent().task)
-        # target = os.path.join(folder,self.parent().task)
         src = self.task_folder
         target = folder.joinpath(self.task)
         shutil.copytree(src,target)
@@ -311,7 +293,6 @@ class ArduinoController(QtWidgets.QWidget):
 
         # open file for writing
         if self.parent().logging:
-            # fH = open(os.path.join(folder,'arduino_log.txt'),'w')
             fH = open(folder.joinpath('arduino_log.txt'),'w')
 
         # multithreading taken from
@@ -343,9 +324,7 @@ class ArduinoController(QtWidgets.QWidget):
         # overwrite logged arduino vars file
         if self.parent().logging:
             try:
-                # target = os.path.join(self.run_folder,self.parent().task)
                 target = self.run_folder.joinpath(self.task)
-                # self.VariableController.write_variables(os.path.join(target,'Arduino','src',self.task_config['var_fname']))        
                 self.VariableController.write_variables(target.joinpath('Arduino','src',self.task_config['var_fname']))
             except AttributeError:
                 # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
@@ -359,7 +338,6 @@ class ArduinoController(QtWidgets.QWidget):
 
         # read in original task config
         task_config = configparser.ConfigParser()
-        # task_config_path = os.path.join(self.task_folder,"task_config.ini")
         task_config_path = self.task_folder.joinpath("task_config.ini")
         task_config.read(task_config_path)
         
@@ -493,16 +471,15 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
     def load_last_vars(self):
         """ try to get arduino variables from last run for the task 
         only loads, does not send! """
-        SettingsW = self.parent().parent()
+        ThisSettingsWidget = self.parent().parent()
+
         try:
-            # current_animal_folder = os.path.join(self.parent().parent().profile['animals_folder'],self.parent().parent().animal)
-            current_animal_folder = Path(SettingsW.profile['animals_folder']).joinpath(SettingsW.animal)
+            current_animal_folder = Path(ThisSettingsWidget.profile['animals_folder']).joinpath(ThisSettingsWidget.animal)
             sessions_df = utils.get_sessions(current_animal_folder)
-            previous_sessions = sessions_df.groupby('task').get_group(SettingsW.task)
+            previous_sessions = sessions_df.groupby('task').get_group(ThisSettingsWidget.task)
 
             prev_session_path = Path(previous_sessions.iloc[-1]['path'])
-            # prev_vars_path = os.path.join(prev_session_path,SettingsW.task,self.parent().task_config['pio_project_folder'],'src',self.parent().task_config['var_fname'])
-            prev_vars_path = prev_session_path.joinpath(SettingsW.task,self.parent().task_config['pio_project_folder'],'src',self.parent().task_config['var_fname'])
+            prev_vars_path = prev_session_path.joinpath(ThisSettingsWidget.task,self.parent().task_config['pio_project_folder'],'src',self.parent().task_config['var_fname'])
             
             prev_vars = functions.parse_arduino_vars(prev_vars_path)
 
@@ -556,7 +533,6 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         functions.scale_Widgets([self, self.parent()])
 
     def update(self,line):
-        # utils.debug_trace()
         # if decode
         try:
             code = line.split('\t')[0]
@@ -588,7 +564,6 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
     def __init__(self,parent):
         super(StateMachineMonitorWidget, self).__init__(parent=parent)
 
-        # path = os.path.join(self.parent().task_folder,'Arduino','src','event_codes.h')
         path = self.parent().task_folder.joinpath('Arduino','src','event_codes.h')
         self.Df = functions.parse_code_map(path)
         self.code_map = dict(zip(self.Df['code'].values, self.Df['name'].values))

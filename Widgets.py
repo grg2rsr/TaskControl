@@ -181,8 +181,8 @@ class SettingsWidget(QtWidgets.QWidget):
             # self.RunInfo = RunInfoWidget(self)
 
             # make folder structure
+            # folder = Path(self.profile['tmp_folder'])
             date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
-            # folder = os.path.join(self.profile['animals_folder'],self.animal,date_time+'_'+self.task)
             folder = Path(self.profile['animals_folder']).joinpath(self.animal,date_time+'_'+self.task)
             os.makedirs(folder,exist_ok=True)
 
@@ -232,7 +232,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
     def get_animal_meta(self):
         # TODO FUTURE make a function of Animal object
-        meta_path = os.path.join(self.profile['animals_folder'],self.animal,'animal_meta.csv')
+        meta_path = Path(self.profile['animals_folder']).joinpath(self.animal,'animal_meta.csv')
         return pd.read_csv(meta_path)
 
     def animal_changed(self):
@@ -253,11 +253,11 @@ class SettingsWidget(QtWidgets.QWidget):
     def task_changed(self):
         """ upon task change: look for required controllers, take all present down and instantiate the new ones """
         self.task = self.TaskChoiceWidget.get_value()
-        self.task_folder = os.path.join(self.profile['tasks_folder'],self.task)
+        self.task_folder = Path(self.profile['tasks_folder']).joinpath(self.task)
 
         # parse task config file
         self.task_config = configparser.ConfigParser()
-        self.task_config.read(os.path.join(self.task_folder, 'task_config.ini'))
+        self.task_config.read(self.task_folder.joinpath('task_config.ini'))
 
         # TODO generalize - make a list of controllers
         for section in self.task_config.sections():
@@ -312,7 +312,7 @@ class AnimalInfoWidget(QtWidgets.QWidget):
 
     def update(self):
         # TODO get a list of past sessions and parse them
-        current_animal_folder = os.path.join(self.parent().profile['animals_folder'],self.parent().animal)
+        current_animal_folder = Path(self.parent().profile['animals_folder']).joinpath(self.parent().animal)
         try:
             sessions_df = utils.get_sessions(current_animal_folder)
             # lines = sessions_df['task'].to_list()

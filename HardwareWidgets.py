@@ -56,11 +56,11 @@ class BonsaiController(QtWidgets.QWidget):
         animal = self.parent().animal
         task = self.parent().task
         task_config = self.parent().task_config['Bonsai']
-        task_folder = os.path.join(self.parent().profile['tasks_folder'], task)
+        # task_folder = os.path.join(self.parent().profile['tasks_folder'], task)
+        task_folder = Path(self.parent().profile['tasks_folder']).joinpath(task)
        
         # fname = animal+'.raw' # FIXME there is a thing with _ and 0 appended, check this
         
-        folder = Path(folder)
         out_path = folder.joinpath('bonsai_') # this needs to be fixed in bonsai
 
         
@@ -70,12 +70,13 @@ class BonsaiController(QtWidgets.QWidget):
         # TODO add bonsai com_port passing, check if multiple can be passed with colon separation
         # parameters = "-p:save_path=\""+str(out_path)+"\""
 
-        bonsai_exe = self.parent().profiles['General']['bonsai_cmd']
+        bonsai_exe = Path(self.parent().profiles['General']['bonsai_cmd'])
         
-        bonsai_workflow = os.path.join(task_folder,'Bonsai',task_config['workflow_fname'])
+        # bonsai_workflow = os.path.join(task_folder,'Bonsai',task_config['workflow_fname'])
+        bonsai_workflow = task_folder.joinpath('Bonsai',task_config['workflow_fname'])
         bonsai_workflow = "\""+bonsai_workflow+"\""
 
-        command = ' '.join([str(Path(bonsai_exe)),str(Path(bonsai_workflow)),"--start",parameters,"&"])
+        command = ' '.join([str(bonsai_exe),str(bonsai_workflow),"--start",parameters,"&"])
 
         print("bonsai command:")
         print(command)
