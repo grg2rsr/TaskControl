@@ -24,7 +24,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="q1:Device">
-          <q1:PortName>COM7</q1:PortName>
+          <q1:PortName>COM11</q1:PortName>
           <q1:DeviceState>Active</q1:DeviceState>
           <q1:DumpRegisters>true</q1:DumpRegisters>
           <q1:LedState>On</q1:LedState>
@@ -91,7 +91,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="dsp:MatrixWriter">
-          <dsp:Path>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-14_17-25-33_suppress_movements\bonsai_harp_log.bin</dsp:Path>
+          <dsp:Path>Y:\shared-paton\georg\TaskControl\Animals\123\2020-01-20_16-42-40_suppress_movements\bonsai_harp_log.bin</dsp:Path>
           <dsp:Suffix>None</dsp:Suffix>
           <dsp:Overwrite>true</dsp:Overwrite>
           <dsp:Layout>ColumnMajor</dsp:Layout>
@@ -108,7 +108,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-14_17-25-33_suppress_movements\bonsai_</Value>
+          <Value>Y:\shared-paton\georg\TaskControl\Animals\123\2020-01-20_16-42-40_suppress_movements\bonsai_</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">
@@ -146,11 +146,13 @@
       <Expression xsi:type="q3:ExpressionTransform">
         <q3:Expression>it &gt; 500000</q3:Expression>
       </Expression>
-      <Expression xsi:type="Combinator">
-        <Combinator xsi:type="q5:DigitalOutput">
-          <q5:PortName>COM5</q5:PortName>
-          <q5:Pin>0</q5:Pin>
-        </Combinator>
+      <Expression xsi:type="Disable">
+        <Builder xsi:type="Combinator">
+          <Combinator xsi:type="q5:DigitalOutput">
+            <q5:PortName>COM5</q5:PortName>
+            <q5:Pin>0</q5:Pin>
+          </Combinator>
+        </Builder>
       </Expression>
       <Expression xsi:type="Disable">
         <Builder xsi:type="SubscribeSubject">
@@ -205,7 +207,7 @@
         </PropertyMappings>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-14_17-25-33_suppress_movements\bonsai_frame_stamps.csv</io:FileName>
+        <io:FileName>Y:\shared-paton\georg\TaskControl\Animals\123\2020-01-20_16-42-40_suppress_movements\bonsai_frame_stamps.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>

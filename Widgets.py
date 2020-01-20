@@ -149,6 +149,9 @@ class SettingsWidget(QtWidgets.QWidget):
         # TODO iterate over controllers and close all
         # for this, a list of registered task needs list of registered controllers and visualizers
 
+        if hasattr(self, 'AnimalInfoWidget'):
+            self.AnimalInfoWidget.close()
+
         if hasattr(self, 'ArduinoController'):
             self.ArduinoController.close()
         

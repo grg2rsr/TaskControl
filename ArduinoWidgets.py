@@ -52,6 +52,9 @@ class ArduinoController(QtWidgets.QWidget):
         # signals
         self.Signals = Signals()
 
+        self.stopped = False
+        self.reprogram = False
+
         self.initUI()
     
     def initUI(self):
@@ -59,6 +62,12 @@ class ArduinoController(QtWidgets.QWidget):
         self.FormLayout = QtWidgets.QFormLayout()
         self.FormLayout.setVerticalSpacing(10)
         self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
+
+        # reprogram
+        self.reprogramCheckBox = QtWidgets.QCheckBox("reupload sketch")
+        self.reprogramCheckBox.setChecked(False)
+        self.reprogramCheckBox.stateChanged.connect(self.reprogramCheckBox_changed)
+        self.FormLayout.addRow(self.reprogramCheckBox)
 
         # get com ports and ini selector
         # com_ports = self.get_com_ports()
@@ -137,9 +146,11 @@ class ArduinoController(QtWidgets.QWidget):
 
     # FUTURE TODO implement baud rate selector
 
-    # def reset_board(self):
-    #     # TODO implement - necessary?
-    #     pass
+    def reprogramCheckBox_changed(self):
+        if self.reprogramCheckBox.checkState() == 2:
+            self.reprogram = True
+        else:
+            self.reprogram = False
 
     def send(self,command):
         """ sends string command interface to arduino, interface compatible """
@@ -277,7 +288,10 @@ class ArduinoController(QtWidgets.QWidget):
             self.log_task(folder)
 
         # upload
-        self.upload()
+        if self.reprogram:
+            self.upload()
+        else:
+            print(" --- resetting arduino only --- reusing previous sketch --- ")
 
         # connect to serial port
         self.connection = self.connect()
@@ -303,7 +317,7 @@ class ArduinoController(QtWidgets.QWidget):
         # everybody that needs to do sth when new data arrives listens to that signal
 
         def read_from_port(ser):
-            while True:
+            while not self.stopped:
                 try:
                     line = ser.readline().decode('utf-8').strip()
                     if line is not '': # filtering out empty reads
@@ -317,10 +331,15 @@ class ArduinoController(QtWidgets.QWidget):
                     # FIXME CHECK if this will also fail on failed reads!
                     break
 
-        thread = threading.Thread(target=read_from_port, args=(self.connection, ))
-        thread.start() # apparently this line is not passed, thread hangs here? if yes,then why multithreading at all???
+        self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
+        self.thread.start() # apparently this line is not passed, thread hangs here? if yes,then why multithreading at all???
 
     def closeEvent(self, event):
+
+        # take care of ending the threads
+        self.stopped = True
+        self.thread.join()
+
         # overwrite logged arduino vars file
         if self.parent().logging:
             try:

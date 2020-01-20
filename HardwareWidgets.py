@@ -56,14 +56,9 @@ class BonsaiController(QtWidgets.QWidget):
         animal = self.parent().animal
         task = self.parent().task
         task_config = self.parent().task_config['Bonsai']
-        # task_folder = os.path.join(self.parent().profile['tasks_folder'], task)
         task_folder = Path(self.parent().profile['tasks_folder']).joinpath(task)
-       
-        # fname = animal+'.raw' # FIXME there is a thing with _ and 0 appended, check this
-        
         out_path = folder.joinpath('bonsai_') # this needs to be fixed in bonsai
-
-        
+       
         # constructing the bonsai exe string
         parameters = "-p:save_path=\""+str(out_path)+"\""
 
@@ -71,10 +66,8 @@ class BonsaiController(QtWidgets.QWidget):
         # parameters = "-p:save_path=\""+str(out_path)+"\""
 
         bonsai_exe = Path(self.parent().profiles['General']['bonsai_cmd'])
-        
-        # bonsai_workflow = os.path.join(task_folder,'Bonsai',task_config['workflow_fname'])
         bonsai_workflow = task_folder.joinpath('Bonsai',task_config['workflow_fname'])
-        bonsai_workflow = "\""+bonsai_workflow+"\""
+
 
         command = ' '.join([str(bonsai_exe),str(bonsai_workflow),"--start",parameters,"&"])
 
@@ -86,6 +79,10 @@ class BonsaiController(QtWidgets.QWidget):
         # curious, it should do the opposite ... 
 
     pass
+
+    def closeEvent(self, event):
+        # stub
+        self.close()
 
 """
  __        ______        ___       _______   ______  _______  __       __
@@ -117,6 +114,8 @@ class LoadCellController(QtWidgets.QWidget):
         self.Fy_off = 0
 
         self.Buffer = sp.zeros((100,2))
+
+        self.stopped = False
 
         self.LoadCellMonitor = LoadCellMonitor(self)
         self.init_udp_server()
@@ -198,7 +197,7 @@ class LoadCellController(QtWidgets.QWidget):
         # exception and then I let it pass w/o doing anything. Verify if necessary
         
         def udp_reader():
-            while True:
+            while not self.stopped:
                 try:
                     # read data and publish it via a qt signal
                     # raw_read = sock.recv(12) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
@@ -279,7 +278,8 @@ class LoadCellController(QtWidgets.QWidget):
         # if serial connection is open, close it
         if hasattr(self,'arduino_2nd_ser'):
             self.arduino_2nd_ser.close()
-        self.LoadCellMonitor.close()
+
+        self.stopped = True
         # self.th_read.join()
         self.close()
 
@@ -367,6 +367,11 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.lc_data[-1,:] = [x,y]
         self.LineFB_pp.setData(y=self.lc_data[:,0])
         self.LineLR_pp.setData(y=self.lc_data[:,1])
+
+
+    def closeEvent(self, event):
+        # stub
+        self.close()
 
 """ copy paste working script from the computer downstairs """
 # ###
