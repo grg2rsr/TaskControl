@@ -542,7 +542,7 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
         else:
             # Df sorted according to self.Df['name']
             Df_sorted = Df.set_index('name').loc[self.Df['name'].values]
-            Df_sorted.reset_index(level=0,inplace=True)
+            Df_sorted.reset_index(level=0, inplace=True)
             
             for i, row in Df_sorted.iterrows():
                 self.itemAt(i,1).widget().set_value(row['value'])

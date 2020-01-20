@@ -19,7 +19,6 @@ import Widgets
 import functions
 import utils 
 
-# TODO  not necessarily here ... could be moved elsewhere
 class Signals(QtCore.QObject):
     # explained here why this has to be within a QObject
     # https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html

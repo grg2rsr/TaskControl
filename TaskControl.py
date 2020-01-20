@@ -35,16 +35,14 @@ class TaskControlApp(QtWidgets.QApplication):
         self.exit()
 
 if __name__ == "__main__":
-    # TODO argparse!
+    import argparse
+    # profiles_fpath = 'profiles_fphot.ini' # the fiber photometry computer downstairs in the viv
+    profiles_fpath = 'profiles_ccu.ini' # my ccu desktop in the open lab
 
-    if len(sys.argv) == 2:
-        profiles_fpath = sys.argv[1]
-    else:
-        # the fiber photometry computer downstairs in the viv
-        # profiles_fpath = 'profiles_fphot.ini'
-
-        # my ccu desktop in the open lab
-        profiles_fpath = 'profiles_ccu.ini'
+    # argparsing
+    parser = argparse.ArgumentParser(description=' xXx Unified TaskControl xXx ')
+    parser.add_argument("-p", default=profiles_fpath, action='store', dest="profiles_fpath", help='set the path to the profiles.ini file')
+    args = parser.parse_args()
 
     # run the application
-    TaskControl = TaskControlApp([], profiles_fpath=profiles_fpath)
+    TaskControl = TaskControlApp([], profiles_fpath=args.profiles_fpath)

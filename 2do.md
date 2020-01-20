@@ -1,10 +1,15 @@
 # 2do
 
 now: first is to make sure it runs again - checkout
-
 raw interface sits fixed on serial1
+make it possible to pass com port to bonsai sketch
+
+implement Pathlib widely - use this chance also to make use of the tmp folder functionality?
 
 
+
+## refactoring
+Df -> Arudino_VarsDf / VarsDf
 
 ## fix the const/newline/init_variables problem
 find a way that interface_generator.py does not need a copy of parse_arduino_vars ... 
