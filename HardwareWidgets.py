@@ -63,10 +63,13 @@ class BonsaiController(QtWidgets.QWidget):
         folder = Path(folder)
         out_path = folder.joinpath('bonsai_') # this needs to be fixed in bonsai
 
-        # TODO add bonsai com_port passing
         
         # constructing the bonsai exe string
         parameters = "-p:save_path=\""+str(out_path)+"\""
+
+        # TODO add bonsai com_port passing, check if multiple can be passed with colon separation
+        # parameters = "-p:save_path=\""+str(out_path)+"\""
+
         bonsai_exe = self.parent().profiles['General']['bonsai_cmd']
         
         bonsai_workflow = os.path.join(task_folder,'Bonsai',task_config['workflow_fname'])
