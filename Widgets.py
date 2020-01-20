@@ -1,4 +1,5 @@
 import sys, os
+from pathlib import Path
 import datetime
 import shutil
 import configparser
@@ -181,7 +182,8 @@ class SettingsWidget(QtWidgets.QWidget):
 
             # make folder structure
             date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
-            folder = os.path.join(self.profile['animals_folder'],self.animal,date_time+'_'+self.task)
+            # folder = os.path.join(self.profile['animals_folder'],self.animal,date_time+'_'+self.task)
+            folder = Path(self.profile['animals_folder']).joinpath(self.animal,date_time+'_'+self.task)
             os.makedirs(folder,exist_ok=True)
 
             # TODO generalize this section. Currently all possible hardware controllers need to be called seperately

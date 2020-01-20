@@ -1,5 +1,6 @@
 import sys, os
 import configparser
+from pathlib import Path
 
 from PyQt5 import QtWidgets
 from Widgets import *
@@ -8,10 +9,8 @@ class TaskControlApp(QtWidgets.QApplication):
     def __init__(self, *args, profiles_fpath=None):
         super(TaskControlApp, self).__init__(*args)
 
-        self.profiles_fpath = profiles_fpath
-        print(self.profiles_fpath)
-
         # parse profiles.ini
+        self.profiles_fpath = Path(profiles_fpath)
         profiles = configparser.ConfigParser()
         profiles.read(self.profiles_fpath)
 

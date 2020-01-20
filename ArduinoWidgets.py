@@ -41,10 +41,14 @@ class ArduinoController(QtWidgets.QWidget):
 
         # for abbreviation bc if changed, objects are reinstantiated anyways
         self.task = self.parent().task
-        self.task_folder = os.path.join(self.parent().profile['tasks_folder'],self.task)
+        # self.task_folder = os.path.join(self.parent().profile['tasks_folder'],self.task)
+        self.task_folder = Path(self.parent().profile['tasks_folder']).joinpath(self.task)
         self.task_config = self.parent().task_config['Arduino']
 
-        Df = functions.parse_arduino_vars(os.path.join(self.task_folder,'Arduino','src',self.task_config['var_fname']))
+        # Df = functions.parse_arduino_vars(os.path.join(self.task_folder,'Arduino','src',self.task_config['var_fname']))
+        self.vars_path = self.task_folder.joinpath('Arduino','src',self.task_config['var_fname'])
+
+        Df = functions.parse_arduino_vars(self.vars_path)
 
         self.VariableController = ArduinoVariablesWidget(self,Df)
 
@@ -178,27 +182,26 @@ class ArduinoController(QtWidgets.QWidget):
           
         # build and log
         print("--- uploading code on arduino --- ")
-        prev_cwd = os.getcwd()
-        os.chdir(os.path.join(self.task_folder,self.task_config['pio_project_folder']))
 
-        # check existence of interface.cpp, and if not, build it
-        # if not os.path.exists(os.path.join('src','interface.cpp')):
-        # DEBUG - force redo the interface template
-        if 1:
-            print("interface.cpp not found, attempting to build it")
-            os.chdir("src")
+        # check if interface_generator.py exists, if yes, make interface.cpp
+        if self.vars_path.joinpath('interface_generator.py'):
+            print(" --- generating interface --- ")
+            prev_cwd = Path.cwd()
+            os.chdir(self.vars_path.parent)
             try:
                 cmd = " ".join(["python","interface_generator.py",self.task_config['var_fname']])
                 subprocess.check_output(cmd,shell=True)
             except:
                 print("failed at building interface.cpp. Exiting ... ")
                 sys.exit()
-            os.chdir(os.path.normpath(os.getcwd() + os.sep + os.pardir))
-
+            os.chdir(prev_cwd)
+     
         # replace whatever com port is in the platformio.ini
         # with the one from task config
         pio_config = configparser.ConfigParser()
-        pio_config.read("platformio.ini")
+        # self.pio_config_path = Path(self.task_config['pio_project_folder']).joinpath("platformio.ini")
+        self.pio_config_path = self.task_folder.joinpath(self.task_config['pio_project_folder'],"platformio.ini")
+        pio_config.read(self.pio_config_path)
 
         for section in pio_config.sections():
             if section.split(":")[0] == "env":
@@ -207,41 +210,60 @@ class ArduinoController(QtWidgets.QWidget):
         # also write this
         # should be irrespective of logging?!
         if self.parent().logging:
-            with open("platformio.ini", 'w') as fH:
+            with open(self.pio_config_path, 'w') as fH:
                 pio_config.write(fH)
         
         # get current UI arduino variables, backup defaults,
         # write the UI derived and upload those, revert after upload
         # this workaround is necessary to use the get previous variables
         # functionality ... 
-        src = os.path.join('src',self.task_config['var_fname'])
-        target = os.path.join('src',self.task_config['var_fname']+'_default')
-        shutil.copy(src,target)
-        if self.parent().logging:
-            self.VariableController.write_variables(os.path.join('src',self.task_config['var_fname']))
+        # src = os.path.join('src',self.task_config['var_fname'])
+        
+        # src = os.path.join('src',self.task_config['var_fname'])
+        # target = os.path.join('src',self.task_config['var_fname']+'_default')
+        # shutil.copy(src,target)
+
+        # backing up original values
+        shutil.copy(self.vars_path,self.vars_path.with_suffix('.default'))
+        # overwriting vars
+        self.VariableController.write_variables(self.vars_path)
+
+        # if self.parent().logging:
+            # self.VariableController.write_variables(os.path.join('src',self.task_config['var_fname']))
 
         # upload
-        fH = open(os.path.join(self.run_folder,'platformio_build_log.txt'),'w')
+        prev_dir = Path.cwd()
+        os.chdir(self.task_folder.joinpath(self.task_config['pio_project_folder']))
+
+        # fH = open(os.path.join(self.run_folder,'platformio_build_log.txt'),'w')
+        fH = open(self.run_folder.joinpath('platformio_build_log.txt'),'w')
         platformio_cmd = self.parent().profiles['General']['platformio_cmd']
         cmd = ' '.join([platformio_cmd,'run','--target','upload'])
         proc = subprocess.Popen(cmd,shell=True,stdout=fH)
         proc.communicate()
         fH.close()
 
+        os.chdir(prev_dir)
+
         # restore default variables in the task folder
-        src = os.path.join('src',self.task_config['var_fname']+'_default')
-        target = os.path.join('src',self.task_config['var_fname'])
-        shutil.copy(src,target)
-        os.remove(src)
+        # src = os.path.join('src',self.task_config['var_fname']+'_default')
+        # target = os.path.join('src',self.task_config['var_fname'])
+        # shutil.copy(src,target)
+
+        # restoring original variables
+        shutil.copy(self.vars_path.with_suffix('.default'),self.vars_path)
+        os.remove(self.vars_path.with_suffix('.default'))
 
         # back to previous directory
-        os.chdir(prev_cwd)
+        # os.chdir(prev_cwd)
 
     def log_task(self,folder):
         """ copy the entire arduino folder to the logging folder """
         print(" - logging arduino code")
-        src = os.path.join(self.parent().profile['tasks_folder'],self.parent().task)
-        target = os.path.join(folder,self.parent().task)
+        # src = os.path.join(self.parent().profile['tasks_folder'],self.parent().task)
+        # target = os.path.join(folder,self.parent().task)
+        src = self.task_folder
+        target = folder.joinpath(self.task)
         shutil.copytree(src,target)
 
     def connect(self):
@@ -289,7 +311,8 @@ class ArduinoController(QtWidgets.QWidget):
 
         # open file for writing
         if self.parent().logging:
-            fH = open(os.path.join(folder,'arduino_log.txt'),'w')
+            # fH = open(os.path.join(folder,'arduino_log.txt'),'w')
+            fH = open(folder.joinpath('arduino_log.txt'),'w')
 
         # multithreading taken from
         # https://stackoverflow.com/questions/17553543/pyserial-non-blocking-read-loop
@@ -320,8 +343,10 @@ class ArduinoController(QtWidgets.QWidget):
         # overwrite logged arduino vars file
         if self.parent().logging:
             try:
-                target = os.path.join(self.run_folder,self.parent().task)
-                self.VariableController.write_variables(os.path.join(target,'Arduino','src',self.task_config['var_fname']))        
+                # target = os.path.join(self.run_folder,self.parent().task)
+                target = self.run_folder.joinpath(self.task)
+                # self.VariableController.write_variables(os.path.join(target,'Arduino','src',self.task_config['var_fname']))        
+                self.VariableController.write_variables(target.joinpath('Arduino','src',self.task_config['var_fname']))
             except AttributeError:
                 # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
                 pass
@@ -334,7 +359,8 @@ class ArduinoController(QtWidgets.QWidget):
 
         # read in original task config
         task_config = configparser.ConfigParser()
-        task_config_path = os.path.join(self.task_folder,"task_config.ini")
+        # task_config_path = os.path.join(self.task_folder,"task_config.ini")
+        task_config_path = self.task_folder.joinpath("task_config.ini")
         task_config.read(task_config_path)
         
         # update all changes in this section
@@ -467,13 +493,16 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
     def load_last_vars(self):
         """ try to get arduino variables from last run for the task 
         only loads, does not send! """
+        SettingsW = self.parent().parent()
         try:
-            current_animal_folder = os.path.join(self.parent().parent().profile['animals_folder'],self.parent().parent().animal)
+            # current_animal_folder = os.path.join(self.parent().parent().profile['animals_folder'],self.parent().parent().animal)
+            current_animal_folder = Path(SettingsW.profile['animals_folder']).joinpath(SettingsW.animal)
             sessions_df = utils.get_sessions(current_animal_folder)
-            previous_sessions = sessions_df.groupby('task').get_group(self.parent().parent().task)
+            previous_sessions = sessions_df.groupby('task').get_group(SettingsW.task)
 
-            prev_session_path = previous_sessions.iloc[-1]['path']
-            prev_vars_path = os.path.join(prev_session_path,self.parent().parent().task,self.parent().task_config['pio_project_folder'],'src',self.parent().task_config['var_fname'])
+            prev_session_path = Path(previous_sessions.iloc[-1]['path'])
+            # prev_vars_path = os.path.join(prev_session_path,SettingsW.task,self.parent().task_config['pio_project_folder'],'src',self.parent().task_config['var_fname'])
+            prev_vars_path = prev_session_path.joinpath(SettingsW.task,self.parent().task_config['pio_project_folder'],'src',self.parent().task_config['var_fname'])
             
             prev_vars = functions.parse_arduino_vars(prev_vars_path)
 
@@ -559,7 +588,8 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
     def __init__(self,parent):
         super(StateMachineMonitorWidget, self).__init__(parent=parent)
 
-        path = os.path.join(self.parent().task_folder,'Arduino','src','event_codes.h')
+        # path = os.path.join(self.parent().task_folder,'Arduino','src','event_codes.h')
+        path = self.parent().task_folder.joinpath('Arduino','src','event_codes.h')
         self.Df = functions.parse_code_map(path)
         self.code_map = dict(zip(self.Df['code'].values, self.Df['name'].values))
 
