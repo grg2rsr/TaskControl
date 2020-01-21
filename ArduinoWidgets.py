@@ -45,6 +45,9 @@ class ArduinoController(QtWidgets.QWidget):
         self.task_folder = Path(self.parent().profile['tasks_folder']).joinpath(self.task)
         self.task_config = self.parent().task_config['Arduino']
 
+        # TODO here: copy these variables to the temp vars path and overwrite the path here
+        # then - all operations should be done on this
+
         self.vars_path = self.task_folder.joinpath('Arduino','src',self.task_config['var_fname'])
         Df = functions.parse_arduino_vars(self.vars_path)
 
@@ -189,21 +192,6 @@ class ArduinoController(QtWidgets.QWidget):
     def upload(self):
         """ uploads the sketch specified in platformio.ini
         which is in turn specified in the task_config.ini """
-          
-        # build and log
-        
-        # check if interface_generator.py exists, if yes, make interface.cpp
-        # if self.vars_path.joinpath('interface_generator.py'):
-        #     print(" --- generating interface --- ")
-        #     prev_cwd = Path.cwd()
-        #     os.chdir(self.vars_path.parent)
-        #     try:
-        #         cmd = " ".join(["python","interface_generator.py",self.task_config['var_fname']])
-        #         subprocess.check_output(cmd,shell=True)
-        #     except:
-        #         print("failed at building interface.cpp. Exiting ... ")
-        #         sys.exit()
-        #     os.chdir(prev_cwd)
 
         # building interface
         print(" --- generating interface --- ")
@@ -363,18 +351,22 @@ class ArduinoController(QtWidgets.QWidget):
         task_config_path = self.task_folder.joinpath("task_config.ini")
         task_config.read(task_config_path)
         
+
+        # these are obsolete currently, as there is no way to change things in the task config interactively
+        # could be interesting to keep it though in order to run several boxes from one computer
+
         # update all changes in this section
-        for key,value in self.task_config.items():
-            task_config.set('Arduino',key,value)
+        # for key,value in self.task_config.items():
+            # task_config.set('Arduino',key,value)
 
         # com port: remove descriptor
-        task_config.set('Arduino','com_port',self.task_config['com_port'].split(':')[0])
+        # task_config.set('Arduino','com_port',self.task_config['com_port'].split(':')[0])
 
         # write it
-        if self.parent().logging:
-            with open(task_config_path, 'w') as task_config_fH:
-                task_config.write(task_config_fH)
-            print("logging arduino section of task config to :", task_config_path)
+        # if self.parent().logging:
+        #     with open(task_config_path, 'w') as task_config_fH:
+        #         task_config.write(task_config_fH)
+        #     print("logging arduino section of task config to :", task_config_path)
 
         # remove everything that is written nontheless
         if not self.parent().logging:
@@ -720,4 +712,4 @@ class KeyboardInteractionWidget(QtWidgets.QWidget):
         functions.scale_Widgets([self, self.parent()])
 
     def keyPressEvent(self, event):
-        self.parent().send("CMD "+event.text())
+        self.parent().send("CMD " + event.text())
