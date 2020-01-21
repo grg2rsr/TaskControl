@@ -4,7 +4,7 @@
 
 
 [ ] multiple parameter passing to bonsai
-make it possible to pass com port to bonsai sketch
+for make it possible to pass com port to bonsai sketch
 
 ## decisions:
 tmp folder or not?

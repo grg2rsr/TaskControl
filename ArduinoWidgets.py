@@ -634,8 +634,9 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         self.show()
     
     def set_state(self, state):
-        # fugly
         # does not fully work bc the state entry function is not called
+        # fugly
+        # also, are those part of the interface?
         code = self.Df.loc[self.Df['name'] == state+'_STATE']['code'].values[0]
         cmd = "SET current_state "+code
         self.parent().send(cmd)

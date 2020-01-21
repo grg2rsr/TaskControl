@@ -124,6 +124,23 @@ https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-ro
 exit condition has to include condition || last_state != current_state
 so it can get called when state is manually changed
 will not work as exit functions contain transition to next state ... 
+
+new idea to this: make a req_state variable (requested state) and check if
+req and the current state are different
+
+# exit function
+if (exit_condition || req_state != current_state) {
+    current_state = req_state
+}
+but then this needs to get deactivated after one execution, so extra flag is needed
+
+if (exit_condition || (req_state != current_state && state_change_requested == True) ) {
+    current_state = req_state;
+    state_change_requested = False;
+}
+then, state change is requested by 
+<SET req_state state>
+<SET state_change_requested true>
 */
 
 void state_entry_common(){
