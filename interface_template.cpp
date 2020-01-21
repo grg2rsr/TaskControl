@@ -81,6 +81,10 @@ void processSerialData() {
 
             // INSERT_GETTERS
 
+            if (strcmp(varname,"current_state")==0){
+                Serial.println(String(varname)+String("=")+String(current_state));
+            }
+
         }
 
         // SET

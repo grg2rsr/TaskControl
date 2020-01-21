@@ -57,17 +57,14 @@ class BonsaiController(QtWidgets.QWidget):
         task = self.parent().task
         task_config = self.parent().task_config['Bonsai']
         task_folder = Path(self.parent().profile['tasks_folder']).joinpath(task)
-        out_path = folder.joinpath('bonsai_') # this needs to be fixed in bonsai
+        out_path = folder.joinpath('bonsai_') # this needs to be fixed in bonsai # FIXME TODO
        
         # constructing the bonsai exe string
         parameters = "-p:save_path=\""+str(out_path)+"\""
-
-        # TODO add bonsai com_port passing, check if multiple can be passed with colon separation
-        # parameters = "-p:save_path=\""+str(out_path)+"\""
+        parameters = parameters+" -p:com_port="+task_config['com_port']
 
         bonsai_exe = Path(self.parent().profiles['General']['bonsai_cmd'])
         bonsai_workflow = task_folder.joinpath('Bonsai',task_config['workflow_fname'])
-
 
         command = ' '.join([str(bonsai_exe),str(bonsai_workflow),"--start",parameters,"&"])
 

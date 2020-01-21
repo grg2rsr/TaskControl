@@ -155,7 +155,7 @@ void finite_state_machine() {
     switch (current_state) {
 
         case INI_STATE:
-            // nothing
+            current_state = ITI_STATE;
             break;
 
         case REWARD_AVAILABLE_STATE:
@@ -180,7 +180,7 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (micros() - state_entry > reward_available_dur) {
+            if (micros() - state_entry > reward_available_dur || reward_collected == true) {
                 // transit to ITI after certain time
                 current_state = ITI_STATE;
             }

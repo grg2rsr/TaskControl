@@ -329,7 +329,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         # take care of ending the threads
         self.stopped = True
-        self.thread.join()
+        # self.thread.join()
 
         # overwrite logged arduino vars file
         if self.parent().logging:

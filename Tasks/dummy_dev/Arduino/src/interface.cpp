@@ -13,7 +13,7 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 
-int current_state = 1;
+int current_state = 0; // WATCH OUT this is ini state
 
 void getSerialData() {
     // check if command data is available and if yes read it
@@ -89,6 +89,10 @@ void processSerialData() {
                 Serial.println(String(varname)+String("=")+String(LED_OFF_TIME));
             }
     
+            if (strcmp(varname,"current_state")==0){
+                Serial.println(String(varname)+String("=")+String(current_state));
+            }
+
         }
 
         // SET

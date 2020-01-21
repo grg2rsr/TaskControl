@@ -2,10 +2,6 @@
 
 [ ] think about last variables when training different animals
 
-
-[ ] multiple parameter passing to bonsai
-for make it possible to pass com port to bonsai sketch
-
 ## decisions:
 tmp folder or not?
 pro: cleaner

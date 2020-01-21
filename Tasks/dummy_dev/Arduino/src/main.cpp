@@ -65,6 +65,7 @@ void finite_state_machine() {
     switch (current_state) {
 
         case INI_STATE:
+        current_state = LED_ON_STATE;
             break;
 
         case LED_ON_STATE:
