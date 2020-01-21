@@ -13,7 +13,7 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 
-int current_state = 1;
+int current_state = 0; // WATCH OUT this is ini state
 
 void getSerialData() {
     // check if command data is available and if yes read it
