@@ -1,5 +1,4 @@
 # python me to generate an interface.cpp based on the variables in `init_variables.h`
-# MAJOR FIXME this file contains unix specific stuff ... 
 
 import pandas as pd
 import scipy as sp
@@ -110,37 +109,31 @@ def run(variables_path):
     """
 
     bool_setter_template = """
-            if (strcmp(varname,"VARNAME")==0){
-                if (strcmp(varvalue,"false")==0) {
-                    VARNAME = false;
-                }
-                else {
-                    VARNAME = true;
+            if (dtype == "bool") {
+                if (strcmp(varname,"VARNAME")==0){
+                    if (strcmp(varvalue,"false")==0) {
+                        VARNAME = false;
+                    }
+                    else {
+                        VARNAME = true;
+                    }
                 }
             }
     """
 
     int_setter_template = """
-            if (strcmp(varname,"VARNAME")==0){
-                VARNAME = atoi(varvalue);
-            }
-    """
-
-    long_setter_template = """
-            if (strcmp(varname,"VARNAME")==0){
-                VARNAME = atol(varvalue);
-            }
-    """
-
-    unsigned_long_setter_template = """
-            if (strcmp(varname,"VARNAME")==0){
-                VARNAME = strtoul(varvalue,NULL,10);
+            if (dtype == "int") {
+                if (strcmp(varname,"VARNAME")==0){
+                    VARNAME = atoi(varvalue);
+                }
             }
     """
 
     float_setter_template = """
-            if (strcmp(varname,"VARNAME")==0){
-                VARNAME = atof(varvalue);
+            if (dtype == "float") {
+                if (strcmp(varname,"VARNAME")==0){
+                    VARNAME = atof(varvalue);
+                }
             }
     """
 
@@ -168,20 +161,6 @@ def run(variables_path):
             all_setters.append(int_setter_template.replace("VARNAME",row['name']))
     except KeyError:
         # no ints found
-        pass
-
-    try:
-        for i, row in init_vars.groupby('dtype').get_group('long').iterrows():
-            all_setters.append(long_setter_template.replace("VARNAME",row['name']))
-    except KeyError:
-        # no longs found
-        pass
-
-    try:
-        for i, row in init_vars.groupby('dtype').get_group('unsigned long').iterrows():
-            all_setters.append(unsigned_long_setter_template.replace("VARNAME",row['name']))
-    except KeyError:
-        # no unsigned longs found
         pass
 
     try:

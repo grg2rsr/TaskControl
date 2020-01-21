@@ -13,8 +13,6 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 
-int current_state = 1;
-
 void getSerialData() {
     // check if command data is available and if yes read it
     // all commands are flanked by <>
@@ -105,9 +103,26 @@ void processSerialData() {
             char varvalue[len-split+1];
             strlcpy(varvalue, line+split+1, len-split+1);
 
-            // for the state machine "force state" buttons
-            if (strcmp(varname,"current_state")==0){
-                current_state = atoi(varvalue);
+            // parse dtype
+            String dtype = "unset";
+
+            // test for bool 
+            if ((dtype == "true") || (dtype == "false")) {
+                dtype = "bool";
+            }
+
+            // test for float (has decimal point)
+            unsigned int num_len = sizeof(varvalue)/sizeof(char);
+            for (unsigned int i = 0; i < num_len; i++) {
+                if (varvalue[i] == '.') {
+                    // isFloat = true;
+                    dtype = "float";
+                }
+            }
+
+            // else must be int
+            if (dtype == "unset"){
+                dtype = "int";
             }
 
             // INSERT_SETTERS
@@ -131,6 +146,11 @@ void processSerialData() {
                 run = false;
                 Serial.println("Arduino is halted");
             }
+        }
+
+        // RAW
+        if (strcmp(mode,"RAW")==0){
+            // manually implement functions here
         }
 
         newData = false;
