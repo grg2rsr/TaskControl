@@ -18,6 +18,7 @@ import scipy as sp
 import Widgets
 import functions
 import utils 
+import interface_generator
 
 class Signals(QtCore.QObject):
     # explained here why this has to be within a QObject
@@ -190,25 +191,28 @@ class ArduinoController(QtWidgets.QWidget):
         which is in turn specified in the task_config.ini """
           
         # build and log
-        print("--- uploading code on arduino --- ")
-
+        
         # check if interface_generator.py exists, if yes, make interface.cpp
-        if self.vars_path.joinpath('interface_generator.py'):
-            print(" --- generating interface --- ")
-            prev_cwd = Path.cwd()
-            os.chdir(self.vars_path.parent)
-            try:
-                cmd = " ".join(["python","interface_generator.py",self.task_config['var_fname']])
-                subprocess.check_output(cmd,shell=True)
-            except:
-                print("failed at building interface.cpp. Exiting ... ")
-                sys.exit()
-            os.chdir(prev_cwd)
+        # if self.vars_path.joinpath('interface_generator.py'):
+        #     print(" --- generating interface --- ")
+        #     prev_cwd = Path.cwd()
+        #     os.chdir(self.vars_path.parent)
+        #     try:
+        #         cmd = " ".join(["python","interface_generator.py",self.task_config['var_fname']])
+        #         subprocess.check_output(cmd,shell=True)
+        #     except:
+        #         print("failed at building interface.cpp. Exiting ... ")
+        #         sys.exit()
+        #     os.chdir(prev_cwd)
+
+        # building interface
+        print(" --- generating interface --- ")
+        interface_generator.run(self.vars_path)
      
+        # uploading code onto arduino
         # replace whatever com port is in the platformio.ini
         # with the one from task config
         pio_config = configparser.ConfigParser()
-        # self.pio_config_path = Path(self.task_config['pio_project_folder']).joinpath("platformio.ini")
         self.pio_config_path = self.task_folder.joinpath(self.task_config['pio_project_folder'],"platformio.ini")
         pio_config.read(self.pio_config_path)
 
@@ -216,11 +220,9 @@ class ArduinoController(QtWidgets.QWidget):
             if section.split(":")[0] == "env":
                 pio_config.set(section,"upload_port",self.task_config['com_port'].split(':')[0])
 
-        # also write this
-        # should be irrespective of logging?!
-        if self.parent().logging:
-            with open(self.pio_config_path, 'w') as fH:
-                pio_config.write(fH)
+        # write it
+        with open(self.pio_config_path, 'w') as fH:
+            pio_config.write(fH)
         
         # get current UI arduino variables, backup defaults,
         # write the UI derived and upload those, revert after upload
@@ -236,6 +238,7 @@ class ArduinoController(QtWidgets.QWidget):
             # self.VariableController.write_variables(os.path.join('src',self.task_config['var_fname']))
 
         # upload
+        print(" --- uploading code on arduino --- ")
         prev_dir = Path.cwd()
         os.chdir(self.task_folder.joinpath(self.task_config['pio_project_folder']))
 

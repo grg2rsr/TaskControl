@@ -1,5 +1,7 @@
 # 2do
 
+[ ] think about last variables when training different animals
+
 
 [ ] multiple parameter passing to bonsai
 make it possible to pass com port to bonsai sketch

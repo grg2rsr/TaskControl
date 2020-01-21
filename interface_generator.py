@@ -192,14 +192,14 @@ def run(variables_path):
         #  no floats ...
         pass
 
-    with open("interface_template.cpp",'r') as fH:
+    with open(Path(__file__).with_name("interface_template.cpp"),'r') as fH:
         lines = fH.readlines()
 
     # replace in include line
     for i, line in enumerate(lines):
         if line == "#include \"interface_variables.h\"\n":
             insertion_ind = i
-    lines[insertion_ind] = "#include \""+variables_path+"\"\n"
+    lines[insertion_ind] = "#include \""+variables_path.name+"\"\n"
 
     # insert getters
     for i,line in enumerate(lines):
@@ -214,7 +214,7 @@ def run(variables_path):
     lines.insert(setter_insertion_ind+1,''.join(all_setters))
 
     # write all
-    with open(Path.with_name('interface.cpp'),'w') as fH:
+    with open(variables_path.with_name('interface.cpp'),'w') as fH:
         fH.writelines(''.join(lines))
 
 if __name__== "__main__":
