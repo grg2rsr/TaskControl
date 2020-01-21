@@ -4,6 +4,7 @@
 import pandas as pd
 import scipy as sp
 import sys,os
+from pathlib import Path
 
 dtype_map = {
             'int':'i4',
@@ -213,14 +214,14 @@ def run(variables_path):
     lines.insert(setter_insertion_ind+1,''.join(all_setters))
 
     # write all
-    with open('interface.cpp','w') as fH:
+    with open(Path.with_name('interface.cpp'),'w') as fH:
         fH.writelines(''.join(lines))
 
 if __name__== "__main__":
     if len(sys.argv)==1:
         # for using defaults from the cmd
-        run("interface_variables.h")
+        run(Path.cwd.joinpath("interface_variables.h"))
 
     if len(sys.argv) == 2:
-        variables_path = sys.argv[1]
+        variables_path = Path(sys.argv[1])
         run(variables_path)
