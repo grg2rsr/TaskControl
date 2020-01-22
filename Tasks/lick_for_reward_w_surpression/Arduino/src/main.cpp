@@ -17,7 +17,7 @@
 */
 
 // int current_state = INI_STATE; // starting at this, aleady declared in interface.cpp
-int last_state = ITI_STATE; // whatever other state
+int last_state = FIXATE_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
 
@@ -40,6 +40,10 @@ unsigned long tone_duration = 200;
 |_______| \______/   \______|
 
 */
+float now(){
+    return (float) micros() / 1000.0;
+}
+
 void log_current_state(){
     Serial.println(String(current_state) + '\t' + String(now()));
 }
@@ -57,9 +61,6 @@ void log_msg(String Message){
 // more human readable times to set
 // take care that vars taken from the UI are cast correctly
 
-float now(){
-    return (float) micros() / 1000.0;
-}
 
 /*
      _______. _______ .__   __.      _______.  ______   .______          _______.
@@ -195,12 +196,14 @@ void finite_state_machine() {
             if (last_state == current_state){
                 // if premature lick, timeout
                 if (lick_in == true){
-                    // current_state = TIMEOUT_STATE;
+                    log_code(BROKEN_FIXATION_EVENT);
 
                     // "soft version"
                     // after broken fixation, restart immediately
-                    current_state = TRIAL_AVAILABLE_STATE;
-                    log_code(BROKEN_FIXATION);
+                    // current_state = ITI_STATE;
+
+                    // "hard version"
+                    current_state = TIMEOUT_STATE;
                 }
             }
 
@@ -209,7 +212,7 @@ void finite_state_machine() {
                 // ifsuccessfully withhold movement for enough time:
                 // go to reward available state
                 current_state = REWARD_AVAILABLE_STATE;
-                log_code(SUCCESSFUL_FIXATION);
+                log_code(SUCCESSFUL_FIXATION_EVENT);
             }
             break;
 
