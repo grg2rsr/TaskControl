@@ -647,11 +647,10 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
             full_name = self.code_map[code]
 
             # remove all color from events
-            if full_name.endswith("_EVENT"):
-                # color all state buttons gray
-                for name, btn in self.Btns:
-                    if name.endswith('_EVENT'):
-                        btn.setStyleSheet("background-color: light gray")
+            # if full_name.endswith("_EVENT"):
+            for name, btn in self.Btns:
+                if name.endswith('_EVENT'):
+                    btn.setStyleSheet("background-color: light gray")
 
             # for states
             if full_name.endswith("_STATE"):

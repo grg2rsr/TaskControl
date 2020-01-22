@@ -136,8 +136,13 @@ if (exit_condition || req_state != current_state) {
 but then this needs to get deactivated after one execution, so extra flag is needed
 
 if (exit_condition || (req_state != current_state && state_change_requested == True) ) {
-    current_state = req_state;
-    state_change_requested = False;
+    // exit actions
+
+    if (req_state != current_state && state_change_requested == True) {
+        // forced transition
+        current_state = req_state;
+        state_change_requested = False;
+    }
 }
 then, state change is requested by 
 <SET req_state state>
