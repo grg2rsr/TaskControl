@@ -121,10 +121,14 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # FIXME this contains hardcoding stuff ... 
         # window scaling
+
+        functions.scale_Widgets([self.AnimalInfoWidget,self])
+        functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=50)
+
         if hasattr(self, 'ArduinoController'):
-            functions.tile_Widgets(self.ArduinoController, self, where='right',gap=100)
-            functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=50)
             functions.scale_Widgets([self.ArduinoController.VariableController, self.ArduinoController])
+            functions.tile_Widgets(self.ArduinoController, self, where='right',gap=25)
+            functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=50)
         
         if hasattr(self, 'BonsaiController'):
             functions.tile_Widgets(self.BonsaiController, self.ArduinoController, where='right',gap=25)
@@ -137,8 +141,8 @@ class SettingsWidget(QtWidgets.QWidget):
             functions.tile_Widgets(self.DisplayController, self.LoadCellController, where='right',gap=25)
 
         # needs to be called - again
-        functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=50)
-        functions.scale_Widgets([self.AnimalInfoWidget,self])
+        # functions.scale_Widgets([self.AnimalInfoWidget,self])
+        # functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=50)
 
     def update_plot(self):
         # TODO deal with this entire functionality

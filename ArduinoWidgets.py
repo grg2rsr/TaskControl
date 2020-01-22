@@ -543,8 +543,8 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.setWindowTitle("Arduino monitor")
         self.show()
 
-        functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=150)
         functions.scale_Widgets([self, self.parent()])
+        functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=50)
 
     def update(self,line):
         # if decode
@@ -628,8 +628,8 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         self.setLayout(self.Layout)
         self.setWindowTitle("State Machine Monitor")
 
-        functions.tile_Widgets(self, self.parent().KeyboardInteraction, where='below',gap=25)
         functions.scale_Widgets([self, self.parent()])
+        functions.tile_Widgets(self, self.parent().KeyboardInteraction, where='below',gap=50)
 
         self.show()
     
@@ -708,8 +708,8 @@ class KeyboardInteractionWidget(QtWidgets.QWidget):
         self.setWindowTitle("Keyboard interface")
         self.show()
 
-        functions.tile_Widgets(self, self.parent().SerialMonitor, where='below',gap=25)
         functions.scale_Widgets([self, self.parent()])
+        functions.tile_Widgets(self, self.parent().SerialMonitor, where='below',gap=50)
 
     def keyPressEvent(self, event):
         self.parent().send("CMD " + event.text())
