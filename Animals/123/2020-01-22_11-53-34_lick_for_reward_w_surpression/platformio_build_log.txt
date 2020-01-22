@@ -1,0 +1,25 @@
+Processing megaatmega2560 (platform: atmelavr; board: megaatmega2560; framework: arduino)
+
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/atmelavr/megaatmega2560.html
+PLATFORM: Atmel AVR 1.15.0 > Arduino Mega or Mega 2560 ATmega2560 (Mega 2560)
+HARDWARE: ATMEGA2560 16MHz, 8KB RAM, 248KB Flash
+PACKAGES: toolchain-atmelavr 1.50400.190710 (5.4.0), framework-arduinoavr 4.1.2, tool-avrdude 1.60300.190424 (6.3.0)
+LDF: Library Dependency Finder -> http://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 8 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- <Tone> 1.0.0
+Building in release mode
+Checking size .pio\build\megaatmega2560\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+DATA:    [=         ]   8.6% (used 701 bytes from 8192 bytes)
+PROGRAM: [=         ]   5.3% (used 13382 bytes from 253952 bytes)
+Configuring upload protocol...
+AVAILABLE: wiring
+CURRENT: upload_protocol = wiring
+Looking for upload port...
+Use manually specified: COM4
+Uploading .pio\build\megaatmega2560\firmware.hex
+ [SUCCESS] Took 5.22 seconds 
