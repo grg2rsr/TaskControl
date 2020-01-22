@@ -26,7 +26,8 @@ bool lick_in = false;
 bool reward_collected = false;
 
 // speakers
-Tone tone_controller;
+Tone reward_tone_controller;
+Tone punish_tone_controller;
 unsigned long tone_duration = 200;
 
 
@@ -40,11 +41,11 @@ unsigned long tone_duration = 200;
 
 */
 void log_current_state(){
-    Serial.println(String(current_state) + '\t' + String(micros()));
+    Serial.println(String(current_state) + '\t' + String(now()));
 }
 
 void log_code(int code){
-    Serial.println(String(code) + '\t' + String(micros()));
+    Serial.println(String(code) + '\t' + String(now()));
 }
 
 void log_msg(String Message){
@@ -56,9 +57,9 @@ void log_msg(String Message){
 // more human readable times to set
 // take care that vars taken from the UI are cast correctly
 
-// float now(){
-//     return (float) micros() / 1000.0;
-// }
+float now(){
+    return (float) micros() / 1000.0;
+}
 
 /*
      _______. _______ .__   __.      _______.  ______   .______          _______.
@@ -101,11 +102,11 @@ void RewardValveController(){
         digitalWrite(REWARD_VALVE_PIN,HIGH);
         reward_valve_closed = false;
         // reward_valve_dur = ul2time(reward_magnitude);
-        reward_valve_open_time = micros();
+        reward_valve_open_time = now();
         deliver_reward = false;
     }
 
-    if (reward_valve_closed == false && micros() - reward_valve_open_time > reward_valve_dur) {
+    if (reward_valve_closed == false && now() - reward_valve_open_time > reward_valve_dur) {
         digitalWrite(REWARD_VALVE_PIN,LOW);
         reward_valve_closed = true;
     }
@@ -146,7 +147,7 @@ then, state change is requested by
 void state_entry_common(){
     // common tasks to do at state entry for all states
     last_state = current_state;
-    state_entry = micros();
+    state_entry = now();
     log_current_state();
 }
 
@@ -158,20 +159,87 @@ void finite_state_machine() {
             current_state = ITI_STATE;
             break;
 
-        case REWARD_AVAILABLE_STATE:
+        case TRIAL_AVAILABLE_STATE:
+            // state entry
+            // this directly goes to fixate state thus restarts the hold
+            if (current_state != last_state){
+                state_entry_common();
+            }
+
+            // update
+            if (last_state == current_state){
+
+            }
+            
+            // exit condition
+            if (true) {
+                current_state = FIXATE_STATE;
+            }
+            break;
+
+        case FIXATE_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
                 // entry actions
-                reward_collected = false;
-                // play sound check up on nonblocking tone library
-                tone_controller.play(reward_tone_freq, tone_duration);
+                // cue fixation period
+                // LED?
+            }
+
+            // update
+            if (last_state == current_state){
+                // if premature lick, timeout
+                if (lick_in == true){
+                    // current_state = TIMEOUT_STATE;
+
+                    // "soft version"
+                    // after broken fixation, restart immediately
+                    current_state = TRIAL_AVAILABLE_STATE;
+                    log_code(BROKEN_FIXATION);
+                }
+            }
+
+            // exit condition
+            if (now() - state_entry > fix_dur) {
+                // ifsuccessfully withhold movement for enough time:
+                // go to reward available state
+                current_state = REWARD_AVAILABLE_STATE;
+                log_code(SUCCESSFUL_FIXATION);
+            }
+            break;
+
+        case TIMEOUT_STATE:
+            // state entry
+            if (current_state != last_state){
+                state_entry_common();
+                // punish with loud tone
+                // two seperate tone controllers?
+                punish_tone_controller.play(punish_tone_freq, tone_duration);
             }
 
             // update
             if (last_state == current_state){
                 // state actions
-                // if lick_in, open valve
+            }
+
+            // exit condition
+            if (now() - state_entry > timeout_dur) {
+                // after timeout, transit to trial available again
+                current_state = TRIAL_AVAILABLE_STATE;
+            }
+            break;
+
+        case REWARD_AVAILABLE_STATE:
+            // state entry
+            if (current_state != last_state){
+                state_entry_common();
+                reward_collected = false;
+                reward_tone_controller.play(reward_tone_freq, tone_duration);
+            }
+
+            // update
+            if (last_state == current_state){
+                // if lick_in and reward not yet collected, deliver it
                 if (lick_in == true and reward_collected == false){
                     deliver_reward = true;
                     reward_collected = true;
@@ -180,8 +248,13 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (micros() - state_entry > reward_available_dur || reward_collected == true) {
-                // transit to ITI after certain time
+            if (now() - state_entry > reward_available_dur || reward_collected == true) {
+                // transit to ITI after certain time or after reward collection
+
+                // change this to time base only to allow for a grace period of licks
+                // otherwise mice try to collect reward and lick themselves into a timeout
+                // ITI is also somewhat grace period
+
                 current_state = ITI_STATE;
             }
             break;
@@ -190,8 +263,6 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-                // entry actions
-                // set screen blank
             }
 
             // update
@@ -200,9 +271,10 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (micros() - state_entry > ITI_dur) {
+            if (now() - state_entry > ITI_dur) {
                 // after ITI, transit to trial available
-                current_state = REWARD_AVAILABLE_STATE;
+                // current_state = TRIAL_AVAILABLE_STATE;
+                current_state = FIXATE_STATE;
             }
             break;
 
@@ -220,7 +292,8 @@ void finite_state_machine() {
 */
 void setup() {
     Serial.begin(115200);
-    tone_controller.begin(SPEAKER_PIN);
+    reward_tone_controller.begin(REWARD_SPEAKER_PIN);
+    punish_tone_controller.begin(PUNISH_SPEAKER_PIN);
     Serial.println("<Arduino is ready to receive commands>");
 }
 

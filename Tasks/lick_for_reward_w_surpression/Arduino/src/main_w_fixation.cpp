@@ -26,7 +26,8 @@ bool lick_in = false;
 bool reward_collected = false;
 
 // speakers
-Tone tone_controller;
+Tone reward_tone_controller;
+Tone punish_tone_controller;
 unsigned long tone_duration = 200;
 
 
@@ -158,21 +159,23 @@ void finite_state_machine() {
             current_state = ITI_STATE;
             break;
 
-        // case TRIAL_AVAILABLE_STATE:
-        //     // state entry
-        //     if (current_state != last_state){
-        //         state_entry_common();
-        //     }
+        case TRIAL_AVAILABLE_STATE:
+            // state entry
+            // this directly goes to fixate state thus restarts the hold
+            if (current_state != last_state){
+                state_entry_common();
+            }
 
-        //     // update
-        //     if (last_state == current_state){
+            // update
+            if (last_state == current_state){
 
-        //     }
+            }
             
-        //     // exit condition
-        //     if () {
-        //     }
-        //     break;
+            // exit condition
+            if (true) {
+                current_state = FIXATE_STATE;
+            }
+            break;
 
         case FIXATE_STATE:
             // state entry
@@ -187,7 +190,11 @@ void finite_state_machine() {
             if (last_state == current_state){
                 // if premature lick, timeout
                 if (lick_in == true){
-                    current_state = TIMEOUT_STATE;
+                    // current_state = TIMEOUT_STATE;
+
+                    // "soft version"
+                    // after broken fixation, restart immediately
+                    current_state = TRIAL_AVAILABLE_STATE;
                     log_code(BROKEN_FIXATION);
                 }
             }
@@ -207,7 +214,7 @@ void finite_state_machine() {
                 state_entry_common();
                 // punish with loud tone
                 // two seperate tone controllers?
-                tone_controller.play(punish_tone_freq, tone_duration);
+                punish_tone_controller.play(punish_tone_freq, tone_duration);
             }
 
             // update
@@ -227,7 +234,7 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 reward_collected = false;
-                tone_controller.play(reward_tone_freq, tone_duration);
+                reward_tone_controller.play(reward_tone_freq, tone_duration);
             }
 
             // update
@@ -285,7 +292,8 @@ void finite_state_machine() {
 */
 void setup() {
     Serial.begin(115200);
-    tone_controller.begin(SPEAKER_PIN);
+    reward_tone_controller.begin(REWARD_SPEAKER_PIN);
+    punish_tone_controller.begin(PUNISH_SPEAKER_PIN);
     Serial.println("<Arduino is ready to receive commands>");
 }
 
