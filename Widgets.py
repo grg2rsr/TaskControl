@@ -14,7 +14,7 @@ from functions import dtype_map
 import functions
 import utils
 
-# import VisWidgetss
+import VisWidgets
 import ArduinoWidgets
 import HardwareWidgets
 
