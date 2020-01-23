@@ -38,7 +38,6 @@ update_figure()
 event and span vis
 
 
-
 matplotlib in qr5
 https://matplotlib.org/gallery/user_interfaces/embedding_in_qt_sgskip.html
 
