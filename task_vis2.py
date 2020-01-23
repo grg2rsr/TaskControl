@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import scipy as sp
 import seaborn as sns
 import pandas as pd
-import neo
-import quantities as pq
+# import neo
+# import quantities as pq
 from pathlib import Path
 import sys
 import time as Time
@@ -27,8 +27,8 @@ def parse_arduino_log(log_path, code_map=None):
     return Data
 
 def log2Span(Data,span_name):
-    on_times = Data.groupby('name').get_group(span_name+'_ON')['t'].values.astype('float')*pq.ms
-    off_times = Data.groupby('name').get_group(span_name+'_OFF')['t'].values.astype('float')*pq.ms
+    on_times = Data.groupby('name').get_group(span_name+'_ON')['t'].values.astype('float')
+    off_times = Data.groupby('name').get_group(span_name+'_OFF')['t'].values.astype('float')
     if on_times.shape != off_times.shape:
         print("unequal number of ON and OFF events for: ", span_name)
     dt = off_times - on_times
@@ -45,7 +45,7 @@ def log2Spans(Data,span_names):
     return Spans
 
 def log2Event(Data,event_name):
-    times = Data.groupby('name').get_group(event_name+'_EVENT')['t'].values.astype('float')*pq.ms
+    times = Data.groupby('name').get_group(event_name+'_EVENT')['t'].values.astype('float')
     Df = pd.DataFrame(times,columns=['t'])
     return Df
 
@@ -61,25 +61,29 @@ def log2Events(Data,event_names):
 
 """ make TrialsDf """
 def make_TrialsDf(Data,trial_entry=None,trial_exit_succ=None,trial_exit_unsucc=None):
-    TrialsDf = pd.DataFrame()
-    TrialsDf['t_on'] = Data.groupby('name').get_group(trial_entry)['t']
+    TrialsDf = pd.DataFrame(Data.groupby('name').get_group(trial_entry)['t'])
+    TrialsDf.columns = ['t_on']
+    try:
+        Hit = pd.DataFrame(Data.groupby('name').get_group(trial_exit_succ)['t'])
+        Hit['outcome'] = 'succ'
+    except KeyError:
+        Hit = pd.DataFrame()
 
-    Df = pd.DataFrame()
-    Df['t_off'] = Data.groupby('name').get_group(trial_exit_succ)['t']
-    Df['outcome'] = 'succ'
+    try:
+        Miss = pd.DataFrame(Data.groupby('name').get_group(trial_exit_unsucc)['t'])
+        Miss['outcome'] = 'unsucc'
+    except KeyError:
+        Miss = pd.DataFrame()
 
-    Df2 = pd.DataFrame()
-    Df2['t_off'] = Data.groupby('name').get_group(trial_exit_unsucc)['t']
-    Df2['outcome'] = 'unsucc'
-
-    Df3 = pd.concat([Df,Df2],axis=0)
-    Df3 = Df3.sort_values('t_off')
+    AllEndings = pd.concat([Hit,Miss],axis=0)
+    AllEndings = AllEndings.sort_values('t')
+    AllEndings.columns = ['t_off','outcome']
 
     # removing last incompleted
-    if TrialsDf.shape[0] > Df3.shape[0]:
+    if TrialsDf.shape[0] > AllEndings.shape[0]:
         TrialsDf = TrialsDf[:-1]
 
-    TrialsDf = pd.concat([TrialsDf.reset_index(drop=True),Df3.reset_index(drop=True)],axis=1)
+    TrialsDf = pd.concat([TrialsDf.reset_index(drop=True),AllEndings.reset_index(drop=True)],axis=1)
     TrialsDf['dt'] = TrialsDf['t_off'] - TrialsDf['t_on']
     
     return TrialsDf
@@ -93,8 +97,13 @@ def time_slice(Df, t_min, t_max, col='t_on'):
 
 
 # PATH
-log_path = Path("/home/georg/git_tmp/TaskControl/Animals/123/2020-01-22_11-53-34_lick_for_reward_w_surpression/arduino_log.txt")
-code_map_path = Path("/home/georg/git_tmp/TaskControl/Tasks/lick_for_reward_w_surpression/Arduino/src/event_codes.h")
+# upstairs
+# log_path = Path("/home/georg/git_tmp/TaskControl/Animals/123/2020-01-22_11-53-34_lick_for_reward_w_surpression/arduino_log.txt")
+# code_map_path = Path("/home/georg/git_tmp/TaskControl/Tasks/lick_for_reward_w_surpression/Arduino/src/event_codes.h")
+
+# downstairs
+log_path = Path(r'D:\TaskControl\Animals\123\2020-01-22_11-53-34_lick_for_reward_w_surpression\arduino_log.txt')
+code_map_path = Path(r'D:\TaskControl\Animals\123\2020-01-22_11-53-34_lick_for_reward_w_surpression\lick_for_reward_w_surpression\Arduino\src\event_codes.h')
 
 Code_Map = parse_code_map(code_map_path)
 Data = parse_arduino_log(log_path, Code_Map)
@@ -108,9 +117,9 @@ Spans = log2Spans(Data, span_names)
 Events = log2Events(Data, event_names)
 
 # definition of the bounding events
-trial_entry = "FIXATE_STATE"
-trial_exit_succ = "SUCCESSFUL_FIXATION_EVENT"
-trial_exit_unsucc = "BROKEN_FIXATION_EVENT"
+trial_entry = "TRIAL_ENTRY_EVENT"
+trial_exit_succ = "TRIAL_COMPLETED_EVENT"
+trial_exit_unsucc = "TRIAL_ABORTED_EVENT"
 
 TrialsDf = make_TrialsDf(Data,trial_entry=trial_entry,
                               trial_exit_succ=trial_exit_succ,

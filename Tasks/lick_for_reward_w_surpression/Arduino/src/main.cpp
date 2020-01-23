@@ -187,6 +187,7 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
+                log_code(TRIAL_ENTRY_EVENT);
                 // entry actions
                 // cue fixation period
                 // LED?
@@ -197,6 +198,7 @@ void finite_state_machine() {
                 // if premature lick, timeout
                 if (lick_in == true){
                     log_code(BROKEN_FIXATION_EVENT);
+                    log_code(TRIAL_ABORTED_EVENT);
 
                     // "soft version"
                     // after broken fixation, restart immediately
@@ -213,6 +215,7 @@ void finite_state_machine() {
                 // go to reward available state
                 current_state = REWARD_AVAILABLE_STATE;
                 log_code(SUCCESSFUL_FIXATION_EVENT);
+                log_code(TRIAL_COMPLETED_EVENT);
             }
             break;
 

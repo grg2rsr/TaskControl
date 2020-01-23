@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 import sys
 from functions import parse_code_map
+import utils
 
 def parse_arduino_log(log_path, code_map=None):
     """ create a DataFrame representation of an arduino log. If a code map is passed 
@@ -23,13 +24,15 @@ def parse_arduino_log(log_path, code_map=None):
     return Data
 
 def log2Span(Data,span_name):
-    on_times = Data.groupby('name').get_group(span_name+'_ON')['t'].values.astype('float')*pq.ms
-    off_times = Data.groupby('name').get_group(span_name+'_OFF')['t'].values.astype('float')*pq.ms
+    on_times = Data.groupby('name').get_group(span_name+'_ON')['t'].values.astype('float')
+    off_times = Data.groupby('name').get_group(span_name+'_OFF')['t'].values.astype('float')
     if on_times.shape != off_times.shape:
         print("unequal number of ON and OFF events for: ", span_name)
-    dt = off_times - on_times
-    Df = pd.DataFrame(sp.stack([on_times,off_times,dt],axis=1),columns=['t_on','t_off','dt'])
-    return Df
+        return pd.DataFrame(columns=['t_on','t_off','dt'])
+    else:
+        dt = off_times - on_times
+        Df = pd.DataFrame(sp.stack([on_times,off_times,dt],axis=1),columns=['t_on','t_off','dt'])
+        return Df
 
 def log2Spans(Data,span_names):
     Spans = {}
@@ -41,7 +44,7 @@ def log2Spans(Data,span_names):
     return Spans
 
 def log2Event(Data,event_name):
-    times = Data.groupby('name').get_group(event_name+'_EVENT')['t'].values.astype('float')*pq.ms
+    times = Data.groupby('name').get_group(event_name+'_EVENT')['t'].values.astype('float')
     Df = pd.DataFrame(times,columns=['t'])
     return Df
 
@@ -52,28 +55,38 @@ def log2Events(Data,event_names):
             Events[event_name] = log2Event(Data,event_name)
         except KeyError:
             print("event not present in log but in code map: ", event_name)
+            # utils.debug_trace()
     return Events
 
 def make_TrialsDf(Data,trial_entry=None,trial_exit_succ=None,trial_exit_unsucc=None):
-    TrialsDf = pd.DataFrame()
-    TrialsDf['t_on'] = Data.groupby('name').get_group(trial_entry)['t']
+    try:
+        TrialsDf = pd.DataFrame(Data.groupby('name').get_group(trial_entry)['t'])
+        TrialsDf.columns = ['t_on']
+    except KeyError:
+        TrialsDf = pd.DataFrame(columns=['t_on'])
+        return TrialsDf
 
-    Df = pd.DataFrame()
-    Df['t_off'] = Data.groupby('name').get_group(trial_exit_succ)['t']
-    Df['outcome'] = 'succ'
+    try:
+        Hit = pd.DataFrame(Data.groupby('name').get_group(trial_exit_succ)['t'])
+        Hit['outcome'] = 'succ'
+    except KeyError:
+        Hit = pd.DataFrame(columns=['t','outcome'])
 
-    Df2 = pd.DataFrame()
-    Df2['t_off'] = Data.groupby('name').get_group(trial_exit_unsucc)['t']
-    Df2['outcome'] = 'unsucc'
+    try:
+        Miss = pd.DataFrame(Data.groupby('name').get_group(trial_exit_unsucc)['t'])
+        Miss['outcome'] = 'unsucc'
+    except KeyError:
+        Miss = pd.DataFrame(columns=['t','outcome'])
 
-    Df3 = pd.concat([Df,Df2],axis=0)
-    Df3 = Df3.sort_values('t_off')
+    AllEndings = pd.concat([Hit,Miss],axis=0)
+    AllEndings = AllEndings.sort_values('t')
+    AllEndings.columns = ['t_off','outcome']
 
     # removing last incompleted
-    if TrialsDf.shape[0] > Df3.shape[0]:
+    if TrialsDf.shape[0] > AllEndings.shape[0]:
         TrialsDf = TrialsDf[:-1]
 
-    TrialsDf = pd.concat([TrialsDf.reset_index(drop=True),Df3.reset_index(drop=True)],axis=1)
+    TrialsDf = pd.concat([TrialsDf.reset_index(drop=True),AllEndings.reset_index(drop=True)],axis=1)
     TrialsDf['dt'] = TrialsDf['t_off'] - TrialsDf['t_on']
     
     return TrialsDf

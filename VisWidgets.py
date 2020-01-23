@@ -11,6 +11,8 @@ import scipy as sp
 
 import visualization as vis
 import functions
+import pandas as pd
+import seaborn as sns
 # TODO those functions are not vis but more analysis utils
 
 import utils
@@ -18,6 +20,26 @@ import utils
 class MyMplCanvas(FigureCanvas):
     # FIXME add controls
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
+    # def __init__(self, parent, width=7, height=9, dpi=100):
+    #     # super(MyMplCanvas, self).__init__(parent=parent)
+    #     self.parent=parent
+
+    #     self.lines = []
+
+    #     # figure init
+    #     self.fig = Figure(figsize=(width, height), dpi=dpi)
+    #     self.axes = self.fig.add_subplot(111)
+    #     FigureCanvas.__init__(self, self.fig)
+    #     # self.setParent(parent)
+
+    #     FigureCanvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+    #     FigureCanvas.updateGeometry(self)
+
+    #     self.parent.ArduinoController.Signals.serial_data_available.connect(self.update_data)
+    #     self.init()
+
+    #     self.show()
+
     def __init__(self, parent, width=7, height=9, dpi=100):
         # super(MyMplCanvas, self).__init__(parent=parent)
         self.parent=parent
@@ -65,12 +87,14 @@ class MyMplCanvas(FigureCanvas):
             line = '\t'.join([decoded,line.split('\t')[1]])
             self.lines.append(line)
 
-            if self.code_dict[code] == "SUCCESSFUL_FIXATION_EVENT":
+            if self.code_dict[code] == "TRIAL_COMPLETED_EVENT" or self.code_dict[code] == "TRIAL_ABORTED_EVENT":
                 self.update_plot()
 
-            print(self.lines)
-
     def update_plot(self):
+        # make data for plot
+        valid_lines = [line.strip().split('\t') for line in self.lines if '\t' in line]
+        self.Data = pd.DataFrame(valid_lines,columns=['name','t'])
+        self.Data['t'] = self.Data['t'].astype('float')
                                 
         # the names of the things present in the log
         span_names = [name.split('_ON')[0] for name in self.Code_Map['name'] if name.endswith('_ON')]
@@ -80,13 +104,13 @@ class MyMplCanvas(FigureCanvas):
         Events = vis.log2Events(self.Data, event_names)
 
         # definition of the bounding events
-        trial_entry = "FIXATE_STATE"
-        trial_exit_succ = "SUCCESSFUL_FIXATION_EVENT"
-        trial_exit_unsucc = "BROKEN_FIXATION_EVENT"
+        trial_entry = "TRIAL_ENTRY_EVENT"
+        trial_exit_succ = "TRIAL_COMPLETED_EVENT"
+        trial_exit_unsucc = "TRIAL_ABORTED_EVENT"
 
         TrialsDf = vis.make_TrialsDf(self.Data,trial_entry=trial_entry,
-                                    trial_exit_succ=trial_exit_succ,
-                                    trial_exit_unsucc=trial_exit_unsucc)
+                                     trial_exit_succ=trial_exit_succ,
+                                     trial_exit_unsucc=trial_exit_unsucc)
 
         # fig, axes = plt.subplots(figsize=(7,9))
 
@@ -105,7 +129,7 @@ class MyMplCanvas(FigureCanvas):
 
             # adding events as ticks
             for event_name, Df in Events.items():
-                times = time_slice(Df, row['t_on']+pre, row['t_off']+post, col='t')['t']
+                times = vis.time_slice(Df, row['t_on']+pre, row['t_off']+post, col='t')['t']
                 times = times - row['t_on'] # relative to trial onset
 
                 for t in times:
@@ -113,20 +137,20 @@ class MyMplCanvas(FigureCanvas):
 
             # adding spans
             for span_name, Df in Spans.items():
-                Df_sliced = time_slice(Df, row['t_on']+pre, row['t_off']+post, col='t_on')
+                Df_sliced = vis.time_slice(Df, row['t_on']+pre, row['t_off']+post, col='t_on')
                 for j, row_s in Df_sliced.iterrows():
                     t = row_s['t_on'] - row['t_on']
                     dur = row_s['dt']
                     rect = plt.Rectangle((t,i-0.5), dur, 1,
                                         facecolor=cdict[span_name])
                     self.axes.add_patch(rect)
-                
+
         for key in cdict.keys():
             self.axes.plot([0],[0],color=cdict[key],label=key,lw=4)
-        self.axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',ncol=3, mode="expand", borderaxespad=0.)
-        self.axes.invert_yaxis()
+        # self.axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',ncol=3, mode="expand", borderaxespad=0.)
+        # self.axes.invert_yaxis()
         self.axes.set_xlabel('time (ms)')
         self.axes.set_ylabel('trials')
         self.fig.tight_layout()
-        plt.show()
+        self.draw()
         

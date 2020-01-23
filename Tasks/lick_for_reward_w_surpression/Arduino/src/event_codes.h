@@ -20,7 +20,11 @@ const unsigned int LICK_ON = 10;
 const unsigned int LICK_OFF = 11;
 
 // EVENTS
-const unsigned int REWARD_COLLECTED_EVENT = 12;
+const unsigned int TRIAL_ENTRY_EVENT = 20;
+const unsigned int TRIAL_COMPLETED_EVENT = 21;
+const unsigned int TRIAL_ABORTED_EVENT = 22;
+
+const unsigned int REWARD_COLLECTED_EVENT = 30;
 const unsigned int SUCCESSFUL_FIXATION_EVENT = 31;
 const unsigned int BROKEN_FIXATION_EVENT = 32;
 
