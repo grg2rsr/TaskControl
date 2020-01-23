@@ -122,27 +122,30 @@ class SettingsWidget(QtWidgets.QWidget):
         # FIXME this contains hardcoding stuff ... 
         # window scaling
 
+        small_gap = int(self.profiles['General']['small_gap'])
+        big_gap = int(self.profiles['General']['big_gap'])
+
         functions.scale_Widgets([self.AnimalInfoWidget,self])
-        functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=50)
+        functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=big_gap)
 
         if hasattr(self, 'ArduinoController'):
             functions.scale_Widgets([self.ArduinoController.VariableController, self.ArduinoController])
-            functions.tile_Widgets(self.ArduinoController, self, where='right',gap=25)
-            functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=50)
+            functions.tile_Widgets(self.ArduinoController, self, where='right',gap=small_gap)
+            functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=big_gap)
         
         if hasattr(self, 'BonsaiController'):
-            functions.tile_Widgets(self.BonsaiController, self.ArduinoController, where='right',gap=25)
+            functions.tile_Widgets(self.BonsaiController, self.ArduinoController, where='right',gap=small_gap)
         
         if hasattr(self, 'LoadCellController'):
-            functions.tile_Widgets(self.LoadCellController, self.ArduinoController, where='right',gap=25)
-            functions.tile_Widgets(self.LoadCellController.LoadCellMonitor, self.LoadCellController, where='below',gap=50)
+            functions.tile_Widgets(self.LoadCellController, self.ArduinoController, where='right',gap=small_gap)
+            functions.tile_Widgets(self.LoadCellController.LoadCellMonitor, self.LoadCellController, where='below',gap=big_gap)
 
         if hasattr(self, 'DisplayController'):
-            functions.tile_Widgets(self.DisplayController, self.LoadCellController, where='right',gap=25)
+            functions.tile_Widgets(self.DisplayController, self.LoadCellController, where='right',gap=small_gap)
 
         # needs to be called - again
         # functions.scale_Widgets([self.AnimalInfoWidget,self])
-        # functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=50)
+        # functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=big_gap)
 
     def update_plot(self):
         # TODO deal with this entire functionality
@@ -275,8 +278,8 @@ class SettingsWidget(QtWidgets.QWidget):
                     self.ArduinoController.close()
                 self.ArduinoController = ArduinoWidgets.ArduinoController(self)
                 print("initializing ArduinoController")
-                # functions.tile_Widgets(self.ArduinoController, self,where='right',gap=25)
-                # functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=50)
+                # functions.tile_Widgets(self.ArduinoController, self,where='right',gap=small_gap)
+                # functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=big_gap)
                 # functions.scale_Widgets([self.ArduinoController.VariableController, self.ArduinoController])
 
             if section == 'Bonsai':

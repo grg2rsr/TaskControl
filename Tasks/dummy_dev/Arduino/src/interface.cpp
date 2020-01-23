@@ -57,8 +57,9 @@ void processSerialData() {
     if (newData == true) {
         // echo back command if verbose
         if (verbose==true) {
-            Serial.print("Arduino received: ");
-            Serial.println(receivedChars);
+            Serial.print("<Arduino received: ");
+            Serial.print(receivedChars);
+            Serial.println(">");
         }
 
         // get total length of message
@@ -144,12 +145,12 @@ void processSerialData() {
             // Stop and Go functionality
             if (strcmp(CMD,"RUN")==0){
                 run = true;
-                Serial.println("Arduino is running");
+                Serial.println("<Arduino is running>");
             }
 
             if (strcmp(CMD,"HALT")==0){
                 run = false;
-                Serial.println("Arduino is halted");
+                Serial.println("<Arduino is halted>");
             }
         }
 

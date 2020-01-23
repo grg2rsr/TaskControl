@@ -10,6 +10,7 @@ from PyQt5 import QtWidgets
 import scipy as sp
 
 import visualization as vis
+import functions
 # TODO those functions are not vis but more analysis utils
 
 import utils
@@ -21,10 +22,7 @@ class MyMplCanvas(FigureCanvas):
         # super(MyMplCanvas, self).__init__(parent=parent)
         self.parent=parent
 
-        # self.compute_initial_figure()
-        #     def compute_initial_figure(self):
-        # self.axes.plot(sp.randn(100))
-        # plt.show()
+        self.lines = []
 
         # figure init
         self.fig = Figure(figsize=(width, height), dpi=dpi)
@@ -48,7 +46,9 @@ class MyMplCanvas(FigureCanvas):
         code_map_path = self.parent.ArduinoController.task_folder.joinpath(pio_folder,"src",event_codes_fname)
         self.log_path = self.parent.ArduinoController.run_folder.joinpath('arduino_log.txt')
 
-        self.Code_Map = vis.parse_code_map(code_map_path)
+        self.Code_Map = functions.parse_code_map(code_map_path)
+        self.code_dict = dict(zip(self.Code_Map['code'].values, self.Code_Map['name'].values))
+
 
     # def init_figure(self):
     #     self.axes.plot(sp.randn(100))
@@ -59,76 +59,74 @@ class MyMplCanvas(FigureCanvas):
         """ connected to new serial data, when any of the trial finishers, update """ 
 
         # if decodeable
-        try:        
+        if not line.startswith('<'):
             code = line.split('\t')[0]
-            # utils.debug_trace()
+            decoded = self.code_dict[code]
+            line = '\t'.join([decoded,line.split('\t')[1]])
+            self.lines.append(line)
 
-            if self.Code_Map.loc[self.Code_Map["code"] == code]["name"].values[0] == "SUCCESSFUL_FIXATION_EVENT":
-                self.Data = vis.parse_arduino_log(self.log_path,self.Code_Map)
+            if self.code_dict[code] == "SUCCESSFUL_FIXATION_EVENT":
+                self.update_plot()
+
+            print(self.lines)
+
+    def update_plot(self):
                                 
-                # the names of the things present in the log
-                span_names = [name.split('_ON')[0] for name in self.Code_Map['name'] if name.endswith('_ON')]
-                event_names = [name.split('_EVENT')[0] for name in self.Code_Map['name'] if name.endswith('_EVENT')]
-                # state_names = [name.split('_STATE')[0] for name in Code_Map['name'] if name.endswith('_STATE')]
+        # the names of the things present in the log
+        span_names = [name.split('_ON')[0] for name in self.Code_Map['name'] if name.endswith('_ON')]
+        event_names = [name.split('_EVENT')[0] for name in self.Code_Map['name'] if name.endswith('_EVENT')]
 
-                Spans = vis.log2Spans(self.Data, span_names)
-                Events = vis.log2Events(self.Data, event_names)
+        Spans = vis.log2Spans(self.Data, span_names)
+        Events = vis.log2Events(self.Data, event_names)
 
-                # utils.debug_trace()
+        # definition of the bounding events
+        trial_entry = "FIXATE_STATE"
+        trial_exit_succ = "SUCCESSFUL_FIXATION_EVENT"
+        trial_exit_unsucc = "BROKEN_FIXATION_EVENT"
 
-                # definition of the bounding events
-                trial_entry = "FIXATE_STATE"
-                trial_exit_succ = "SUCCESSFUL_FIXATION_EVENT"
-                trial_exit_unsucc = "BROKEN_FIXATION_EVENT"
+        TrialsDf = vis.make_TrialsDf(self.Data,trial_entry=trial_entry,
+                                    trial_exit_succ=trial_exit_succ,
+                                    trial_exit_unsucc=trial_exit_unsucc)
 
-                TrialsDf = vis.make_TrialsDf(self.Data,trial_entry=trial_entry,
-                                            trial_exit_succ=trial_exit_succ,
-                                            trial_exit_unsucc=trial_exit_unsucc)
+        # fig, axes = plt.subplots(figsize=(7,9))
 
-                # fig, axes = plt.subplots(figsize=(7,9))
+        colors = sns.color_palette('deep',n_colors=len(event_names)+len(span_names))
+        cdict = dict(zip(event_names+span_names,colors))
 
-                colors = sns.color_palette('deep',n_colors=len(event_names)+len(span_names))
-                cdict = dict(zip(event_names+span_names,colors))
+        pre, post = (-1000,1000) # hardcoded
 
-                pre, post = (-1000,1000) # hardcoded
+        for i, row in TrialsDf.iterrows():
+            if row['outcome'] == 'succ':
+                col = 'black'
+            else:
+                col = 'gray'
+            self.axes.plot([0,row['dt']],[i,i],lw=3,color=col)
+            self.axes.axhline(i,linestyle=':',color='black',alpha=0.5,lw=1)
 
-                for i, row in TrialsDf.iterrows():
-                    if row['outcome'] == 'succ':
-                        col = 'black'
-                    else:
-                        col = 'gray'
-                    self.axes.plot([0,row['dt']],[i,i],lw=3,color=col)
-                    self.axes.axhline(i,linestyle=':',color='black',alpha=0.5,lw=1)
+            # adding events as ticks
+            for event_name, Df in Events.items():
+                times = time_slice(Df, row['t_on']+pre, row['t_off']+post, col='t')['t']
+                times = times - row['t_on'] # relative to trial onset
 
-                    # adding events as ticks
-                    for event_name, Df in Events.items():
-                        times = time_slice(Df, row['t_on']+pre, row['t_off']+post, col='t')['t']
-                        times = times - row['t_on'] # relative to trial onset
+                for t in times:
+                    self.axes.plot([t,t],[i-0.5,i+0.5],lw=3,color=cdict[event_name])
 
-                        for t in times:
-                            self.axes.plot([t,t],[i-0.5,i+0.5],lw=3,color=cdict[event_name])
-
-                    # adding spans
-                    for span_name, Df in Spans.items():
-                        Df_sliced = time_slice(Df, row['t_on']+pre, row['t_off']+post, col='t_on')
-                        for j, row_s in Df_sliced.iterrows():
-                            t = row_s['t_on'] - row['t_on']
-                            dur = row_s['dt']
-                            rect = plt.Rectangle((t,i-0.5), dur, 1,
-                                                facecolor=cdict[span_name])
-                            self.axes.add_patch(rect)
-                        
-                for key in cdict.keys():
-                    self.axes.plot([0],[0],color=cdict[key],label=key,lw=4)
-                self.axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',ncol=3, mode="expand", borderaxespad=0.)
-                self.axes.invert_yaxis()
-                self.axes.set_xlabel('time (ms)')
-                self.axes.set_ylabel('trials')
-                self.fig.tight_layout()
-                plt.show()
-        except:
-            print("plotting error")
-            pass
-
-        # utils.debug_trace() # TODO
+            # adding spans
+            for span_name, Df in Spans.items():
+                Df_sliced = time_slice(Df, row['t_on']+pre, row['t_off']+post, col='t_on')
+                for j, row_s in Df_sliced.iterrows():
+                    t = row_s['t_on'] - row['t_on']
+                    dur = row_s['dt']
+                    rect = plt.Rectangle((t,i-0.5), dur, 1,
+                                        facecolor=cdict[span_name])
+                    self.axes.add_patch(rect)
+                
+        for key in cdict.keys():
+            self.axes.plot([0],[0],color=cdict[key],label=key,lw=4)
+        self.axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',ncol=3, mode="expand", borderaxespad=0.)
+        self.axes.invert_yaxis()
+        self.axes.set_xlabel('time (ms)')
+        self.axes.set_ylabel('trials')
+        self.fig.tight_layout()
+        plt.show()
         

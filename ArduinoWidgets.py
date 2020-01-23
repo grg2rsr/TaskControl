@@ -547,10 +547,9 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=50)
 
     def update(self,line):
-        # if decode
+        # if decodeable, replace
         try:
             code = line.split('\t')[0]
-            # decoded = self.parent().VariableController.Df.loc[code]['name']
             decoded = self.parent().StateMachineMonitor.code_map[code]
             line = '\t'.join([decoded,line.split('\t')[1]])
         except:
