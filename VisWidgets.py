@@ -17,6 +17,37 @@ import seaborn as sns
 
 import utils
 
+
+"""
+this needs a full rewrite
+
+into 
+__init__()
+
+init_figure()
+- takes also care of the deco (hard?)
+
+update_data()
+- takes / parses serial data
+ 
+
+update_figure()
+- on all events: draw ev
+- on all off: draw from last on to this off
+
+event and span vis
+
+
+
+matplotlib in qr5
+https://matplotlib.org/gallery/user_interfaces/embedding_in_qt_sgskip.html
+
+plotting with pyqtgraph
+https://www.learnpyqt.com/courses/graphics-plotting/plotting-pyqtgraph/
+
+"""
+
+
 class MyMplCanvas(FigureCanvas):
     # FIXME add controls
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""

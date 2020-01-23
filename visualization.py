@@ -59,6 +59,8 @@ def log2Events(Data,event_names):
     return Events
 
 def make_TrialsDf(Data,trial_entry=None,trial_exit_succ=None,trial_exit_unsucc=None):
+    # TODO make this work gracefully in terms of passing an empty dataframe
+    # TODO read a complete log and then expand line by line to see when it breaks how
     try:
         TrialsDf = pd.DataFrame(Data.groupby('name').get_group(trial_entry)['t'])
         TrialsDf.columns = ['t_on']
