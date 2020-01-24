@@ -105,10 +105,11 @@ class SettingsWidget(QtWidgets.QWidget):
         RunBtn.clicked.connect(self.Run)
 
         # plot button
-        Plot_button = QtWidgets.QPushButton(self)
-        Plot_button.clicked.connect(self.update_plot)
-        Plot_button.setText('Plot performance')
-        FormLayout.addRow(Plot_button)
+        self.Plot_button = QtWidgets.QPushButton(self)
+        self.Plot_button.clicked.connect(self.update_plot)
+        self.Plot_button.setText('Plot performance')
+        FormLayout.addRow(self.Plot_button)
+        self.Plot_button.setEnabled(False)
 
         # TODO register a range of task specific plotters
         # or clicking this fires all plotters associated to the task
@@ -218,6 +219,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
             self.running = True
             # gray out button, set to running
+            self.Plot_button.setEnabled(True)
         else:
             # Here - change button to stop
             print("Task is already running! ")
