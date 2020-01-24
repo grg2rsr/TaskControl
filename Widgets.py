@@ -151,7 +151,9 @@ class SettingsWidget(QtWidgets.QWidget):
     def update_plot(self):
         # TODO deal with this entire functionality
         # https://matplotlib.org/2.1.0/gallery/user_interfaces/embedding_in_qt5_sgskip.html
-        self.PlotWidget = VisWidgets.MyMplCanvas(self)
+        # self.PlotWidget = VisWidgets.MyMplCanvas(self)
+        from TaskVis_pg import TaskVis
+        self.PlotWidget = TaskVis(self)
 
     def closeEvent(self,event):
         # TODO iterate over controllers and close all

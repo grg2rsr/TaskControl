@@ -100,30 +100,30 @@ def time_slice(Df, t_min, t_max, col='t_on'):
 
 # PATH
 # upstairs
-log_path = Path("/home/georg/git_tmp/TaskControl/Animals/123/2020-01-22_11-53-34_lick_for_reward_w_surpression/arduino_log.txt")
-code_map_path = Path("/home/georg/git_tmp/TaskControl/Animals/123/2020-01-22_11-53-34_lick_for_reward_w_surpression/lick_for_reward_w_surpression/Arduino/src/event_codes.h")
+# log_path = Path("/home/georg/git_tmp/TaskControl/Animals/123/2020-01-22_11-53-34_lick_for_reward_w_surpression/arduino_log.txt")
+# code_map_path = Path("/home/georg/git_tmp/TaskControl/Animals/123/2020-01-22_11-53-34_lick_for_reward_w_surpression/lick_for_reward_w_surpression/Arduino/src/event_codes.h")
 
-# downstairs
-# log_path = Path(r'D:\TaskControl\Animals\123\2020-01-22_11-53-34_lick_for_reward_w_surpression\arduino_log.txt')
-# code_map_path = Path(r'D:\TaskControl\Animals\123\2020-01-22_11-53-34_lick_for_reward_w_surpression\lick_for_reward_w_surpression\Arduino\src\event_codes.h')
+# # downstairs
+# # log_path = Path(r'D:\TaskControl\Animals\123\2020-01-22_11-53-34_lick_for_reward_w_surpression\arduino_log.txt')
+# # code_map_path = Path(r'D:\TaskControl\Animals\123\2020-01-22_11-53-34_lick_for_reward_w_surpression\lick_for_reward_w_surpression\Arduino\src\event_codes.h')
 
-Code_Map = parse_code_map(code_map_path)
-Data = parse_arduino_log(log_path, Code_Map)
+# Code_Map = parse_code_map(code_map_path)
+# Data = parse_arduino_log(log_path, Code_Map)
 
-# the names of the things present in the log
-span_names = [name.split('_ON')[0] for name in Code_Map['name'] if name.endswith('_ON')]
-event_names = [name.split('_EVENT')[0] for name in Code_Map['name'] if name.endswith('_EVENT')]
+# # the names of the things present in the log
+# span_names = [name.split('_ON')[0] for name in Code_Map['name'] if name.endswith('_ON')]
+# event_names = [name.split('_EVENT')[0] for name in Code_Map['name'] if name.endswith('_EVENT')]
 
-Spans = log2Spans(Data, span_names)
-Events = log2Events(Data, event_names)
+# Spans = log2Spans(Data, span_names)
+# Events = log2Events(Data, event_names)
 
-# definition of the bounding events
-trial_entry = "FIXATE_STATE"
-trial_exit_succ = "SUCCESSFUL_FIXATION_EVENT"
-trial_exit_unsucc = "BROKEN_FIXATION_EVENT"
+# # definition of the bounding events
+# trial_entry = "FIXATE_STATE"
+# trial_exit_succ = "SUCCESSFUL_FIXATION_EVENT"
+# trial_exit_unsucc = "BROKEN_FIXATION_EVENT"
 
-TrialsDf = make_TrialsDf(Data,trial_entry=trial_entry,
-                              trial_exit_succ=trial_exit_succ,
-                              trial_exit_unsucc=trial_exit_unsucc)
+# TrialsDf = make_TrialsDf(Data,trial_entry=trial_entry,
+#                               trial_exit_succ=trial_exit_succ,
+#                               trial_exit_unsucc=trial_exit_unsucc)
 
-log2Event(Data[:2], "REWARD_COLLECTED")
+# log2Event(Data[:2], "REWARD_COLLECTED")
