@@ -98,11 +98,19 @@ class SettingsWidget(QtWidgets.QWidget):
         FormLayout.addRow(self.logCheckBox)
 
         # run button
-        RunBtn = QtWidgets.QPushButton(self)
-        RunBtn.setStyleSheet("background-color: yellow")
-        RunBtn.setText('Run task')
-        FormLayout.addRow(RunBtn)
-        RunBtn.clicked.connect(self.Run)
+        self.RunBtn = QtWidgets.QPushButton(self)
+        # self.RunBtn.setStyleSheet("background-color: yellow")
+        self.RunBtn.setText('Run task')
+        FormLayout.addRow(self.RunBtn)
+        self.RunBtn.clicked.connect(self.Run)
+
+        # done button
+        self.DoneBtn = QtWidgets.QPushButton(self)
+        # self.DoneBtn.setStyleSheet("background-color: yellow")
+        self.DoneBtn.setText('finish session')
+        FormLayout.addRow(self.DoneBtn)
+        self.DoneBtn.clicked.connect(self.Done)
+        self.DoneBtn.setEnabled(False)
 
         # plot button
         self.Plot_button = QtWidgets.QPushButton(self)
@@ -124,6 +132,7 @@ class SettingsWidget(QtWidgets.QWidget):
         # window scaling
 
         # TODO really rework this sections in terms of generelizability
+        # need a list of controllers that are initialized
 
         small_gap = int(self.profiles['General']['small_gap'])
         big_gap = int(self.profiles['General']['big_gap'])
@@ -195,6 +204,8 @@ class SettingsWidget(QtWidgets.QWidget):
         + upload code to arduino
         + listen to port
         """
+        self.RunBtn.setEnabled(False)
+        self.DoneBtn.setEnabled(True)
 
         if self.running == False:
             print(" --- RUN --- ")
@@ -236,6 +247,18 @@ class SettingsWidget(QtWidgets.QWidget):
         else:
             # Here - change button to stop
             print("Task is already running! ")
+
+    def Done(self):
+        # UI
+        self.DoneBtn.setEnabled(False)
+        self.RunBtn.setEnabled(True)
+
+        # Flags
+        self.running = False
+
+        # take down controllers
+        for controller in self.Controllers:
+            controller.close()
 
     def logCheckBox_changed(self):
         if self.logCheckBox.checkState() == 2:

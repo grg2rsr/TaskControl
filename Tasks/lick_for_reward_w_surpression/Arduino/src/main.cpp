@@ -287,10 +287,10 @@ void finite_state_machine() {
                 // ITI has to be long enough to not make the mice lick themselves into a timeout
 
                 // normal version: after ITI, transit to trial available
-                current_state = TRIAL_AVAILABLE_STATE;
+                // current_state = TRIAL_AVAILABLE_STATE;
 
                 // lick for reward version
-                // current_state = REWARD_AVAILABLE_STATE;
+                current_state = REWARD_AVAILABLE_STATE;
             }
             break;
 
