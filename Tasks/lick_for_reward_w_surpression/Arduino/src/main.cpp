@@ -138,7 +138,10 @@ but then this needs to get deactivated after one execution, so extra flag is nee
 
 if (exit_condition || (req_state != current_state && state_change_requested == True) ) {
     // exit actions
-
+    .
+    .
+    .
+    
     if (req_state != current_state && state_change_requested == True) {
         // forced transition
         current_state = req_state;
@@ -201,18 +204,17 @@ void finite_state_machine() {
                     log_code(BROKEN_FIXATION_EVENT);
                     log_code(TRIAL_ABORTED_EVENT);
 
-                    // "soft version"
-                    // after broken fixation, restart immediately
+                    // "soft version" : after broken fixation, restart immediately
                     // current_state = ITI_STATE;
 
-                    // "hard version"
+                    // "hard version" : broken fixation leads to timeout
                     current_state = TIMEOUT_STATE;
                 }
             }
 
             // exit condition
             if (now() - state_entry > fix_dur) {
-                // ifsuccessfully withhold movement for enough time:
+                // if successfully withhold movement for enough time:
                 // go to reward available state
                 current_state = REWARD_AVAILABLE_STATE;
                 log_code(SUCCESSFUL_FIXATION_EVENT);
@@ -261,12 +263,10 @@ void finite_state_machine() {
 
             // exit condition
             if (now() - state_entry > reward_available_dur || reward_collected == true) {
-                // transit to ITI after certain time or after reward collection
-
-                // change this to time base only to allow for a grace period of licks
-                // otherwise mice try to collect reward and lick themselves into a timeout
-                // ITI is also somewhat grace period
-
+                // transit to ITI after certain time (reward not collected) or after reward collection
+                if (reward_collected == false) {
+                    log_code(REWARD_MISSED_EVENT);
+                }
                 current_state = ITI_STATE;
             }
             break;
@@ -284,7 +284,9 @@ void finite_state_machine() {
 
             // exit condition
             if (now() - state_entry > ITI_dur) {
-                // after ITI, transit to trial available
+                // ITI has to be long enough to not make the mice lick themselves into a timeout
+
+                // normal version: after ITI, transit to trial available
                 current_state = TRIAL_AVAILABLE_STATE;
 
                 // lick for reward version

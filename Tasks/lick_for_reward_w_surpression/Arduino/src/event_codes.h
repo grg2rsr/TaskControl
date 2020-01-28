@@ -27,5 +27,6 @@ const unsigned int TRIAL_ABORTED_EVENT = 22;
 const unsigned int REWARD_COLLECTED_EVENT = 30;
 const unsigned int SUCCESSFUL_FIXATION_EVENT = 31;
 const unsigned int BROKEN_FIXATION_EVENT = 32;
+const unsigned int REWARD_MISSED_EVENT = 33;
 
 
