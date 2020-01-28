@@ -123,6 +123,8 @@ class SettingsWidget(QtWidgets.QWidget):
         # FIXME this contains hardcoding stuff ... 
         # window scaling
 
+        # TODO really rework this sections in terms of generelizability
+
         small_gap = int(self.profiles['General']['small_gap'])
         big_gap = int(self.profiles['General']['big_gap'])
 
@@ -135,10 +137,19 @@ class SettingsWidget(QtWidgets.QWidget):
             functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=big_gap)
         
         if hasattr(self, 'BonsaiController'):
-            functions.tile_Widgets(self.BonsaiController, self.ArduinoController, where='right',gap=small_gap)
+            if hasattr(self, 'ArduinoController'):
+                functions.tile_Widgets(self.BonsaiController, self.ArduinoController, where='right',gap=small_gap)
+            else:
+                functions.tile_Widgets(self.BonsaiController, self, where='right',gap=small_gap)
         
         if hasattr(self, 'LoadCellController'):
-            functions.tile_Widgets(self.LoadCellController, self.ArduinoController, where='right',gap=small_gap)
+            if hasattr(self, 'ArduinoController'):
+                functions.tile_Widgets(self.LoadCellController, self.ArduinoController, where='right',gap=small_gap)
+            else: 
+                if hasattr(self, 'BonsaiController'):
+                    functions.tile_Widgets(self.LoadCellController, self.BonsaiController, where='right',gap=small_gap)
+                else:
+                    functions.tile_Widgets(self.LoadCellController, self, where='right',gap=small_gap)
             functions.tile_Widgets(self.LoadCellController.LoadCellMonitor, self.LoadCellController, where='below',gap=big_gap)
 
         if hasattr(self, 'DisplayController'):

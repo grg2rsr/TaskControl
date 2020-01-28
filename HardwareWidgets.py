@@ -61,7 +61,8 @@ class BonsaiController(QtWidgets.QWidget):
        
         # constructing the bonsai exe string
         parameters = "-p:save_path=\""+str(out_path)+"\""
-        parameters = parameters+" -p:com_port="+task_config['com_port']
+        if 'com_port' in task_config.keys():
+            parameters = parameters+" -p:com_port="+task_config['com_port']
 
         bonsai_exe = Path(self.parent().profiles['General']['bonsai_cmd'])
         bonsai_workflow = task_folder.joinpath('Bonsai',task_config['workflow_fname'])

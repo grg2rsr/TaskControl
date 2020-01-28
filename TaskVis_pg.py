@@ -93,7 +93,7 @@ class TaskVis(QtWidgets.QWidget):
         self.current_trial_idx = 0
 
         self.PlotItem = self.PlotWindow.addPlot(title='trials')
-        # self.LineFB = self.PlotItemFB.plot(x=sp.arange(300), y=self.lc_raw_data[:,1], pen=(200,200,200))
+        
 
         # self.PlotWindow.nextRow()
 
@@ -126,6 +126,7 @@ class TaskVis(QtWidgets.QWidget):
 
     def update_plot(self):
         # utils.debug_trace()
+        # self.TrialLine = self.PlotItem.plot(x=sp.arange(300), y=[self.current_trial_idx,self.current_trial_idx], pen=(200,200,200))
         # if last line is an event
         if self.Data.iloc[-1]["name"].endswith("_EVENT"):
 
