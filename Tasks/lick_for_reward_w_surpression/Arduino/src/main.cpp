@@ -179,6 +179,7 @@ void finite_state_machine() {
             
             // exit condition
             if (true) {
+                // no action required, trial autostarts
                 current_state = FIXATE_STATE;
             }
             break;
@@ -284,8 +285,10 @@ void finite_state_machine() {
             // exit condition
             if (now() - state_entry > ITI_dur) {
                 // after ITI, transit to trial available
-                // current_state = TRIAL_AVAILABLE_STATE;
-                current_state = FIXATE_STATE;
+                current_state = TRIAL_AVAILABLE_STATE;
+
+                // lick for reward version
+                // current_state = REWARD_AVAILABLE_STATE;
             }
             break;
 
