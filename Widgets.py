@@ -213,7 +213,7 @@ class SettingsWidget(QtWidgets.QWidget):
             print("Animal: ",self.animal)
             
             # TODO runanimal popup here
-            # self.RunInfo = RunInfoWidget(self)
+            self.RunInfo = RunInfoWidget(self)
 
             # make folder structure
             # folder = Path(self.profile['tmp_folder'])

@@ -100,6 +100,7 @@ unsigned long reward_valve_open_time = max_future;
 void RewardValveController(){
     // self terminating digital pin blink
     if (reward_valve_closed == true && deliver_reward == true) {
+        reward_tone_controller.play(reward_tone_freq, tone_duration);
         digitalWrite(REWARD_VALVE_PIN,HIGH);
         reward_valve_closed = false;
         // reward_valve_dur = ul2time(reward_magnitude);
@@ -227,7 +228,6 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 // punish with loud tone
-                // two seperate tone controllers?
                 punish_tone_controller.play(punish_tone_freq, tone_duration);
             }
 
@@ -248,7 +248,7 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 reward_collected = false;
-                reward_tone_controller.play(reward_tone_freq, tone_duration);
+                reward_tone_controller.play(reward_cue_freq, tone_duration);
             }
 
             // update
