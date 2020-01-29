@@ -86,10 +86,14 @@ def tile_Widgets(Widget, RefWidget, where='right', gap=50):
         y = RefWidget.pos().y() + RefWidget.size().height() + gap
     Widget.move(x, y)
 
-def scale_Widgets(Widgets, how='vertical'):
+def scale_Widgets(Widgets, how='vertical',mode='max'):
     if how == 'vertical':
         widths = [widget.size().width() for widget in Widgets]
-        max_width = max(widths)
-        [widget.resize(max_width,widget.height()) for widget in Widgets]
+        if mode=='max':
+            max_width = max(widths)
+            [widget.resize(max_width,widget.height()) for widget in Widgets]
+        if mode=='min':
+            min_width = min(widths)
+            [widget.resize(min_width,widget.sizeHint().height()) for widget in Widgets]
         
 

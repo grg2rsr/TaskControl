@@ -41,6 +41,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.profile = None
         self.user = None
         self.task = None # the task that is being run
+        self.Controllers = []
         self.main = main
         self.logging = True
         self.running = False
@@ -67,10 +68,10 @@ class SettingsWidget(QtWidgets.QWidget):
         animals = utils.get_animals(self.profile['animals_folder'])
         self.animal = self.profile['last_animal']
         self.AnimalChoiceWidget = StringChoiceWidget(self, choices=animals)
-        self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
-        self.AnimalChoiceWidget.set_value(self.animal)
-        if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
-            self.animal_changed()
+        # self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
+        # self.AnimalChoiceWidget.set_value(self.animal)
+        # if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
+        #     self.animal_changed()
         FormLayout.addRow('Animal', self.AnimalChoiceWidget)
 
         # TODO reimplement this functionality
@@ -125,48 +126,34 @@ class SettingsWidget(QtWidgets.QWidget):
         # positioning and deco
         self.setWindowTitle("Settings")
         self.move(10, 10) # some corner of the screen ... 
+        
+        # calling animal changed again to trigger correct layouting
+        self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
+        self.AnimalChoiceWidget.set_value(self.animal)
+        if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
+            self.animal_changed()
 
+        self.layout_controllers()
+        
         self.show()
 
-        # FIXME this contains hardcoding stuff ... 
-        # window scaling
-
-        # TODO really rework this sections in terms of generelizability
-        # need a list of controllers that are initialized
-
+    
+    def layout_controllers(self):
+        """ takes care that all controllers are visually positioned nicely """
         small_gap = int(self.profiles['General']['small_gap'])
         big_gap = int(self.profiles['General']['big_gap'])
 
-        functions.scale_Widgets([self.AnimalInfoWidget,self])
-        functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=big_gap)
-
-        if hasattr(self, 'ArduinoController'):
-            functions.scale_Widgets([self.ArduinoController.VariableController, self.ArduinoController])
-            functions.tile_Widgets(self.ArduinoController, self, where='right',gap=small_gap)
-            functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=big_gap)
-        
-        if hasattr(self, 'BonsaiController'):
-            if hasattr(self, 'ArduinoController'):
-                functions.tile_Widgets(self.BonsaiController, self.ArduinoController, where='right',gap=small_gap)
+        for i,Controller in enumerate(self.Controllers):
+            if i == 0:
+                prev_widget = self
             else:
-                functions.tile_Widgets(self.BonsaiController, self, where='right',gap=small_gap)
-        
-        if hasattr(self, 'LoadCellController'):
-            if hasattr(self, 'ArduinoController'):
-                functions.tile_Widgets(self.LoadCellController, self.ArduinoController, where='right',gap=small_gap)
-            else: 
-                if hasattr(self, 'BonsaiController'):
-                    functions.tile_Widgets(self.LoadCellController, self.BonsaiController, where='right',gap=small_gap)
-                else:
-                    functions.tile_Widgets(self.LoadCellController, self, where='right',gap=small_gap)
-            functions.tile_Widgets(self.LoadCellController.LoadCellMonitor, self.LoadCellController, where='below',gap=big_gap)
+                prev_widget = self.Controllers[i-1]
 
-        if hasattr(self, 'DisplayController'):
-            functions.tile_Widgets(self.DisplayController, self.LoadCellController, where='right',gap=small_gap)
-
-        # needs to be called - again
-        # functions.scale_Widgets([self.AnimalInfoWidget,self])
-        # functions.tile_Widgets(self.AnimalInfoWidget,self, where='below', gap=big_gap)
+            functions.tile_Widgets(Controller, prev_widget, where="right", gap=small_gap)
+            Controller.layout()
+            # if hasattr(Controller, 'Children'):
+            #    functions.scale_Widgets([Controller]+Controller.Children)
+            # Controller.layout_children()
 
     def update_plot(self):
         # TODO deal with this entire functionality
@@ -300,6 +287,12 @@ class SettingsWidget(QtWidgets.QWidget):
 
     def task_changed(self):
         """ upon task change: look for required controllers, take all present down and instantiate the new ones """
+        # first take down all currently open ones
+        for Controller in self.Controllers:
+            Controller.close()
+            self.Controllers = []
+
+        print("Currently selected Task: ", self.task)
         self.task = self.TaskChoiceWidget.get_value()
         self.task_folder = Path(self.profile['tasks_folder']).joinpath(self.task)
 
@@ -307,34 +300,32 @@ class SettingsWidget(QtWidgets.QWidget):
         self.task_config = configparser.ConfigParser()
         self.task_config.read(self.task_folder.joinpath('task_config.ini'))
 
-        # TODO generalize - make a list of controllers
         for section in self.task_config.sections():
             # place here all possible controllers ...
             # closes present controllers and reopens
             if section == 'Arduino':
-                if hasattr(self,'ArduinoController'):
-                    self.ArduinoController.close()
+                print("initializing "+section)
                 self.ArduinoController = ArduinoWidgets.ArduinoController(self)
-                print("initializing ArduinoController")
-                # functions.tile_Widgets(self.ArduinoController, self,where='right',gap=small_gap)
-                # functions.tile_Widgets(self.ArduinoController.VariableController, self.ArduinoController, where='below',gap=big_gap)
-                # functions.scale_Widgets([self.ArduinoController.VariableController, self.ArduinoController])
+                self.Controllers.append(self.ArduinoController)
 
             if section == 'Bonsai':
-                if hasattr(self,'BonsaiController'):
-                        self.BonsaiController.close()
+                print("initializing "+section)
                 self.BonsaiController = HardwareWidgets.BonsaiController(self)
-                print("initializing BonsaiController")
+                self.Controllers.append(self.BonsaiController)
 
             if section == 'LoadCell': # here: this 
+                print("initializing "+section)
                 self.LoadCellController = HardwareWidgets.LoadCellController(self)
-                print("initializing LoadCellController")
+                self.Controllers.append(self.LoadCellController)
 
             if section == 'Display':
+                print("initializing "+section)
                 self.DisplayController = HardwareWidgets.DisplayController(self)
+                self.Controllers.append(self.DisplayController)
 
         self.profile['last_task'] = self.task
-        print("Task: ", self.task)
+
+        self.layout_controllers()
 
 
 class AnimalInfoWidget(QtWidgets.QWidget):
@@ -355,8 +346,12 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         self.setWindowTitle("Animal info")
         self.show()
         self.update()
+        self.layout_self()
 
-        functions.tile_Widgets(self, self.parent(), where='below',gap=100)
+    def layout_self(self):
+        big_gap = int(self.parent().profiles['General']['big_gap'])
+        functions.scale_Widgets([self,self.parent()], mode='min')
+        functions.tile_Widgets(self, self.parent(), where='below', gap=big_gap)
 
     def update(self):
         # TODO get a list of past sessions and parse them

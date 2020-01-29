@@ -51,7 +51,9 @@ class ArduinoController(QtWidgets.QWidget):
         self.vars_path = self.task_folder.joinpath('Arduino','src',self.task_config['var_fname'])
         Df = functions.parse_arduino_vars(self.vars_path)
 
+        # take care of the kids
         self.VariableController = ArduinoVariablesWidget(self,Df)
+        self.Children = [self.VariableController]
 
         # signals
         self.Signals = Signals()
@@ -122,9 +124,35 @@ class ArduinoController(QtWidgets.QWidget):
         self.setLayout(Full_Layout)
         self.setWindowTitle("Arduino controller")
 
-        # functions.tile_Widgets(self, self.parent(), where='right',gap=25)
+        # the children
+        # open serial monitor
+        self.SerialMonitor = SerialMonitorWidget(self)
+        self.Children.append(self.SerialMonitor)
+
+        # open keyboard interaction
+        self.KeyboardInteraction = KeyboardInteractionWidget(self)
+        self.Children.append(self.KeyboardInteraction)
+
+        # Statemachine Monitor
+        self.StateMachineMonitor = StateMachineMonitorWidget(self)
+        self.Children.append(self.StateMachineMonitor)
+
+        self.layout()
 
         self.show()
+
+    def layout(self):
+        """ position children to myself """
+        small_gap = int(self.parent().profiles['General']['small_gap'])
+        big_gap = int(self.parent().profiles['General']['big_gap'])
+
+        functions.scale_Widgets([self] + self.Children[:-1],mode='max') # dirty hack to not scale the state machine monitor
+        for i,child in enumerate(self.Children):
+            if i == 0:
+                ref = self
+            else:
+                ref = self.Children[i-1]
+            functions.tile_Widgets(child, ref, where='below',gap=big_gap)
 
     # def get_com_ports(self):
     #     """ returns com ports with descriptors : separated """
@@ -285,16 +313,7 @@ class ArduinoController(QtWidgets.QWidget):
             print(" --- resetting arduino only --- reusing previous sketch --- ")
 
         # connect to serial port
-        self.connection = self.connect()
-
-        # open serial monitor
-        self.SerialMonitor = SerialMonitorWidget(self)
-
-        # open keyboard interaction
-        self.KeyboardInteraction = KeyboardInteractionWidget(self)
-
-        # Statemachine Monitor
-        self.StateMachineMonitor = StateMachineMonitorWidget(self)
+        self.connection = self.connect()      
 
         # open file for writing
         if self.parent().logging:
@@ -372,6 +391,8 @@ class ArduinoController(QtWidgets.QWidget):
         if not self.parent().logging:
             shutil.rmtree(self.run_folder)
 
+        for child in self.Children:
+            child.close()
         self.close()
     pass
 
@@ -542,9 +563,14 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.TextBrowser.setPlainText('initialized\n')
         self.setWindowTitle("Arduino monitor")
         self.show()
+        self.layout()
 
-        functions.scale_Widgets([self, self.parent()])
-        functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=50)
+    # def layout(self):
+    #     small_gap = int(self.parent().parent().profiles['General']['small_gap'])
+    #     big_gap = int(self.parent().parent().profiles['General']['big_gap'])
+
+    #     functions.scale_Widgets([self, self.parent()])
+    #     functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=big_gap)
 
     def update(self,line):
         # if decodeable, replace
@@ -627,8 +653,8 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         self.setLayout(self.Layout)
         self.setWindowTitle("State Machine Monitor")
 
-        functions.scale_Widgets([self, self.parent()])
-        functions.tile_Widgets(self, self.parent().KeyboardInteraction, where='below',gap=50)
+        # functions.scale_Widgets([self, self.parent()])
+        # functions.tile_Widgets(self, self.parent().KeyboardInteraction, where='below',gap=50)
 
         self.show()
     
@@ -707,8 +733,8 @@ class KeyboardInteractionWidget(QtWidgets.QWidget):
         self.setWindowTitle("Keyboard interface")
         self.show()
 
-        functions.scale_Widgets([self, self.parent()])
-        functions.tile_Widgets(self, self.parent().SerialMonitor, where='below',gap=50)
+        # functions.scale_Widgets([self, self.parent()])
+        # functions.tile_Widgets(self, self.parent().SerialMonitor, where='below',gap=50)
 
     def keyPressEvent(self, event):
         self.parent().send("CMD " + event.text())

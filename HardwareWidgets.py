@@ -50,6 +50,10 @@ class BonsaiController(QtWidgets.QWidget):
         self.setLayout(self.Layout)
         self.show()
 
+    def layout(self):
+        # nothing to do ... 
+        pass
+
     def Run(self,folder):
         """ folder is the logging folder """
 
