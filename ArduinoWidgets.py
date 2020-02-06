@@ -396,8 +396,10 @@ class ArduinoController(QtWidgets.QWidget):
         self.close()
     
     def stop(self):
-        """ """
-        pass
+        """ when session is finished """
+        self.send('CMD HALT')
+        self.RunBtn.setText('RUN')
+        self.RunBtn.setStyleSheet("background-color: green")
     pass
 
 

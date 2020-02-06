@@ -64,6 +64,12 @@ class SettingsWidget(QtWidgets.QWidget):
         self.UserChoiceWidget.set_value(self.user)
         FormLayout.addRow('User', self.UserChoiceWidget)
 
+        # sep
+        line = QtWidgets.QFrame(self)
+        line.setFrameShape(QtWidgets.QFrame.HLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        FormLayout.addWidget(line)
+
         # animal selector
         animals = utils.get_animals(self.profile['animals_folder'])
         self.animal = self.profile['last_animal']
@@ -98,6 +104,12 @@ class SettingsWidget(QtWidgets.QWidget):
         self.logCheckBox.stateChanged.connect(self.logCheckBox_changed)
         FormLayout.addRow(self.logCheckBox)
 
+        # sep
+        line = QtWidgets.QFrame(self)
+        line.setFrameShape(QtWidgets.QFrame.HLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        FormLayout.addWidget(line)
+
         # run button
         self.RunBtn = QtWidgets.QPushButton(self)
         # self.RunBtn.setStyleSheet("background-color: yellow")
@@ -120,13 +132,29 @@ class SettingsWidget(QtWidgets.QWidget):
         FormLayout.addRow(self.Plot_button)
         self.Plot_button.setEnabled(False)
 
+        # sep
+        line = QtWidgets.QFrame(self)
+        line.setFrameShape(QtWidgets.QFrame.HLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        FormLayout.addWidget(line)
+
         # display timer
         self.TimeLabel = QtWidgets.QLabel('00:00:00')
         FormLayout.addRow(self.TimeLabel)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.time_handler)
 
-
+        # self terminate
+        self.selfTerminateCheckBox = QtWidgets.QCheckBox("self terminate")
+        self.selfTerminateCheckBox.setChecked(True)
+        self.self_terminate = True
+        self.selfTerminateCheckBox.stateChanged.connect(self.selfTerminateCheckBox_changed)
+        
+        FormLayout.addRow(self.selfTerminateCheckBox)
+        Df = pd.DataFrame([['after (min) ',1,'int32']],columns=['name','value','dtype'])
+        self.selfTerminateEdit = ValueEditFormLayout(self, DataFrame=Df)
+        FormLayout.addRow(self.selfTerminateEdit)
+        
         # positioning and deco
         self.setWindowTitle("Settings")
         self.move(10, 10) # some corner of the screen ... 
@@ -245,6 +273,8 @@ class SettingsWidget(QtWidgets.QWidget):
 
     def Done(self):
         """ finishing the session """
+        # TODO should be refactored
+
         # UI
         self.DoneBtn.setEnabled(False)
         self.RunBtn.setEnabled(True)
@@ -259,11 +289,21 @@ class SettingsWidget(QtWidgets.QWidget):
             controller.stop()
             controller.close()
 
+        # bonus TODO
+        # send me a mail / slack message
+        # https://github.com/slackapi/python-slackclient
+
     def logCheckBox_changed(self):
         if self.logCheckBox.checkState() == 2:
             self.logging = True
         else:
             self.logging = False
+
+    def selfTerminateCheckBox_changed(self):
+        if self.selfTerminateCheckBox.checkState() == 2:
+            self.self_terminate = True
+        else:
+            self.self_terminate = False
 
     def user_changed(self):
         self.user = self.UserChoiceWidget.get_value()
@@ -341,10 +381,16 @@ class SettingsWidget(QtWidgets.QWidget):
 
 
     def time_handler(self):
+        # called every second by QTimer
         # FIXME rounding errors
         # FIXME refactor
         dt = datetime.now() - self.time_at_run
         self.TimeLabel.setText(str(dt).split('.')[0])
+
+        # test for session timeout / self termination
+        max_time = self.selfTerminateEdit.get_entries().iloc[0]['value']
+        if dt.seconds/60 > max_time and self.self_terminate:
+            self.Done()
        
 
 class AnimalInfoWidget(QtWidgets.QWidget):
