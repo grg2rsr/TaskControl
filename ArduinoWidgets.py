@@ -394,6 +394,10 @@ class ArduinoController(QtWidgets.QWidget):
         for child in self.Children:
             child.close()
         self.close()
+    
+    def stop(self):
+        """ """
+        pass
     pass
 
 

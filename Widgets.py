@@ -1,8 +1,8 @@
 import sys, os
 from pathlib import Path
-import datetime
 import shutil
 import configparser
+from datetime import datetime
 
 import scipy as sp
 import pandas as pd
@@ -120,8 +120,12 @@ class SettingsWidget(QtWidgets.QWidget):
         FormLayout.addRow(self.Plot_button)
         self.Plot_button.setEnabled(False)
 
-        # TODO register a range of task specific plotters
-        # or clicking this fires all plotters associated to the task
+        # display timer
+        self.TimeLabel = QtWidgets.QLabel('00:00:00')
+        FormLayout.addRow(self.TimeLabel)
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.time_handler)
+
 
         # positioning and deco
         self.setWindowTitle("Settings")
@@ -204,7 +208,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
             # make folder structure
             # folder = Path(self.profile['tmp_folder'])
-            date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
+            date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
             folder = Path(self.profile['animals_folder']).joinpath(self.animal,date_time+'_'+self.task)
             os.makedirs(folder,exist_ok=True)
 
@@ -231,20 +235,28 @@ class SettingsWidget(QtWidgets.QWidget):
             self.running = True
             # gray out button, set to running
             self.Plot_button.setEnabled(True)
+
+            # start the timer
+            self.time_at_run = datetime.now()
+            self.timer.start(1000)
         else:
             # Here - change button to stop
             print("Task is already running! ")
 
     def Done(self):
+        """ finishing the session """
         # UI
         self.DoneBtn.setEnabled(False)
         self.RunBtn.setEnabled(True)
 
+        self.timer.stop()
+
         # Flags
         self.running = False
 
-        # take down controllers
+        # stop and take down controllers
         for controller in self.Controllers:
+            controller.stop()
             controller.close()
 
     def logCheckBox_changed(self):
@@ -327,6 +339,13 @@ class SettingsWidget(QtWidgets.QWidget):
 
         self.layout_controllers()
 
+
+    def time_handler(self):
+        # FIXME rounding errors
+        # FIXME refactor
+        dt = datetime.now() - self.time_at_run
+        self.TimeLabel.setText(str(dt).split('.')[0])
+       
 
 class AnimalInfoWidget(QtWidgets.QWidget):
     """ displays some interesing info about the animal: list of previous sessions """

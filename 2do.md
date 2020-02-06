@@ -7,6 +7,12 @@ tmp folder or not?
 pro: cleaner
 contra: temporary arduino_vars file also needed
 
+## self terminating sessions
+on time
+on water
+on trials
+bonus feature: send email
+
 ## known hardcodes
 raw interface sits fixed on serial1
 history of serial monitor is limited

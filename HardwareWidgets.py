@@ -86,6 +86,10 @@ class BonsaiController(QtWidgets.QWidget):
         # stub
         self.close()
 
+    def stop(self):
+        """ """
+        pass
+
 """
  __        ______        ___       _______   ______  _______  __       __
 |  |      /  __  \      /   \     |       \ /      ||   ____||  |     |  |
