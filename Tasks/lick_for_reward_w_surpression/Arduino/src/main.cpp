@@ -30,7 +30,6 @@ Tone reward_tone_controller;
 Tone punish_tone_controller;
 unsigned long tone_duration = 200;
 
-
 /*
  __        ______     _______
 |  |      /  __  \   /  _____|
@@ -60,7 +59,6 @@ void log_msg(String Message){
 // should be the same in memory, one operation more per micros() call
 // more human readable times to set
 // take care that vars taken from the UI are cast correctly
-
 
 /*
      _______. _______ .__   __.      _______.  ______   .______          _______.
@@ -102,6 +100,7 @@ void RewardValveController(){
     if (reward_valve_closed == true && deliver_reward == true) {
         reward_tone_controller.play(reward_tone_freq, tone_duration);
         digitalWrite(REWARD_VALVE_PIN,HIGH);
+        log_code(REWARD_VALVE_ON);
         reward_valve_closed = false;
         // reward_valve_dur = ul2time(reward_magnitude);
         reward_valve_open_time = now();
@@ -110,6 +109,7 @@ void RewardValveController(){
 
     if (reward_valve_closed == false && now() - reward_valve_open_time > reward_valve_dur) {
         digitalWrite(REWARD_VALVE_PIN,LOW);
+        log_code(REWARD_VALVE_OFF);
         reward_valve_closed = true;
     }
 }
@@ -249,6 +249,7 @@ void finite_state_machine() {
                 state_entry_common();
                 reward_collected = false;
                 reward_tone_controller.play(reward_cue_freq, tone_duration);
+                log_code(REWARD_AVAILABLE_EVENT);
             }
 
             // update
@@ -287,13 +288,12 @@ void finite_state_machine() {
                 // ITI has to be long enough to not make the mice lick themselves into a timeout
 
                 // normal version: after ITI, transit to trial available
-                current_state = TRIAL_AVAILABLE_STATE;
+                // current_state = TRIAL_AVAILABLE_STATE;
 
                 // lick for reward version
-                // current_state = REWARD_AVAILABLE_STATE;
+                current_state = REWARD_AVAILABLE_STATE;
             }
             break;
-
     }
 }
 
@@ -318,12 +318,12 @@ void loop() {
         // execute state machine(s)
         finite_state_machine();
 
-        // sample sensors
-        read_lick();
-
         // valve controllers
         RewardValveController();
     }
+
+    // sample sensors
+    read_lick();
 
     // serial communication
     getSerialData();
