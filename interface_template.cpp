@@ -12,6 +12,7 @@ char receivedChars[numChars];
 boolean newData = false;
 bool verbose = true;
 bool run = false;
+bool deliver_reward = false;
 
 int current_state = 0; // WATCH OUT this is ini state
 
@@ -135,6 +136,10 @@ void processSerialData() {
             if (strcmp(CMD,"HALT")==0){
                 run = false;
                 Serial.println("<Arduino is halted>");
+            }
+
+            if (strcmp(CMD,"r")==0){
+                deliver_reward = true;
             }
         }
 

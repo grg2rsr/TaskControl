@@ -94,7 +94,7 @@ ____    ____  ___       __      ____    ____  _______
 */
 
 bool reward_valve_closed = true;
-bool deliver_reward = false;
+// bool deliver_reward = false; // already forward declared in interface_template.cpp
 unsigned long reward_valve_open_time = max_future;
 
 void RewardValveController(){
@@ -206,10 +206,10 @@ void finite_state_machine() {
                     log_code(TRIAL_ABORTED_EVENT);
 
                     // "soft version" : after broken fixation, restart immediately
-                    // current_state = ITI_STATE;
+                    current_state = ITI_STATE;
 
                     // "hard version" : broken fixation leads to timeout
-                    current_state = TIMEOUT_STATE;
+                    // current_state = TIMEOUT_STATE;
                 }
             }
 
@@ -287,10 +287,10 @@ void finite_state_machine() {
                 // ITI has to be long enough to not make the mice lick themselves into a timeout
 
                 // normal version: after ITI, transit to trial available
-                // current_state = TRIAL_AVAILABLE_STATE;
+                current_state = TRIAL_AVAILABLE_STATE;
 
                 // lick for reward version
-                current_state = REWARD_AVAILABLE_STATE;
+                // current_state = REWARD_AVAILABLE_STATE;
             }
             break;
 

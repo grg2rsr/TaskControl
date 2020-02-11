@@ -584,6 +584,32 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             code = line.split('\t')[0]
             decoded = self.parent().StateMachineMonitor.code_map[code]
             line = '\t'.join([decoded,line.split('\t')[1]])
+
+            # update counters
+            if decoded == 'TRIAL_COMPLETED_EVENT':
+                TrialCounter = self.parent().parent().TrialCounter
+                vals = [int(v) for v in TrialCounter.text().split('/')]
+                vals[0] += 1
+                vals[2] += 1
+                TrialCounter.setText('/'.join([str(v) for v in vals]))
+
+            if decoded == 'TRIAL_ABORTED_EVENT':
+                TrialCounter = self.parent().parent().TrialCounter
+                vals = [int(v) for v in TrialCounter.text().split('/')]
+                vals[1] += 1
+                vals[2] += 1
+                TrialCounter.setText('/'.join([str(v) for v in vals]))
+
+            if decoded == 'REWARD_COLLECTED_EVENT':
+                WaterCounter = self.parent().parent().WaterCounter
+                amount = int(WaterCounter.text())
+                VarsDf = self.parent().VariableController.VariableEditWidget.get_entries()
+
+                if 'reward_magnitude' in VarsDf['name'].values:
+                    current_amount = VarsDf.loc[VarsDf['name'] == 'reward_magnitude']['value']
+                    amount += current_amount
+                    WaterCounter.setText(str(amount))
+
         except:
             pass
 
@@ -738,9 +764,6 @@ class KeyboardInteractionWidget(QtWidgets.QWidget):
         self.setLayout(self.Layout)
         self.setWindowTitle("Keyboard interface")
         self.show()
-
-        # functions.scale_Widgets([self, self.parent()])
-        # functions.tile_Widgets(self, self.parent().SerialMonitor, where='below',gap=50)
 
     def keyPressEvent(self, event):
         self.parent().send("CMD " + event.text())

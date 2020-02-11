@@ -42,6 +42,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.user = None
         self.task = None # the task that is being run
         self.Controllers = []
+        self.Children = []
         self.main = main
         self.logging = True
         self.running = False
@@ -68,7 +69,7 @@ class SettingsWidget(QtWidgets.QWidget):
         line = QtWidgets.QFrame(self)
         line.setFrameShape(QtWidgets.QFrame.HLine)
         line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        FormLayout.addWidget(line)
+        FormLayout.addRow(line)
 
         # animal selector
         animals = utils.get_animals(self.profile['animals_folder'])
@@ -99,27 +100,25 @@ class SettingsWidget(QtWidgets.QWidget):
         FormLayout.addRow('Task', self.TaskChoiceWidget)
 
         # logging checkbox
-        self.logCheckBox = QtWidgets.QCheckBox("logging enabled")
+        self.logCheckBox = QtWidgets.QCheckBox()
         self.logCheckBox.setChecked(True)
         self.logCheckBox.stateChanged.connect(self.logCheckBox_changed)
-        FormLayout.addRow(self.logCheckBox)
+        FormLayout.addRow("logging enabled", self.logCheckBox)
 
         # sep
         line = QtWidgets.QFrame(self)
         line.setFrameShape(QtWidgets.QFrame.HLine)
         line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        FormLayout.addWidget(line)
+        FormLayout.addRow(line)
 
         # run button
         self.RunBtn = QtWidgets.QPushButton(self)
-        # self.RunBtn.setStyleSheet("background-color: yellow")
         self.RunBtn.setText('Run task')
         FormLayout.addRow(self.RunBtn)
         self.RunBtn.clicked.connect(self.Run)
 
         # done button
         self.DoneBtn = QtWidgets.QPushButton(self)
-        # self.DoneBtn.setStyleSheet("background-color: yellow")
         self.DoneBtn.setText('finish session')
         FormLayout.addRow(self.DoneBtn)
         self.DoneBtn.clicked.connect(self.Done)
@@ -136,13 +135,24 @@ class SettingsWidget(QtWidgets.QWidget):
         line = QtWidgets.QFrame(self)
         line.setFrameShape(QtWidgets.QFrame.HLine)
         line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        FormLayout.addWidget(line)
+        FormLayout.addRow(line)
 
         # display timer
-        self.TimeLabel = QtWidgets.QLabel('00:00:00')
-        FormLayout.addRow(self.TimeLabel)
+        self.TimeLabel = QtWidgets.QLCDNumber()
+        self.TimeLabel.setDigitCount(8)
+        self.TimeLabel.display('00:00:00')
+        FormLayout.addRow('time in session', self.TimeLabel)
+        self.TimeLabel.setSegmentStyle(QtWidgets.QLCDNumber.Flat)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.time_handler)
+
+        # display number of trials
+        self.TrialCounter = QtWidgets.QLabel('0/0/0')
+        FormLayout.addRow('completed/aborted/total',self.TrialCounter)
+
+        # display amount of water consumed
+        self.WaterCounter = QtWidgets.QLabel('0')
+        FormLayout.addRow('consumed water (ul)', self.WaterCounter)
 
         # self terminate
         self.selfTerminateCheckBox = QtWidgets.QCheckBox("self terminate")
@@ -151,10 +161,10 @@ class SettingsWidget(QtWidgets.QWidget):
         self.selfTerminateCheckBox.stateChanged.connect(self.selfTerminateCheckBox_changed)
         
         FormLayout.addRow(self.selfTerminateCheckBox)
-        Df = pd.DataFrame([['after (min) ',1,'int32']],columns=['name','value','dtype'])
+        Df = pd.DataFrame([['after (min) ',30,'int32']],columns=['name','value','dtype'])
         self.selfTerminateEdit = ValueEditFormLayout(self, DataFrame=Df)
         FormLayout.addRow(self.selfTerminateEdit)
-        
+
         # positioning and deco
         self.setWindowTitle("Settings")
         self.move(10, 10) # some corner of the screen ... 
@@ -165,9 +175,9 @@ class SettingsWidget(QtWidgets.QWidget):
         if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
             self.animal_changed()
 
-        self.layout_controllers()
-        
         self.show()
+        self.layout_controllers()
+        self.layout_children()
 
     
     def layout_controllers(self):
@@ -186,6 +196,11 @@ class SettingsWidget(QtWidgets.QWidget):
             # if hasattr(Controller, 'Children'):
             #    functions.scale_Widgets([Controller]+Controller.Children)
             # Controller.layout_children()
+
+    def layout_children(self):
+        for child in self.Children:
+            child.layout()
+
 
     def update_plot(self):
         # TODO deal with this entire functionality
@@ -289,6 +304,8 @@ class SettingsWidget(QtWidgets.QWidget):
             controller.stop()
             controller.close()
 
+        # TODO popup with a comment on the session
+
         # bonus TODO
         # send me a mail / slack message
         # https://github.com/slackapi/python-slackclient
@@ -332,6 +349,8 @@ class SettingsWidget(QtWidgets.QWidget):
             self.AnimalInfoWidget.close()
 
         self.AnimalInfoWidget = AnimalInfoWidget(self)
+        self.Children = []
+        self.Children.append(self.AnimalInfoWidget)
 
         # TODO get animal metadata
         # animal folder, get all runs, get meta from the folder plus the last weight
@@ -355,23 +374,20 @@ class SettingsWidget(QtWidgets.QWidget):
         for section in self.task_config.sections():
             # place here all possible controllers ...
             # closes present controllers and reopens
+            print("initializing "+section)
             if section == 'Arduino':
-                print("initializing "+section)
                 self.ArduinoController = ArduinoWidgets.ArduinoController(self)
                 self.Controllers.append(self.ArduinoController)
 
             if section == 'Bonsai':
-                print("initializing "+section)
                 self.BonsaiController = HardwareWidgets.BonsaiController(self)
                 self.Controllers.append(self.BonsaiController)
 
-            if section == 'LoadCell': # here: this 
-                print("initializing "+section)
+            if section == 'LoadCell':
                 self.LoadCellController = HardwareWidgets.LoadCellController(self)
                 self.Controllers.append(self.LoadCellController)
 
             if section == 'Display':
-                print("initializing "+section)
                 self.DisplayController = HardwareWidgets.DisplayController(self)
                 self.Controllers.append(self.DisplayController)
 
@@ -385,13 +401,19 @@ class SettingsWidget(QtWidgets.QWidget):
         # FIXME rounding errors
         # FIXME refactor
         dt = datetime.now() - self.time_at_run
-        self.TimeLabel.setText(str(dt).split('.')[0])
+        self.TimeLabel.display(str(dt).split('.')[0])
 
         # test for session timeout / self termination
         max_time = self.selfTerminateEdit.get_entries().iloc[0]['value']
         if dt.seconds/60 > max_time and self.self_terminate:
             self.Done()
        
+
+
+
+
+
+
 
 class AnimalInfoWidget(QtWidgets.QWidget):
     """ displays some interesing info about the animal: list of previous sessions """
@@ -409,13 +431,14 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         self.Layout.addWidget(self.Table)
         self.setLayout(self.Layout)
         self.setWindowTitle("Animal info")
-        self.show()
         self.update()
-        self.layout_self()
+        self.show()
+        self.layout()
 
-    def layout_self(self):
+    def layout(self):
         big_gap = int(self.parent().profiles['General']['big_gap'])
-        functions.scale_Widgets([self,self.parent()], mode='min')
+        # functions.scale_Widgets([self,self.parent()], mode='min')
+        self.resize(self.parent().width(),self.sizeHint().height())
         functions.tile_Widgets(self, self.parent(), where='below', gap=big_gap)
 
     def update(self):
