@@ -4,6 +4,9 @@ import scipy as sp
 import pathlib
 
 # TODO each of these functions should return a dataframe, with a 'path' column and other interesting info ... 
+# most of this is now performed by a function in the "first look" behavior stuff on the laptop
+# get it!!!
+
 def get_animals(folder):
     """ checks each folder in folder """
     animals= []

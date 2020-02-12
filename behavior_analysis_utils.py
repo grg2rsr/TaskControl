@@ -24,6 +24,25 @@ def parse_arduino_log(log_path, code_map=None):
 
     return Data
 
+def parse_lines(lines, code_map=None):
+    """ analogous to parse_arduino_log, but operates on a list of lines """
+
+    Data = pd.DataFrame([[]],columns=['code','t'])
+
+    for line in lines:
+        if not line.startswith('<'):
+            code,t = line.strip().split('\t')
+            data = pd.DataFrame([[code,t]],columns=['code','t'])
+            Data.append(data)
+
+    Data['t'] = Data['t'].astype('float')
+
+    if code_map is not None:
+        cm = dict(zip(code_map['code'], code_map['name']))
+        Data['name'] = [cm[code] for code in Data["code"]]
+
+    return Data
+
 def log2Span(Data,span_name):
     try:
         on_times = Data.groupby('name').get_group(span_name+'_ON')['t'].values.astype('float')
