@@ -24,16 +24,16 @@ def parse_arduino_log(log_path, code_map=None):
 
     return Data
 
-def parse_lines(lines, code_map=None):
+def parse_lines2(lines, code_map=None):
     """ analogous to parse_arduino_log, but operates on a list of lines """
 
-    Data = pd.DataFrame([[]],columns=['code','t'])
+    Data = pd.DataFrame(columns=['code','t'])
 
     for line in lines:
         if not line.startswith('<'):
-            code,t = line.strip().split('\t')
+            code, t = line.strip().split('\t')
             data = pd.DataFrame([[code,t]],columns=['code','t'])
-            Data.append(data)
+            Data = Data.append(data)
 
     Data['t'] = Data['t'].astype('float')
 
@@ -42,6 +42,30 @@ def parse_lines(lines, code_map=None):
         Data['name'] = [cm[code] for code in Data["code"]]
 
     return Data
+
+def  parse_line(line, code_map=None):
+    if not line.startswith('<'):
+        code,t = line.strip().split('\t')
+        data = pd.DataFrame([[code,t]],columns=['code','t'])
+        data['t'] = data['t'].astype('float')
+
+        if code_map is not None:
+            cm = dict(zip(code_map['code'], code_map['name']))
+            # data['name'] = [cm[code] for code in data["code"]]
+            data['name'] = cm[data["code"]]
+
+        return data
+    else:
+        pass
+
+def parse_lines(lines, code_map=None):
+    Dfs = []
+    lines = [Dfs.append(parse_line(line, code_map=code_map)) for line in lines]
+    Data = pd.concat(Dfs)
+    Data.reset_index(drop=True)
+    return Data
+
+    
 
 def log2Span(Data,span_name):
     try:

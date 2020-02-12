@@ -50,6 +50,14 @@ class ArduinoController(QtWidgets.QWidget):
 
         self.vars_path = self.task_folder.joinpath('Arduino','src',self.task_config['var_fname'])
         Df = functions.parse_arduino_vars(self.vars_path)
+        self.code_map = dict(zip(Df['code'], Df['name']))
+
+
+        path = self.parent().task_folder.joinpath('Arduino','src','event_codes.h')
+        self.Df = functions.parse_code_map(path)
+        self.code_map = dict(zip(self.Df['code'].values, self.Df['name'].values))
+
+
 
         # take care of the kids
         self.VariableController = ArduinoVariablesWidget(self,Df)
@@ -57,6 +65,8 @@ class ArduinoController(QtWidgets.QWidget):
 
         # signals
         self.Signals = Signals()
+        self.Signals.serial_data_available.connect(self.parse_line)
+        self.Data = pd.DataFrame(columns=['code','t','name'])
 
         self.stopped = False
         self.reprogram = True
@@ -96,12 +106,6 @@ class ArduinoController(QtWidgets.QWidget):
 
         Full_Layout = QtWidgets.QVBoxLayout()
         Full_Layout.addWidget(FormWidget)
-
-        # reset button - left in for future reimplementation
-        # Btn = QtWidgets.QPushButton()
-        # Btn.setText('Reset Arduino')
-        # Btn.clicked.connect(self.reset_board)
-        # Full_Layout.addWidget(Btn)
 
         # start/stop button
         self.RunBtn = QtWidgets.QPushButton()
@@ -343,6 +347,15 @@ class ArduinoController(QtWidgets.QWidget):
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start() # apparently this line is not passed, thread hangs here? if yes,then why multithreading at all???
+
+    def parse_line(self,line):
+        if not line.startswith('<'):
+            code,t = line.strip().split('\t')
+            name = self.code_map[code]
+            data = pd.DataFrame([[code,t,name]],columns=['code','t','name'])
+            data['t'] = data['t'].astype('float')
+
+            self.Data = self.Data.append(data)
 
     def closeEvent(self, event):
 
