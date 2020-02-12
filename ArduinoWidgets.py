@@ -55,11 +55,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         path = self.task_folder.joinpath('Arduino','src','event_codes.h')
         Df = functions.parse_code_map(path)
-        # self.code_map = dict(zip(Df['code'].values, Df['name'].values))
-
         self.code_map = dict(zip(Df['code'], Df['name']))
-        
-
 
         # take care of the kids
         self.Children = [self.VariableController]
@@ -628,14 +624,13 @@ class SerialMonitorWidget(QtWidgets.QWidget):
                 TrialCounter.setText('/'.join([str(v) for v in vals]))
 
             if decoded == 'REWARD_COLLECTED_EVENT':
-                WaterCounter = self.parent().parent().WaterCounter
-                amount = int(WaterCounter.text())
+                amount = int(self.parent().parent().WaterCounter.text())
                 VarsDf = self.parent().VariableController.VariableEditWidget.get_entries()
 
                 if 'reward_magnitude' in VarsDf['name'].values:
-                    current_amount = VarsDf.loc[VarsDf['name'] == 'reward_magnitude']['value'].values[0]
-                    amount += current_amount
-                    WaterCounter.setText(str(amount))
+                    VarsDf.index = VarsDf.name
+                    amount += VarsDf.loc['reward_magnitude','value']
+                    self.parent().parent().WaterCounter.setText(str(int(amount)))
 
         except:
             pass

@@ -1,6 +1,0 @@
-name,value,dtype
-ID,000,int32
-Ear tag,LF,U4
-Genotype,-cre,U10
-Date of birth,YYYY_MM_DD,U10
-Weight,30.0,float32

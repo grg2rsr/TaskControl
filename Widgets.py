@@ -283,6 +283,10 @@ class SettingsWidget(QtWidgets.QWidget):
             # start the timer
             self.time_at_run = datetime.now()
             self.timer.start(1000)
+
+            # reset the counters
+            self.TrialCounter.setText('0/0/0')
+            self.WaterCounter.setText('0')
         else:
             # Here - change button to stop
             print("Task is already running! ")

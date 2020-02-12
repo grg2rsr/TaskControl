@@ -3,7 +3,6 @@ int reward_tone_freq = 12000;
 int reward_cue_freq = 12000;
 int punish_tone_freq = 6000;
 unsigned long ITI_dur = 5000;
-unsigned long ITI_var_dur = 1000;
 unsigned long timeout_dur = 4000;
 unsigned long reward_valve_dur = 70;
 unsigned long reward_magnitude = 10;

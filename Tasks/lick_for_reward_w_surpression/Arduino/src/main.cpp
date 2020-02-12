@@ -31,7 +31,6 @@ Tone reward_tone_controller;
 Tone punish_tone_controller;
 unsigned long tone_duration = 200;
 
-
 /*
  __        ______     _______
 |  |      /  __  \   /  _____|
@@ -54,13 +53,8 @@ void log_code(int code){
 }
 
 void log_msg(String Message){
-    Serial.println(Message);
+    Serial.println("<MSG "+Message+" >");
 }
-
-// for future implementation: do all time based things on float base?
-// should be the same in memory, one operation more per micros() call
-// more human readable times to set
-// take care that vars taken from the UI are cast correctly
 
 /*
      _______. _______ .__   __.      _______.  ______   .______          _______.
@@ -72,7 +66,6 @@ void log_msg(String Message){
 
 */
 void read_lick(){
-  // samples the IR beam for licks
   if (lick_in == false && digitalRead(LICK_PIN) == true){
     log_code(LICK_ON);
     lick_in = true;
@@ -98,13 +91,13 @@ bool reward_valve_closed = true;
 unsigned long reward_valve_open_time = max_future;
 
 void RewardValveController(){
-    // self terminating digital pin blink
+    // practically a self terminating digital pin blink
     if (reward_valve_closed == true && deliver_reward == true) {
         reward_tone_controller.play(reward_tone_freq, tone_duration);
         digitalWrite(REWARD_VALVE_PIN,HIGH);
         log_code(REWARD_VALVE_ON);
         reward_valve_closed = false;
-        // reward_valve_dur = ul2time(reward_magnitude);
+        // reward_valve_dur = ul2time(reward_magnitude); // for the future
         reward_valve_open_time = now();
         deliver_reward = false;
     }
@@ -174,6 +167,7 @@ void finite_state_machine() {
         case TRIAL_AVAILABLE_STATE:
             // state entry
             // this directly goes to fixate state thus restarts the hold
+            // aka "autostart"
             if (current_state != last_state){
                 state_entry_common();
             }
@@ -284,7 +278,6 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-                this_ITI_dur = ITI_dur + random(0,ITI_var_dur);
             }
 
             // update
@@ -293,7 +286,7 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (now() - state_entry > this_ITI_dur) {
+            if (now() - state_entry > ITI_dur) {
                 // ITI has to be long enough to not make the mice lick themselves into a timeout
 
                 // normal version: after ITI, transit to trial available
