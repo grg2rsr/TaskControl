@@ -48,24 +48,25 @@ class ArduinoController(QtWidgets.QWidget):
         # TODO here: copy these variables to the temp vars path and overwrite the path here
         # then - all operations should be done on this
 
+        # VariableController
         self.vars_path = self.task_folder.joinpath('Arduino','src',self.task_config['var_fname'])
         Df = functions.parse_arduino_vars(self.vars_path)
+        self.VariableController = ArduinoVariablesWidget(self,Df)
+
+        path = self.task_folder.joinpath('Arduino','src','event_codes.h')
+        Df = functions.parse_code_map(path)
+        # self.code_map = dict(zip(Df['code'].values, Df['name'].values))
+
         self.code_map = dict(zip(Df['code'], Df['name']))
-
-
-        path = self.parent().task_folder.joinpath('Arduino','src','event_codes.h')
-        self.Df = functions.parse_code_map(path)
-        self.code_map = dict(zip(self.Df['code'].values, self.Df['name'].values))
-
+        
 
 
         # take care of the kids
-        self.VariableController = ArduinoVariablesWidget(self,Df)
         self.Children = [self.VariableController]
 
         # signals
         self.Signals = Signals()
-        self.Signals.serial_data_available.connect(self.parse_line)
+        # self.Signals.serial_data_available.connect(self.parse_line)
         self.Data = pd.DataFrame(columns=['code','t','name'])
 
         self.stopped = False
@@ -519,6 +520,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
                 # reading and writing from different threads apparently threadsafe
                 # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
                 self.parent().connection.write(bytestr)
+                time.sleep(0.01) # to fix incomplete sends? verify if this really works ... 
         else:
             print("Arduino is not connected")
 
@@ -592,8 +594,20 @@ class SerialMonitorWidget(QtWidgets.QWidget):
     #     functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=big_gap)
 
     def update(self,line):
-        # if decodeable, replace
+
+        
         try:
+            # if report
+            if line.startswith('<'):
+                if line[1:-1].split(' ')[0] == 'VAR':
+                    cmd,var,value = line[1:-1].split(' ')
+                    Df = self.parent().VariableController.VariableEditWidget.get_entries()
+                    Df.index = Df.name
+                    Df.loc[var,'value'] = int(value)
+                    Df.reset_index(drop=True,inplace=True)
+                    self.parent().VariableController.VariableEditWidget.set_entries(Df)
+
+            # if decodeable, replace
             code = line.split('\t')[0]
             decoded = self.parent().StateMachineMonitor.code_map[code]
             line = '\t'.join([decoded,line.split('\t')[1]])
@@ -619,7 +633,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
                 VarsDf = self.parent().VariableController.VariableEditWidget.get_entries()
 
                 if 'reward_magnitude' in VarsDf['name'].values:
-                    current_amount = VarsDf.loc[VarsDf['name'] == 'reward_magnitude']['value']
+                    current_amount = VarsDf.loc[VarsDf['name'] == 'reward_magnitude']['value'].values[0]
                     amount += current_amount
                     WaterCounter.setText(str(amount))
 

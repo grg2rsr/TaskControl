@@ -82,11 +82,9 @@ void processSerialData() {
             strlcpy(varname, receivedChars+4, len-4+1);
 
             // INSERT_GETTERS
-
             if (strcmp(varname,"current_state")==0){
-                Serial.println(String(varname)+String("=")+String(current_state));
+                Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
             }
-
         }
 
         // SET

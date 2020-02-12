@@ -14,7 +14,7 @@ from functions import dtype_map
 import functions
 import utils
 
-import VisWidgets
+# import VisWidgets
 import ArduinoWidgets
 import HardwareWidgets
 
@@ -208,8 +208,7 @@ class SettingsWidget(QtWidgets.QWidget):
         # self.PlotWidget = VisWidgets.MyMplCanvas(self)
         # from TaskVis_pg import TaskVis
         # self.PlotWidget = TaskVis(self)
-
-        
+        pass
 
     def closeEvent(self,event):
         # TODO iterate over controllers and close all
@@ -305,6 +304,8 @@ class SettingsWidget(QtWidgets.QWidget):
         for controller in self.Controllers:
             controller.stop()
             controller.close()
+
+        self.task_changed() # this should then reopen all controllers
 
         # TODO popup with a comment on the session
 

@@ -31,6 +31,7 @@ Tone reward_tone_controller;
 Tone punish_tone_controller;
 unsigned long tone_duration = 200;
 
+
 /*
  __        ______     _______
 |  |      /  __  \   /  _____|
@@ -221,6 +222,12 @@ void finite_state_machine() {
                 current_state = REWARD_AVAILABLE_STATE;
                 log_code(SUCCESSFUL_FIXATION_EVENT);
                 log_code(TRIAL_COMPLETED_EVENT);
+
+                // sweep up fix_dur
+                if (fix_dur < fix_dur_target){
+                    fix_dur = fix_dur + fix_dur * fix_increment;
+                    Serial.println("<VAR fix_dur "+String(fix_dur)+String(">"));
+                }
             }
             break;
 
@@ -290,10 +297,10 @@ void finite_state_machine() {
                 // ITI has to be long enough to not make the mice lick themselves into a timeout
 
                 // normal version: after ITI, transit to trial available
-                // current_state = TRIAL_AVAILABLE_STATE;
+                current_state = TRIAL_AVAILABLE_STATE;
 
                 // lick for reward version
-                current_state = REWARD_AVAILABLE_STATE;
+                // current_state = REWARD_AVAILABLE_STATE;
             }
             break;
     }
@@ -313,16 +320,16 @@ void setup() {
     reward_tone_controller.begin(REWARD_SPEAKER_PIN);
     punish_tone_controller.begin(PUNISH_SPEAKER_PIN);
     Serial.println("<Arduino is ready to receive commands>");
+    delay(5000);
 }
 
 void loop() {
     if (run == true){
         // execute state machine(s)
         finite_state_machine();
-
-        // valve controllers
-        RewardValveController();
     }
+    // valve controllers
+    RewardValveController();
 
     // sample sensors
     read_lick();
