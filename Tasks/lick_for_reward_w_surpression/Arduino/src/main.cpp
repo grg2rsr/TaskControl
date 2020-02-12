@@ -20,6 +20,7 @@
 int last_state = FIXATE_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
+unsigned long this_ITI_dur = ITI_dur;
 
 // flow control flags
 bool lick_in = false;
@@ -276,6 +277,7 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
+                this_ITI_dur = ITI_dur + random(0,ITI_var_dur);
             }
 
             // update
@@ -284,7 +286,7 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (now() - state_entry > ITI_dur) {
+            if (now() - state_entry > this_ITI_dur) {
                 // ITI has to be long enough to not make the mice lick themselves into a timeout
 
                 // normal version: after ITI, transit to trial available

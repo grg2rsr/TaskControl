@@ -47,14 +47,17 @@ plotting funcs are run
 
 """ this could form a minimal structure for registerable mpl plotters """
 def init():
-    fig, axes = plt.subplots()
-
+    # TODO code map path
     Code_Map = parse_code_map(code_map_path)
-    Data = parse_arduino_log(log_path, Code_Map)
+    Data = parse_arduino_log(log_path, Code_Map) 
 
+    # init figure
+    fig, axes = plt.subplots()
     pass
 
 def update():
+    # parse lines
+    
     pass
 
 
