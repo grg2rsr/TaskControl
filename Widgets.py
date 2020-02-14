@@ -147,7 +147,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.timer.timeout.connect(self.time_handler)
 
         # display number of trials
-        self.TrialCounter = QtWidgets.QLabel('0/0/0')
+        self.TrialCounter = QtWidgets.QLabel('0/0/0\t--')
         FormLayout.addRow('completed/aborted/total',self.TrialCounter)
 
         # display amount of water consumed
@@ -289,7 +289,7 @@ class SettingsWidget(QtWidgets.QWidget):
             self.timer.start(1000)
 
             # reset the counters
-            self.TrialCounter.setText('0/0/0')
+            self.TrialCounter.setText('0/0/0\t--')
             self.WaterCounter.setText('0')
         else:
             # Here - change button to stop
@@ -414,11 +414,20 @@ class SettingsWidget(QtWidgets.QWidget):
         dt = datetime.now() - self.time_at_run
         self.TimeLabel.display(str(dt).split('.')[0])
 
-        # test for session timeout / self termination
-        # fixme
-        max_time = self.selfTerminateEdit.get_entries().iloc[0]['value']
-        if dt.seconds/60 > max_time and self.self_terminate:
-            self.Done()
+        # test for self termination
+        if self.self_terminate:
+            Df = self.selfTerminateEdit.get_entries()
+            max_time, max_water, max_trials = Df['value'] # depends on order ... 
+            current_time = dt.seconds/60
+            current_water = int(self.WaterCounter.text())
+            current_num_trials = int(self.TrialCounter.text().split('\t')[0].split('/')[-1]) # total number of trials
+            if current_time > max_time and max_time > 0:
+                self.Done()
+            if current_water > max_water and max_water > 0:
+                self.Done()
+            if current_num_trials > max_trials and max_trials > 0:
+                self.Done()
+
        
 
 

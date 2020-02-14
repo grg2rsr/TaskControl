@@ -614,14 +614,14 @@ class SerialMonitorWidget(QtWidgets.QWidget):
                 vals = [int(v) for v in TrialCounter.text().split('/')]
                 vals[0] += 1
                 vals[2] += 1
-                TrialCounter.setText('/'.join([str(v) for v in vals]))
+                TrialCounter.setText('/'.join([str(v) for v in vals]) + '\t' + str(vals[0]/vals[2]))
 
             if decoded == 'TRIAL_ABORTED_EVENT':
                 TrialCounter = self.parent().parent().TrialCounter
                 vals = [int(v) for v in TrialCounter.text().split('/')]
                 vals[1] += 1
                 vals[2] += 1
-                TrialCounter.setText('/'.join([str(v) for v in vals]))
+                TrialCounter.setText('/'.join([str(v) for v in vals]) + '\t' + str(vals[0]/vals[2]))
 
             if decoded == 'REWARD_COLLECTED_EVENT':
                 amount = int(self.parent().parent().WaterCounter.text())
