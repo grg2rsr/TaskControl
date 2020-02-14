@@ -1,4 +1,4 @@
-# %matplotlib qt5s
+%matplotlib qt5
 from behavior_analysis_utils import *
 # this should be changed ... 
 from pathlib import Path
@@ -6,6 +6,12 @@ from pathlib import Path
 ### PATH DEF
 log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals/JP2073/2020-02-11_12-59-34_lick_for_reward_w_surpression/arduino_log.txt")
 code_map_path = Path("/media/georg/htcondor/shared-paton/georg/Animals/JP2073/2020-02-11_12-59-34_lick_for_reward_w_surpression/lick_for_reward_w_surpression/Arduino/src/event_codes.h")
+
+log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals/JP2072/2020-02-12_14-30-35_lick_for_reward_w_surpression/arduino_log.txt")
+code_map_path = Path("/media/georg/htcondor/shared-paton/georg/Animals/JP2072/2020-02-12_14-30-35_lick_for_reward_w_surpression/lick_for_reward_w_surpression/Arduino/src/event_codes.h")
+
+log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals/JP2079/2020-02-12_17-21-01_lick_for_reward_w_surpression/arduino_log.txt")
+code_map_path = log_path.parent.joinpath("lick_for_reward_w_surpression/Arduino/src/event_codes.h")
 
 ### READ 
 Code_Map = parse_code_map(code_map_path)
@@ -45,20 +51,20 @@ plotting funcs are run
 """
 
 
-""" this could form a minimal structure for registerable mpl plotters """
-def init():
-    # TODO code map path
-    Code_Map = parse_code_map(code_map_path)
-    Data = parse_arduino_log(log_path, Code_Map) 
+# """ this could form a minimal structure for registerable mpl plotters """
+# def init():
+#     # TODO code map path
+#     Code_Map = parse_code_map(code_map_path)
+#     Data = parse_arduino_log(log_path, Code_Map) 
 
-    # init figure
-    fig, axes = plt.subplots()
-    pass
+#     # init figure
+#     fig, axes = plt.subplots()
+#     pass
 
-def update():
-    # parse lines
-    
-    pass
+# def update():
+#     # parse lines
+
+#     pass
 
 
 
@@ -121,14 +127,16 @@ def psth(axes, ref_times, events, pre, post, bin_width, **kwargs):
     return axes
 
 ### this would be part of the (registered?) plotter
-data = pd.concat([Data.groupby('name').get_group(g) for g in ('REWARD_COLLECTED_EVENT','REWARD_MISSED_EVENT')])
+data = pd.concat([Data.groupby('name').get_group(g) for g in ('TRIAL_COMPLETED_EVENT','TRIAL_ABORTED_EVENT')])
+# data = Data.groupby('name').get_group('SUCCESSFUL_FIXATION_EVENT')
+# data = Data.groupby('name').get_group('TRIAL_ENTRY_EVENT')
 data = data.sort_values('t')
 data = data.reset_index()
-pre, post = (-5000,5000)
+pre, post = (-3000,3000)
 
 ref_times = data['t'] # apply slicing here
 events = Spans['LICK']['t_on']
-bin_width = 20
+bin_width = 100
 
 fig, axes = plt.subplots(nrows=2, sharex=True)
 overview(axes[0], data, pre, post)

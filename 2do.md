@@ -1,5 +1,5 @@
 # 2do
-
+the training varialbes 
 [ ] think about last variables when training different animals
 
 ## decisions:
@@ -10,10 +10,9 @@ this might have solved itself, think about it
 
 
 ## self terminating sessions
-on time
-on water
-on trials
-bonus feature: send email
+[ ] on water
+[ ] on trials
+[ ] bonus feature: send email
 
 ## known hardcodes
 raw interface sits fixed on serial1

@@ -203,6 +203,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
 
     def update_plot(self):
+        """ emtpy """
         # TODO deal with this entire functionality
         # https://matplotlib.org/2.1.0/gallery/user_interfaces/embedding_in_qt5_sgskip.html
         # self.PlotWidget = VisWidgets.MyMplCanvas(self)
