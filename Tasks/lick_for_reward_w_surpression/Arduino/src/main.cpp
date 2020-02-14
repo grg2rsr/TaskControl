@@ -201,6 +201,9 @@ void finite_state_machine() {
                     log_code(BROKEN_FIXATION_EVENT);
                     log_code(TRIAL_ABORTED_EVENT);
 
+                    // cue wrong action
+                    punish_tone_controller.play(punish_tone_freq, tone_duration);
+
                     // "soft version" : after broken fixation, restart immediately
                     current_state = ITI_STATE;
 
@@ -219,7 +222,7 @@ void finite_state_machine() {
 
                 // sweep up fix_dur
                 if (fix_dur < fix_dur_target){
-                    fix_dur = fix_dur + fix_dur * fix_increment;
+                    fix_dur = constrain(fix_dur + fix_dur * fix_increment, 0, fix_dur_target);
                     Serial.println("<VAR fix_dur "+String(fix_dur)+String(">"));
                 }
             }

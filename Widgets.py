@@ -156,12 +156,15 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # self terminate
         self.selfTerminateCheckBox = QtWidgets.QCheckBox("self terminate")
-        self.selfTerminateCheckBox.setChecked(True)
-        self.self_terminate = True
+        self.selfTerminateCheckBox.setChecked(False)
+        self.self_terminate = False
         self.selfTerminateCheckBox.stateChanged.connect(self.selfTerminateCheckBox_changed)
         
         FormLayout.addRow(self.selfTerminateCheckBox)
-        Df = pd.DataFrame([['after (min) ',30,'int32']],columns=['name','value','dtype'])
+        Df = pd.DataFrame([['after (min) ',0,'int32'],
+                           ['after (ml) ',0, 'int32'],
+                           ['after #trials ',0, 'int32']],
+                           columns=['name','value','dtype'])
         self.selfTerminateEdit = ValueEditFormLayout(self, DataFrame=Df)
         FormLayout.addRow(self.selfTerminateEdit)
 
@@ -412,6 +415,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.TimeLabel.display(str(dt).split('.')[0])
 
         # test for session timeout / self termination
+        # fixme
         max_time = self.selfTerminateEdit.get_entries().iloc[0]['value']
         if dt.seconds/60 > max_time and self.self_terminate:
             self.Done()
