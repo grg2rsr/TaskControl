@@ -134,6 +134,8 @@ data = data.sort_values('t')
 data = data.reset_index()
 pre, post = (-3000,3000)
 
+data = data.iloc[-50:]
+
 ref_times = data['t'] # apply slicing here
 events = Spans['LICK']['t_on']
 bin_width = 100

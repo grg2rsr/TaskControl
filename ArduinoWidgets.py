@@ -646,6 +646,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.TextBrowser.setPlainText('\n'.join(self.lines[-history_len:]))
 
         # scroll to end
+        # BUG does not work!
         if self.update_CheckBox.checkState() == 2:
             sb.setValue(sb.maximum())
         else:
@@ -706,9 +707,6 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
 
         self.setLayout(self.Layout)
         self.setWindowTitle("State Machine Monitor")
-
-        # functions.scale_Widgets([self, self.parent()])
-        # functions.tile_Widgets(self, self.parent().KeyboardInteraction, where='below',gap=50)
 
         self.show()
     

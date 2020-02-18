@@ -170,6 +170,7 @@ void finite_state_machine() {
             // aka "autostart"
             if (current_state != last_state){
                 state_entry_common();
+                reward_tone_controller.play(trial_avail_cue_freq, tone_duration);
             }
 
             // update
@@ -209,6 +210,13 @@ void finite_state_machine() {
 
                     // "hard version" : broken fixation leads to timeout
                     // current_state = TIMEOUT_STATE;
+
+                    // sweep down fix_dur
+                    if (fix_dur > fix_dur_min){
+                        fix_dur = constrain(fix_dur - fix_dur * fix_decrement, fix_dur_min, fix_dur_target);
+                        Serial.println("<VAR fix_dur "+String(fix_dur)+String(">"));
+                    }
+
                 }
             }
 
@@ -222,7 +230,7 @@ void finite_state_machine() {
 
                 // sweep up fix_dur
                 if (fix_dur < fix_dur_target){
-                    fix_dur = constrain(fix_dur + fix_dur * fix_increment, 0, fix_dur_target);
+                    fix_dur = constrain(fix_dur + fix_dur * fix_increment, fix_dur_min, fix_dur_target);
                     Serial.println("<VAR fix_dur "+String(fix_dur)+String(">"));
                 }
             }
