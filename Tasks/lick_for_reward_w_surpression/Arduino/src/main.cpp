@@ -170,6 +170,7 @@ void finite_state_machine() {
             // aka "autostart"
             if (current_state != last_state){
                 state_entry_common();
+                reward_tone_controller.play(trial_avail_cue_freq, tone_duration);
             }
 
             // update
