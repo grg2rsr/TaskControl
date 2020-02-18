@@ -11,7 +11,7 @@ from PyQt5 import QtWidgets
 import scipy as sp
 import pyqtgraph as pg
 
-import visualization as vis
+# import visualization as vis
 import functions
 import pandas as pd
 import seaborn as sns
@@ -116,8 +116,10 @@ on each trial init comput this on the previous trial
 
 
 class SessionVis(QtWidgets.QWidget):
-    def __init__(self, parent):
-        super(SessionVis, self).__init__(parent=parent, Code_Map=None)
+    def __init__(self, parent, Code_Map=None):
+        super(SessionVis, self).__init__(parent=parent)
+        self.setWindowFlags(QtCore.Qt.Window)
+
         self.Code_Map = Code_Map
         # should be
         # utils.debug_trace()
@@ -126,6 +128,7 @@ class SessionVis(QtWidgets.QWidget):
         self.code_dict = dict(zip(self.Code_Map['code'].values, self.Code_Map['name'].values))
         self.SessionDf = pd.DataFrame(columns=['number','t','successful'])
         self.lines = []
+        self.initUI()
 
     def initUI(self):
         self.setWindowTitle("Session performance monitor")
@@ -138,12 +141,9 @@ class SessionVis(QtWidgets.QWidget):
 
         self.TrialRateItem = self.PlotWindow.addPlot(title='trial rate')
         self.TrialRateLine = self.TrialRateItem.plot(pen=(200,100,100))
-        self.PlotWindow.nextRow()
+        self.PlotWindow.nextColumn()
         self.SuccessRateItem = self.PlotWindow.addPlot(title='success rate')
-
-        # self.LineLR_pp = self.PlotItemLR_pp.plot(x=sp.arange(300), y=self.lc_data[:,1], pen=(200,100,100))
-
-        # also do colors, here
+        self.SuccessRateLine = self.SuccessRateItem.plot(pen=(200,100,100))
 
         self.Layout.addWidget(self.PlotWindow)
         self.setLayout(self.Layout)
@@ -151,11 +151,14 @@ class SessionVis(QtWidgets.QWidget):
 
     def update_plot(self):
         # trial rate
-        self.TrialRateLine.setData(x=self.SessionDf['t'].values,y=self.SessionDf['number'].values)
+        x = self.SessionDf['t'].values
+        y = self.SessionDf['number'].values
+        self.TrialRateLine.setData(x=x, y=y)
         
         # trial success rate
-
-        # self.draw()
+        x = self.SessionDf['number'].values
+        y = [sum(self.SessionDf.loc[:i,'successful'])/(i+1) for i in range(self.SessionDf.shape[0])]
+        self.SuccessRateLine.setData(x=x, y=y)
 
     def update(self,line):
          # if decodeable
@@ -164,195 +167,193 @@ class SessionVis(QtWidgets.QWidget):
             code,t = line.split('\t')
             decoded = self.code_dict[code]
             t = float(t)
-        else:
-            pass
 
-        if code == "TRIAL_ENTRY_EVENT":
-            # parse lines
-            Df = parse_lines(self.lines)
+            if decoded == "TRIAL_ENTRY_EVENT":
+                # parse lines
+                Df = parse_lines(self.lines, code_map=self.Code_Map)
 
-            # update SessionDf
-            if "TRIAL_COMPLETED_EVENT" in self.SessionDf['name']:
-                succ = True
-            else:
-                succ = False
+                # update SessionDf
+                if "TRIAL_COMPLETED_EVENT" in Df['name'].values:
+                    succ = True
+                else:
+                    succ = False
 
-            D = dict(number=self.SessionDf.shape[0] + 1,
-                     t=t,
-                     successful=succ)
-            self.SessionDf = self.SessionDf.append(D)
-            
-            # clear lines
-            self.lines = []
+                D = dict(number=self.SessionDf.shape[0] + 1,
+                        t=t,
+                        successful=succ)
+                self.SessionDf = self.SessionDf.append(D, ignore_index=True)
+                
+                # clear lines
+                self.lines = []
 
-            # update plot
-            self.update_plot()
+                # update plot
+                self.update_plot()
 
 
 
 
 
-class TaskVis(QtWidgets.QWidget):
-    """
+# class TaskVis(QtWidgets.QWidget):
+#     """
     
-    """
-    def __init__(self, parent):
-        super(TaskVis, self).__init__(parent=parent)
-        self.setWindowFlags(QtCore.Qt.Window)
+#     """
+#     def __init__(self, parent):
+#         super(TaskVis, self).__init__(parent=parent)
+#         self.setWindowFlags(QtCore.Qt.Window)
 
-        # connecting signals
-        """ think about whether the children should connect themselves to signals of the parent
-        or whether inside the parents the connections should be set
-        and call and update(line) method of this object ... 
-        pro
-        reduces clutter in this plotter
-        clutter = weird parent().Signals blabla
-        therefore also makes this object more standalone and more portable
+#         # connecting signals
+#         """ think about whether the children should connect themselves to signals of the parent
+#         or whether inside the parents the connections should be set
+#         and call and update(line) method of this object ... 
+#         pro
+#         reduces clutter in this plotter
+#         clutter = weird parent().Signals blabla
+#         therefore also makes this object more standalone and more portable
 
-        con
-        clutter does not need to be reduced really
-        this object will ever only live here so it can be hard specified
-        portability not really required?
+#         con
+#         clutter does not need to be reduced really
+#         this object will ever only live here so it can be hard specified
+#         portability not really required?
 
-        """
-        self.parent().ArduinoController.Signals.serial_data_available.connect(self.on_new_data)
+#         """
+#         self.parent().ArduinoController.Signals.serial_data_available.connect(self.on_new_data)
 
-        # setting up data structures
-        """ this could be entirely non necessary """
-        self.Data = pd.DataFrame(columns=['code','t','name'])
+#         # setting up data structures
+#         """ this could be entirely non necessary """
+#         self.Data = pd.DataFrame(columns=['code','t','name'])
 
-        """ code map should be passed as a constructor parameter ... """
-        pio_folder = self.parent().task_config['Arduino']['pio_project_folder']
-        event_codes_fname = self.parent().task_config['Arduino']['event_codes_fname']
-        code_map_path = self.parent().ArduinoController.task_folder.joinpath(pio_folder,"src",event_codes_fname)
-        # self.log_path = self.parent().ArduinoController.run_folder.joinpath('arduino_log.txt')
+#         """ code map should be passed as a constructor parameter ... """
+#         pio_folder = self.parent().task_config['Arduino']['pio_project_folder']
+#         event_codes_fname = self.parent().task_config['Arduino']['event_codes_fname']
+#         code_map_path = self.parent().ArduinoController.task_folder.joinpath(pio_folder,"src",event_codes_fname)
+#         # self.log_path = self.parent().ArduinoController.run_folder.joinpath('arduino_log.txt')
 
-        # code map related
-        self.Code_Map = functions.parse_code_map(code_map_path)
-        self.code_dict = dict(zip(self.Code_Map['code'].values, self.Code_Map['name'].values))
+#         # code map related
+#         self.Code_Map = functions.parse_code_map(code_map_path)
+#         self.code_dict = dict(zip(self.Code_Map['code'].values, self.Code_Map['name'].values))
 
 
 
-        """ these can be moved to init UI, made non self and done ... """
-        # the names of the things present in the log
-        self.span_names = [name.split('_ON')[0] for name in self.Code_Map['name'] if name.endswith('_ON')]
-        self.event_names = [name.split('_EVENT')[0] for name in self.Code_Map['name'] if name.endswith('_EVENT')]
+#         """ these can be moved to init UI, made non self and done ... """
+#         # the names of the things present in the log
+#         self.span_names = [name.split('_ON')[0] for name in self.Code_Map['name'] if name.endswith('_ON')]
+#         self.event_names = [name.split('_EVENT')[0] for name in self.Code_Map['name'] if name.endswith('_EVENT')]
 
-        # once code map is defined, colors can be as well
-        colors = sns.color_palette('deep',n_colors=len(self.event_names)+len(self.span_names))
-        self.cdict = dict(zip(self.event_names+self.span_names,colors))
+#         # once code map is defined, colors can be as well
+#         colors = sns.color_palette('deep',n_colors=len(self.event_names)+len(self.span_names))
+#         self.cdict = dict(zip(self.event_names+self.span_names,colors))
 
-        self.initUI()
+#         self.initUI()
 
-    def initUI(self):
-        self.setWindowTitle("Task overview monitor")
-        self.Layout = QtWidgets.QHBoxLayout()
-        self.setMinimumWidth(300) # FIXME hardcoded!
+#     def initUI(self):
+#         self.setWindowTitle("Task overview monitor")
+#         self.Layout = QtWidgets.QHBoxLayout()
+#         self.setMinimumWidth(300) # FIXME hardcoded!
 
-        # Display and aesthetics
-        self.PlotWindow = pg.GraphicsWindow(title="my title")
-        self.current_trial_idx = 0
+#         # Display and aesthetics
+#         self.PlotWindow = pg.GraphicsWindow(title="my title")
+#         self.current_trial_idx = 0
 
-        self.PlotItem = self.PlotWindow.addPlot(title='trials')
+#         self.PlotItem = self.PlotWindow.addPlot(title='trials')
         
 
-        # self.PlotWindow.nextRow()
+#         # self.PlotWindow.nextRow()
 
-        # self.LineLR_pp = self.PlotItemLR_pp.plot(x=sp.arange(300), y=self.lc_data[:,1], pen=(200,100,100))
+#         # self.LineLR_pp = self.PlotItemLR_pp.plot(x=sp.arange(300), y=self.lc_data[:,1], pen=(200,100,100))
 
-        # also do colors, here
+#         # also do colors, here
 
-        self.Layout.addWidget(self.PlotWindow)
-        self.setLayout(self.Layout)
-        self.show()        
+#         self.Layout.addWidget(self.PlotWindow)
+#         self.setLayout(self.Layout)
+#         self.show()        
 
-    def on_new_data(self,line):
-        # parse new line and append it to self.Data
+#     def on_new_data(self,line):
+#         # parse new line and append it to self.Data
 
-        # if decodeable
-        if not line.startswith('<'):
-            code,t = line.split('\t')
-            t = float(t)
-        else:
-            pass
+#         # if decodeable
+#         if not line.startswith('<'):
+#             code,t = line.split('\t')
+#             t = float(t)
+#         else:
+#             pass
 
-        decoded = self.code_dict[code]
+#         decoded = self.code_dict[code]
 
-        if decoded == next_row_event:
-            self.current_row += 1
+#         if decoded == next_row_event:
+#             self.current_row += 1
 
-        if decoded.endswith('_EVENT'):
-            # easy
+#         if decoded.endswith('_EVENT'):
+#             # easy
 
-        if decoded.endswith('_ON'):
-            last_entry[decoded] = t 
+#         if decoded.endswith('_ON'):
+#             last_entry[decoded] = t 
         
-        if decoded.endswith('_OFF':):
-            # add rect from 
-            last_entry[decoded],t
+#         if decoded.endswith('_OFF':):
+#             # add rect from 
+#             last_entry[decoded],t
 
-            t_on, t_off = prev['t'], self.Data.iloc[-1]['t']
-            rect = pg.QtGui.QGraphicsRectItem(t_on, self.current_row ,t_off-t_on,1)
+#             t_on, t_off = prev['t'], self.Data.iloc[-1]['t']
+#             rect = pg.QtGui.QGraphicsRectItem(t_on, self.current_row ,t_off-t_on,1)
 
-            rect.setPen(pg.mkPen(cdict[span_name]))
-            rect.setBrush(pg.mkPen(cdict[span_name]))
-            self.PlotWindow.addItem(rect)
-
-
-            # D = dict(code=code,t=float(t),name=self.code_dict[code])
-            # self.Data = self.Data.append(D,ignore_index=True)
-            """ there is not really a need for keeping this entire dataframe? """
-
-            # on the beginning of each trial
-            # if self.code_dict[code] == "TRIAL_ENTRY":
-            #     self.current_trial_entry_time = t
-            #     self.current_trial_idx += 1
-
-            # update plot
-            # self.update_plot()
-        pass
-
-    # def update_plot(self):
-        # utils.debug_trace()
-        # self.TrialLine = self.PlotItem.plot(x=sp.arange(300), y=[self.current_trial_idx,self.current_trial_idx], pen=(200,200,200))
-        # if last line is an event
-        if self.Data.iloc[-1]["name"].endswith("_EVENT"):
-
-            # add to plot
-            pass
-
-        # if _OFF
-        if self.Data.iloc[-1]["name"].endswith("_OFF"):
-            # get event name
-            span_name = self.Data[-1]["name"].split("_OFF")[0]
-            # get the previous on, note that this however performs groupby on the entire data each time
-            prev = self.Data.groupby("name").get_group(span_name+"_ON")[-1]
-            t_on, t_off = prev['t'], self.Data.iloc[-1]['t']
-            rect = pg.QtGui.QGraphicsRectItem(t_on,self.current_trial_idx,t_off-t_on,1)
-
-            rect.setPen(pg.mkPen(cdict[span_name]))
-            rect.setBrush(pg.mkPen(cdict[span_name]))
-            self.PlotWindow.addItem(rect)
+#             rect.setPen(pg.mkPen(cdict[span_name]))
+#             rect.setBrush(pg.mkPen(cdict[span_name]))
+#             self.PlotWindow.addItem(rect)
 
 
-            # State_Logger = get_Logger(log['code'])
-            # State_Logger.enter(log['t'],log['x'],log['f'])
-            # # make a new rect for the continuous viewer
-            # [[xmin, xmax], [ymin, ymax]] = Plot_Cont.viewRange()
-            # R = QtGui.QGraphicsRectItem(log['t'],ymin,0,ymax-ymin)
-            # if log['code'] != 20: # to take care of super short lick visibility
-            #     R.setPen(pg.mkPen(colors[log['code']]))
-            # else:
-            #     R.setPen(pg.mkPen([0,0,0,0]))
-            # R.setBrush(pg.mkBrush(colors[log['code']]))
-            # Plot_Cont.addItem(R)
-            # Rects_Cont[log['code']] = R
-            # Rects_Cont_all.append(R)
+#             # D = dict(code=code,t=float(t),name=self.code_dict[code])
+#             # self.Data = self.Data.append(D,ignore_index=True)
+#             """ there is not really a need for keeping this entire dataframe? """
+
+#             # on the beginning of each trial
+#             # if self.code_dict[code] == "TRIAL_ENTRY":
+#             #     self.current_trial_entry_time = t
+#             #     self.current_trial_idx += 1
+
+#             # update plot
+#             # self.update_plot()
+#         pass
+
+#     # def update_plot(self):
+#         # utils.debug_trace()
+#         # self.TrialLine = self.PlotItem.plot(x=sp.arange(300), y=[self.current_trial_idx,self.current_trial_idx], pen=(200,200,200))
+#         # if last line is an event
+#         if self.Data.iloc[-1]["name"].endswith("_EVENT"):
+
+#             # add to plot
+#             pass
+
+#         # if _OFF
+#         if self.Data.iloc[-1]["name"].endswith("_OFF"):
+#             # get event name
+#             span_name = self.Data[-1]["name"].split("_OFF")[0]
+#             # get the previous on, note that this however performs groupby on the entire data each time
+#             prev = self.Data.groupby("name").get_group(span_name+"_ON")[-1]
+#             t_on, t_off = prev['t'], self.Data.iloc[-1]['t']
+#             rect = pg.QtGui.QGraphicsRectItem(t_on,self.current_trial_idx,t_off-t_on,1)
+
+#             rect.setPen(pg.mkPen(cdict[span_name]))
+#             rect.setBrush(pg.mkPen(cdict[span_name]))
+#             self.PlotWindow.addItem(rect)
+
+
+#             # State_Logger = get_Logger(log['code'])
+#             # State_Logger.enter(log['t'],log['x'],log['f'])
+#             # # make a new rect for the continuous viewer
+#             # [[xmin, xmax], [ymin, ymax]] = Plot_Cont.viewRange()
+#             # R = QtGui.QGraphicsRectItem(log['t'],ymin,0,ymax-ymin)
+#             # if log['code'] != 20: # to take care of super short lick visibility
+#             #     R.setPen(pg.mkPen(colors[log['code']]))
+#             # else:
+#             #     R.setPen(pg.mkPen([0,0,0,0]))
+#             # R.setBrush(pg.mkBrush(colors[log['code']]))
+#             # Plot_Cont.addItem(R)
+#             # Rects_Cont[log['code']] = R
+#             # Rects_Cont_all.append(R)
 
 
 
 
-        # get last _ON of the same span and plot 
-    def closeEvent(self, event):
-        # stub
-        self.close()
+#         # get last _ON of the same span and plot 
+#     def closeEvent(self, event):
+#         # stub
+#         self.close()

@@ -590,8 +590,6 @@ class SerialMonitorWidget(QtWidgets.QWidget):
     #     functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=big_gap)
 
     def update(self,line):
-
-        
         try:
             # if report
             if line.startswith('<'):
@@ -609,19 +607,18 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             line = '\t'.join([decoded,line.split('\t')[1]])
 
             # update counters
-            if decoded == 'TRIAL_COMPLETED_EVENT':
+            if decoded == 'TRIAL_COMPLETED_EVENT' or decoded == 'TRIAL_ABORTED_EVENT':
                 TrialCounter = self.parent().parent().TrialCounter
-                vals = [int(v) for v in TrialCounter.text().split('/')]
-                vals[0] += 1
-                vals[2] += 1
-                TrialCounter.setText('/'.join([str(v) for v in vals]) + '\t' + str(vals[0]/vals[2]))
+                vals = [int(v) for v in TrialCounter.text().split('\t')[0].split('/')]
+                if decoded == 'TRIAL_COMPLETED_EVENT':
+                    vals[0] += 1
+                    vals[2] += 1
+                if decoded == 'TRIAL_ABORTED_EVENT':
+                    vals[1] += 1
+                    vals[2] += 1
 
-            if decoded == 'TRIAL_ABORTED_EVENT':
-                TrialCounter = self.parent().parent().TrialCounter
-                vals = [int(v) for v in TrialCounter.text().split('/')]
-                vals[1] += 1
-                vals[2] += 1
-                TrialCounter.setText('/'.join([str(v) for v in vals]) + '\t' + str(vals[0]/vals[2]))
+                new_frac = sp.around(vals[0]/vals[2],2)
+                TrialCounter.setText('/'.join([str(v) for v in vals]) + '\t' + str(new_frac))
 
             if decoded == 'REWARD_COLLECTED_EVENT':
                 amount = int(self.parent().parent().WaterCounter.text())
@@ -633,6 +630,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
                     self.parent().parent().WaterCounter.setText(str(int(amount)))
 
         except:
+            # print("SerialMon update failed on line: ",line)
             pass
 
         self.lines.append(line)

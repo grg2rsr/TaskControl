@@ -24,35 +24,33 @@ def parse_arduino_log(log_path, code_map=None):
 
     return Data
 
-def parse_lines2(lines, code_map=None):
-    """ analogous to parse_arduino_log, but operates on a list of lines """
+# def parse_lines2(lines, code_map=None):
+#     """ analogous to parse_arduino_log, but operates on a list of lines """
 
-    Data = pd.DataFrame(columns=['code','t'])
+#     Data = pd.DataFrame(columns=['code','t'])
 
-    for line in lines:
-        if not line.startswith('<'):
-            code, t = line.strip().split('\t')
-            data = pd.DataFrame([[code,t]],columns=['code','t'])
-            Data = Data.append(data)
+#     for line in lines:
+#         if not line.startswith('<'):
+#             code, t = line.strip().split('\t')
+#             data = pd.DataFrame([[code,t]],columns=['code','t'])
+#             Data = Data.append(data)
 
-    Data['t'] = Data['t'].astype('float')
+#     Data['t'] = Data['t'].astype('float')
 
-    if code_map is not None:
-        cm = dict(zip(code_map['code'], code_map['name']))
-        Data['name'] = [cm[code] for code in Data["code"]]
+#     if code_map is not None:
+#         cm = dict(zip(code_map['code'], code_map['name']))
+#         Data['name'] = [cm[code] for code in Data["code"]]
 
-    return Data
+#     return Data
 
-def  parse_line(line, code_map=None):
+def  parse_line(line, code_dict=None):
     if not line.startswith('<'):
-        code,t = line.strip().split('\t')
+        code, t = line.strip().split('\t')
         data = pd.DataFrame([[code,t]],columns=['code','t'])
         data['t'] = data['t'].astype('float')
 
-        if code_map is not None:
-            cm = dict(zip(code_map['code'], code_map['name']))
-            # data['name'] = [cm[code] for code in data["code"]]
-            data['name'] = cm[data["code"]]
+        if code_dict is not None:
+            data['name'] = code_dict[data.loc[0,"code"]]
 
         return data
     else:
@@ -60,7 +58,9 @@ def  parse_line(line, code_map=None):
 
 def parse_lines(lines, code_map=None):
     Dfs = []
-    lines = [Dfs.append(parse_line(line, code_map=code_map)) for line in lines]
+    if code_map is not None:
+        code_dict = dict(zip(code_map['code'], code_map['name']))
+    lines = [Dfs.append(parse_line(line, code_dict=code_dict)) for line in lines]
     Data = pd.concat(Dfs)
     Data.reset_index(drop=True)
     return Data

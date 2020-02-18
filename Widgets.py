@@ -210,9 +210,11 @@ class SettingsWidget(QtWidgets.QWidget):
         # TODO deal with this entire functionality
         # https://matplotlib.org/2.1.0/gallery/user_interfaces/embedding_in_qt5_sgskip.html
         # self.PlotWidget = VisWidgets.MyMplCanvas(self)
-        # from TaskVis_pg import TaskVis
-        # self.PlotWidget = TaskVis(self)
-        pass
+        from TaskVis_pg import SessionVis
+        path = self.task_folder.joinpath('Arduino','src','event_codes.h')
+        Df = functions.parse_code_map(path)
+        self.SessionVisWidget = SessionVis(self, Code_Map=Df)
+        self.ArduinoController.Signals.serial_data_available.connect(self.SessionVisWidget.update)
 
     def closeEvent(self,event):
         # TODO iterate over controllers and close all
