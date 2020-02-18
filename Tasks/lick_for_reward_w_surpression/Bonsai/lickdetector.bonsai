@@ -15,7 +15,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>D:\TaskControl\Animals\123\2020-02-18_11-47-36_lick_for_reward_w_surpression\bonsai_</Value>
+          <Value>D:\TaskControl\Animals\123\2020-02-18_15-21-37_lick_for_reward_w_surpression\bonsai_</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">
@@ -37,21 +37,21 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="cv:Crop">
           <cv:RegionOfInterest>
-            <cv:X>722</cv:X>
-            <cv:Y>520</cv:Y>
+            <cv:X>737</cv:X>
+            <cv:Y>556</cv:Y>
             <cv:Width>37</cv:Width>
             <cv:Height>45</cv:Height>
           </cv:RegionOfInterest>
         </Combinator>
       </Expression>
       <Expression xsi:type="Combinator">
-        <Combinator xsi:type="dsp:Sum" />
+        <Combinator xsi:type="dsp:Average" />
       </Expression>
       <Expression xsi:type="MemberSelector">
         <Selector>Val0</Selector>
       </Expression>
       <Expression xsi:type="q2:ExpressionTransform">
-        <q2:Expression>it &lt; 280000</q2:Expression>
+        <q2:Expression>it &gt; 100</q2:Expression>
       </Expression>
       <Expression xsi:type="Disable">
         <Builder xsi:type="SubscribeSubject">
@@ -125,7 +125,7 @@
         <Selector>Metadata.embeddedFrameCounter,Metadata.embeddedTimeStamp,Metadata.embeddedGPIOPinState</Selector>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>D:\TaskControl\Animals\123\2020-02-18_11-47-36_lick_for_reward_w_surpression\bonsai_frame_stamps.csv</io:FileName>
+        <io:FileName>D:\TaskControl\Animals\123\2020-02-18_15-21-37_lick_for_reward_w_surpression\bonsai_frame_stamps.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>

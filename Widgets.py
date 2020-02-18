@@ -216,6 +216,10 @@ class SettingsWidget(QtWidgets.QWidget):
         self.SessionVisWidget = SessionVis(self, Code_Map=Df)
         self.ArduinoController.Signals.serial_data_available.connect(self.SessionVisWidget.update)
 
+        from TaskVis_pg import TrialsVis
+        self.TrialsVisWidget = TrialsVis(self, Code_Map=Df)
+        self.ArduinoController.Signals.serial_data_available.connect(self.TrialsVisWidget.update)
+
     def closeEvent(self,event):
         # TODO iterate over controllers and close all
         # for this, a list of registered task needs list of registered controllers and visualizers
