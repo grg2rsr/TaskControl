@@ -110,6 +110,30 @@ void RewardValveController(){
 }
 
 /*
+.___  ___.   ______   ____    ____  __  .__   __.   _______    ____    ____  ___      .______          _______.
+|   \/   |  /  __  \  \   \  /   / |  | |  \ |  |  /  _____|   \   \  /   / /   \     |   _  \        /       |
+|  \  /  | |  |  |  |  \   \/   /  |  | |   \|  | |  |  __      \   \/   / /  ^  \    |  |_)  |      |   (----`
+|  |\/|  | |  |  |  |   \      /   |  | |  . `  | |  | |_ |      \      / /  /_\  \   |      /        \   \
+|  |  |  | |  `--'  |    \    /    |  | |  |\   | |  |__| |       \    / /  _____  \  |  |\  \----.----)   |
+|__|  |__|  \______/      \__/     |__| |__| \__|  \______|        \__/ /__/     \__\ | _| `._____|_______/
+
+*/
+
+void increment_fix_dur(){
+    if (fix_dur < fix_dur_target){
+        fix_dur = constrain(fix_dur + fix_dur * fix_increment, fix_dur_min, fix_dur_target);
+        Serial.println("<VAR fix_dur "+String(fix_dur)+String(">"));
+    }
+}
+
+void decrement_fix_dur(){
+    if (fix_dur > fix_dur_min){
+        fix_dur = constrain(fix_dur - fix_dur * fix_decrement, fix_dur_min, fix_dur_target);
+        Serial.println("<VAR fix_dur "+String(fix_dur)+String(">"));
+    }
+}
+
+/*
  _______     _______..___  ___.
 |   ____|   /       ||   \/   |
 |  |__     |   (----`|  \  /  |
@@ -212,10 +236,7 @@ void finite_state_machine() {
                     // current_state = TIMEOUT_STATE;
 
                     // sweep down fix_dur
-                    if (fix_dur > fix_dur_min){
-                        fix_dur = constrain(fix_dur - fix_dur * fix_decrement, fix_dur_min, fix_dur_target);
-                        Serial.println("<VAR fix_dur "+String(fix_dur)+String(">"));
-                    }
+                    decrement_fix_dur();
 
                 }
             }
@@ -228,11 +249,7 @@ void finite_state_machine() {
                 log_code(SUCCESSFUL_FIXATION_EVENT);
                 log_code(TRIAL_COMPLETED_EVENT);
 
-                // sweep up fix_dur
-                if (fix_dur < fix_dur_target){
-                    fix_dur = constrain(fix_dur + fix_dur * fix_increment, fix_dur_min, fix_dur_target);
-                    Serial.println("<VAR fix_dur "+String(fix_dur)+String(">"));
-                }
+
             }
             break;
 
@@ -280,6 +297,13 @@ void finite_state_machine() {
                 // transit to ITI after certain time (reward not collected) or after reward collection
                 if (reward_collected == false) {
                     log_code(REWARD_MISSED_EVENT);
+                    // keep fix dur the same if reward is missed
+                    // decrement_fix_dur();
+                }
+                
+                // only sweep up fix dur if reward is collected. 
+                if (reward_collected == true) {
+                    increment_fix_dur();
                 }
                 current_state = ITI_STATE;
             }
