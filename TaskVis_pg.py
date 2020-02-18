@@ -18,7 +18,7 @@ import seaborn as sns
 # TODO those functions are not vis but more analysis utils
 
 import utils
-
+from behavior_analysis_utils import parse_lines
 
 """
 this needs a full rewrite
@@ -117,32 +117,76 @@ on each trial init comput this on the previous trial
 
 class SessionVis(QtWidgets.QWidget):
     def __init__(self, parent):
-        super(SessionVis, self).__init__(parent=parent, code_map=None)
-        self.code_map = code_map
-        self.SessionsDf = pd.DataFrame()
+        super(SessionVis, self).__init__(parent=parent, Code_Map=None)
+        self.Code_Map = Code_Map
+        # should be
+        # utils.debug_trace()
+        # Code_Map.index = Code_Map['code']
+        # Code_Map['name'].to_dict()
+        self.code_dict = dict(zip(self.Code_Map['code'].values, self.Code_Map['name'].values))
+        self.SessionDf = pd.DataFrame(columns=['number','t','successful'])
         self.lines = []
 
     def initUI(self):
-        pass
+        self.setWindowTitle("Session performance monitor")
+        self.Layout = QtWidgets.QHBoxLayout()
+        self.setMinimumWidth(300) # FIXME hardcoded!
+
+        # Display and aesthetics
+        self.PlotWindow = pg.GraphicsWindow(title="my title")
+        self.current_trial_idx = 0
+
+        self.TrialRateItem = self.PlotWindow.addPlot(title='trial rate')
+        self.TrialRateLine = self.TrialRateItem.plot(pen=(200,100,100))
+        self.PlotWindow.nextRow()
+        self.SuccessRateItem = self.PlotWindow.addPlot(title='success rate')
+
+        # self.LineLR_pp = self.PlotItemLR_pp.plot(x=sp.arange(300), y=self.lc_data[:,1], pen=(200,100,100))
+
+        # also do colors, here
+
+        self.Layout.addWidget(self.PlotWindow)
+        self.setLayout(self.Layout)
+        self.show()
+
+    def update_plot(self):
+        # trial rate
+        self.TrialRateLine.setData(x=self.SessionDf['t'].values,y=self.SessionDf['number'].values)
+        
+        # trial success rate
+
+        # self.draw()
 
     def update(self,line):
          # if decodeable
         if not line.startswith('<'):
+            self.lines.append(line)
             code,t = line.split('\t')
+            decoded = self.code_dict[code]
             t = float(t)
         else:
             pass
 
         if code == "TRIAL_ENTRY_EVENT":
             # parse lines
+            Df = parse_lines(self.lines)
 
-            # shared:
-            number = 
-            entry_time = t
-            successful = 
+            # update SessionDf
+            if "TRIAL_COMPLETED_EVENT" in self.SessionDf['name']:
+                succ = True
+            else:
+                succ = False
 
-            self.SessionsDf = self.SessionsDf.append()
+            D = dict(number=self.SessionDf.shape[0] + 1,
+                     t=t,
+                     successful=succ)
+            self.SessionDf = self.SessionDf.append(D)
+            
+            # clear lines
+            self.lines = []
 
+            # update plot
+            self.update_plot()
 
 
 
