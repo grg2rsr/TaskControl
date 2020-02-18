@@ -291,11 +291,16 @@ class TrialsVis(QtWidgets.QWidget):
                 df = log2Span(Df,span_name)
                 for i,row in df.iterrows():
                     t = row['t_on'] - align_time
-                    rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt'], 1)
-                    col = [v*255 for v in self.cdict[span_name]]
-                    rect.setPen(pg.mkPen(col))
-                    rect.setBrush(pg.mkBrush(col))
-                    self.PlotItem.addItem(rect)
+                    try:
+                        rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt'], 1)
+                        col = [v*255 for v in self.cdict[span_name]]
+                        if span_name == 'LICK':
+                            col[3] = 150 # reduced opacity
+                        rect.setPen(pg.mkPen(col))
+                        rect.setBrush(pg.mkBrush(col))
+                        self.PlotItem.addItem(rect)
+                    except TypeError:
+                        pass
             except KeyError:
                 pass
                 

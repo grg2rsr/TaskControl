@@ -154,13 +154,19 @@ class SettingsWidget(QtWidgets.QWidget):
         self.WaterCounter = QtWidgets.QLabel('0')
         FormLayout.addRow('consumed water (ul)', self.WaterCounter)
 
+        # sep
+        line = QtWidgets.QFrame(self)
+        line.setFrameShape(QtWidgets.QFrame.HLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        FormLayout.addRow(line)
+
         # self terminate
-        self.selfTerminateCheckBox = QtWidgets.QCheckBox("self terminate")
+        self.selfTerminateCheckBox = QtWidgets.QCheckBox()
         self.selfTerminateCheckBox.setChecked(False)
         self.self_terminate = False
         self.selfTerminateCheckBox.stateChanged.connect(self.selfTerminateCheckBox_changed)
         
-        FormLayout.addRow(self.selfTerminateCheckBox)
+        FormLayout.addRow("self terminate", self.selfTerminateCheckBox)
         Df = pd.DataFrame([['after (min) ',0,'int32'],
                            ['after (ml) ',0, 'int32'],
                            ['after #trials ',0, 'int32']],
