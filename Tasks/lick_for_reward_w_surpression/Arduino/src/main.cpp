@@ -86,6 +86,10 @@ ____    ____  ___       __      ____    ____  _______
 
 */
 
+float ul2time(unsigned long reward_volume){
+    return (float) reward_volume / valve_ul_ms;
+}
+
 bool reward_valve_closed = true;
 // bool deliver_reward = false; // already forward declared in interface_template.cpp
 unsigned long reward_valve_open_time = max_future;
@@ -97,7 +101,7 @@ void RewardValveController(){
         digitalWrite(REWARD_VALVE_PIN,HIGH);
         log_code(REWARD_VALVE_ON);
         reward_valve_closed = false;
-        // reward_valve_dur = ul2time(reward_magnitude); // for the future
+        reward_valve_dur = ul2time(reward_magnitude);
         reward_valve_open_time = now();
         deliver_reward = false;
     }
