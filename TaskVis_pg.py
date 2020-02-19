@@ -97,9 +97,14 @@ class SessionVis(QtWidgets.QWidget):
         self.current_trial_idx = 0
 
         self.TrialRateItem = self.PlotWindow.addPlot(title='trial rate')
+        self.TrialRateItem.setLabel("left",text="trial #")
+        self.TrialRateItem.setLabel("bottom",text="time",units="ms")
         self.TrialRateLine = self.TrialRateItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
+
         self.PlotWindow.nextColumn()
         self.SuccessRateItem = self.PlotWindow.addPlot(title='success rate')
+        self.SuccessRateItem.setLabel("left",text="frac. successful trials")
+        self.SuccessRateItem.setLabel("bottom",text="trial #")
         self.SuccessRateLine = self.SuccessRateItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
         self.SuccessRateLine20 = self.SuccessRateItem.plot(pen=pg.mkPen(color=(100,200,100),width=2))
 
@@ -131,13 +136,17 @@ class SessionVis(QtWidgets.QWidget):
             decoded = self.code_dict[code]
             t = float(t)
 
-            if decoded == "TRIAL_AVAILABLE_EVENT":
+            if decoded == "TRIAL_AVAILABLE_STATE":
                 # parse lines
-                Df = parse_lines(self.lines, code_map=self.Code_Map)
-                S = parse_trial(Df)
-
-                S['number'] = self.SessionDf.shape[0]
-                self.SessionDf = self.SessionDf.append(S, ignore_index=True)
+                try:
+                    Df = parse_lines(self.lines, code_map=self.Code_Map)
+                    S = parse_trial(Df)
+                    if S is not None:
+                        S['number'] = self.SessionDf.shape[0]
+                        self.SessionDf = self.SessionDf.append(S, ignore_index=True)
+                except ValueError:
+                    # this is thrown when lines are emtpy
+                    pass
                 
                 # update plot
                 self.update_plot()
@@ -172,6 +181,8 @@ class TrialsVis(QtWidgets.QWidget):
         # Display and aesthetics
         self.PlotWindow = pg.GraphicsWindow(title="my title")
         self.PlotItem = self.PlotWindow.addPlot(title='trials')
+        self.PlotItem.setLabel("left",text="trial #")
+        self.PlotItem.setLabel("bottom",text="time", units="ms")
         
         # the names of the things present in the log
         self.span_names = [name.split('_ON')[0] for name in self.Code_Map['name'] if name.endswith('_ON')]
@@ -201,15 +212,19 @@ class TrialsVis(QtWidgets.QWidget):
             decoded = self.code_dict[code]
             t = float(t)
 
-            if decoded == "TRIAL_AVAILABLE_EVENT":
-                # parse lines
-                Df = parse_lines(self.lines, code_map=self.Code_Map)
+            if decoded == "TRIAL_AVAILABLE_STATE":
+                try:
+                    # parse lines
+                    Df = parse_lines(self.lines, code_map=self.Code_Map)
 
-                self.trial_counter += 1
-                row_index = self.trial_counter 
-                
-                # plot this Df
-                self.plot_row(Df,row_index)
+                    self.trial_counter += 1
+                    row_index = self.trial_counter 
+                    
+                    # plot this Df
+                    self.plot_row(Df,row_index)
+                except ValueError:
+                    # this is thrown when lines are empty
+                    pass
 
                 # clear lines
                 self.lines = []

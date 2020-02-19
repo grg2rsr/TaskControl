@@ -152,7 +152,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # display amount of water consumed
         self.WaterCounter = QtWidgets.QLabel('0')
-        FormLayout.addRow('consumed water (ul)', self.WaterCounter)
+        FormLayout.addRow('consumed water (µl)', self.WaterCounter)
 
         # sep
         line = QtWidgets.QFrame(self)
@@ -167,10 +167,11 @@ class SettingsWidget(QtWidgets.QWidget):
         self.selfTerminateCheckBox.stateChanged.connect(self.selfTerminateCheckBox_changed)
         
         FormLayout.addRow("self terminate", self.selfTerminateCheckBox)
-        Df = pd.DataFrame([['after (min) ',0,'int32'],
-                           ['after (ml) ',0, 'int32'],
-                           ['after #trials ',0, 'int32']],
+        Df = pd.DataFrame([['after (min) ',  60,   'int32'],
+                           ['after (ml) ',   1000, 'int32'],
+                           ['after #trials ',0,    'int32']],
                            columns=['name','value','dtype'])
+
         self.selfTerminateEdit = ValueEditFormLayout(self, DataFrame=Df)
         FormLayout.addRow(self.selfTerminateEdit)
 

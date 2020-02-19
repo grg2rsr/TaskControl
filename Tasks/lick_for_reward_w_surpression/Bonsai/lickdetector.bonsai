@@ -3,10 +3,10 @@
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xmlns:q1="clr-namespace:Bonsai.PointGrey;assembly=Bonsai.PointGrey"
                  xmlns:cv="clr-namespace:Bonsai.Vision;assembly=Bonsai.Vision"
+                 xmlns:dsp="clr-namespace:Bonsai.Dsp;assembly=Bonsai.Dsp"
                  xmlns:q2="clr-namespace:Bonsai.Scripting;assembly=Bonsai.Scripting"
                  xmlns:q3="clr-namespace:Bonsai.Arduino;assembly=Bonsai.Arduino"
                  xmlns:io="clr-namespace:Bonsai.IO;assembly=Bonsai.System"
-                 xmlns:dsp="clr-namespace:Bonsai.Dsp;assembly=Bonsai.Dsp"
                  xmlns="https://bonsai-rx.org/2018/workflow">
   <Workflow>
     <Nodes>
@@ -15,7 +15,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>D:\TaskControl\Animals\JP2079\2020-02-18_15-42-24_lick_for_reward_w_surpression\bonsai_</Value>
+          <Value>D:\TaskControl\Animals\JP2072\2020-02-19_11-02-30_lick_for_reward_w_surpression\bonsai_</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">
@@ -37,8 +37,8 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="cv:Crop">
           <cv:RegionOfInterest>
-            <cv:X>692</cv:X>
-            <cv:Y>539</cv:Y>
+            <cv:X>714</cv:X>
+            <cv:Y>524</cv:Y>
             <cv:Width>39</cv:Width>
             <cv:Height>44</cv:Height>
           </cv:RegionOfInterest>
@@ -125,7 +125,7 @@
         <Selector>Metadata.embeddedFrameCounter,Metadata.embeddedTimeStamp,Metadata.embeddedGPIOPinState</Selector>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>D:\TaskControl\Animals\JP2079\2020-02-18_15-42-24_lick_for_reward_w_surpression\bonsai_frame_stamps.csv</io:FileName>
+        <io:FileName>D:\TaskControl\Animals\JP2072\2020-02-19_11-02-30_lick_for_reward_w_surpression\bonsai_frame_stamps.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>

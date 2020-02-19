@@ -67,8 +67,11 @@ def parse_trial(Df):
     first event should be trial available
     this should return a series
     can not know about trial number ? """
-    
-    t = Df.groupby('name').get_group('TRIAL_AVAILABLE_STATE').iloc[0]['t']
+    try:
+        t = Df.groupby('name').get_group('TRIAL_AVAILABLE_STATE').iloc[0]['t']
+    except KeyError:
+        # this happens before first trial
+        return None
 
     if "TRIAL_COMPLETED_EVENT" in Df['name'].values:
         succ = True
@@ -77,7 +80,11 @@ def parse_trial(Df):
             t_rew_col = Df.groupby('name').get_group("REWARD_COLLECTED_EVENT").iloc[-1]['t']
             t_rew_avail = Df.groupby('name').get_group("REWARD_AVAILABLE_EVENT").iloc[-1]['t']
             rew_col_rt = t_rew_col - t_rew_avail
-    else:
+        else:
+            reward_collected = False
+            rew_col_rt = sp.NaN
+
+    if "TRIAL_ABORTED_EVENT" in Df['name'].values:
         succ = False
         reward_collected = sp.NaN
         rew_col_rt = sp.NaN

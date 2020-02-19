@@ -122,6 +122,10 @@ class ArduinoController(QtWidgets.QWidget):
         Layout.addWidget(SendBtn)
         Full_Layout.addLayout(Layout)
 
+        # keyboard interaction
+        Label = QtWidgets.QLabel('focus here to capture single keystrokes')
+        Full_Layout.addWidget(Label)
+
         self.setLayout(Full_Layout)
         self.setWindowTitle("Arduino controller")
 
@@ -130,17 +134,17 @@ class ArduinoController(QtWidgets.QWidget):
         self.SerialMonitor = SerialMonitorWidget(self)
         self.Children.append(self.SerialMonitor)
 
-        # open keyboard interaction
-        self.KeyboardInteraction = KeyboardInteractionWidget(self)
-        self.Children.append(self.KeyboardInteraction)
-
         # Statemachine Monitor
         self.StateMachineMonitor = StateMachineMonitorWidget(self)
         self.Children.append(self.StateMachineMonitor)
 
         self.layout()
-
         self.show()
+
+    def keyPressEvent(self, event):
+        """ reimplementation to send single keystrokes
+        makes keyboardinteraction widget useless"""
+        self.send("CMD " + event.text())
 
     def layout(self):
         """ position children to myself """
@@ -757,31 +761,3 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
 
         except:
             pass
-
-"""
- __  ___  ___________    ____ .______     ______        ___      .______       _______
-|  |/  / |   ____\   \  /   / |   _  \   /  __  \      /   \     |   _  \     |       \
-|  '  /  |  |__   \   \/   /  |  |_)  | |  |  |  |    /  ^  \    |  |_)  |    |  .--.  |
-|    <   |   __|   \_    _/   |   _  <  |  |  |  |   /  /_\  \   |      /     |  |  |  |
-|  .  \  |  |____    |  |     |  |_)  | |  `--'  |  /  _____  \  |  |\  \----.|  '--'  |
-|__|\__\ |_______|   |__|     |______/   \______/  /__/     \__\ | _| `._____||_______/
-
-"""
-
-class KeyboardInteractionWidget(QtWidgets.QWidget):
-    """ captures single keystrokes and sends them to the arduino """
-    def __init__(self, parent):
-        super(KeyboardInteractionWidget, self).__init__(parent=parent)
-        self.setWindowFlags(QtCore.Qt.Window)
-        self.initUI()
-
-    def initUI(self):
-        self.Layout = QtWidgets.QHBoxLayout()
-        Label = QtWidgets.QLabel('focus here to capture single keystrokes')
-        self.Layout.addWidget(Label)
-        self.setLayout(self.Layout)
-        self.setWindowTitle("Keyboard interface")
-        self.show()
-
-    def keyPressEvent(self, event):
-        self.parent().send("CMD " + event.text())
