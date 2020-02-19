@@ -13,6 +13,7 @@ import seaborn as sns
 import utils
 from behavior_analysis_utils import parse_lines
 from behavior_analysis_utils import log2Span
+from behavior_analysis_utils import parse_trial
 
 """
 matplotlib in qt5
@@ -60,6 +61,17 @@ on each trial init comput this on the previous trial
 """
 
 
+"""
+other things to code
+
+"trial engagement" (is trial rate?)
+reward collected
+reaction times
+- trial avail to trial init
+- reward avail to reward collect
+
+"""
+
 class SessionVis(QtWidgets.QWidget):
     def __init__(self, parent, Code_Map=None):
         super(SessionVis, self).__init__(parent=parent)
@@ -71,7 +83,7 @@ class SessionVis(QtWidgets.QWidget):
         # Code_Map.index = Code_Map['code']
         # Code_Map['name'].to_dict()
         self.code_dict = dict(zip(self.Code_Map['code'].values, self.Code_Map['name'].values))
-        self.SessionDf = pd.DataFrame(columns=['number','t','successful'])
+        self.SessionDf = pd.DataFrame(columns=['number','t','successful','reward_collected','rew_col_rt'])
         self.lines = []
         self.initUI()
 
@@ -90,6 +102,9 @@ class SessionVis(QtWidgets.QWidget):
         self.SuccessRateItem = self.PlotWindow.addPlot(title='success rate')
         self.SuccessRateLine = self.SuccessRateItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
         self.SuccessRateLine20 = self.SuccessRateItem.plot(pen=pg.mkPen(color=(100,200,100),width=2))
+
+        # self.PlotWindow.nextRow()
+        # self.Success
 
         self.Layout.addWidget(self.PlotWindow)
         self.setLayout(self.Layout)
@@ -110,33 +125,28 @@ class SessionVis(QtWidgets.QWidget):
         self.SuccessRateLine20.setData(x=x, y=y)
 
     def update(self,line):
-         # if decodeable
+        # if decodeable
         if not line.startswith('<'):
-            self.lines.append(line)
             code,t = line.split('\t')
             decoded = self.code_dict[code]
             t = float(t)
 
-            if decoded == "TRIAL_ENTRY_EVENT":
+            if decoded == "TRIAL_AVAILABLE_EVENT":
                 # parse lines
                 Df = parse_lines(self.lines, code_map=self.Code_Map)
+                S = parse_trial(Df)
 
-                # update SessionDf
-                if "TRIAL_COMPLETED_EVENT" in Df['name'].values:
-                    succ = True
-                else:
-                    succ = False
-
-                D = dict(number=self.SessionDf.shape[0] + 1,
-                        t=t,
-                        successful=succ)
-                self.SessionDf = self.SessionDf.append(D, ignore_index=True)
+                S['number'] = self.SessionDf.shape[0]
+                self.SessionDf = self.SessionDf.append(S, ignore_index=True)
                 
-                # clear lines
-                self.lines = []
-
                 # update plot
                 self.update_plot()
+
+                # restart lines with current line
+                self.lines = []
+                self.lines.append(line)
+            else:
+                self.lines.append(line)
 
 
 class TrialsVis(QtWidgets.QWidget):
@@ -191,7 +201,7 @@ class TrialsVis(QtWidgets.QWidget):
             decoded = self.code_dict[code]
             t = float(t)
 
-            if decoded == "TRIAL_ENTRY_EVENT":
+            if decoded == "TRIAL_AVAILABLE_EVENT":
                 # parse lines
                 Df = parse_lines(self.lines, code_map=self.Code_Map)
 

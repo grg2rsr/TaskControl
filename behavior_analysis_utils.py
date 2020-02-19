@@ -1,9 +1,6 @@
-import matplotlib.pyplot as plt
 import scipy as sp
-import seaborn as sns
 import pandas as pd
 from pathlib import Path
-import sys
 from functions import parse_code_map
 import utils
 
@@ -23,25 +20,6 @@ def parse_arduino_log(log_path, code_map=None):
         Data['name'] = [cm[code] for code in Data["code"]]
 
     return Data
-
-# def parse_lines2(lines, code_map=None):
-#     """ analogous to parse_arduino_log, but operates on a list of lines """
-
-#     Data = pd.DataFrame(columns=['code','t'])
-
-#     for line in lines:
-#         if not line.startswith('<'):
-#             code, t = line.strip().split('\t')
-#             data = pd.DataFrame([[code,t]],columns=['code','t'])
-#             Data = Data.append(data)
-
-#     Data['t'] = Data['t'].astype('float')
-
-#     if code_map is not None:
-#         cm = dict(zip(code_map['code'], code_map['name']))
-#         Data['name'] = [cm[code] for code in Data["code"]]
-
-#     return Data
 
 def  parse_line(line, code_dict=None):
     if not line.startswith('<'):
@@ -65,7 +43,57 @@ def parse_lines(lines, code_map=None):
     Data.reset_index(drop=True)
     return Data
 
+def slice_into_trials(Data):
+    """ returns a list of DataFrames """    
+    start_inds = Data.groupby('name').get_group("TRIAL_AVAILABLE_STATE").index
+    completed_inds = Data.groupby('name').get_group("TRIAL_COMPLETED_EVENT").index
+    aborted_inds = Data.groupby('name').get_group("TRIAL_ABORTED_EVENT").index
+    stop_inds = completed_inds.append(aborted_inds)
+    stop_inds = stop_inds.sort_values()
+
+    if len(start_inds) != len(stop_inds):
+        print("unequal number of trial entries and exits!")
+        return None
+
+    Dfs = []
+    for i in range(len(start_inds)):
+        Dfs.append(Data.loc[start_inds[i]:stop_inds[i]])
+
+    return Dfs
+
+def parse_trial(Df):
+    # update SessionDf
+    """
+    first event should be trial available
+    this should return a series
+    can not know about trial number ? """
     
+    t = Df.groupby('name').get_group('TRIAL_AVAILABLE_STATE').iloc[0]['t']
+
+    if "TRIAL_COMPLETED_EVENT" in Df['name'].values:
+        succ = True
+        if "REWARD_COLLECTED_EVENT" in Df['name'].values:
+            reward_collected = True
+            t_rew_col = Df.groupby('name').get_group("REWARD_COLLECTED_EVENT").iloc[-1]['t']
+            t_rew_avail = Df.groupby('name').get_group("REWARD_AVAILABLE_EVENT").iloc[-1]['t']
+            rew_col_rt = t_rew_col - t_rew_avail
+    else:
+        succ = False
+        reward_collected = sp.NaN
+        rew_col_rt = sp.NaN
+    index = ['t','successful','reward_collected','rew_col_rt']
+
+    # TODO HARDCODES EVERYWHERE AAA
+    return pd.Series([t,succ,reward_collected,rew_col_rt], index=index)
+    
+def parse_trials(Dfs):
+    """ bc parse_trial is used also by online plotting 
+    this one however is only needed offline """
+
+    SessionDf = []
+    for Df in Dfs:
+        SessionDf.append(parse_trial(Df))
+    return SessionDf
 
 def log2Span(Data,span_name):
     try:
