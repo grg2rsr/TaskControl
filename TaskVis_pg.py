@@ -96,20 +96,34 @@ class SessionVis(QtWidgets.QWidget):
         self.PlotWindow = pg.GraphicsWindow(title="my title")
         self.current_trial_idx = 0
 
-        self.TrialRateItem = self.PlotWindow.addPlot(title='trial rate')
-        self.TrialRateItem.setLabel("left",text="trial #")
-        self.TrialRateItem.setLabel("bottom",text="time",units="ms")
-        self.TrialRateLine = self.TrialRateItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
+        # uncomment for this task
+        # self.TrialRateItem = self.PlotWindow.addPlot(title='trial rate')
+        # self.TrialRateItem.setLabel("left",text="trial #")
+        # self.TrialRateItem.setLabel("bottom",text="time",units="ms")
+        # self.TrialRateLine = self.TrialRateItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
+        # self.PlotWindow.nextColumn()
 
-        self.PlotWindow.nextColumn()
         self.SuccessRateItem = self.PlotWindow.addPlot(title='success rate')
         self.SuccessRateItem.setLabel("left",text="frac. successful trials")
         self.SuccessRateItem.setLabel("bottom",text="trial #")
         self.SuccessRateLine = self.SuccessRateItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
         self.SuccessRateLine20 = self.SuccessRateItem.plot(pen=pg.mkPen(color=(100,200,100),width=2))
-
         # self.PlotWindow.nextRow()
-        # self.Success
+        self.PlotWindow.nextCOlumn()
+
+        # make this a general thing for displaying the fraction of incoming binary data
+        self.RewardCollectedItem = self.PlotWindow.addPlot(title='reward collection rate')
+        self.RewardCollectedItem.setLabel("left",text="frac. collected rewards")
+        self.RewardCollectedItem.setLabel("bottom",text="successful trial #")
+        self.RewardCollectedLine = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
+        self.RewardCollectedLine20 = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
+
+        # reaction times to reward sound cue
+        self.PlotWindow.nextRow()
+        self.RewardRtItem = self.PlotWindow.addPlot(title='reward collection reaction time')
+        self.RewardRtItem.setLabel("left",text="time (ms)")
+        self.RewardRtItem.setLabel("bottom",text="successful trial #")
+        self.RewardRtLine = self.RewardRtItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
 
         self.Layout.addWidget(self.PlotWindow)
         self.setLayout(self.Layout)
@@ -117,9 +131,9 @@ class SessionVis(QtWidgets.QWidget):
 
     def update_plot(self):
         # trial rate
-        x = self.SessionDf['t'].values
-        y = self.SessionDf['number'].values
-        self.TrialRateLine.setData(x=x, y=y)
+        # x = self.SessionDf['t'].values
+        # y = self.SessionDf['number'].values
+        # self.TrialRateLine.setData(x=x, y=y)
         
         # trial success rate
         x = self.SessionDf['number'].values
@@ -128,6 +142,22 @@ class SessionVis(QtWidgets.QWidget):
 
         y = [sum(self.SessionDf.loc[i-20+1:i,'successful'])/20 for i in range(self.SessionDf.shape[0])]
         self.SuccessRateLine20.setData(x=x, y=y)
+
+        # reward collected rate
+        Df = self.SessionDf.groupby('successful').get_group(True)
+        x = Df['number'].values
+        y = [sum(Df.loc[:i,'reward_collected'])/(i+1) for i in range(Df.shape[0])]
+        self.SuccessRateLine.setData(x=x, y=y)
+
+        y = [sum(Df.loc[i-20+1:i,'reward_collected'])/20 for i in range(Df.shape[0])]
+        self.SuccessRateLine20.setData(x=x, y=y)
+
+        # reward reaction time
+        Df = self.SessionDf.groupby('successful').get_group(True)
+        x = Df.index
+        y = Df['rew_col_rt']
+        self.RewardRtLine.setData(x=x, y=y)
+
 
     def update(self,line):
         # if decodeable
