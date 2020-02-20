@@ -109,7 +109,7 @@ class SessionVis(QtWidgets.QWidget):
         self.SuccessRateLine = self.SuccessRateItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
         self.SuccessRateLine20 = self.SuccessRateItem.plot(pen=pg.mkPen(color=(100,200,100),width=2))
         # self.PlotWindow.nextRow()
-        self.PlotWindow.nextCOlumn()
+        self.PlotWindow.nextColumn()
 
         # make this a general thing for displaying the fraction of incoming binary data
         self.RewardCollectedItem = self.PlotWindow.addPlot(title='reward collection rate')
@@ -117,9 +117,10 @@ class SessionVis(QtWidgets.QWidget):
         self.RewardCollectedItem.setLabel("bottom",text="successful trial #")
         self.RewardCollectedLine = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
         self.RewardCollectedLine20 = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
+        self.PlotWindow.nextColumn()
 
         # reaction times to reward sound cue
-        self.PlotWindow.nextRow()
+        # self.PlotWindow.nextRow()
         self.RewardRtItem = self.PlotWindow.addPlot(title='reward collection reaction time')
         self.RewardRtItem.setLabel("left",text="time (ms)")
         self.RewardRtItem.setLabel("bottom",text="successful trial #")
@@ -144,19 +145,25 @@ class SessionVis(QtWidgets.QWidget):
         self.SuccessRateLine20.setData(x=x, y=y)
 
         # reward collected rate
-        Df = self.SessionDf.groupby('successful').get_group(True)
-        x = Df['number'].values
-        y = [sum(Df.loc[:i,'reward_collected'])/(i+1) for i in range(Df.shape[0])]
-        self.SuccessRateLine.setData(x=x, y=y)
+        try:
+            Df = self.SessionDf.groupby('successful').get_group(True)
+            x = Df['number'].values
+            y = [sum(Df.loc[:i,'reward_collected'])/(i+1) for i in range(Df.shape[0])]
+            self.SuccessRateLine.setData(x=x, y=y)
 
-        y = [sum(Df.loc[i-20+1:i,'reward_collected'])/20 for i in range(Df.shape[0])]
-        self.SuccessRateLine20.setData(x=x, y=y)
+            y = [sum(Df.loc[i-20+1:i,'reward_collected'])/20 for i in range(Df.shape[0])]
+            self.SuccessRateLine20.setData(x=x, y=y)
+        except KeyError:
+            pass
 
         # reward reaction time
-        Df = self.SessionDf.groupby('successful').get_group(True)
-        x = Df.index
-        y = Df['rew_col_rt']
-        self.RewardRtLine.setData(x=x, y=y)
+        # try:
+        #     Df = self.SessionDf.groupby('successful').get_group(True)
+        #     x = Df.index.values
+        #     y = Df['rew_col_rt']
+        #     self.RewardRtLine.setData(x=x, y=y)
+        # except KeyError:
+        #     pass
 
 
     def update(self,line):

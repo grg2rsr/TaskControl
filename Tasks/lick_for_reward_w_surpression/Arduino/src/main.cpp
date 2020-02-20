@@ -93,6 +93,7 @@ float ul2time(unsigned long reward_volume){
 bool reward_valve_closed = true;
 // bool deliver_reward = false; // already forward declared in interface_template.cpp
 unsigned long reward_valve_open_time = max_future;
+float reward_valve_dur = 0;
 
 void RewardValveController(){
     // practically a self terminating digital pin blink
