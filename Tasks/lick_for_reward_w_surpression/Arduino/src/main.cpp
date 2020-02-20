@@ -242,6 +242,7 @@ void finite_state_machine() {
 
                     // sweep down fix_dur
                     decrement_fix_dur();
+                    break; // this could fix the dual exit problem
 
                 }
             }
@@ -250,33 +251,31 @@ void finite_state_machine() {
             if (now() - state_entry > fix_dur) {
                 // if successfully withhold movement for enough time:
                 // go to reward available state
-                current_state = REWARD_AVAILABLE_STATE;
                 log_code(SUCCESSFUL_FIXATION_EVENT);
                 log_code(TRIAL_COMPLETED_EVENT);
-
-
+                current_state = REWARD_AVAILABLE_STATE;
             }
             break;
 
-        case TIMEOUT_STATE:
-            // state entry
-            if (current_state != last_state){
-                state_entry_common();
-                // punish with loud tone
-                punish_tone_controller.play(punish_tone_freq, tone_duration);
-            }
+        // case TIMEOUT_STATE:
+        //     // state entry
+        //     if (current_state != last_state){
+        //         state_entry_common();
+        //         // punish with loud tone
+        //         punish_tone_controller.play(punish_tone_freq, tone_duration);
+        //     }
 
-            // update
-            if (last_state == current_state){
-                // state actions
-            }
+        //     // update
+        //     if (last_state == current_state){
+        //         // state actions
+        //     }
 
-            // exit condition
-            if (now() - state_entry > timeout_dur) {
-                // after timeout, transit to trial available again
-                current_state = TRIAL_AVAILABLE_STATE;
-            }
-            break;
+        //     // exit condition
+        //     if (now() - state_entry > timeout_dur) {
+        //         // after timeout, transit to trial available again
+        //         current_state = TRIAL_AVAILABLE_STATE;
+        //     }
+        //     break;
 
         case REWARD_AVAILABLE_STATE:
             // state entry

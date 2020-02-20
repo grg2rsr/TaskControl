@@ -45,7 +45,7 @@ def parse_lines(lines, code_map=None):
 
 def slice_into_trials(Data):
     """ returns a list of DataFrames """    
-    start_inds = Data.groupby('name').get_group("TRIAL_AVAILABLE_STATE").index
+    start_inds = Data.groupby('name').get_group("TRIAL_ENTRY_EVENT").index
     completed_inds = Data.groupby('name').get_group("TRIAL_COMPLETED_EVENT").index
     aborted_inds = Data.groupby('name').get_group("TRIAL_ABORTED_EVENT").index
     stop_inds = completed_inds.append(aborted_inds)
@@ -96,11 +96,8 @@ def parse_trial(Df):
 def parse_trials(Dfs):
     """ bc parse_trial is used also by online plotting 
     this one however is only needed offline """
-
-    SessionDf = []
-    for Df in Dfs:
-        SessionDf.append(parse_trial(Df))
-    return SessionDf
+    SessionDf = [parse_trial(Df) for Df in Dfs]
+    return pd.concat(SessionDf,axis=1).T
 
 def log2Span(Data,span_name):
     try:
@@ -138,48 +135,48 @@ def log2Events(Data,event_names):
         Events[event_name] = log2Event(Data,event_name)
     return Events
 
-def make_TrialsDf(Data,trial_entry=None,trial_exit_succ=None,trial_exit_unsucc=None):
-    try:
-        TrialsDf = pd.DataFrame(Data.groupby('name').get_group(trial_entry)['t'])
-        TrialsDf.columns = ['t_on']
-    except KeyError:
-        TrialsDf = pd.DataFrame(columns=['t_on'])
-        return TrialsDf
+# def make_TrialsDf(Data,trial_entry=None,trial_exit_succ=None,trial_exit_unsucc=None):
+#     try:
+#         TrialsDf = pd.DataFrame(Data.groupby('name').get_group(trial_entry)['t'])
+#         TrialsDf.columns = ['t_on']
+#     except KeyError:
+#         TrialsDf = pd.DataFrame(columns=['t_on'])
+#         return TrialsDf
 
-    try:
-        Hit = pd.DataFrame(Data.groupby('name').get_group(trial_exit_succ)['t'])
-        Hit['outcome'] = 'succ'
-    except KeyError:
-        Hit = pd.DataFrame(columns=['t','outcome'])
+#     try:
+#         Hit = pd.DataFrame(Data.groupby('name').get_group(trial_exit_succ)['t'])
+#         Hit['outcome'] = 'succ'
+#     except KeyError:
+#         Hit = pd.DataFrame(columns=['t','outcome'])
 
-    try:
-        Miss = pd.DataFrame(Data.groupby('name').get_group(trial_exit_unsucc)['t'])
-        Miss['outcome'] = 'unsucc'
-    except KeyError:
-        Miss = pd.DataFrame(columns=['t','outcome'])
+#     try:
+#         Miss = pd.DataFrame(Data.groupby('name').get_group(trial_exit_unsucc)['t'])
+#         Miss['outcome'] = 'unsucc'
+#     except KeyError:
+#         Miss = pd.DataFrame(columns=['t','outcome'])
 
-    AllEndings = pd.concat([Hit,Miss],axis=0)
-    AllEndings = AllEndings.sort_values('t')
-    AllEndings.columns = ['t_off','outcome']
+#     AllEndings = pd.concat([Hit,Miss],axis=0)
+#     AllEndings = AllEndings.sort_values('t')
+#     AllEndings.columns = ['t_off','outcome']
 
-    # removing last incompleted
-    if TrialsDf.shape[0] > AllEndings.shape[0]:
-        TrialsDf = TrialsDf[:-1]
+#     # removing last incompleted
+#     if TrialsDf.shape[0] > AllEndings.shape[0]:
+#         TrialsDf = TrialsDf[:-1]
 
-    TrialsDf = pd.concat([TrialsDf.reset_index(drop=True),AllEndings.reset_index(drop=True)],axis=1)
-    TrialsDf['dt'] = TrialsDf['t_off'] - TrialsDf['t_on']
+#     TrialsDf = pd.concat([TrialsDf.reset_index(drop=True),AllEndings.reset_index(drop=True)],axis=1)
+#     TrialsDf['dt'] = TrialsDf['t_off'] - TrialsDf['t_on']
     
-    return TrialsDf
+#     return TrialsDf
 
 def time_slice(Df, t_min, t_max, col='t_on'):
     """ slices the DataFrame on the column """
     return Df.loc[sp.logical_and(Df[col] > t_min, Df[col] < t_max)]
 
-
 # PATH
 # upstairs
 # log_path = Path("/home/georg/git_tmp/TaskControl/Animals/123/2020-01-22_11-53-34_lick_for_reward_w_surpression/arduino_log.txt")
 # code_map_path = Path("/home/georg/git_tmp/TaskControl/Animals/123/2020-01-22_11-53-34_lick_for_reward_w_surpression/lick_for_reward_w_surpression/Arduino/src/event_codes.h")
+path = Path("/media/georg/htcondor/shared-paton/georg/arduino_log.txt")
 
 # # downstairs
 # # log_path = Path(r'D:\TaskControl\Animals\123\2020-01-22_11-53-34_lick_for_reward_w_surpression\arduino_log.txt')
