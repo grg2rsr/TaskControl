@@ -62,8 +62,8 @@ class ArduinoController(QtWidgets.QWidget):
 
         # signals
         self.Signals = Signals()
-        # self.Signals.serial_data_available.connect(self.parse_line)
-        self.Data = pd.DataFrame(columns=['code','t','name'])
+        self.Signals.serial_data_available.connect(self.parse_line)
+        # self.Data = pd.DataFrame(columns=['code','t','name'])
 
         self.stopped = False
         self.reprogram = True
@@ -78,7 +78,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         # reprogram
         self.reprogramCheckBox = QtWidgets.QCheckBox("reupload sketch")
-        self.reprogramCheckBox.setChecked(True)
+        self.reprogramCheckBox.setChecked(self.reprogram)
         self.reprogramCheckBox.stateChanged.connect(self.reprogramCheckBox_changed)
         self.FormLayout.addRow(self.reprogramCheckBox)
 
@@ -347,7 +347,8 @@ class ArduinoController(QtWidgets.QWidget):
                     break
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
-        self.thread.start() # apparently this line is not passed, thread hangs here? if yes,then why multithreading at all???
+        self.thread.start()
+        print("listening on serial port has started")
 
     def parse_line(self,line):
         # should I really do this?
@@ -637,12 +638,13 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         # print lines in window
         sb = self.TextBrowser.verticalScrollBar()
         sb_prev_value = sb.value()
-        self.TextBrowser.setPlainText('\n'.join(self.lines[-history_len:]))
+        self.TextBrowser.setPlainText('\n'.join(self.lines))
+        sb.setValue(sb.maximum())
 
         # scroll to end
         # BUG does not work!
         # if self.update_CheckBox.checkState() == 2:
-        #     sb.setValue(sb.maximum())
+        #    sb.setValue(sb.maximum())
         # else:
         #     sb.setValue(sb_prev_value)
 
