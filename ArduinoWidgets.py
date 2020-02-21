@@ -350,13 +350,44 @@ class ArduinoController(QtWidgets.QWidget):
         self.thread.start() # apparently this line is not passed, thread hangs here? if yes,then why multithreading at all???
 
     def parse_line(self,line):
-        if not line.startswith('<'):
-            code,t = line.strip().split('\t')
-            name = self.code_map[code]
-            data = pd.DataFrame([[code,t,name]],columns=['code','t','name'])
-            data['t'] = data['t'].astype('float')
+        # should I really do this?
+        # if not line.startswith('<'):
+        #     code,t = line.strip().split('\t')
+        #     name = self.code_map[code]
+        #     data = pd.DataFrame([[code,t,name]],columns=['code','t','name'])
+        #     data['t'] = data['t'].astype('float')
 
-            self.Data = self.Data.append(data)
+        #     self.Data = self.Data.append(data)
+
+        # if report
+        if line.startswith('<'):
+            if line[1:-1].split(' ')[0] == 'VAR':
+                cmd,var,value = line[1:-1].split(' ')
+                Df = self.VariableController.VariableEditWidget.get_entries()
+                Df.index = Df.name
+                Df.loc[var,'value'] = int(value)
+                Df.reset_index(drop=True,inplace=True)
+                self.VariableController.VariableEditWidget.set_entries(Df)
+
+        # normal read
+        if '\t' in line:
+            code = line.split('\t')[0]
+            decoded = self.StateMachineMonitor.code_map[code] # FIXME
+            line = '\t'.join([decoded,line.split('\t')[1]])
+
+            # update counters
+            if decoded == 'TRIAL_COMPLETED_EVENT':
+                self.parent().TrialCounter.increment(successful=True)
+
+            if decoded == 'TRIAL_ABORTED_EVENT':
+                self.parent().TrialCounter.increment(successful=False)
+
+            if decoded == 'REWARD_COLLECTED_EVENT':
+                VarsDf = self.VariableController.VariableEditWidget.get_entries()
+                if 'reward_magnitude' in VarsDf['name'].values:
+                    VarsDf.index = VarsDf.name
+                    current_magnitude = VarsDf.loc['reward_magnitude','value']
+                    self.parent().WaterCounter.increment(current_magnitude)
 
     def closeEvent(self, event):
 
@@ -594,50 +625,6 @@ class SerialMonitorWidget(QtWidgets.QWidget):
     #     functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=big_gap)
 
     def update(self,line):
-        # almost none of this should be here - this is a monitor!
-        try:
-            # if report
-            if line.startswith('<'):
-                if line[1:-1].split(' ')[0] == 'VAR':
-                    cmd,var,value = line[1:-1].split(' ')
-                    Df = self.parent().VariableController.VariableEditWidget.get_entries()
-                    Df.index = Df.name
-                    Df.loc[var,'value'] = int(value)
-                    Df.reset_index(drop=True,inplace=True)
-                    self.parent().VariableController.VariableEditWidget.set_entries(Df)
-
-            # if decodeable, replace
-            code = line.split('\t')[0]
-            decoded = self.parent().StateMachineMonitor.code_map[code]
-            line = '\t'.join([decoded,line.split('\t')[1]])
-
-            # update counters
-            if decoded == 'TRIAL_COMPLETED_EVENT' or decoded == 'TRIAL_ABORTED_EVENT':
-                TrialCounter = self.parent().parent().TrialCounter
-                vals = [int(v) for v in TrialCounter.text().split('\t')[0].split('/')]
-                if decoded == 'TRIAL_COMPLETED_EVENT':
-                    vals[0] += 1
-                    vals[2] += 1
-                if decoded == 'TRIAL_ABORTED_EVENT':
-                    vals[1] += 1
-                    vals[2] += 1
-
-                new_frac = sp.around(vals[0]/vals[2],2)
-                TrialCounter.setText('/'.join([str(v) for v in vals]) + '\t' + str(new_frac))
-
-            if decoded == 'REWARD_COLLECTED_EVENT':
-                amount = int(self.parent().parent().WaterCounter.text())
-                VarsDf = self.parent().VariableController.VariableEditWidget.get_entries()
-
-                if 'reward_magnitude' in VarsDf['name'].values:
-                    VarsDf.index = VarsDf.name
-                    amount += VarsDf.loc['reward_magnitude','value']
-                    self.parent().parent().WaterCounter.setText(str(int(amount)))
-
-        except:
-            # print("SerialMon update failed on line: ",line)
-            pass
-
         # TODO make sure this doesn't stay like this ... 
         history_len = 100 # FIXME expose this property? or remove it. for now for debugging
 
@@ -661,7 +648,8 @@ class SerialMonitorWidget(QtWidgets.QWidget):
 
 
 class StateMachineMonitorWidget(QtWidgets.QWidget):
-    """ has colored fields for the states """
+    # TODO - this is not a monitor but also a controller!
+    """ """
     def __init__(self,parent):
         super(StateMachineMonitorWidget, self).__init__(parent=parent)
 

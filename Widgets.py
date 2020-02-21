@@ -149,11 +149,11 @@ class SettingsWidget(QtWidgets.QWidget):
         # display number of trials
         # TODO correct way to deal with the counters is to just write classes
         # currently the updating is done within a Monitor!
-        self.TrialCounter = QtWidgets.QLabel('0/0/0\t--')
+        self.TrialCounter = TrialCounter(self)
         FormLayout.addRow('completed/aborted/total',self.TrialCounter)
 
         # display amount of water consumed
-        self.WaterCounter = QtWidgets.QLabel('0')
+        self.WaterCounter = WaterCounter(self)
         FormLayout.addRow('consumed water (µl)', self.WaterCounter)
 
         # sep
@@ -684,6 +684,40 @@ class RunInfoWidget(QtWidgets.QDialog):
 
 """
 
+class TrialCounter(QtWidgets.QLabel):
+    """ """
+    def __init__(self, parent):
+        super(TrialCounter, self).__init__(parent=parent)
+        self.reset()
+
+    def reset(self):
+        self.setText("0/0/0\t--")
+
+    def increment(self,successful=False):
+        vals = [int(v) for v in self.text().split('\t')[0].split('/')]
+        if successful:
+            vals[0] += 1
+            vals[2] += 1
+        else:
+            vals[1] += 1
+            vals[2] += 1
+
+        new_frac = sp.around(vals[0]/vals[2],2)
+        self.setText('/'.join([str(v) for v in vals]) + '\t' + str(new_frac))
+
+class WaterCounter(QtWidgets.QLabel):
+    """ """
+    def __init__(self, parent):
+        super(WaterCounter, self).__init__(parent=parent)
+        self.reset()
+
+    def reset(self):
+        self.setText("0")
+
+    def increment(self, amount):
+        current_amount = int(self.text())
+        new_amount = current_amount + amount
+        self.setText(str(new_amount))
 
 class StringChoiceWidget(QtWidgets.QComboBox):
     """ A QComboBox with convenience setter and getter """
