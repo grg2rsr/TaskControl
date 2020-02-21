@@ -40,16 +40,17 @@ unsigned long tone_duration = 200;
 |_______| \______/   \______|
 
 */
+
 float now(){
-    return (float) micros() / 1000.0;
+    return (unsigned long) micros() / 1000;
 }
 
-void log_current_state(){
-    Serial.println(String(current_state) + '\t' + String(now()));
-}
+// void log_current_state(){
+//     Serial.println(String(current_state) + '\t' + String(now()));
+// }
 
 void log_code(int code){
-    Serial.println(String(code) + '\t' + String(now()));
+    Serial.println(String(code) + '\t' + String(micros()/1000.0));
 }
 
 void log_msg(String Message){
@@ -182,7 +183,7 @@ void state_entry_common(){
     // common tasks to do at state entry for all states
     last_state = current_state;
     state_entry = now();
-    log_current_state();
+    log_code(current_state);
 }
 
 void finite_state_machine() {
