@@ -571,9 +571,9 @@ class SerialMonitorWidget(QtWidgets.QWidget):
     def initUI(self):
         # logging checkbox
         self.Layout = QtWidgets.QVBoxLayout()
-        self.update_CheckBox = QtWidgets.QCheckBox("update")
-        self.update_CheckBox.setChecked(True)
-        self.Layout.addWidget(self.update_CheckBox)
+        # self.update_CheckBox = QtWidgets.QCheckBox("update")
+        # self.update_CheckBox.setChecked(True)
+        # self.Layout.addWidget(self.update_CheckBox)
         
         # textbrowser
         self.TextBrowser = QtWidgets.QTextBrowser(self)
@@ -581,7 +581,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
 
         # all
         self.setLayout(self.Layout)
-        self.TextBrowser.setPlainText('initialized\n')
+        # self.TextBrowser.setPlainText('initialized\n')
         self.setWindowTitle("Arduino monitor")
         self.show()
         self.layout()
@@ -594,6 +594,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
     #     functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=big_gap)
 
     def update(self,line):
+        # almost none of this should be here - this is a monitor!
         try:
             # if report
             if line.startswith('<'):
@@ -637,10 +638,14 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             # print("SerialMon update failed on line: ",line)
             pass
 
-        self.lines.append(line)
-
         # TODO make sure this doesn't stay like this ... 
         history_len = 100 # FIXME expose this property? or remove it. for now for debugging
+
+        if len(self.lines) < history_len:
+            self.lines.append(line)
+        else:
+            self.lines.append(line)
+            self.lines = self.lines[1:]
 
         # print lines in window
         sb = self.TextBrowser.verticalScrollBar()
@@ -649,10 +654,10 @@ class SerialMonitorWidget(QtWidgets.QWidget):
 
         # scroll to end
         # BUG does not work!
-        if self.update_CheckBox.checkState() == 2:
-            sb.setValue(sb.maximum())
-        else:
-            sb.setValue(sb_prev_value)
+        # if self.update_CheckBox.checkState() == 2:
+        #     sb.setValue(sb.maximum())
+        # else:
+        #     sb.setValue(sb_prev_value)
 
 
 class StateMachineMonitorWidget(QtWidgets.QWidget):
@@ -712,6 +717,7 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
 
         self.show()
     
+    # in this case it becomes a controller ... 
     def set_state(self, state):
         # does not fully work bc the state entry function is not called
         # fugly
@@ -758,6 +764,5 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
                 btn = [btn for name,btn in self.Btns if name==full_name][0]
                 btn.setStyleSheet("background-color: green")
             
-
         except:
             pass

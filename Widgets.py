@@ -147,6 +147,8 @@ class SettingsWidget(QtWidgets.QWidget):
         self.timer.timeout.connect(self.time_handler)
 
         # display number of trials
+        # TODO correct way to deal with the counters is to just write classes
+        # currently the updating is done within a Monitor!
         self.TrialCounter = QtWidgets.QLabel('0/0/0\t--')
         FormLayout.addRow('completed/aborted/total',self.TrialCounter)
 
@@ -301,12 +303,60 @@ class SettingsWidget(QtWidgets.QWidget):
             self.time_at_run = datetime.now()
             self.timer.start(1000)
 
-            # reset the counters
+            # reset the counters and connect them
             self.TrialCounter.setText('0/0/0\t--')
             self.WaterCounter.setText('0')
+            # self.ArduinoController.Signals.serial_data_available.connect(self.update_counters)
         else:
             # Here - change button to stop
             print("Task is already running! ")
+
+    # def update_counter(self,line):
+    #     # even better would be to have this guy only incrementing / decrementing etc
+    #     # and then take care within the controller if it should be incremented
+    #     # if report a change in a var value
+    #     if line.startswith('<'):
+    #         if line[1:-1].split(' ')[0] == 'VAR':
+    #             cmd,var,value = line[1:-1].split(' ')
+    #             Df = self.ArduinoController.VariableController.VariableEditWidget.get_entries()
+    #             Df.index = Df.name
+    #             Df.loc[var,'value'] = int(value)
+    #             Df.reset_index(drop=True,inplace=True)
+    #             self.ArduinoController.VariableController.VariableEditWidget.set_entries(Df)
+    #             return None
+
+    #     # classic decodeable
+    #     if '\t' in line:
+    #         code = line.split('\t')[0]
+    #         decoded = self.ArduinoController.StateMachineMonitor.code_map[code] # FIXME
+    #         line = '\t'.join([decoded,line.split('\t')[1]])
+
+    #         # update counters
+    #         if decoded == 'TRIAL_COMPLETED_EVENT' or decoded == 'TRIAL_ABORTED_EVENT':
+    #             TrialCounter = self.parent().parent().TrialCounter
+    #             vals = [int(v) for v in TrialCounter.text().split('\t')[0].split('/')]
+    #             if decoded == 'TRIAL_COMPLETED_EVENT':
+    #                 vals[0] += 1
+    #                 vals[2] += 1
+    #             if decoded == 'TRIAL_ABORTED_EVENT':
+    #                 vals[1] += 1
+    #                 vals[2] += 1
+
+    #             new_frac = sp.around(vals[0]/vals[2],2)
+    #             TrialCounter.setText('/'.join([str(v) for v in vals]) + '\t' + str(new_frac))
+
+    #         if decoded == 'REWARD_COLLECTED_EVENT':
+    #             amount = int(self.parent().parent().WaterCounter.text())
+    #             VarsDf = self.parent().VariableController.VariableEditWidget.get_entries()
+
+    #             if 'reward_magnitude' in VarsDf['name'].values:
+    #                 VarsDf.index = VarsDf.name
+    #                 amount += VarsDf.loc['reward_magnitude','value']
+    #                 self.parent().parent().WaterCounter.setText(str(int(amount)))
+
+    #     except:
+    #         # print("SerialMon update failed on line: ",line)
+    #         pass        
 
     def Done(self):
         """ finishing the session """

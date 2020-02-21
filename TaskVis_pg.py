@@ -92,16 +92,21 @@ class SessionVis(QtWidgets.QWidget):
         self.Layout = QtWidgets.QHBoxLayout()
         # self.setMinimumWidth(300) # FIXME hardcoded!
 
+        # self.Line
+
         # Display and aesthetics
-        self.PlotWindow = pg.GraphicsWindow(title="my title")
-        self.current_trial_idx = 0
+        self.PlotWindow = pg.GraphicsWindow()
 
         # uncomment for this task
-        # self.TrialRateItem = self.PlotWindow.addPlot(title='trial rate')
-        # self.TrialRateItem.setLabel("left",text="trial #")
-        # self.TrialRateItem.setLabel("bottom",text="time",units="ms")
-        # self.TrialRateLine = self.TrialRateItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
-        # self.PlotWindow.nextColumn()
+        # think about this: trial rate as a fraction of max trial rate
+        # this should show task engagement
+        # needs to be put in or as a 
+        self.TrialRateItem = self.PlotWindow.addPlot(title='trial rate')
+        self.TrialRateItem.setLabel("left",text="trial #")
+        self.TrialRateItem.setLabel("bottom",text="time",units="ms")
+        self.TrialRateLine = self.TrialRateItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
+        # self.PlotWindow.nextRow()
+        self.PlotWindow.nextColumn()
 
         self.SuccessRateItem = self.PlotWindow.addPlot(title='success rate')
         self.SuccessRateItem.setLabel("left",text="frac. successful trials")
@@ -117,20 +122,23 @@ class SessionVis(QtWidgets.QWidget):
         self.RewardCollectedItem.setLabel("bottom",text="successful trial #")
         self.RewardCollectedLine = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
         self.RewardCollectedLine20 = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
-        self.PlotWindow.nextColumn()
+        # self.PlotWindow.nextRow()1
+        # self.PlotWindow.nextColumn()
 
         # reaction times to reward sound cue
         # self.PlotWindow.nextRow()
-        self.RewardRtItem = self.PlotWindow.addPlot(title='reward collection reaction time')
-        self.RewardRtItem.setLabel("left",text="time (ms)")
-        self.RewardRtItem.setLabel("bottom",text="successful trial #")
-        self.RewardRtLine = self.RewardRtItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
-
+        # self.RewardRtItem = self.PlotWindow.addPlot(title='reward collection reaction time')
+        # self.RewardRtItem.setLabel("left",text="time (ms)")
+        # self.RewardRtItem.setLabel("bottom",text="successful trial #")
+        # self.RewardRtLine = self.RewardRtItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
+        
         self.Layout.addWidget(self.PlotWindow)
+
         self.setLayout(self.Layout)
         self.show()
 
     def update_plot(self):
+        hist = 20 # to be exposed in the future
         # trial rate
         # x = self.SessionDf['t'].values
         # y = self.SessionDf['number'].values
@@ -138,28 +146,28 @@ class SessionVis(QtWidgets.QWidget):
         
         # trial success rate
         x = self.SessionDf['number'].values
-        y = [sum(self.SessionDf.loc[:i,'successful'])/(i+1) for i in range(self.SessionDf.shape[0])]
+        y = [sum(self.SessionDf.iloc[:i]['successful'])/(i+1) for i in range(self.SessionDf.shape[0])]
         self.SuccessRateLine.setData(x=x, y=y)
 
-        y = [sum(self.SessionDf.loc[i-20+1:i,'successful'])/20 for i in range(self.SessionDf.shape[0])]
+        y = [sum(self.SessionDf.iloc[i-hist+1:i]['successful'])/hist for i in range(self.SessionDf.shape[0])]
         self.SuccessRateLine20.setData(x=x, y=y)
 
-        # reward collected rate
-        try:
-            Df = self.SessionDf.groupby('successful').get_group(True)
-            x = Df['number'].values
-            y = [sum(Df.loc[:i,'reward_collected'])/(i+1) for i in range(Df.shape[0])]
-            self.SuccessRateLine.setData(x=x, y=y)
-
-            y = [sum(Df.loc[i-20+1:i,'reward_collected'])/20 for i in range(Df.shape[0])]
-            self.SuccessRateLine20.setData(x=x, y=y)
-        except KeyError:
-            pass
-
-        # reward reaction time
+        # # reward collected rate
         # try:
         #     Df = self.SessionDf.groupby('successful').get_group(True)
-        #     x = Df.index.values
+        #     x = Df['number'].values
+        #     y = [sum(Df.iloc[:i]['reward_collected'])/(i+1) for i in range(Df.shape[0])]
+        #     self.SuccessRateLine.setData(x=x, y=y)
+
+        #     y = [sum(Df.iloc[i-hist+1:i]['reward_collected'])/hist for i in range(Df.shape[0])]
+        #     self.SuccessRateLine20.setData(x=x, y=y)
+        # except KeyError:
+        #     pass
+
+        # # reward reaction time
+        # try:
+        #     Df = self.SessionDf.groupby('successful').get_group(True)
+        #     x = Df['number'].values
         #     y = Df['rew_col_rt']
         #     self.RewardRtLine.setData(x=x, y=y)
         # except KeyError:
