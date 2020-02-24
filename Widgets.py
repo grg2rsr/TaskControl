@@ -482,7 +482,7 @@ class SettingsWidget(QtWidgets.QWidget):
             Df = self.selfTerminateEdit.get_entries()
             max_time, max_water, max_trials = Df['value'] # depends on order ... 
             current_time = dt.seconds/60
-            current_water = int(self.WaterCounter.text())
+            current_water = int(float(self.WaterCounter.text()))
             current_num_trials = int(self.TrialCounter.text().split('\t')[0].split('/')[-1]) # total number of trials
             if current_time > max_time and max_time > 0:
                 self.Done()

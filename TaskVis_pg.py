@@ -286,7 +286,7 @@ class TrialsVis(QtWidgets.QWidget):
                 df = Df.groupby('name').get_group(event_name+'_EVENT')
                 for i,row in df.iterrows():
                     t = row['t'] - align_time
-                    rect = pg.QtGui.QGraphicsRectItem(t, row_index , 10, 1)
+                    rect = pg.QtGui.QGraphicsRectItem(t, row_index , 5, 1)
                     col = [v*255 for v in self.cdict[event_name]]
                     rect.setPen(pg.mkPen(col))
                     rect.setBrush(pg.mkBrush(col))
@@ -300,10 +300,13 @@ class TrialsVis(QtWidgets.QWidget):
                 for i,row in df.iterrows():
                     t = row['t_on'] - align_time
                     try:
-                        rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt'], 1)
                         col = [v*255 for v in self.cdict[span_name]]
                         if span_name == 'LICK':
                             col.append(150) # reduced opacity
+                            rect = pg.QtGui.QGraphicsRectItem(t, row_index+0.05, row['dt'], 0.9)
+                        else:
+                            rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt'], 1)
+                        rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt'], 1)
                         rect.setPen(pg.mkPen(col))
                         rect.setBrush(pg.mkBrush(col))
                         self.PlotItem.addItem(rect)
