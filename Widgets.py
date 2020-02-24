@@ -484,11 +484,11 @@ class SettingsWidget(QtWidgets.QWidget):
             current_time = dt.seconds/60
             current_water = int(float(self.WaterCounter.text()))
             current_num_trials = int(self.TrialCounter.text().split('\t')[0].split('/')[-1]) # total number of trials
-            if current_time > max_time and max_time > 0:
+            if current_time >= max_time and max_time > 0:
                 self.Done()
-            if current_water > max_water and max_water > 0:
+            if current_water >= max_water and max_water > 0:
                 self.Done()
-            if current_num_trials > max_trials and max_trials > 0:
+            if current_num_trials >= max_trials and max_trials > 0:
                 self.Done()
 
        

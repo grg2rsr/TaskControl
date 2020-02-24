@@ -591,13 +591,12 @@ class SerialMonitorWidget(QtWidgets.QWidget):
     open upon connect and received data
     """
 
-    def __init__(self, parent):
-        super(SerialMonitorWidget, self).__init__(parent=parent, code_map=None)
+    def __init__(self, parent, code_map=None):
+        super(SerialMonitorWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
         self.initUI()
         self.lines = []
         self.code_map = code_map
-        if code_map is not None:
 
         # connect to parent signals
         parent.Signals.serial_data_available.connect(self.update)
@@ -662,8 +661,8 @@ class SerialMonitorWidget(QtWidgets.QWidget):
 class StateMachineMonitorWidget(QtWidgets.QWidget):
     # TODO - this is not a monitor but also a controller!
     """ """
-    def __init__(self,parent):
-        super(StateMachineMonitorWidget, self).__init__(parent=parent, code_map=None)
+    def __init__(self,parent, code_map=None):
+        super(StateMachineMonitorWidget, self).__init__(parent=parent)
 
         # code_map related
         self.code_map = code_map
