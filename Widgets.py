@@ -715,7 +715,7 @@ class WaterCounter(QtWidgets.QLabel):
         self.setText("0")
 
     def increment(self, amount):
-        current_amount = int(self.text())
+        current_amount = int(float(self.text()))
         new_amount = current_amount + amount
         self.setText(str(new_amount))
 
