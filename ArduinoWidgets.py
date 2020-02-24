@@ -641,7 +641,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             if not line.startswith('<'):
                 if '\t' in line:
                     code = line.split('\t')[0]
-                    decoded = self.code_map[code] # FIXME
+                    decoded = self.code_map[code]
                     line = '\t'.join([decoded,line.split('\t')[1]])
 
         # print lines in window
@@ -706,7 +706,7 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         for i in range(self.States_Layout.count()):
             state = self.States_Layout.itemAt(i).widget().text()
             # https://stackoverflow.com/a/42945033/4749250
-            self.States_Layout.itemAt(i).widget().clicked.connect(partial(self.set_state,state))
+            self.States_Layout.itemAt(i).widget().clicked.connect(partial(self.set_state, state))
 
         self.Layout.addLayout(self.Spans_Layout)
         self.Layout.addLayout(self.Events_Layout)
@@ -718,6 +718,7 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
     
     # in this case it becomes a controller ... 
     def set_state(self, state):
+        state += '_STATE'
         code = self.code_map_inv[state]
         cmd = "SET current_state " + code
         self.parent().send(cmd)
