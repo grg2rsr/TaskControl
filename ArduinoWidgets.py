@@ -131,11 +131,11 @@ class ArduinoController(QtWidgets.QWidget):
 
         # the children
         # open serial monitor
-        self.SerialMonitor = SerialMonitorWidget(self)
+        self.SerialMonitor = SerialMonitorWidget(self, code_map=self.code_map)
         self.Children.append(self.SerialMonitor)
 
         # Statemachine Monitor
-        self.StateMachineMonitor = StateMachineMonitorWidget(self)
+        self.StateMachineMonitor = StateMachineMonitorWidget(self, code_map=self.code_map)
         self.Children.append(self.StateMachineMonitor)
 
         self.layout()
@@ -373,7 +373,7 @@ class ArduinoController(QtWidgets.QWidget):
         # normal read
         if '\t' in line:
             code = line.split('\t')[0]
-            decoded = self.StateMachineMonitor.code_map[code] # FIXME
+            decoded = self.code_map[code]
             line = '\t'.join([decoded,line.split('\t')[1]])
 
             # update counters
@@ -592,10 +592,12 @@ class SerialMonitorWidget(QtWidgets.QWidget):
     """
 
     def __init__(self, parent):
-        super(SerialMonitorWidget, self).__init__(parent=parent)
+        super(SerialMonitorWidget, self).__init__(parent=parent, code_map=None)
         self.setWindowFlags(QtCore.Qt.Window)
         self.initUI()
         self.lines = []
+        self.code_map = code_map
+        if code_map is not None:
 
         # connect to parent signals
         parent.Signals.serial_data_available.connect(self.update)
@@ -635,6 +637,14 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             self.lines.append(line)
             self.lines = self.lines[1:]
 
+        # decoding line if Code_Map is passed
+        if self.code_map is not None:
+            if not line.startswith('<'):
+                if '\t' in line:
+                    code = line.split('\t')[0]
+                    decoded = self.code_map[code] # FIXME
+                    line = '\t'.join([decoded,line.split('\t')[1]])
+
         # print lines in window
         sb = self.TextBrowser.verticalScrollBar()
         sb_prev_value = sb.value()
@@ -653,11 +663,11 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
     # TODO - this is not a monitor but also a controller!
     """ """
     def __init__(self,parent):
-        super(StateMachineMonitorWidget, self).__init__(parent=parent)
+        super(StateMachineMonitorWidget, self).__init__(parent=parent, code_map=None)
 
-        path = self.parent().task_folder.joinpath('Arduino','src','event_codes.h')
-        self.Df = functions.parse_code_map(path)
-        self.code_map = dict(zip(self.Df['code'].values, self.Df['name'].values))
+        # code_map related
+        self.code_map = code_map
+        self.code_map_inv = dict(zip(code_map.values(),code_map.keys()))
 
         # connect to parent signals
         parent.Signals.serial_data_available.connect(self.update)
@@ -709,11 +719,8 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
     
     # in this case it becomes a controller ... 
     def set_state(self, state):
-        # does not fully work bc the state entry function is not called
-        # fugly
-        # also, are those part of the interface?
-        code = self.Df.loc[self.Df['name'] == state+'_STATE']['code'].values[0]
-        cmd = "SET current_state "+code
+        code = self.code_map_inv[state]
+        cmd = "SET current_state " + code
         self.parent().send(cmd)
 
     def update(self,line):
