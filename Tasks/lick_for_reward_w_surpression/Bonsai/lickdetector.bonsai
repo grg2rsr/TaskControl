@@ -15,7 +15,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>D:\TaskControl\Animals\123\2020-02-24_10-05-35_lick_for_reward_w_surpression\bonsai_</Value>
+          <Value>D:\TaskControl\Animals\123\2020-02-24_17-12-23_lick_for_reward_w_surpression\bonsai_</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">
@@ -37,10 +37,10 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="cv:Crop">
           <cv:RegionOfInterest>
-            <cv:X>705</cv:X>
-            <cv:Y>543</cv:Y>
-            <cv:Width>46</cv:Width>
-            <cv:Height>46</cv:Height>
+            <cv:X>142</cv:X>
+            <cv:Y>337</cv:Y>
+            <cv:Width>37</cv:Width>
+            <cv:Height>45</cv:Height>
           </cv:RegionOfInterest>
         </Combinator>
       </Expression>
@@ -51,26 +51,20 @@
         <Selector>Val0</Selector>
       </Expression>
       <Expression xsi:type="q2:ExpressionTransform">
-        <q2:Expression>it &lt; 160</q2:Expression>
+        <q2:Expression>it &gt; 50</q2:Expression>
       </Expression>
-      <Expression xsi:type="Disable">
-        <Builder xsi:type="SubscribeSubject">
-          <Name>base_name</Name>
-        </Builder>
+      <Expression xsi:type="SubscribeSubject">
+        <Name>base_name</Name>
       </Expression>
-      <Expression xsi:type="Disable">
-        <Builder xsi:type="Add">
-          <Operand xsi:type="StringProperty">
-            <Value>video.avi</Value>
-          </Operand>
-        </Builder>
+      <Expression xsi:type="Add">
+        <Operand xsi:type="StringProperty">
+          <Value>video.avi</Value>
+        </Operand>
       </Expression>
-      <Expression xsi:type="Disable">
-        <Builder xsi:type="PropertyMapping">
-          <PropertyMappings>
-            <Property Name="FileName" />
-          </PropertyMappings>
-        </Builder>
+      <Expression xsi:type="PropertyMapping">
+        <PropertyMappings>
+          <Property Name="FileName" />
+        </PropertyMappings>
       </Expression>
       <Expression xsi:type="SubscribeSubject">
         <Name>base_name</Name>
@@ -104,28 +98,26 @@
           <q3:Pin>2</q3:Pin>
         </Combinator>
       </Expression>
-      <Expression xsi:type="Disable">
-        <Builder xsi:type="Combinator">
-          <Combinator xsi:type="cv:VideoWriter">
-            <cv:FileName>C:\Users\Utilizador\Desktop\georg\TaskControl\Animals\123\2019-11-14_17-25-33_suppress_movements\bonsai_video.avi</cv:FileName>
-            <cv:Suffix>None</cv:Suffix>
-            <cv:Buffered>true</cv:Buffered>
-            <cv:Overwrite>true</cv:Overwrite>
-            <cv:FourCC>FMP4</cv:FourCC>
-            <cv:FrameRate>150</cv:FrameRate>
-            <cv:FrameSize>
-              <cv:Width>0</cv:Width>
-              <cv:Height>0</cv:Height>
-            </cv:FrameSize>
-            <cv:ResizeInterpolation>NearestNeighbor</cv:ResizeInterpolation>
-          </Combinator>
-        </Builder>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="cv:VideoWriter">
+          <cv:FileName>D:\TaskControl\Animals\123\2020-02-24_17-12-23_lick_for_reward_w_surpression\bonsai_video.avi</cv:FileName>
+          <cv:Suffix>None</cv:Suffix>
+          <cv:Buffered>true</cv:Buffered>
+          <cv:Overwrite>false</cv:Overwrite>
+          <cv:FourCC>FMP4</cv:FourCC>
+          <cv:FrameRate>60</cv:FrameRate>
+          <cv:FrameSize>
+            <cv:Width>0</cv:Width>
+            <cv:Height>0</cv:Height>
+          </cv:FrameSize>
+          <cv:ResizeInterpolation>NearestNeighbor</cv:ResizeInterpolation>
+        </Combinator>
       </Expression>
       <Expression xsi:type="MemberSelector">
         <Selector>Metadata.embeddedFrameCounter,Metadata.embeddedTimeStamp,Metadata.embeddedGPIOPinState</Selector>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>D:\TaskControl\Animals\123\2020-02-24_10-05-35_lick_for_reward_w_surpression\bonsai_frame_stamps.csv</io:FileName>
+        <io:FileName>D:\TaskControl\Animals\123\2020-02-24_17-12-23_lick_for_reward_w_surpression\bonsai_frame_stamps.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>

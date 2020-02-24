@@ -16,19 +16,19 @@ def parse_arduino_log(log_path, code_map=None):
     Data['t'] = Data['t'].astype('float')
 
     if code_map is not None:
-        cm = dict(zip(code_map['code'], code_map['name']))
-        Data['name'] = [cm[code] for code in Data["code"]]
+        Data['name'] = [code_map[code] for code in Data["code"]]
 
     return Data
 
-def  parse_line(line, code_dict=None):
+def  parse_line(line, code_map=None):
+    """ """
     if not line.startswith('<'):
         code, t = line.strip().split('\t')
         data = pd.DataFrame([[code,t]],columns=['code','t'])
         data['t'] = data['t'].astype('float')
 
-        if code_dict is not None:
-            data['name'] = code_dict[data.loc[0,"code"]]
+        if code_map is not None:
+            data['name'] = code_map[data.loc[0,"code"]]
 
         return data
     else:
@@ -36,9 +36,7 @@ def  parse_line(line, code_dict=None):
 
 def parse_lines(lines, code_map=None):
     Dfs = []
-    if code_map is not None:
-        code_dict = dict(zip(code_map['code'], code_map['name']))
-    lines = [Dfs.append(parse_line(line, code_dict=code_dict)) for line in lines]
+    lines = [Dfs.append(parse_line(line, code_map=code_map)) for line in lines]
     Data = pd.concat(Dfs)
     Data.reset_index(drop=True)
     return Data

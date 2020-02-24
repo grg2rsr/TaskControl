@@ -351,15 +351,6 @@ class ArduinoController(QtWidgets.QWidget):
         print("listening on serial port has started")
 
     def parse_line(self,line):
-        # should I really do this?
-        # if not line.startswith('<'):
-        #     code,t = line.strip().split('\t')
-        #     name = self.code_map[code]
-        #     data = pd.DataFrame([[code,t,name]],columns=['code','t','name'])
-        #     data['t'] = data['t'].astype('float')
-
-        #     self.Data = self.Data.append(data)
-
         # if report
         if line.startswith('<'):
             if line[1:-1].split(' ')[0] == 'VAR':
@@ -619,15 +610,16 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.show()
         self.layout()
 
-    # def layout(self):
-    #     small_gap = int(self.parent().parent().profiles['General']['small_gap'])
-    #     big_gap = int(self.parent().parent().profiles['General']['big_gap'])
-
-    #     functions.scale_Widgets([self, self.parent()])
-    #     functions.tile_Widgets(self, self.parent().VariableController, where='below',gap=big_gap)
-
     def update(self,line):
-        # TODO make sure this doesn't stay like this ... 
+        # decoding line if code_map is passed
+        if not line.startswith('<'):
+            if self.code_map is not None:
+                if '\t' in line:
+                    code = line.split('\t')[0]
+                    decoded = self.code_map[code]
+                    line = '\t'.join([decoded,line.split('\t')[1]])
+
+        # TODO deal with the history functionality
         history_len = 100 # FIXME expose this property? or remove it. for now for debugging
 
         if len(self.lines) < history_len:
@@ -636,21 +628,14 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             self.lines.append(line)
             self.lines = self.lines[1:]
 
-        # decoding line if Code_Map is passed
-        if self.code_map is not None:
-            if not line.startswith('<'):
-                if '\t' in line:
-                    code = line.split('\t')[0]
-                    decoded = self.code_map[code]
-                    line = '\t'.join([decoded,line.split('\t')[1]])
-
         # print lines in window
         sb = self.TextBrowser.verticalScrollBar()
         sb_prev_value = sb.value()
         self.TextBrowser.setPlainText('\n'.join(self.lines))
+        
+        # scroll to end
         sb.setValue(sb.maximum())
 
-        # scroll to end
         # BUG does not work!
         # if self.update_CheckBox.checkState() == 2:
         #    sb.setValue(sb.maximum())

@@ -221,12 +221,12 @@ class SettingsWidget(QtWidgets.QWidget):
         # self.PlotWidget = VisWidgets.MyMplCanvas(self)
         from TaskVis_pg import SessionVis
         path = self.task_folder.joinpath('Arduino','src','event_codes.h')
-        Df = functions.parse_code_map(path)
-        self.SessionVisWidget = SessionVis(self, Code_Map=Df)
+        CodesDf = functions.parse_code_map(path)
+        self.SessionVisWidget = SessionVis(self, CodesDf=CodesDf)
         self.ArduinoController.Signals.serial_data_available.connect(self.SessionVisWidget.update)
 
         from TaskVis_pg import TrialsVis
-        self.TrialsVisWidget = TrialsVis(self, Code_Map=Df)
+        self.TrialsVisWidget = TrialsVis(self, CodesDf=CodesDf)
         self.ArduinoController.Signals.serial_data_available.connect(self.TrialsVisWidget.update)
 
     def closeEvent(self,event):
@@ -432,6 +432,8 @@ class SettingsWidget(QtWidgets.QWidget):
 
     def task_changed(self):
         """ upon task change: look for required controllers, take all present down and instantiate the new ones """
+        # self.Done() # TODO think about this
+
         # first take down all currently open ones
         for Controller in self.Controllers:
             Controller.close()

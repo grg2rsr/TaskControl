@@ -73,16 +73,12 @@ reaction times
 """
 
 class SessionVis(QtWidgets.QWidget):
-    def __init__(self, parent, Code_Map=None):
+    def __init__(self, parent, CodesDf=None):
         super(SessionVis, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
 
-        self.Code_Map = Code_Map
-        # should be
-        # utils.debug_trace()
-        # Code_Map.index = Code_Map['code']
-        # Code_Map['name'].to_dict()
-        self.code_dict = dict(zip(self.Code_Map['code'].values, self.Code_Map['name'].values))
+        self.CodesDf = CodesDf
+        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
         self.SessionDf = pd.DataFrame(columns=['number','t','successful','reward_collected','rew_col_rt'])
         self.lines = []
         self.initUI()
@@ -178,13 +174,13 @@ class SessionVis(QtWidgets.QWidget):
         # if decodeable
         if not line.startswith('<'):
             code,t = line.split('\t')
-            decoded = self.code_dict[code]
+            decoded = self.code_map[code]
             t = float(t)
 
             if decoded == "TRIAL_AVAILABLE_STATE":
                 # parse lines
                 try:
-                    Df = parse_lines(self.lines, code_map=self.Code_Map)
+                    Df = parse_lines(self.lines, code_map=self.code_map)
                     S = parse_trial(Df)
                     if S is not None:
                         S['number'] = self.SessionDf.shape[0]
@@ -204,7 +200,7 @@ class SessionVis(QtWidgets.QWidget):
 
 
 class TrialsVis(QtWidgets.QWidget):
-    def __init__(self, parent, Code_Map=None):
+    def __init__(self, parent, CodesDf=None):
         super(TrialsVis, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
 
@@ -213,8 +209,8 @@ class TrialsVis(QtWidgets.QWidget):
         self.lines = []
 
         # code map related
-        self.Code_Map = Code_Map
-        self.code_dict = dict(zip(self.Code_Map['code'].values, self.Code_Map['name'].values))
+        self.CodesDf = CodesDf
+        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
         self.initUI()
 
@@ -230,8 +226,8 @@ class TrialsVis(QtWidgets.QWidget):
         self.PlotItem.setLabel("bottom",text="time", units="ms")
         
         # the names of the things present in the log
-        self.span_names = [name.split('_ON')[0] for name in self.Code_Map['name'] if name.endswith('_ON')]
-        self.event_names = [name.split('_EVENT')[0] for name in self.Code_Map['name'] if name.endswith('_EVENT')]
+        self.span_names = [name.split('_ON')[0] for name in self.CodesDf['name'] if name.endswith('_ON')]
+        self.event_names = [name.split('_EVENT')[0] for name in self.CodesDf['name'] if name.endswith('_EVENT')]
 
         self.trial_counter = 0
 
@@ -254,13 +250,13 @@ class TrialsVis(QtWidgets.QWidget):
         # if decodeable
         if not line.startswith('<'):
             code,t = line.split('\t')
-            decoded = self.code_dict[code]
+            decoded = self.code_map[code]
             t = float(t)
 
             if decoded == "TRIAL_AVAILABLE_STATE":
                 try:
                     # parse lines
-                    Df = parse_lines(self.lines, code_map=self.Code_Map)
+                    Df = parse_lines(self.lines, code_map=self.code_map)
 
                     self.trial_counter += 1
                     row_index = self.trial_counter 
