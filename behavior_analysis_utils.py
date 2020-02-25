@@ -108,13 +108,24 @@ def log2Span(Data,span_name):
     except KeyError:
         return pd.DataFrame(columns=['t_on','t_off','dt'])
 
-    if on_times.shape != off_times.shape:
-        print("unequal number of ON and OFF events for: ", span_name)
+    try:
+        # if last off outside
+        if on_times.shape[0] == off_times.shape[0] + 1 and on_times[0] < off_times[0]:
+            on_times = on_times[:-1]
+
+        # if first on outside
+        if off_times.shape[0] == on_times.shape[0] + 1 and on_times[1] < off_times[0]:
+            on_times = on_times[1:]
+
+        if on_times.shape[0] == off_times.shape[0]:
+            dt = off_times - on_times
+            Df = pd.DataFrame(sp.stack([on_times,off_times,dt],axis=1),columns=['t_on','t_off','dt'])
+            return Df
+    except IndexError:
         return pd.DataFrame(columns=['t_on','t_off','dt'])
     else:
-        dt = off_times - on_times
-        Df = pd.DataFrame(sp.stack([on_times,off_times,dt],axis=1),columns=['t_on','t_off','dt'])
-        return Df
+        print("unequal number of ON and OFF events for: ", span_name)
+        return pd.DataFrame(columns=['t_on','t_off','dt'])
 
 def log2Spans(Data,span_names):
     Spans = {}

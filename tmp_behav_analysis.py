@@ -2,31 +2,29 @@
 %load_ext autoreload
 %autoreload 2
 
-
 from matplotlib import pyplot as plt
-
 import behavior_analysis_utils as bhv
 import pandas as pd
 # this should be changed ... 
 from pathlib import Path
 import scipy as sp
 import seaborn as sns
+from tqdm import tqdm
 
 ### PATH DEF
-log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals/JP2073/2020-02-11_12-59-34_lick_for_reward_w_surpression/arduino_log.txt")
-# code_map_path = Path("/media/georg/htcondor/shared-paton/georg/Animals/JP2073/2020-02-11_12-59-34_lick_for_reward_w_surpression/lick_for_reward_w_surpression/Arduino/src/event_codes.h")
-
-log_path = Path("/media/georg/htcondor/shared-paton/georg/2020-02-20_09-39-30_lick_for_reward_w_surpression/arduino_log.txt")
-
-# log_path = Path("/media/georg/htcondor/shared-paton/georg/2020-02-20_14-32-43_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals/JP2073/2020-02-11_12-59-34_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/2020-02-20_09-39-30_lick_for_reward_w_surpression/arduino_log.txt")
+log_path = Path("/media/georg/htcondor/shared-paton/georg/2020-02-20_14-32-43_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2079/2020-02-25_13-47-59_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2079/2020-02-14_11-14-47_lick_for_reward_w_surpression/arduino_log.txt") # the last file of the non-trial entry cue
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-14_09-01-40_lick_for_reward_w_surpression/arduino_log.txt")
+# infer
 code_map_path = log_path.parent.joinpath("lick_for_reward_w_surpression","Arduino","src","event_codes.h")
 
 ### READ 
 CodesDf = bhv.parse_code_map(code_map_path)
 code_map = dict(zip(CodesDf['code'],CodesDf['name']))
 Data = bhv.parse_arduino_log(log_path, code_map)
-
-# for a live variant, Data is inferred from lines
 
 ### COMMON
 # the names of the things present in the log
@@ -36,164 +34,254 @@ event_names = [name.split('_EVENT')[0] for name in CodesDf['name'] if name.endsw
 Spans = bhv.log2Spans(Data, span_names)
 Events = bhv.log2Events(Data, event_names)
 
-colors = sns.color_palette('husl',n_colors=len(event_names)+len(span_names))
-cdict = dict(zip(event_names+span_names,colors))
 
 ### SOME PREPROCESSING
 # filter unrealistic licks
 bad_licks = sp.logical_or(Spans['LICK']['dt'] < 20,Spans['LICK']['dt'] > 100)
 Spans['LICK'] = Spans['LICK'].loc[~bad_licks]
 
-from tqdm import tqdm
+# add lick_event
+Lick_Event = pd.DataFrame(sp.stack([['NA']*Spans['LICK'].shape[0],Spans['LICK']['t_on'].values,['LICK_EVENT']*Spans['LICK'].shape[0]]).T,columns=['code','t','name'])
+Lick_Event['t'] = Lick_Event['t'].astype('float')
+Data = Data.append(Lick_Event)
+Data.sort_values('t')
+
+event_names.append("LICK")
+Events['LICK'] = bhv.log2Event(Data,'LICK')
+
+Spans.pop("LICK")
+span_names.remove("LICK")
+
+colors = sns.color_palette('husl',n_colors=len(event_names)+len(span_names))
+cdict = dict(zip(event_names+span_names,colors))
 
 
-### overview plot
+def trial_overview(Data, t_ref, pre, post, axes=None, how='dots'):
 
-# plot licks relative to collected rewards / or any event really
-# the events that will form the relative timepoints
+    if axes is None:
+        axes = plt.gca()
 
-# data = pd.concat([Data.groupby('name').get_group(g) for g in ('REWARD_COLLECTED_EVENT','REWARD_MISSED_EVENT')])
-# data = Data.groupby('name').get_group('ITI_STATE')
-data = Data.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
-data = data.sort_values('t')
-data = data.reset_index()
+    for i,t in enumerate(tqdm(t_ref)):
+        Df = bhv.time_slice(Data,t+pre,t+post,'t')
+        # present_events = [name for name in Df['name'].unique() if name.endswith("_EVENT")]
 
-pre, post = (-3000,3000)
+        for name,group in Df.groupby('name'):
+            if name.endswith("_EVENT"):
+                event_name = name.split("_EVENT")[0]
+                times = group['t'] - t
+                
+                if how == 'dots':
+                    axes.plot(times, [i]*len(times), '.', color=cdict[event_name], alpha=0.75) # a bar
+                
+                if how == 'bars':
+                    for time in times:
+                        axes.plot([time,time],[i-0.5,i+0.5],lw=3,color=cdict[event_name], alpha=0.75) # a bar
+            
+            if name.endswith("_ON") and name != "LICK_ON":
+                span_name = name.split("_ON")[0]
+                Df_sliced = bhv.log2Span(Df, span_name)
 
-fig, axes = plt.subplots()
-
-for i, row in data.iterrows():
-    t = row['t']
-
-    # adding events
-    for event_name, Df in Events.items():
-        times = bhv.time_slice(Df, t+pre, t+post, col='t')['t']
-        times = times - t # relative to trial onset
-
-        # vlines based this is slower?
-        # axes.vlines(times, i-0.5, i+0.5, lw=3,color=cdict[event_name], alpha=0.75) # a bar
-
-        # manual bar plotting - faster?
-        # for time in times:
-            # axes.plot([time,time],[i-0.5,i+0.5],lw=3,color=cdict[event_name], alpha=0.75) # a bar
-
-        # dots
-        axes.plot(times, [i]*len(times), '.', color=cdict[event_name], alpha=0.75) # a bar
-
-    # adding spans
-    for span_name, Df in Spans.items():
-        Df_sliced = bhv.time_slice(Df, t+pre, t+post, col='t_on')
-        for j, row_s in Df_sliced.iterrows():
-            time = row_s['t_on'] - t
-            dur = row_s['dt']
-            rect = plt.Rectangle((time,i-0.5), dur, 1, facecolor=cdict[span_name], alpha=0.75)
-            axes.add_patch(rect)
+                for j, row_s in Df_sliced.iterrows():
+                    time = row_s['t_on'] - t
+                    dur = row_s['dt']
+                    rect = plt.Rectangle((time,i-0.5), dur, 1, facecolor=cdict[span_name])
+                    axes.add_patch(rect)
 
 
-for key in cdict.keys():
-    axes.plot([0],[0],color=cdict[key],label=key,lw=4)
-axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',ncol=3, mode="expand", borderaxespad=0.)
-axes.invert_yaxis()
-axes.set_xlabel('time (ms)')
-axes.set_ylabel('trials')
-fig.tight_layout()
+    for key in cdict.keys():
+        axes.plot([0],[0],color=cdict[key],label=key,lw=4)
+    axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',ncol=3, mode="expand", borderaxespad=0.)
+    axes.invert_yaxis()
+    axes.set_xlabel('time (ms)')
+    axes.set_ylabel('trials')
 
-####### NEW ATTEMPT
+    return axes
 
+def psth(t_ref, events, pre, post, bin_width=50, axes=None, **kwargs):
+    if axes is None:
+        axes = plt.gca()
+
+    t_bins = sp.arange(pre,post,bin_width)
+    bins = sp.zeros(t_bins.shape)
+
+    values = []
+    for t in t_ref:
+        times = bhv.time_slice(events,t+pre,t+post,'t')['t'] - t
+        values.append(times.values)
+    values = sp.concatenate(values)
+
+    counts, bins = sp.histogram(values,bins=t_bins)
+    axes.step(bins[1:], counts, **kwargs)
+
+    # for t in t_ref:
+    #     times = bhv.time_slice(events,t+pre,t+post,'t')['t'] - t
+    #     for time in times:
+    #     # for event_time in event_times:
+    #         bins[sp.argmin(time > t_bins)] += 1 
+
+    # axes.step(t_bins,bins,**kwargs)
+    return axes
+
+# big overview
+# Data.name.unique()
 data = Data.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
 data = data.sort_values('t')
 data = data.reset_index()
 t_ref = data['t'].values
-pre, post = (-100,3000)
+pre, post = (-100,5000)
 
-fig, axes = plt.subplots()
-
-for i,t in enumerate(tqdm(t_ref)):
-    Df = bhv.time_slice(Data,t+pre,t+post,'t')
-    # present_events = [name for name in Df['name'].unique() if name.endswith("_EVENT")]
-
-    for name,group in Df.groupby('name'):
-        if name.endswith("_EVENT"):
-            event_name = name.split("_EVENT")[0]
-            times = group['t'] - t
-            
-            # dots
-            # axes.plot(times, [i]*len(times), '.', color=cdict[event_name], alpha=0.75) # a bar
-            
-            for time in times:
-                axes.plot([time,time],[i-0.5,i+0.5],lw=3,color=cdict[event_name], alpha=0.75) # a bar
-
-        # if name.endswith("_ON"):
-        #     event_name = name.split("_EVENT")[0]
-        #     times = group['t'] - t
-
-# direct comparison: the other way around
-fig, axes = plt.subplots()
-for i,t in enumerate(tqdm(t_ref)):
-    for event_name, Df in Events.items():
-        data = bhv.time_slice(Df, t+pre, t+post,'t')
-        times = data['t'] - t
-
-        # dots
-        axes.plot(times, [i]*len(times), '.', color=cdict[event_name], alpha=0.75) # a bar
-
-        # as bars
-        # for time in times:
-        #     axes.plot([time,time],[i-0.5,i+0.5],lw=3,color=cdict[event_name], alpha=0.75) # a bar
-
-    for span_name, Df in Spans.items():
-        Df_sliced = bhv.time_slice(Df, t+pre, t+post, 't_on')
-
-        for j, row_s in Df_sliced.iterrows():
-            time = row_s['t_on'] - t
-            dur = row_s['dt']
-            rect = plt.Rectangle((time,i-0.5), dur, 1, facecolor=cdict[span_name], alpha=0.75)
-            axes.add_patch(rect)
-
-    # for event in present_events:
-        # Df.groupby
-
-    # for i, row in Df.iterrows():
-    #     if row['name'].endswith("_EVENT"):
-    #         time = row['t'] - t_ref
-    #         axes.plot([time,time],[i-0.5,i+0.5],lw=3,color=cdict[event_name], alpha=0.75) # a bar
+fig, axes = plt.subplots(figsize=[6,9])
+trial_overview(Data,t_ref,pre,post,axes,how='bars')
+fig.tight_layout()
 
 
-
-
-
-
-
-
-
-
-
-
-
-# event rate of sth relative to sth else - PSTH for speed for now
-fig, axes = plt.subplots()
-
-data = pd.concat([Data.groupby('name').get_group(g) for g in ('REWARD_COLLECTED_EVENT','REWARD_MISSED_EVENT')])
-data = pd.concat([Data.groupby('name').get_group(g) for g in ('TRIAL_AVAILABLE_STATE')])
+# with Lick PSTH
+data = Data.groupby('name').get_group('TRIAL_ABORTED_EVENT')
 data = data.sort_values('t')
 data = data.reset_index()
+t_ref = data['t'].values
+pre, post = (-500,1000)
 
-data = data.iloc[-20:]
+fig, axes = plt.subplots(nrows=2,sharex=True,figsize=[6,9])
+trial_overview(Data,t_ref,pre,post,axes[0],how='bars')
+psth(t_ref, Events['LICK'], pre, post, bin_width=10)
+fig.tight_layout()
 
-ref_times = data['t'] # apply slicing here
-events = Spans['LICK']['t_on']
 
-pre, post = (-5000,5000)
-bin_width = 250
-t_bins = sp.arange(pre,post,bin_width)
-bins = sp.zeros(t_bins.shape)
+# reaction time to reward_available
+def log2Span2(Data, on_name, off_name):
+    """
+    makes a span from one timepoint to the next
+    """
+    ons = Data.groupby('name').get_group(on_name)
+    offs = Data.groupby('name').get_group(off_name)
 
-for t in ref_times:
-    event_times = events[sp.logical_and(events > t+pre ,events < t+post)] - t
-    for event_time in event_times:
-        bins[sp.argmin(event_time > t_bins)] += 1 
+    ts = []
+    for tup in ons.itertuples():
+        t_on = tup.t
+        t_max = offs.iloc[-1]['t']
+        try:
+            t_off = bhv.time_slice(offs, t_on, t_max, 't').iloc[0]['t']
+            ts.append((t_on,t_off))
+        except IndexError:
+            # thrown when last is on
+            pass
+        #     t_off = offs.loc[offs['t'] > t_on].iloc[0]['t']
 
-plt.step(t_bins,bins)
+    Span = pd.DataFrame(ts,columns=['t_on','t_off'])
+    Span['dt'] = Span['t_off'] - Span['t_on']
+    return Span
+
+
+Rew_col_rt = log2Span2(Data,"REWARD_AVAILABLE_EVENT","REWARD_COLLECTED_EVENT")['dt']
+plt.hist(Rew_col_rt,bins=sp.arange(0,200,5))
+
+# event_slice
+
+# events 2 span?
+def events2span(Data, entry_event, exit_event):
+    entry_event = "TRIAL_ENTRY_EVENT"
+    exit_event = "ITI_STATE"
+    data_entry = Data.groupby("name").get_group(entry_event)
+    data_exit = Data.groupby("name").get_group(exit_event)
+
+    if data_entry.shape[0] == data_exit.shape[0]:
+        # easy peasy
+        Span = pd.DataFrame(sp.stack([data_entry['t'].values,data_exit['t'].values],axis=1),columns=['t_on','t_off'])
+        Span['dt'] = Span['t_off'] - Span['t_on']
+        return Span
+    
+    if data_entry.shape[0] != data_exit.shape[0]:
+        print("problems occur: unequal number of entry and exits")
+        ts = []
+        for tup in data_entry.itertuples():
+            t_on = tup.t
+            t_max = data_exit.iloc[-1]['t']
+            try:
+                t_off = bhv.time_slice(data_exit, t_on, t_max, 't').iloc[0]['t']
+                ts.append((t_on,t_off))
+            except IndexError:
+                # thrown when last is on
+                pass
+
+        Span = pd.DataFrame(ts,columns=['t_on','t_off'])
+        Span['dt'] = Span['t_off'] - Span['t_on']
+        return Span
+
+
+
+# slice_by_span(Data,Span)
+# completed = events2span(Data,"TRIAL_ENTRY_EVENT","ITI_STATE")
+
+# make SessionDf
+completed = log2Span2(Data,"TRIAL_AVAILABLE_STATE","ITI_STATE")
+#aborted = log2Span2(Data,"TRIAL_ENTRY_EVENT","TRIAL_ABORTED_EVENT")
+#all 
+
+Dfs = []
+for i, row in completed.iterrows():
+    ind_start = Data.loc[Data['t'] == row['t_on']].index[0]
+    ind_stop = Data.loc[Data['t'] == row['t_off']].index[0]
+    Dfs.append(Data.iloc[ind_start:ind_stop+1])
+
+SessionDf = bhv.parse_trials(Dfs)
+plt.plot(SessionDf.successful,'o')
+
+vals = SessionDf.groupby("reward_collected").get_group(True)['rew_col_rt'].values
+plt.hist(vals,bins=sp.arange(0,200,20))
+
+bhv.parse_trial(Dfs[1])
+
+
+
+
+
+
+
+# ### old code
+
+
+
+# # direct comparison: the other way around
+# fig, axes = plt.subplots()
+# for i,t in enumerate(tqdm(t_ref)):
+#     for event_name, Df in Events.items():
+#         data = bhv.time_slice(Df, t+pre, t+post,'t')
+#         times = data['t'] - t
+
+#         # dots
+#         axes.plot(times, [i]*len(times), '.', color=cdict[event_name], alpha=0.75) # a bar
+
+#         # as bars
+#         # for time in times:
+#         #     axes.plot([time,time],[i-0.5,i+0.5],lw=3,color=cdict[event_name], alpha=0.75) # a bar
+
+#     for span_name, Df in Spans.items():
+#         Df_sliced = bhv.time_slice(Df, t+pre, t+post, 't_on')
+
+#         for j, row_s in Df_sliced.iterrows():
+#             time = row_s['t_on'] - t
+#             dur = row_s['dt']
+#             rect = plt.Rectangle((time,i-0.5), dur, 1, facecolor=cdict[span_name], alpha=0.75)
+#             axes.add_patch(rect)
+
+#     # for event in present_events:
+#         # Df.groupby
+
+#     # for i, row in Df.iterrows():
+#     #     if row['name'].endswith("_EVENT"):
+#     #         time = row['t'] - t_ref
+#     #         axes.plot([time,time],[i-0.5,i+0.5],lw=3,color=cdict[event_name], alpha=0.75) # a bar
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -344,3 +432,56 @@ plt.step(t_bins,bins)
 #         self.draw()
         
     
+
+
+
+
+# ### overview plot
+# # plot licks relative to collected rewards / or any event really
+# # the events that will form the relative timepoints
+
+# # data = pd.concat([Data.groupby('name').get_group(g) for g in ('REWARD_COLLECTED_EVENT','REWARD_MISSED_EVENT')])
+# # data = Data.groupby('name').get_group('ITI_STATE')
+# data = Data.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
+# data = data.sort_values('t')
+# data = data.reset_index()
+
+# pre, post = (-3000,3000)
+
+# fig, axes = plt.subplots()
+
+# for i, row in data.iterrows():
+#     t = row['t']
+
+#     # adding events
+#     for event_name, Df in Events.items():
+#         times = bhv.time_slice(Df, t+pre, t+post, col='t')['t']
+#         times = times - t # relative to trial onset
+
+#         # vlines based this is slower?
+#         # axes.vlines(times, i-0.5, i+0.5, lw=3,color=cdict[event_name], alpha=0.75) # a bar
+
+#         # manual bar plotting - faster?
+#         # for time in times:
+#             # axes.plot([time,time],[i-0.5,i+0.5],lw=3,color=cdict[event_name], alpha=0.75) # a bar
+
+#         # dots
+#         axes.plot(times, [i]*len(times), '.', color=cdict[event_name], alpha=0.75) # a bar
+
+#     # adding spans
+#     for span_name, Df in Spans.items():
+#         Df_sliced = bhv.time_slice(Df, t+pre, t+post, col='t_on')
+#         for j, row_s in Df_sliced.iterrows():
+#             time = row_s['t_on'] - t
+#             dur = row_s['dt']
+#             rect = plt.Rectangle((time,i-0.5), dur, 1, facecolor=cdict[span_name], alpha=0.75)
+#             axes.add_patch(rect)
+
+
+# for key in cdict.keys():
+#     axes.plot([0],[0],color=cdict[key],label=key,lw=4)
+# axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',ncol=3, mode="expand", borderaxespad=0.)
+# axes.invert_yaxis()
+# axes.set_xlabel('time (ms)')
+# axes.set_ylabel('trials')
+# fig.tight_layout()

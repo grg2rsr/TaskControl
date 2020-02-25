@@ -283,17 +283,17 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 reward_collected = false;
-                reward_tone_controller.play(reward_cue_freq, tone_duration);
                 log_code(REWARD_AVAILABLE_EVENT);
+                reward_tone_controller.play(reward_cue_freq, tone_duration);
             }
 
             // update
             if (last_state == current_state){
                 // if lick_in and reward not yet collected, deliver it
                 if (lick_in == true and reward_collected == false){
+                    log_code(REWARD_COLLECTED_EVENT);
                     deliver_reward = true;
                     reward_collected = true;
-                    log_code(REWARD_COLLECTED_EVENT);
                 }
             }
 
