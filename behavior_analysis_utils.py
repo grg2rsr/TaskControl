@@ -6,39 +6,42 @@ import utils
 
 def parse_arduino_log(log_path, code_map=None):
     """ create a DataFrame representation of an arduino log. If a code map is passed 
-    a corresponding decoded column will be created """
+    a corresponding decoded column will be created
+
+    for offline use
+    """
 
     with open(log_path,'r') as fH:
         lines = fH.readlines()
 
-    valid_lines = [line.strip().split('\t') for line in lines if '\t' in line]
-    Data = pd.DataFrame(valid_lines,columns=['code','t'])
-    Data['t'] = Data['t'].astype('float')
+    return parse_lines(lines,code_map=code_map)
 
-    if code_map is not None:
-        Data['name'] = [code_map[code] for code in Data["code"]]
 
-    return Data
-
-def  parse_line(line, code_map=None):
-    """ """
-    if not line.startswith('<'):
-        code, t = line.strip().split('\t')
-        data = pd.DataFrame([[code,t]],columns=['code','t'])
-        data['t'] = data['t'].astype('float')
+def parse_line(line, code_map=None):
+    """ never used?? """
+    if not line.startswith("<") and '\t' in line:
+        data = pd.Series(line.strip().split('\t'),index=['code','t'])
+        data.loc['t'] = float(data.loc['t'])
 
         if code_map is not None:
-            data['name'] = code_map[data.loc[0,"code"]]
+            data.loc['name'] = code_map[data.loc["code"]]
 
         return data
-    else:
-        pass
 
-def parse_lines(lines, code_map=None):
-    Dfs = []
-    lines = [Dfs.append(parse_line(line, code_map=code_map)) for line in lines]
-    Data = pd.concat(Dfs)
+def parse_lines(lines,code_map=None):
+    """ _much_ faster parser"""
+    valid_lines = [line.strip() for line in lines if '\t' in line]
+    Data = pd.DataFrame([line.split('\t') for line in valid_lines],columns=['code','t'])
     Data.reset_index(drop=True)
+
+    # decode
+    if code_map is not None:
+        Data['name'] = [code_map[code] for code in Data['code']]
+
+    # test for time wraparound
+    if sp.any(sp.diff(Data['t']) < 0):
+        reversal_ind = sp.where(sp.diff(Data['t']) < 0)[0][0]
+        Data['t'].iloc[reversal_ind+1:] += Data['t'].iloc[reversal_ind]
     return Data
 
 def slice_into_trials(Data):
@@ -133,48 +136,23 @@ def log2Events(Data,event_names):
         Events[event_name] = log2Event(Data,event_name)
     return Events
 
-# def make_TrialsDf(Data,trial_entry=None,trial_exit_succ=None,trial_exit_unsucc=None):
-#     try:
-#         TrialsDf = pd.DataFrame(Data.groupby('name').get_group(trial_entry)['t'])
-#         TrialsDf.columns = ['t_on']
-#     except KeyError:
-#         TrialsDf = pd.DataFrame(columns=['t_on'])
-#         return TrialsDf
+# def time_slice(Df, t_min, t_max, col='t_on'):
+#     """ slices the DataFrame on the column """
+#     return Df.loc[sp.logical_and(Df[col] > t_min, Df[col] < t_max)]
 
-#     try:
-#         Hit = pd.DataFrame(Data.groupby('name').get_group(trial_exit_succ)['t'])
-#         Hit['outcome'] = 'succ'
-#     except KeyError:
-#         Hit = pd.DataFrame(columns=['t','outcome'])
-
-#     try:
-#         Miss = pd.DataFrame(Data.groupby('name').get_group(trial_exit_unsucc)['t'])
-#         Miss['outcome'] = 'unsucc'
-#     except KeyError:
-#         Miss = pd.DataFrame(columns=['t','outcome'])
-
-#     AllEndings = pd.concat([Hit,Miss],axis=0)
-#     AllEndings = AllEndings.sort_values('t')
-#     AllEndings.columns = ['t_off','outcome']
-
-#     # removing last incompleted
-#     if TrialsDf.shape[0] > AllEndings.shape[0]:
-#         TrialsDf = TrialsDf[:-1]
-
-#     TrialsDf = pd.concat([TrialsDf.reset_index(drop=True),AllEndings.reset_index(drop=True)],axis=1)
-#     TrialsDf['dt'] = TrialsDf['t_off'] - TrialsDf['t_on']
-    
-#     return TrialsDf
-
-def time_slice(Df, t_min, t_max, col='t_on'):
-    """ slices the DataFrame on the column """
-    return Df.loc[sp.logical_and(Df[col] > t_min, Df[col] < t_max)]
+def time_slice(Df, t_min, t_max, col='t_on'): # change default to 't'
+    vals = Df[col].values
+    binds = sp.logical_and(vals > t_min, vals < t_max)
+    return Df.loc[binds]
 
 # PATH
 # upstairs
 # log_path = Path("/home/georg/git_tmp/TaskControl/Animals/123/2020-01-22_11-53-34_lick_for_reward_w_surpression/arduino_log.txt")
 # code_map_path = Path("/home/georg/git_tmp/TaskControl/Animals/123/2020-01-22_11-53-34_lick_for_reward_w_surpression/lick_for_reward_w_surpression/Arduino/src/event_codes.h")
-path = Path("/media/georg/htcondor/shared-paton/georg/arduino_log.txt")
+log_path = Path("/media/georg/htcondor/shared-paton/georg/arduino_log.txt")
+# code_
+# 
+
 
 # # downstairs
 # # log_path = Path(r'D:\TaskControl\Animals\123\2020-01-22_11-53-34_lick_for_reward_w_surpression\arduino_log.txt')
