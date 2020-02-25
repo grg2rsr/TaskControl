@@ -117,16 +117,16 @@ class SessionVis(QtWidgets.QWidget):
         self.RewardCollectedItem.setLabel("left",text="frac. collected rewards")
         self.RewardCollectedItem.setLabel("bottom",text="successful trial #")
         self.RewardCollectedLine = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
-        self.RewardCollectedLine20 = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
-        # self.PlotWindow.nextRow()1
+        self.RewardCollectedLine20 = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(100,200,100),width=2))
+        self.PlotWindow.nextRow()
         # self.PlotWindow.nextColumn()
 
         # reaction times to reward sound cue
         # self.PlotWindow.nextRow()
-        # self.RewardRtItem = self.PlotWindow.addPlot(title='reward collection reaction time')
-        # self.RewardRtItem.setLabel("left",text="time (ms)")
-        # self.RewardRtItem.setLabel("bottom",text="successful trial #")
-        # self.RewardRtLine = self.RewardRtItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
+        self.RewardRtItem = self.PlotWindow.addPlot(title='reward collection reaction time')
+        self.RewardRtItem.setLabel("left",text="time (ms)")
+        self.RewardRtItem.setLabel("bottom",text="successful trial #")
+        self.RewardRtLine = self.RewardRtItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
         
         self.Layout.addWidget(self.PlotWindow)
 
@@ -136,38 +136,41 @@ class SessionVis(QtWidgets.QWidget):
     def update_plot(self):
         hist = 20 # to be exposed in the future
         # trial rate
-        # x = self.SessionDf['t'].values
-        # y = self.SessionDf['number'].values
-        # self.TrialRateLine.setData(x=x, y=y)
+        x = self.SessionDf['t'].values
+        y = self.SessionDf['number'].values
+        self.TrialRateLine.setData(x=x, y=y)
         
         # trial success rate
         x = self.SessionDf['number'].values
         y = [sum(self.SessionDf.iloc[:i]['successful'])/(i+1) for i in range(self.SessionDf.shape[0])]
         self.SuccessRateLine.setData(x=x, y=y)
 
-        y = [sum(self.SessionDf.iloc[i-hist+1:i]['successful'])/hist for i in range(self.SessionDf.shape[0])]
-        self.SuccessRateLine20.setData(x=x, y=y)
+        if self.SessionDf.shape[0] > hist:
+            y = [sum(self.SessionDf.iloc[i-hist+1:i]['successful'])/hist for i in range(self.SessionDf.shape[0])]
+            self.SuccessRateLine20.setData(x=x, y=y)
 
-        # # reward collected rate
-        # try:
-        #     Df = self.SessionDf.groupby('successful').get_group(True)
-        #     x = Df['number'].values
-        #     y = [sum(Df.iloc[:i]['reward_collected'])/(i+1) for i in range(Df.shape[0])]
-        #     self.SuccessRateLine.setData(x=x, y=y)
+        # reward collected rate
+        try:
+            Df = self.SessionDf.groupby('successful').get_group(True)
+            x = Df['number'].values
+            y = [sum(Df.iloc[:i]['reward_collected'])/(i+1) for i in range(Df.shape[0])]
+            self.RewardCollectedLine.setData(x=x, y=y)
 
-        #     y = [sum(Df.iloc[i-hist+1:i]['reward_collected'])/hist for i in range(Df.shape[0])]
-        #     self.SuccessRateLine20.setData(x=x, y=y)
-        # except KeyError:
-        #     pass
+            if self.SessionDf.shape[0] > hist:
+                y = [sum(Df.iloc[i-hist+1:i]['reward_collected'])/hist for i in range(Df.shape[0])]
+                self.RewardCollectedLine20.setData(x=x, y=y)
+        except KeyError:
+            pass
 
-        # # reward reaction time
-        # try:
-        #     Df = self.SessionDf.groupby('successful').get_group(True)
-        #     x = Df['number'].values
-        #     y = Df['rew_col_rt']
-        #     self.RewardRtLine.setData(x=x, y=y)
-        # except KeyError:
-        #     pass
+        # reward reaction time
+        try:
+            Df = self.SessionDf.groupby('successful').get_group(True)
+            x = Df['number'].values
+            y = Df['rew_col_rt'].values
+            self.RewardRtLine.setData(x=x, y=y)
+        except KeyError:
+            # utils.debug_trace()
+            pass
 
 
     def update(self,line):
