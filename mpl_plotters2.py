@@ -353,7 +353,8 @@ axes.plot(x,y,lw=2)
 # plt.plot(x,y)
 
 
-vals = SessionDf.groupby("reward_collected").get_group(True)['rew_col_rt'].values
+# 
+vals = SessionDf.groupby("reward_collected").get_group(True)['rew_col_rt']
 plt.hist(vals,bins=sp.arange(0,200,10))
 
 
