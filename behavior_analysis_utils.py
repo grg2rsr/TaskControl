@@ -18,7 +18,7 @@ def parse_arduino_log(log_path, code_map=None):
 
 
 def parse_line(line, code_map=None):
-    """ never used?? """
+    """ never used? - also questionable in speed """
     if not line.startswith("<") and '\t' in line:
         data = pd.Series(line.strip().split('\t'),index=['code','t'])
         data.loc['t'] = float(data.loc['t'])
@@ -32,6 +32,7 @@ def parse_lines(lines,code_map=None):
     """ _much_ faster parser"""
     valid_lines = [line.strip() for line in lines if '\t' in line]
     Data = pd.DataFrame([line.split('\t') for line in valid_lines],columns=['code','t'])
+    Data['t'] = Data['t'].astype('float')
     Data.reset_index(drop=True)
 
     # decode
@@ -107,13 +108,24 @@ def log2Span(Data,span_name):
     except KeyError:
         return pd.DataFrame(columns=['t_on','t_off','dt'])
 
-    if on_times.shape != off_times.shape:
-        print("unequal number of ON and OFF events for: ", span_name)
+    try:
+        # if last off outside
+        if on_times.shape[0] == off_times.shape[0] + 1 and on_times[0] < off_times[0]:
+            on_times = on_times[:-1]
+
+        # if first on outside
+        if off_times.shape[0] == on_times.shape[0] + 1 and on_times[1] < off_times[0]:
+            on_times = on_times[1:]
+
+        if on_times.shape[0] == off_times.shape[0]:
+            dt = off_times - on_times
+            Df = pd.DataFrame(sp.stack([on_times,off_times,dt],axis=1),columns=['t_on','t_off','dt'])
+            return Df
+    except IndexError:
         return pd.DataFrame(columns=['t_on','t_off','dt'])
     else:
-        dt = off_times - on_times
-        Df = pd.DataFrame(sp.stack([on_times,off_times,dt],axis=1),columns=['t_on','t_off','dt'])
-        return Df
+        print("unequal number of ON and OFF events for: ", span_name)
+        return pd.DataFrame(columns=['t_on','t_off','dt'])
 
 def log2Spans(Data,span_names):
     Spans = {}
@@ -123,8 +135,9 @@ def log2Spans(Data,span_names):
 
 def log2Event(Data,event_name):
     try:
-        times = Data.groupby('name').get_group(event_name+'_EVENT')['t'].values.astype('float')
-        Df = pd.DataFrame(times,columns=['t'])
+        # times = Data.groupby('name').get_group(event_name+'_EVENT')['t'].values.astype('float')
+        # Df = pd.DataFrame(times,columns=['t'])
+        Df = Data.groupby('name').get_group(event_name+'_EVENT')[['t']]
     except KeyError:
         # this gets thrown when the event is not in the log
         return pd.DataFrame(columns=['t'])
@@ -140,7 +153,7 @@ def log2Events(Data,event_names):
 #     """ slices the DataFrame on the column """
 #     return Df.loc[sp.logical_and(Df[col] > t_min, Df[col] < t_max)]
 
-def time_slice(Df, t_min, t_max, col='t_on'): # change default to 't'
+def time_slice(Df, t_min, t_max, col='t'): # change default to 't'
     vals = Df[col].values
     binds = sp.logical_and(vals > t_min, vals < t_max)
     return Df.loc[binds]
