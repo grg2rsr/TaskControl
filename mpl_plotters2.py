@@ -77,6 +77,8 @@ def psth(t_ref, events, pre, post, bin_width=50, axes=None, **kwargs):
 
     counts, bins = sp.histogram(values,bins=t_bins)
     axes.step(bins[1:], counts, **kwargs)
+    axes.set_xlabel('time (ms)')
+    axes.set_ylabel('count')
 
     return axes
 
@@ -98,6 +100,17 @@ def psth(t_ref, events, pre, post, bin_width=50, axes=None, **kwargs):
 # log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2079/2020-02-14_11-14-47_lick_for_reward_w_surpression/arduino_log.txt") # the last file of the non-trial entry cue
 # log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-14_09-01-40_lick_for_reward_w_surpression/arduino_log.txt")
 
+
+"""
+ ___     ___    ______   __
+|__ \   / _ \  |____  | /_ |
+   ) | | | | |     / /   | |
+  / /  | | | |    / /    | |
+ / /_  | |_| |   / /     | |
+|____|  \___/   /_/      |_|
+
+"""
+
 # first 2071
 # log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-11_10-16-38_lick_for_reward_w_surpression/arduino_log.txt")
 # log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-12_13-56-01_lick_for_reward_w_surpression/arduino_log.txt")
@@ -109,26 +122,42 @@ def psth(t_ref, events, pre, post, bin_width=50, axes=None, **kwargs):
 # hits limit, marches out even if rew is not collected
 
 # series of confusion begins
-log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-19_09-56-10_lick_for_reward_w_surpression/arduino_log.txt")
-log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-20_09-39-30_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-19_09-56-10_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-20_09-39-30_lick_for_reward_w_surpression/arduino_log.txt")
 # but contains first sign of learning?
 
 # no, continues
-log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-21_09-16-11_lick_for_reward_w_surpression/arduino_log.txt")
-log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-24_10-06-59_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-21_09-16-11_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-24_10-06-59_lick_for_reward_w_surpression/arduino_log.txt")
 
 # incomplete?
-log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-24_10-14-54_lick_for_reward_w_surpression/arduino_log.txt")
-log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-24_10-29-53_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-24_10-14-54_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-24_10-29-53_lick_for_reward_w_surpression/arduino_log.txt")
 
 # last
-log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-25_10-40-33_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2071/2020-02-25_10-40-33_lick_for_reward_w_surpression/arduino_log.txt")
 
-# other animal: 2079
+"""
+ ___     ___    ______    ___
+|__ \   / _ \  |____  |  / _ \
+   ) | | | | |     / /  | (_) |
+  / /  | | | |    / /    \__, |
+ / /_  | |_| |   / /       / /
+|____|  \___/   /_/       /_/
+
+"""
 # last session
-log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2079/2020-02-25_13-47-59_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2079/2020-02-25_13-47-59_lick_for_reward_w_surpression/arduino_log.txt")
 
-##### 2078
+"""
+ ___     ___    ______    ___
+|__ \   / _ \  |____  |  / _ \
+   ) | | | | |     / /  | (_) |
+  / /  | | | |    / /    > _ <
+ / /_  | |_| |   / /    | (_) |
+|____|  \___/   /_/      \___/
+
+"""
 
 # first day - makes no sense to plot
 # log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2078/2020-02-11_13-57-16_lick_for_reward_w_surpression/arduino_log.txt")
@@ -154,16 +183,24 @@ log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2079/202
 
 # last day of confusion
 # good one to show the responding RT situation
-# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2078/2020-02-21_11-50-52_lick_for_reward_w_surpression/arduino_log.txt")
+log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2078/2020-02-21_11-50-52_lick_for_reward_w_surpression/arduino_log.txt")
 
 # hes doing it!
 # log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2078/2020-02-24_11-31-03_lick_for_reward_w_surpression/arduino_log.txt")
 
 # last session
-log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2078/2020-02-25_12-47-27_lick_for_reward_w_surpression/arduino_log.txt")
+# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2078/2020-02-25_12-47-27_lick_for_reward_w_surpression/arduino_log.txt")
 
 
-### 2072
+"""
+ ___     ___    ______   ___
+|__ \   / _ \  |____  | |__ \
+   ) | | | | |     / /     ) |
+  / /  | | | |    / /     / /
+ / /_  | |_| |   / /     / /_
+|____|  \___/   /_/     |____|
+
+"""
 # log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2072/2020-02-25_11-22-44_lick_for_reward_w_surpression/arduino_log.txt")
 
 
@@ -219,6 +256,7 @@ cdict = dict(zip(event_names+span_names,colors))
 
 """
 import os 
+# %%
 plot_dir = log_path.parent.joinpath('plots')
 os.makedirs(plot_dir,exist_ok=True)
 os.chdir(plot_dir)
@@ -230,8 +268,9 @@ data = Data.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
 # data = Data.groupby('name').get_group('REWARD_AVAILABLE_STATE')
 data = data.sort_values('t')
 data = data.reset_index()
+
 t_ref = data['t'].values
-pre, post = (-100,1500)
+pre, post = (-100,800)
 
 fig, axes = plt.subplots(figsize=[7,9])
 trial_overview(Data,t_ref,pre,post,axes,how='dots')
@@ -239,20 +278,36 @@ fig.tight_layout()
 # fig.savefig()
 
 
+d = sp.diff(Data['t'].values)
+d = sp.diff(Events['LICK']['t'])
+bins = sp.linspace(0,200,20)
+plt.hist(d,bins=bins)
+
+state_names = []
+for name, group in Data.groupby('name'):
+    if name.endswith("_STATE"):
+        state_names.append(name)
+
+
+# %%
 # with Lick PSTH
-# data = Data.groupby('name').get_group('REWARD_AVAILABLE_EVENT')
-data = Data.groupby('name').get_group('TRIAL_ABORTED_EVENT')
-# data = data.iloc[20:140]
+data = Data.groupby('name').get_group('TRIAL_ENTRY_EVENT')
+# data = Data.groupby('name').get_group(g) for g in ['TRIAL_COMPLETED_EVENT','TRIAL_ABORTED_EVENT']
+# data = Data.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
+# data = Data.groupby('name').get_group('TRIAL_ABORTED_EVENT')
+# data = Data.groupby('name').get_group('TRIAL_COMPLETED_EVENT')
+data = data.iloc[20:420]
 data = data.sort_values('t')
 data = data.reset_index()
 t_ref = data['t'].values
-pre, post = (-500,1000)
+pre, post = (-100,5000)
 
 fig, axes = plt.subplots(nrows=2,sharex=True,figsize=[7,9])
 trial_overview(Data,t_ref,pre,post,axes[0],how='dots')
-psth(t_ref, Events['LICK'], pre, post, bin_width=10)
+psth(t_ref, Events['LICK'], pre, post, bin_width=20)
 fig.tight_layout()
 
+# %%
 
 # reaction time to reward_available
 def log2Span2(Data, on_name, off_name):
@@ -279,10 +334,12 @@ def log2Span2(Data, on_name, off_name):
     return Span
 
 
-Rew_col_rt = log2Span2(Data,"REWARD_AVAILABLE_STATE","REWARD_COLLECTED_EVENT")['dt']
-plt.hist(Rew_col_rt,bins=sp.arange(0,200,5))
+# Rew_col_rt = log2Span2(Data,"REWARD_AVAILABLE_STATE","REWARD_COLLECTED_EVENT")['dt']
+# plt.hist(Rew_col_rt,bins=sp.arange(0,200,5))
 # plt.hist(Rew_col_rt)
-# event_slice
+
+
+# %%
 
 # events 2 span?
 def events2span(Data, entry_event, exit_event):
@@ -314,8 +371,6 @@ def events2span(Data, entry_event, exit_event):
         Span['dt'] = Span['t_off'] - Span['t_on']
         return Span
 
-
-
 # slice_by_span(Data,Span)
 # completed = events2span(Data,"TRIAL_ENTRY_EVENT","ITI_STATE")
 
@@ -333,13 +388,16 @@ for i, row in completed.iterrows():
 SessionDf = bhv.parse_trials(Dfs)
 
 ### plot recent success rate
+# %%
 fig, axes = plt.subplots()
 x = SessionDf.index
 y = [sum(SessionDf.iloc[:i]['successful'])/(i+1) for i in range(SessionDf.shape[0])]
-axes.plot(x,y,lw=1)
+axes.plot(x,y,lw=2,label='total',alpha=0.8,color="black")
 hist = 50
 y = [sum(SessionDf.iloc[i-hist:i]['successful'])/hist for i in range(SessionDf.shape[0])]
-axes.plot(x,y,lw=2)
+axes.plot(x,y,lw=2,label='last 50')
+axes.set_xlabel('trials')
+axes.set_ylabel('fraction successful',alpha=0.8)
 
 # plot reward collection rate
 # hist = 25
@@ -352,7 +410,7 @@ axes.plot(x,y,lw=2)
 # y = [sum(SDf.iloc[i-hist:i]['reward_collected'])/hist for i in range(SDf.shape[0])]
 # plt.plot(x,y)
 
-
+# %%
 # 
 vals = SessionDf.groupby("reward_collected").get_group(True)['rew_col_rt']
 plt.hist(vals,bins=sp.arange(0,200,10))
