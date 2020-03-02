@@ -280,7 +280,7 @@ fig.tight_layout()
 
 d = sp.diff(Data['t'].values)
 d = sp.diff(Events['LICK']['t'])
-bins = sp.linspace(0,200,20)
+bins = sp.linspace(0,200,10)
 plt.hist(d,bins=bins)
 
 state_names = []
@@ -296,11 +296,13 @@ data = Data.groupby('name').get_group('TRIAL_ENTRY_EVENT')
 # data = Data.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
 # data = Data.groupby('name').get_group('TRIAL_ABORTED_EVENT')
 # data = Data.groupby('name').get_group('TRIAL_COMPLETED_EVENT')
-data = data.iloc[20:420]
+# data = Data.groupby('name').get_group('REWARD_AVAILABLE_EVENT')
+data = Data.groupby('name').get_group('LICK_ON')
+# data = data.iloc[20:420]
 data = data.sort_values('t')
 data = data.reset_index()
 t_ref = data['t'].values
-pre, post = (-100,5000)
+pre, post = (-100,200)
 
 fig, axes = plt.subplots(nrows=2,sharex=True,figsize=[7,9])
 trial_overview(Data,t_ref,pre,post,axes[0],how='dots')
