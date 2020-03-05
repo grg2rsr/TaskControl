@@ -356,6 +356,8 @@ void setup() {
     delay(5000);
 }
 
+bool toggle = false;
+
 void loop() {
     if (run == true){
         // execute state machine(s)
@@ -370,4 +372,13 @@ void loop() {
     // serial communication
     getSerialData();
     processSerialData();
+
+    if (toggle == false){
+        digitalWrite(7,HIGH);
+        toggle = true;
+    }
+    else {
+        digitalWrite(7,LOW);
+        toggle = false;
+    }
 }

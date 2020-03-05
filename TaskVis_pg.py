@@ -118,8 +118,8 @@ class SessionVis(QtWidgets.QWidget):
         self.RewardCollectedItem.setLabel("bottom",text="successful trial #")
         self.RewardCollectedLine = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
         self.RewardCollectedLine20 = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(100,200,100),width=2))
-        self.PlotWindow.nextRow()
-        # self.PlotWindow.nextColumn()
+        # self.PlotWindow.nextRow()
+        self.PlotWindow.nextColumn()
 
         # reaction times to reward sound cue
         # self.PlotWindow.nextRow()
