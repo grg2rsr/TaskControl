@@ -373,6 +373,13 @@ void loop() {
     getSerialData();
     processSerialData();
 
+    // punish
+    if (punish == true){
+        punish_tone_controller.play(punish_tone_freq, tone_duration);
+        punish = false;
+    }
+
+    // for clocking execution speed
     if (toggle == false){
         digitalWrite(7,HIGH);
         toggle = true;
