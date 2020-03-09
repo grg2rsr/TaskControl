@@ -165,6 +165,32 @@ void finite_state_machine() {
         case INI_STATE:
             current_state = ITI_STATE;
             break;
+
+        case TRIAL_AVAILABLE_STATE:
+            // state entry
+            // "autostart"
+            if (current_state != last_state){
+                state_entry_common();
+                // reward_tone_controller.play(trial_avail_cue_freq, tone_duration);
+            }
+
+            // update
+            if (last_state == current_state){
+                // nothing
+            }
+            
+            // exit condition
+            if (true) {
+                log_code(TRIAL_ENTRY_EVENT); // just for plotting purposes (align on this)
+                // draw next trial
+                if (random() < reward_prob){
+                    current_state = REWARD_AVAILABLE_STATE;
+                }
+                else {
+                    current_state = NO_REWARD_AVAILABLE_STATE;
+                }
+            }
+            break;
              
         case NO_REWARD_AVAILABLE_STATE:
             // state entry
@@ -184,10 +210,7 @@ void finite_state_machine() {
                 // auto exit
                 current_state = ITI_STATE;
             }
-            
             break;
-
-
 
         case REWARD_AVAILABLE_STATE:
             // state entry
@@ -226,21 +249,13 @@ void finite_state_machine() {
 
             // update
             if (last_state == current_state){
-                // state actions:
                 // nothing
             }
 
             // exit condition
             if (now() - state_entry > ITI_dur) {
                 // ITI has to be long enough to not make the mice lick themselves into a timeout
-
-                // draw next trial
-                if (random() < reward_prob){
-                    current_state = REWARD_AVAILABLE_STATE;
-                }
-                else {
-                    current_state = NO_REWARD_AVAILABLE_STATE;
-                }
+                current_state = TRIAL_AVAILABLE_STATE;
             }
             break;
     }
