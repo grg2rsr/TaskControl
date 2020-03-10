@@ -17,7 +17,7 @@
 */
 
 // int current_state = INI_STATE; // starting at this, aleady declared in interface.cpp
-int last_state = FIXATE_STATE; // whatever other state
+int last_state = TRIAL_AVAILABLE_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
 unsigned long this_ITI_dur = ITI_dur;
@@ -183,7 +183,7 @@ void finite_state_machine() {
             if (true) {
                 log_code(TRIAL_ENTRY_EVENT); // just for plotting purposes (align on this)
                 // draw next trial
-                if (random() < reward_prob){
+                if (random(1000) < reward_prob*1000){
                     current_state = REWARD_AVAILABLE_STATE;
                 }
                 else {
@@ -285,11 +285,11 @@ void loop() {
         // execute state machine(s)
         finite_state_machine();
     }
-    // valve controllers
-    RewardValveController();
-
     // sample sensors
     read_lick();
+
+    // valve controllers
+    RewardValveController();
 
     // serial communication
     getSerialData();
@@ -297,7 +297,7 @@ void loop() {
 
     // punish
     if (punish == true){
-        punish_tone_controller.play(punish_tone_freq, tone_duration);
+        punish_tone_controller.play(punish_cue_freq, tone_duration);
         punish = false;
     }
 
