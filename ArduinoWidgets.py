@@ -66,7 +66,7 @@ class ArduinoController(QtWidgets.QWidget):
         # self.Data = pd.DataFrame(columns=['code','t','name'])
 
         self.stopped = False
-        self.reprogram = True
+        # self.reprogram = True # TODO remove this variable
 
         self.initUI()
     
@@ -78,8 +78,8 @@ class ArduinoController(QtWidgets.QWidget):
 
         # reprogram
         self.reprogramCheckBox = QtWidgets.QCheckBox("reupload sketch")
-        self.reprogramCheckBox.setChecked(self.reprogram)
-        self.reprogramCheckBox.stateChanged.connect(self.reprogramCheckBox_changed)
+        self.reprogramCheckBox.setChecked(True)
+        # self.reprogramCheckBox.stateChanged.connect(self.reprogramCheckBox_changed)
         self.FormLayout.addRow(self.reprogramCheckBox)
 
         # get com ports and ini selector
@@ -183,11 +183,11 @@ class ArduinoController(QtWidgets.QWidget):
 
     # FUTURE TODO implement baud rate selector
 
-    def reprogramCheckBox_changed(self):
-        if self.reprogramCheckBox.checkState() == 2:
-            self.reprogram = True
-        else:
-            self.reprogram = False
+    # def reprogramCheckBox_changed(self):
+    #     if self.reprogramCheckBox.checkState() == 2:
+    #         self.reprogram = True
+    #     else:
+    #         self.reprogram = False
 
     def send(self,command):
         """ sends string command interface to arduino, interface compatible """
@@ -312,7 +312,7 @@ class ArduinoController(QtWidgets.QWidget):
             self.log_task(folder)
 
         # upload
-        if self.reprogram:
+        if self.reprogramCheckBox.checkState() == 2: # true when checked
             self.upload()
         else:
             print(" --- resetting arduino only --- reusing previous sketch --- ")

@@ -1,6 +1,14 @@
 # 2do
-the training varialbes 
+the training variables issue
+test it! 
 [ ] think about last variables when training different animals
+
+self termination: make unaccessible when checked
+
+add a comment popup
+
+MSG var issue
+
 
 ## decisions:
 tmp folder or not?
@@ -8,11 +16,6 @@ pro: cleaner
 contra: temporary arduino_vars file also needed
 this might have solved itself, think about it
 
-
-## self terminating sessions
-[ ] on water
-[ ] on trials
-[ ] bonus feature: send email
 
 ## known hardcodes
 raw interface sits fixed on serial1
@@ -26,6 +29,7 @@ Df -> Arudino_VarsDf / VarsDf
 ## fix the const/newline/init_variables problem
 find a way that interface_generator.py does not need a copy of parse_arduino_vars ... 
 -> move it! con: makes it less standalone
+-> currently facing this problem (see the keyboard issues)
 
 ## arduino variables
 write in header day of training, version of TaskControl, date of generation etc etc
