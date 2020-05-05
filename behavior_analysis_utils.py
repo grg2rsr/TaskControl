@@ -118,7 +118,7 @@ def log2Span(Data,span_name):
             off_times = off_times[1:] # remove first OFF
 
         # if recordings didnt record first ON AND last OFF -> total matrix size would still be equal
-        if off_times[0] < on_times[0] and off_times[-1] < on_times[-1]
+        if off_times[0] < on_times[0] and off_times[-1] < on_times[-1]:
             off_times = off_times[1:]
             on_times = on_times[:-1]
 
