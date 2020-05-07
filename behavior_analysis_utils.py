@@ -109,14 +109,20 @@ def log2Span(Data,span_name):
         return pd.DataFrame(columns=['t_on','t_off','dt'])
 
     try:
-        # if last off outside
+        # if recordings didnt record last OFF
         if on_times.shape[0] == off_times.shape[0] + 1 and on_times[0] < off_times[0]:
+            on_times = on_times[:-1] # remove last ON
+
+        # if recordings didnt record first ON
+        if off_times.shape[0] == on_times.shape[0] + 1 and off_times[0] < on_times[0]: 
+            off_times = off_times[1:] # remove first OFF
+
+        # if recordings didnt record first ON AND last OFF -> total matrix size would still be equal
+        if off_times[0] < on_times[0] and off_times[-1] < on_times[-1]:
+            off_times = off_times[1:]
             on_times = on_times[:-1]
 
-        # if first on outside
-        if off_times.shape[0] == on_times.shape[0] + 1 and on_times[1] < off_times[0]:
-            on_times = on_times[1:]
-
+        # Perfect scenario: start with ON, end with OFF
         if on_times.shape[0] == off_times.shape[0]:
             dt = off_times - on_times
             Df = pd.DataFrame(sp.stack([on_times,off_times,dt],axis=1),columns=['t_on','t_off','dt'])
