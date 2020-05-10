@@ -22,6 +22,8 @@ from tqdm import tqdm
 """
 
 def trial_overview(Data, t_ref, pre, post, axes=None, how='dots'):
+    """ plots a trial overview """
+    # RENAME? to session overview
 
     if axes is None:
         axes = plt.gca()
