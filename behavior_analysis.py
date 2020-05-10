@@ -139,8 +139,8 @@ fig.tight_layout()
 # %% metrics on trials
 
 # make SessionDf
-completed = bhv.log2Span2(Data,"TRIAL_AVAILABLE_STATE","ITI_STATE")
-#aborted = log2Span2(Data,"TRIAL_ENTRY_EVENT","TRIAL_ABORTED_EVENT")
+completed = bhv.spans_from_events(Data,"TRIAL_AVAILABLE_STATE","ITI_STATE")
+#aborted = bhv.spans_from_events(Data,"TRIAL_ENTRY_EVENT","TRIAL_ABORTED_EVENT")
 #all 
 
 Dfs = []
@@ -163,3 +163,5 @@ y = [sum(SessionDf.iloc[i-hist:i]['successful'])/hist for i in range(SessionDf.s
 axes.plot(x,y,lw=2,label='last 25')
 axes.set_xlabel('trials')
 axes.set_ylabel('fraction successful',alpha=0.8)
+
+

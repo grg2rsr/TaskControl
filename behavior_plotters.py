@@ -32,7 +32,7 @@ def plot_session_overview(Data, t_ref, pre, post, axes=None, how='dots',cdict=No
     if cdict is None:
         #implement
         pass
-    
+
     for i,t in enumerate(tqdm(t_ref)):
         Df = bhv.time_slice(Data,t+pre,t+post,'t')
         # present_events = [name for name in Df['name'].unique() if name.endswith("_EVENT")]
@@ -51,7 +51,8 @@ def plot_session_overview(Data, t_ref, pre, post, axes=None, how='dots',cdict=No
             
             if name.endswith("_ON") and name != "LICK_ON":
                 span_name = name.split("_ON")[0]
-                Df_sliced = bhv.log2Span(Df, span_name)
+                # Df_sliced = bhv.log2Span(Df, span_name)
+                Df_sliced = bhv.spans_from_events(Df,span_name+'_ON',span_name+'_OFF')
 
                 for j, row_s in Df_sliced.iterrows():
                     time = row_s['t_on'] - t

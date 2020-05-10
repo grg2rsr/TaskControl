@@ -15,19 +15,8 @@ def parse_arduino_log(log_path, code_map=None):
 
     return parse_lines(lines,code_map=code_map)
 
-# def parse_line(line, code_map=None):
-#     """ never used? - also questionable in speed """
-#     if not line.startswith("<") and '\t' in line:
-#         data = pd.Series(line.strip().split('\t'),index=['code','t'])
-#         data.loc['t'] = float(data.loc['t'])
-
-#         if code_map is not None:
-#             data.loc['name'] = code_map[data.loc["code"]]
-
-#         return data
-
 def parse_lines(lines, code_map=None):
-    """ _much_ faster parser"""
+    """ parses a list of lines from arduino into a pd.DataFrame """
     valid_lines = [line.strip() for line in lines if '\t' in line]
     Data = pd.DataFrame([line.split('\t') for line in valid_lines],columns=['code','t'])
     Data['t'] = Data['t'].astype('float')
@@ -45,7 +34,9 @@ def parse_lines(lines, code_map=None):
     return Data
 
 def slice_into_trials(Data):
-    """ returns a list of DataFrames """    
+    """
+    unused? 
+    returns a list of DataFrames """    
     start_inds = Data.groupby('name').get_group("TRIAL_ENTRY_EVENT").index
     completed_inds = Data.groupby('name').get_group("TRIAL_COMPLETED_EVENT").index
     aborted_inds = Data.groupby('name').get_group("TRIAL_ABORTED_EVENT").index
@@ -63,13 +54,15 @@ def slice_into_trials(Data):
     return Dfs
 
 def parse_trial(Df):
-    # Careful: this function is called online 
-    # RENAME to something SessionDf
-    # update SessionDf
     """
+    Df is a list of all events in a trial
     first event should be trial available
-    this should return a series
-    can not know about trial number ? """
+
+    this should return a series for easy concatenation
+    does not know about trial number
+    
+    CAREFUL as this function is called online
+    """
     try:
         # entry event
         t = Df.groupby('name').get_group('TRIAL_AVAILABLE_STATE').iloc[0]['t']
@@ -104,57 +97,27 @@ def parse_trials(Dfs):
     SessionDf = [parse_trial(Df) for Df in Dfs]
     return pd.concat(SessionDf,axis=1).T
 
-def log2Span(Data,span_name):
-    """ extracts spans from parsed log """
-    try:
-        on_times = Data.groupby('name').get_group(span_name+'_ON')['t'].values.astype('float')
-        off_times = Data.groupby('name').get_group(span_name+'_OFF')['t'].values.astype('float')
-    except KeyError:
-        # thrown when span name not in Df
-        return pd.DataFrame(columns=['t_on','t_off','dt'])
-
-    try:
-        # if recordings didnt record last OFF
-        if on_times.shape[0] == off_times.shape[0] + 1 and on_times[0] < off_times[0]:
-            on_times = on_times[:-1] # remove last ON
-
-        # if recordings didnt record first ON
-        if off_times.shape[0] == on_times.shape[0] + 1 and off_times[0] < on_times[0]: 
-            off_times = off_times[1:] # remove first OFF
-
-        # if recordings didnt record first ON AND last OFF -> total matrix size would still be equal
-        if off_times[0] < on_times[0] and off_times[-1] < on_times[-1]:
-            off_times = off_times[1:]
-            on_times = on_times[:-1]
-
-        # Perfect scenario: start with ON, end with OFF
-        if on_times.shape[0] == off_times.shape[0]:
-            dt = off_times - on_times
-            Df = pd.DataFrame(sp.stack([on_times,off_times,dt],axis=1),columns=['t_on','t_off','dt'])
-            return Df
-
-    except IndexError:
-        # figure out when this is thrown
-        return pd.DataFrame(columns=['t_on','t_off','dt'])
-    else:
-        print("unequal number of ON and OFF events for: ", span_name)
-        return pd.DataFrame(columns=['t_on','t_off','dt'])
-
 def log2Spans(Data,span_names):
     """ helper to run log2span on multiple span names """
     Spans = {}
+    
     for span_name in span_names:
-        Spans[span_name] = log2Span(Data,span_name)
+        on_name = span_name + '_ON'
+        off_name = span_name + '_OFF'
+        Spans[span_name] = spans_from_events(Data, on_name, off_name)
     return Spans
 
-def log2Span2(Data, on_name, off_name):
+def spans_from_events(Data, on_name, off_name):
     """
     like log2span although with arbitrary events
     this function takes care of above problems actually
     """
-
-    ons = Data.groupby('name').get_group(on_name)
-    offs = Data.groupby('name').get_group(off_name)
+    try:
+        ons = Data.groupby('name').get_group(on_name)
+        offs = Data.groupby('name').get_group(off_name)
+    except KeyError:
+        # thrown when name not in log - return empty Df
+        return pd.DataFrame(columns=['t_on','t_off','dt'])
 
     t_max = offs.iloc[-1]['t']
     ts = []
