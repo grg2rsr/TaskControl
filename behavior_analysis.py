@@ -138,18 +138,19 @@ fig.tight_layout()
 
 # %% metrics on trials
 
+Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
 # make SessionDf
 completed = bhv.spans_from_events(Data,"TRIAL_AVAILABLE_STATE","ITI_STATE")
 #aborted = bhv.spans_from_events(Data,"TRIAL_ENTRY_EVENT","TRIAL_ABORTED_EVENT")
 #all 
 
-Dfs = []
+TrialDfs = []
 for i, row in completed.iterrows():
     ind_start = Data.loc[Data['t'] == row['t_on']].index[0]
     ind_stop = Data.loc[Data['t'] == row['t_off']].index[0]
-    Dfs.append(Data.iloc[ind_start:ind_stop+1])
+    TrialDfs.append(Data.iloc[ind_start:ind_stop+1])
 
-SessionDf = bhv.parse_trials(Dfs)
+SessionDf = bhv.parse_trials(TrialDfs, Metrics)
 
 ### plot recent success rate
 # %%
@@ -165,3 +166,6 @@ axes.set_xlabel('trials')
 axes.set_ylabel('fraction successful',alpha=0.8)
 
 
+
+
+# %%

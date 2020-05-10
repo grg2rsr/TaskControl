@@ -53,49 +53,65 @@ def slice_into_trials(Data):
 
     return Dfs
 
-def parse_trial(Df):
+def is_successful(TrialDf):
+    if "TRIAL_COMPLETED_EVENT" in TrialDf['name'].values:
+        succ = True
+    else:
+        succ = False    
+    return pd.Series(succ,name='successful')
+
+def reward_collected(TrialDf):
+    if is_successful(TrialDf).values[0]:
+        if "REWARD_COLLECTED_EVENT" in TrialDf['name'].values:
+            rew_col = True
+        else:
+            rew_col = False
+    else:
+        rew_col = sp.NaN
+    return pd.Series(rew_col, name='reward_collected')
+
+def reward_collection_RT(TrialDf):
+    if is_successful(TrialDf).values[0] == False or reward_collected(TrialDf).values[0] == False:
+        rew_col_rt = sp.NaN
+    else:
+        t_rew_col = TrialDf.groupby('name').get_group("REWARD_COLLECTED_EVENT").iloc[-1]['t']
+        t_rew_avail = TrialDf.groupby('name').get_group("REWARD_AVAILABLE_EVENT").iloc[-1]['t']
+        rew_col_rt = t_rew_col - t_rew_avail
+    return pd.Series(rew_col_rt,name='rew_col_rt')
+
+def parse_trial(TrialDf, Metrics):
     """
-    Df is a list of all events in a trial
+    TrialDf is a list of all events in a trial
     first event should be trial available
 
     this should return a series for easy concatenation
     does not know about trial number
     
     CAREFUL as this function is called online
+
+    this function will be extended with trial specific metrics
+    
+    Metrics is a list of callables, each Metrics takes TrialDf as
+    an argument and returns a tuple (name, value)
     """
     try:
         # entry event
-        t = Df.groupby('name').get_group('TRIAL_AVAILABLE_STATE').iloc[0]['t']
+        t = TrialDf.groupby('name').get_group('TRIAL_AVAILABLE_STATE').iloc[0]['t']
     except KeyError:
-        # if Df has no entry event - this happens online before first trial
+        # if TrialDf has no entry event - this happens online before first trial
         return None
 
-    if "TRIAL_COMPLETED_EVENT" in Df['name'].values:
-        succ = True
-        if "REWARD_COLLECTED_EVENT" in Df['name'].values:
-            reward_collected = True
-            t_rew_col = Df.groupby('name').get_group("REWARD_COLLECTED_EVENT").iloc[-1]['t']
-            t_rew_avail = Df.groupby('name').get_group("REWARD_AVAILABLE_EVENT").iloc[-1]['t']
-            rew_col_rt = t_rew_col - t_rew_avail
-        else:
-            reward_collected = False
-            rew_col_rt = sp.NaN
+    MetricsDf = pd.DataFrame([Metric(TrialDf) for Metric in Metrics]).T
+    MetricsDf['t'] = t
 
-    if "TRIAL_ABORTED_EVENT" in Df['name'].values:
-        succ = False
-        reward_collected = sp.NaN
-        rew_col_rt = sp.NaN
-    index = ['t','successful','reward_collected','rew_col_rt']
-
-    # TODO HARDCODES EVERYWHERE AAA
-    # remove hardcodes by giving the respective events as kwargs?
-    return pd.Series([t,succ,reward_collected,rew_col_rt], index=index)
+    return MetricsDf
     
-def parse_trials(Dfs):
+def parse_trials(Dfs, Metrics):
     """ helper: because parse_trial is used also by online 
     plotting routines, this function only needed offline """
-    SessionDf = [parse_trial(Df) for Df in Dfs]
-    return pd.concat(SessionDf,axis=1).T
+    SessionDf = pd.concat([parse_trial(Df, Metrics) for Df in Dfs],axis=0)
+    SessionDf = SessionDf.reset_index(drop=True)
+    return SessionDf
 
 def log2Spans(Data,span_names):
     """ helper to run log2span on multiple span names """
