@@ -23,7 +23,7 @@ import os
  ##        ########  #######     ##       ##    ######## ##     ##  ######  
  
 """
-def plot_session_overview(Data, t_ref, pre, post, axes=None, how='dots',cdict=None):
+def plot_session_overview(LogDf, t_ref, pre, post, axes=None, how='dots',cdict=None):
     """ plots a session overview """
 
     if axes is None:
@@ -34,10 +34,10 @@ def plot_session_overview(Data, t_ref, pre, post, axes=None, how='dots',cdict=No
         pass
 
     for i,t in enumerate(tqdm(t_ref)):
-        Df = bhv.time_slice(Data,t+pre,t+post,'t')
-        # present_events = [name for name in Df['name'].unique() if name.endswith("_EVENT")]
+        Df = bhv.time_slice(LogDf,t+pre,t+post,'t')
 
         for name,group in Df.groupby('name'):
+            # plot events
             if name.endswith("_EVENT"):
                 event_name = name.split("_EVENT")[0]
                 times = group['t'] - t
@@ -49,12 +49,15 @@ def plot_session_overview(Data, t_ref, pre, post, axes=None, how='dots',cdict=No
                     for time in times:
                         axes.plot([time,time],[i-0.5,i+0.5],lw=2,color=cdict[event_name], alpha=0.75) # a bar
             
-            if name.endswith("_ON") and name != "LICK_ON":
+            # plot spans
+            if name.endswith("_ON") and name != "LICK_ON": # special case: exclude licks
                 span_name = name.split("_ON")[0]
                 # Df_sliced = bhv.log2Span(Df, span_name)
-                Df_sliced = bhv.spans_from_events(Df,span_name+'_ON',span_name+'_OFF')
-
-                for j, row_s in Df_sliced.iterrows():
+                # Df_sliced = bhv.spans_from_event_names(Df, span_name+'_ON', span_name+'_OFF')
+                on_name = span_name + '_ON'
+                off_name = span_name + '_OFF'
+                SpansDf = bhv.get_spans_from_event_names(Df, on_name, off_name)
+                for j, row_s in SpansDf.iterrows():
                     time = row_s['t_on'] - t
                     dur = row_s['dt']
                     rect = plt.Rectangle((time,i-0.5), dur, 1, facecolor=cdict[span_name], linewidth=2)

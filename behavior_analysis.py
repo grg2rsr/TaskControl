@@ -39,15 +39,15 @@ code_map_path = log_path.parent.joinpath("lick_for_reward_w_surpression","Arduin
 ### READ 
 CodesDf = bhv.parse_code_map(code_map_path)
 code_map = dict(zip(CodesDf['code'],CodesDf['name']))
-Data = bhv.parse_arduino_log(log_path, code_map)
+LogDf = bhv.parse_arduino_log(log_path, code_map)
 
 ### COMMON
 # the names of the things present in the log
 span_names = [name.split('_ON')[0] for name in CodesDf['name'] if name.endswith('_ON')]
 event_names = [name.split('_EVENT')[0] for name in CodesDf['name'] if name.endswith('_EVENT')]
 
-Spans = bhv.log2Spans(Data, span_names)
-Events = bhv.log2Events(Data, event_names)
+SpansDict = bhv.get_spans(LogDf, span_names)
+EventsDict = bhv.get_events(LogDf, event_names)
 
 # %%
 """
@@ -61,21 +61,20 @@ Events = bhv.log2Events(Data, event_names)
  ##        ##     ## ######## ##        ##     ##  #######   ######  ########  ######   ######  
  
 """
-### SOME PREPROCESSING
 # filter unrealistic licks
-bad_licks = sp.logical_or(Spans['LICK']['dt'] < 20,Spans['LICK']['dt'] > 100)
-Spans['LICK'] = Spans['LICK'].loc[~bad_licks]
+bad_licks = sp.logical_or(SpansDict['LICK']['dt'] < 20,SpansDict['LICK']['dt'] > 100)
+SpansDict['LICK'] = SpansDict['LICK'].loc[~bad_licks]
 
 # add lick_event
-Lick_Event = pd.DataFrame(sp.stack([['NA']*Spans['LICK'].shape[0],Spans['LICK']['t_on'].values,['LICK_EVENT']*Spans['LICK'].shape[0]]).T,columns=['code','t','name'])
+Lick_Event = pd.DataFrame(sp.stack([['NA']*SpansDict['LICK'].shape[0],SpansDict['LICK']['t_on'].values,['LICK_EVENT']*SpansDict['LICK'].shape[0]]).T,columns=['code','t','name'])
 Lick_Event['t'] = Lick_Event['t'].astype('float')
-Data = Data.append(Lick_Event)
-Data.sort_values('t')
+LogDf = LogDf.append(Lick_Event)
+LogDf.sort_values('t')
 
 event_names.append("LICK")
-Events['LICK'] = bhv.log2Event(Data,'LICK')
+EventsDict['LICK'] = bhv.get_events_from_name(LogDf,'LICK')
 
-Spans.pop("LICK")
+SpansDict.pop("LICK")
 span_names.remove("LICK")
 
 # %%
@@ -101,9 +100,9 @@ os.chdir(plot_dir)
 
 # %%
 # big overview
-Data.name.unique() # ?
-data = Data.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
-# data = Data.groupby('name').get_group('REWARD_AVAILABLE_EVENT')
+print(LogDf.name.unique()) # for debug
+data = LogDf.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
+# data = LogDf.groupby('name').get_group('REWARD_AVAILABLE_EVENT')
 data = data.sort_values('t')
 data = data.reset_index()
 
@@ -111,19 +110,19 @@ t_ref = data['t'].values
 pre, post = (-100,800)
 
 fig, axes = plt.subplots(figsize=[7,9])
-plot_session_overview(Data,t_ref,pre,post,axes,how='dots',cdict=cdict)
+plot_session_overview(LogDf, t_ref, pre, post, axes, how='dots', cdict=cdict)
 fig.tight_layout()
 # fig.savefig()
 
 # %%
 # with Lick plot_psth below
-data = Data.groupby('name').get_group('TRIAL_ENTRY_EVENT')
-# data = Data.groupby('name').get_group(g) for g in ['TRIAL_COMPLETED_EVENT','TRIAL_ABORTED_EVENT']
-# data = Data.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
-# data = Data.groupby('name').get_group('TRIAL_ABORTED_EVENT')
-# data = Data.groupby('name').get_group('TRIAL_COMPLETED_EVENT')
-# data = Data.groupby('name').get_group('REWARD_AVAILABLE_EVENT')
-# data = Data.groupby('name').get_group('LICK_ON')
+data = LogDf.groupby('name').get_group('TRIAL_ENTRY_EVENT')
+# data = LogDf.groupby('name').get_group(g) for g in ['TRIAL_COMPLETED_EVENT','TRIAL_ABORTED_EVENT']
+# data = LogDf.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
+# data = LogDf.groupby('name').get_group('TRIAL_ABORTED_EVENT')
+# data = LogDf.groupby('name').get_group('TRIAL_COMPLETED_EVENT')
+# data = LogDf.groupby('name').get_group('REWARD_AVAILABLE_EVENT')
+# data = LogDf.groupby('name').get_group('LICK_ON')
 # data = data.iloc[20:420]
 data = data.sort_values('t')
 data = data.reset_index()
@@ -132,23 +131,21 @@ pre, post = (-100,200)
 
 fig, axes = plt.subplots(nrows=2,sharex=True,figsize=[7,9])
 
-plot_session_overview(Data,t_ref,pre,post,axes[0],how='dots',cdict=cdict)
-plot_psth(t_ref, Events['LICK'], pre, post, bin_width=20, axes=axes[1])
+plot_session_overview(LogDf,t_ref,pre,post,axes[0],how='dots',cdict=cdict)
+plot_psth(t_ref, EventsDict['LICK'], pre, post, bin_width=20, axes=axes[1])
 fig.tight_layout()
 
 # %% metrics on trials
-
 Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
-# make SessionDf
-completed = bhv.spans_from_events(Data,"TRIAL_AVAILABLE_STATE","ITI_STATE")
-#aborted = bhv.spans_from_events(Data,"TRIAL_ENTRY_EVENT","TRIAL_ABORTED_EVENT")
-#all 
+
+# make SessionDf - slice into trials
+TrialSpans = bhv.get_spans_from_event_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
 
 TrialDfs = []
-for i, row in completed.iterrows():
-    ind_start = Data.loc[Data['t'] == row['t_on']].index[0]
-    ind_stop = Data.loc[Data['t'] == row['t_off']].index[0]
-    TrialDfs.append(Data.iloc[ind_start:ind_stop+1])
+for i, row in TrialSpans.iterrows():
+    ind_start = LogDf.loc[LogDf['t'] == row['t_on']].index[0]
+    ind_stop = LogDf.loc[LogDf['t'] == row['t_off']].index[0]
+    TrialDfs.append(LogDf.iloc[ind_start:ind_stop+1])
 
 SessionDf = bhv.parse_trials(TrialDfs, Metrics)
 
