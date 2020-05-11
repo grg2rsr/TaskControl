@@ -145,6 +145,7 @@ def parse_trial(TrialDf, Metrics):
     returns a one row DataFrame
     notes: does not know about trial number
     """
+    # FIXME this has to be checked with the online routine if necessary or can be caught otherwise
     try:
         # entry event
         t = TrialDf.groupby('name').get_group('TRIAL_AVAILABLE_STATE').iloc[0]['t']
@@ -152,7 +153,15 @@ def parse_trial(TrialDf, Metrics):
         # if TrialDf has no entry event - this happens online before first trial
         return None
 
-    MetricsDf = pd.DataFrame([Metric(TrialDf) for Metric in Metrics]).T
+    # getting metrics
+    metrics = [Metric(TrialDf) for Metric in Metrics]
+    MetricsDf = pd.DataFrame(metrics).T
+    
+    # correcting dtype
+    for metric in metrics:
+        MetricsDf[metric.name] = MetricsDf[metric.name].astype(metric.dtype)
+    
+    # adding time
     MetricsDf['t'] = t
 
     return MetricsDf
@@ -205,13 +214,14 @@ def is_successful(TrialDf):
     return pd.Series(succ, name='successful')
 
 def reward_collected(TrialDf):
+    """ note: false if trial not successful (not nan) """
     if is_successful(TrialDf).values[0]:
         if "REWARD_COLLECTED_EVENT" in TrialDf['name'].values:
             rew_col = True
         else:
             rew_col = False
     else:
-        rew_col = sp.NaN
+        rew_col = False
 
     return pd.Series(rew_col, name='reward_collected')
 
