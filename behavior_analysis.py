@@ -161,8 +161,3 @@ y = [sum(SessionDf.iloc[i-hist:i]['successful'])/hist for i in range(SessionDf.s
 axes.plot(x,y,lw=2,label='last 25')
 axes.set_xlabel('trials')
 axes.set_ylabel('fraction successful',alpha=0.8)
-
-
-
-
-# %%

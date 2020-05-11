@@ -155,16 +155,16 @@ def parse_trial(TrialDf, Metrics):
 
     # getting metrics
     metrics = [Metric(TrialDf) for Metric in Metrics]
-    MetricsDf = pd.DataFrame(metrics).T
+    TrialMetricsDf = pd.DataFrame(metrics).T
     
     # correcting dtype
     for metric in metrics:
-        MetricsDf[metric.name] = MetricsDf[metric.name].astype(metric.dtype)
+        TrialMetricsDf[metric.name] = TrialMetricsDf[metric.name].astype(metric.dtype)
     
     # adding time
-    MetricsDf['t'] = t
+    TrialMetricsDf['t'] = t
 
-    return MetricsDf
+    return TrialMetricsDf
     
 def parse_trials(TrialDfs, Metrics):
     """ helper to run parse_trial on multiple trials.
@@ -173,6 +173,31 @@ def parse_trials(TrialDfs, Metrics):
     SessionDf = SessionDf.reset_index(drop=True)
   
     return SessionDf
+
+"""
+ 
+  ######  ########  ######   ######  ####  #######  ##    ##  ######  
+ ##    ## ##       ##    ## ##    ##  ##  ##     ## ###   ## ##    ## 
+ ##       ##       ##       ##        ##  ##     ## ####  ## ##       
+  ######  ######    ######   ######   ##  ##     ## ## ## ##  ######  
+       ## ##             ##       ##  ##  ##     ## ##  ####       ## 
+ ##    ## ##       ##    ## ##    ##  ##  ##     ## ##   ### ##    ## 
+  ######  ########  ######   ######  ####  #######  ##    ##  ######  
+ 
+"""
+"""
+like this, or similar. Performance is not a good name
+"""
+# def parse_session(SessionDf, Metric):
+#     """ """
+#     return SessionMetricsDf
+
+# def parse_sessions(SessionDfs, Metrics):
+#     """ """
+#     return PerformanceDf
+
+
+
 """
  
   ######  ##       ####  ######  ######## 
