@@ -1,8 +1,11 @@
 import scipy as sp
 import pandas as pd
+import numpy as np
+import os
 from pathlib import Path
 from functions import parse_code_map
 import utils
+import datetime
 
 """
  
@@ -38,8 +41,8 @@ def parse_lines(lines, code_map=None):
         LogDf['name'] = [code_map[code] for code in LogDf['code']]
 
     # test for time wraparound
-    if sp.any(sp.diff(LogDf['t']) < 0):
-        reversal_ind = sp.where(sp.diff(LogDf['t']) < 0)[0][0]
+    if np.any(np.diff(LogDf['t']) < 0):
+        reversal_ind = np.where(np.diff(LogDf['t']) < 0)[0][0]
         LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
 
     return LogDf
@@ -185,18 +188,69 @@ def parse_trials(TrialDfs, Metrics):
   ######  ########  ######   ######  ####  #######  ##    ##  ######  
  
 """
-"""
-like this, or similar. Performance is not a good name
-"""
-# def parse_session(SessionDf, Metric):
-#     """ """
-#     return SessionMetricsDf
 
-# def parse_sessions(SessionDfs, Metrics):
-#     """ """
-#     return PerformanceDf
+def parse_session(SessionDf, Metrics, session_number):
+    """ """
 
+    metrics = [Metric(SessionDf) for Metric in Metrics]
+    SessionMetricsDf = pd.DataFrame(metrics).T
 
+    # correcting dtype
+    for metric in metrics:
+        SessionMetricsDf[metric.name] = SessionMetricsDf[metric.name].astype(metric.dtype)
+    
+    # adding session number
+    SessionMetricsDf['session'] = session_number
+
+    return SessionMetricsDf
+
+def parse_sessions(SessionDfs, Metrics):
+    """ helper to run parse_session on multiple sessions.
+    SessionDfs is a list of SessionDf """
+
+    PerformanceDf = pd.concat([parse_session(SessionDf, Metrics, SessionDf) for SessionDf in SessionDfs])
+    PerformanceDf = PerformanceDf.set_index('session')
+
+    return PerformanceDf
+
+def aggregate_session_logs(animal_path, task_name):
+    """ 
+    creates a list of LogDfs with all data obtained 
+    using input task an path to animal's folder  
+    """
+
+    # search and store all folder paths (sessions) containing 
+    # data obtained performing input task
+    folder_names = os.listdir(path= animal_path)
+
+    session_paths = [] 
+
+    for fd in folder_names:
+
+        # hacky way to retrieve information from path
+        date = fd[0:10]
+        date_format = '%Y-%m-%d'
+
+        task = fd[20:]
+  
+        try:
+            datetime.datetime.strptime(date, date_format)
+
+            if task == task_name:
+                session_paths.append(animal_path.joinpath(fd, "arduino_log.txt")) 
+        except:
+            print("Folder/File " + fd + " is not a session using " + task_name)
+
+    # turn each log into logDf and unite sessions into Series
+    code_map_path = session_paths[0].parent.joinpath("lick_for_reward_w_surpression","Arduino","src","event_codes.h")
+    CodesDf = parse_code_map(code_map_path)
+    code_map = dict(zip(CodesDf['code'],CodesDf['name']))
+
+    LogDfs = []
+    for session in session_paths:
+        LogDfs.append(parse_arduino_log(session, code_map))
+
+    return LogDfs, CodesDf
 
 """
  
@@ -213,7 +267,7 @@ like this, or similar. Performance is not a good name
 def time_slice(Df, t_min, t_max, col='t'):
     """ helper to slice a dataframe along time (defined by col)"""
     vals = Df[col].values
-    binds = sp.logical_and(vals > t_min, vals < t_max)
+    binds = np.logical_and(vals > t_min, vals < t_max)
   
     return Df.loc[binds]
 
@@ -228,7 +282,6 @@ def time_slice(Df, t_min, t_max, col='t'):
  ##     ## ########    ##    ##     ## ####  ######   ######  
  
 """
-
 
 def is_successful(TrialDf):
     if "TRIAL_COMPLETED_EVENT" in TrialDf['name'].values:
@@ -252,10 +305,19 @@ def reward_collected(TrialDf):
 
 def reward_collection_RT(TrialDf):
     if is_successful(TrialDf).values[0] == False or reward_collected(TrialDf).values[0] == False:
-        rew_col_rt = sp.NaN
+        rew_col_rt = np.NaN
     else:
         t_rew_col = TrialDf.groupby('name').get_group("REWARD_COLLECTED_EVENT").iloc[-1]['t']
         t_rew_avail = TrialDf.groupby('name').get_group("REWARD_AVAILABLE_EVENT").iloc[-1]['t']
         rew_col_rt = t_rew_col - t_rew_avail
  
     return pd.Series(rew_col_rt, name='rew_col_rt')
+
+# Second level metrics (meta metrics based on first level)
+
+def collected_rate(SessionDf):
+
+    reward_collected = sum(SessionDf['reward_collected'] == 'True')
+    successful_trials = sum(SessionDf['successful'] == 'True')
+
+    return pd.Df(reward_collected/successful_trials, name='collected_rate')

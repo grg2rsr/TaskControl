@@ -1,7 +1,7 @@
 # %%
-%matplotlib qt5
-%load_ext autoreload
-%autoreload 2
+#matplotlib qt5
+#load_ext autoreload
+#autoreload 2
 
 from matplotlib import pyplot as plt
 import matplotlib as mpl
@@ -31,7 +31,7 @@ from behavior_plotters import *
 
 # path to arduino_log.txt
 # log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2078/2020-02-24_11-31-03_lick_for_reward_w_surpression/arduino_log.txt")
-log_path = Path("/home/georg/data/Animals_new/JP2079/2020-02-12_17-21-01_lick_for_reward_w_surpression/arduino_log.txt")
+log_path = Path("C:/Users/Casa/Desktop/Paco/Champalimaud/behavior_data/JP2079/2020-02-12_17-21-01_lick_for_reward_w_surpression/arduino_log.txt")
 
 # infer
 code_map_path = log_path.parent.joinpath("lick_for_reward_w_surpression","Arduino","src","event_codes.h")
