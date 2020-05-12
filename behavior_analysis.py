@@ -152,29 +152,8 @@ for i, row in TrialSpans.iterrows():
 
 SessionDf = bhv.parse_trials(TrialDfs, Metrics)
 
-plot_success_rate(SessionDf,history=20)
-
-# %% reaction time plot
-def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
-    """ """
-    if axes is None:
-        axes = plt.gca()
-    
-    values = SessionDf.groupby('reward_collected').get_group(True)['rew_col_rt'].values
-    
-    if bins is None:
-        bins = sp.arange(0,values.max(),25)
-    
-    axes.hist(values,bins=bins, **kwargs)
-    # counts, bins = sp.histogram(values,bins=bins)
-    # axes.step(bins[1:], counts, color='r')
-    axes.set_xlabel('time (ms)')
-    axes.set_ylabel('count')
-    axes.set_title('reward collection RT')
-
-    return axes
-
-plot_reward_collection_RT(SessionDf)
+# plot_success_rate(SessionDf,history=20)
+# plot_reward_collection_RT(SessionDf)
 
 # %% diagnostic plot
 # fig, axes = plt.subplots(nrows=2,sharex=True)

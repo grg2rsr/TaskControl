@@ -69,7 +69,6 @@ class LineParser():
             else:
                 self.lines.append(line)
 
-
 """
  
  ######## ########  ####    ###    ##       ##     ## ####  ######  
@@ -209,7 +208,7 @@ class SessionVis(QtWidgets.QWidget):
         self.PlotWindow = pg.GraphicsWindow()
 
         pen_1 = pg.mkPen(color=(200,100,100),width=2)
-        pen_2 = pg.mkPen(color=(200,100,100),width=2)
+        pen_2 = pg.mkPen(color=(150,100,100),width=2)
 
         kwargs = dict(title="ITI", xlabel="trial #", ylabel="time (s)")
         self.TrialRateLine, = self.add_LinePlot([pen_1], self.PLotWindow, **kwargs)
@@ -240,25 +239,25 @@ class SessionVis(QtWidgets.QWidget):
         self.TrialRateLine.setData(x=x, y=y)
         
         # success rate
-        # plt.plot(ix, SessionDf['successful'],'.')
-        # plt.plot(ix, succ_rate)
-        # plt.plot(ix, succ_rate_filt)
-        succ_rate = sp.cumsum(self.SessionDf['successful']) / (self.SessionDf.index.values+1)
-        succ_rate_filt = self.SessionDf['successful'].rolling(hist).mean()
-        x = self.SessionDf.index
-        self.SuccessRateLines[0].setData(x=x,y=succ_rate)
-        self.SuccessRateLines[1].setData(x=x,y=succ_rate_filt)
+        x = self.SessionDf.index.values+1
+        y = sp.cumsum(self.SessionDf['successful'].values) / (self.SessionDf.index.values+1)
+        y_filt = self.SessionDf['successful'].rolling(hist).mean()
+        self.SuccessRateLines[0].setData(x=x,y=y)
+        self.SuccessRateLines[1].setData(x=x,y=y_filt)
 
         # reward collection rate
-        S = self.SessionDf.groupby('successful').get_group(True)
-        rew_col_rate = sp.cumsum(S['reward_collected']) / (self.SessionDf.index.values+1)
-        rew_col_rate_filt = S['reward_collected'].rolling(hist).mean()
-        self.RewardCollectedLines[0].setData(x=S.index.values+1,y=rew_col_rate)
-        self.RewardCollectedLines[1].setData(x=S.index.values+1,y=rew_col_rate_filt)
-       
+        SDf = self.SessionDf.groupby('successful').get_group(True)
+        x = SDf.index.values+1
+        y = sp.cumsum(SDf['reward_collected'].values) / (SDf.index.values+1)
+        y_filt = SDf['reward_collected'].rolling(hist).mean()
+        self.RewardCollectedLines[0].setData(x=x,y=y)
+        self.RewardCollectedLines[1].setData(x=x,y=y_filt)
+
         # reward collection reaction time
-        S = self.SessionDf.groupby('reward_collected').get_group(True)
-        self.RewardTRLine.setData(x=S.index.values+1,y=S['rew_col_rt'])
+        SDf = self.SessionDf.groupby('reward_collected').get_group(True)
+        x = SDf.index.values+1
+        y = SDf['rew_col_rt']
+        self.RewardTRLine.setData(x=x,y=y)
 
     def update(self, TrialsDf, TrialMetricsDf):
         # append Trial
