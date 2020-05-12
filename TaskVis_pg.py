@@ -106,7 +106,7 @@ class TrialsVis(QtWidgets.QWidget):
         self.PlotWindow = pg.GraphicsWindow(title="my title")
         self.PlotItem = self.PlotWindow.addPlot(title='trials')
         self.PlotItem.setLabel("left",text="trial #")
-        self.PlotItem.setLabel("bottom",text="time", units="ms") # FIXME -> s
+        self.PlotItem.setLabel("bottom",text="time", units="s")
         
         # the names of things that can possibly happen in the task
         self.span_names = [name.split('_ON')[0] for name in self.CodesDf['name'] if name.endswith('_ON')]
@@ -141,7 +141,7 @@ class TrialsVis(QtWidgets.QWidget):
         EventsDict = bhv.get_events(TrialDf, event_names)
         for event_name, EventsDf in EventsDict.items():
             for i, row in EventsDf.iterrows():
-                t = row['t'] - align_time
+                t = (row['t'] - align_time) / 1e3 # HARDCODE to second
                 rect = pg.QtGui.QGraphicsRectItem(t, row_index , 5, 1)
                 col = [v*255 for v in self.cdict[event_name]]
                 rect.setPen(pg.mkPen(col))
@@ -153,14 +153,14 @@ class TrialsVis(QtWidgets.QWidget):
         SpansDict = bhv.get_spans(TrialDf, span_names)
         for span_name, SpansDf in SpansDict.items():
             for i,row in SpansDf.iterrows():
-                t = row['t_on'] - align_time
+                t = (row['t_on'] - align_time) / 1e3 # HARDCODE to second
                 col = [v*255 for v in self.cdict[span_name]]
                 if span_name == 'LICK':
                     col.append(150) # reduced opacity
-                    rect = pg.QtGui.QGraphicsRectItem(t, row_index+0.05, row['dt'], 0.9)
+                    rect = pg.QtGui.QGraphicsRectItem(t, row_index+0.05, row['dt']/1e3, 0.9) # HARDCODE to second
                 else:
-                    rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt'], 1)
-                rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt'], 1)
+                    rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt']/1e3, 1) # HARDCODE to second
+                rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt']/1e3, 1) # HARDCODE to second
                 rect.setPen(pg.mkPen(col))
                 rect.setBrush(pg.mkBrush(col))
                 self.PlotItem.addItem(rect)

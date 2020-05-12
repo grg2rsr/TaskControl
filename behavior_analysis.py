@@ -131,8 +131,11 @@ pre, post = (-100,200)
 
 fig, axes = plt.subplots(nrows=2,sharex=True,figsize=[7,9])
 
-plot_session_overview(LogDf,t_ref,pre,post,axes[0],how='dots',cdict=cdict)
-plot_psth(t_ref, EventsDict['LICK'], pre, post, bin_width=20, axes=axes[1])
+plot_session_overview(LogDf,t_ref, pre, post,axes[0],how='dots',cdict=cdict)
+
+bin_width = 20
+bins = sp.arange(pre,post,bin_width)
+plot_psth(EventsDict['LICK'], t_ref, bins=bins, axes=axes[1])
 fig.tight_layout()
 
 # %% metrics on trials
@@ -149,15 +152,15 @@ for i, row in TrialSpans.iterrows():
 
 SessionDf = bhv.parse_trials(TrialDfs, Metrics)
 
-### plot recent success rate
-# %%
-fig, axes = plt.subplots()
-fig.suptitle('successful trials')
-x = SessionDf.index
-y = [sum(SessionDf.iloc[:i]['successful'])/(i+1) for i in range(SessionDf.shape[0])]
-axes.plot(x,y,lw=2,label='total',alpha=0.8,color="black")
-hist = 25
-y = [sum(SessionDf.iloc[i-hist:i]['successful'])/hist for i in range(SessionDf.shape[0])]
-axes.plot(x,y,lw=2,label='last 25')
-axes.set_xlabel('trials')
-axes.set_ylabel('fraction successful',alpha=0.8)
+plot_success_rate(SessionDf,history=20)
+
+# %% diagnostic plot
+# fig, axes = plt.subplots(nrows=2,sharex=True)
+# pre = -100
+# post = 200
+# bins = sp.arange(pre,post,10)
+# for b in bins:
+#     for ax in axes:
+#         ax.axvline(b,alpha=0.5)
+# plot_raster(EventsDict['LICK'], t_ref, pre, post, axes=axes[0])
+# plot_psth(EventsDict['LICK'], t_ref, bins=bins, axes=axes[1])

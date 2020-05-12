@@ -73,22 +73,57 @@ def plot_session_overview(LogDf, t_ref, pre, post, axes=None, how='dots',cdict=N
 
     return axes
 
-def plot_psth(t_ref, events, pre, post, bin_width=50, axes=None, **kwargs):
+def plot_psth(EventsDf, t_ref, bins=None, axes=None, **kwargs):
+    """ plots a psth of the event in EventDf on the axis """
     if axes is None:
         axes = plt.gca()
 
-    t_bins = sp.arange(pre,post,bin_width)
-    bins = sp.zeros(t_bins.shape)
+    pre, post = bins[0], bins[-1]
+
+    # bins = sp.zeros(bins.shape)
 
     values = []
     for t in t_ref:
-        times = bhv.time_slice(events,t+pre,t+post,'t')['t'] - t
+        times = bhv.time_slice(EventsDf, t+pre, t+post)['t'] - t
         values.append(times.values)
     values = sp.concatenate(values)
 
-    counts, bins = sp.histogram(values,bins=t_bins)
+    counts, bins = sp.histogram(values,bins=bins)
     axes.step(bins[1:], counts, **kwargs)
     axes.set_xlabel('time (ms)')
     axes.set_ylabel('count')
 
+    return axes
+
+def plot_raster(EventsDf, t_ref, pre, post, axes=None, **kwargs):
+    """ simple raster plot """
+    if axes is None:
+        axes = plt.gca()
+
+    for i,t in enumerate(t_ref):
+        times = bhv.time_slice(EventsDf, t+pre, t+post)['t'] - t
+        axes.plot(times, sp.ones(times.shape[0])*i,'.',color='k')
+
+    return axes
+
+def plot_success_rate(SessionDf, history=None, axes=None):
+    """ plots success rate, if history given includes a rolling smooth """
+    if axes is None:
+        axes = plt.gca()
+
+    x = SessionDf.index.values+1
+    
+    # plot raw as markers
+    axes.plot(x,SessionDf['successful'],'o',alpha=0.25,color='k')
+    
+    # grand average rate
+    y = sp.cumsum(SessionDf['successful'].values) / (SessionDf.index.values+1)
+    axes.plot(x,y, color='C3')
+    
+    if history is not None:
+        y_filt = SessionDf['successful'].rolling(history).mean()
+        axes.plot(x,y_filt, color='C3',alpha=0.5)
+    
+    axes.set_ylabel('frac. successful')
+    axes.set_xlabel('trial #')    
     return axes
