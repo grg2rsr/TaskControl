@@ -66,14 +66,14 @@ def plot_session_overview(LogDf, t_ref, pre, post, axes=None, how='dots',cdict=N
 
     for key in cdict.keys():
         axes.plot([0],[0],color=cdict[key],label=key,lw=4)
-    axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',ncol=3, mode="expand", borderaxespad=0.)
+    axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',ncol=3, mode="expand", borderaxespad=0.,fontsize='xx-small')
     axes.invert_yaxis()
     axes.set_xlabel('time (ms)')
     axes.set_ylabel('trials')
 
     return axes
 
-def plot_psth(EventsDf, t_ref, bins=None, axes=None, **kwargs):
+def plot_psth(EventsDf, t_ref, bins=None, axes=None, how='fill', **kwargs):
     """ plots a psth of the event in EventDf on the axis """
     if axes is None:
         axes = plt.gca()
@@ -88,8 +88,11 @@ def plot_psth(EventsDf, t_ref, bins=None, axes=None, **kwargs):
         values.append(times.values)
     values = sp.concatenate(values)
 
-    counts, bins = sp.histogram(values,bins=bins)
-    axes.step(bins[1:], counts, **kwargs)
+    if how is 'steps':
+        counts, bins = sp.histogram(values,bins=bins)
+        axes.step(bins[1:], counts, **kwargs)
+    if how is 'fill':
+        axes.hist(values,bins=bins,**kwargs)
     axes.set_xlabel('time (ms)')
     axes.set_ylabel('count')
 
@@ -114,7 +117,7 @@ def plot_success_rate(SessionDf, history=None, axes=None):
     x = SessionDf.index.values+1
     
     # plot raw as markers
-    axes.plot(x,SessionDf['successful'],'o',alpha=0.25,color='k')
+    axes.plot(x,SessionDf['successful'],'.',alpha=0.25,color='k')
     
     # grand average rate
     y = sp.cumsum(SessionDf['successful'].values) / (SessionDf.index.values+1)
@@ -125,14 +128,15 @@ def plot_success_rate(SessionDf, history=None, axes=None):
         axes.plot(x,y_filt, color='C3',alpha=0.5)
     
     axes.set_ylabel('frac. successful')
-    axes.set_xlabel('trial #')    
+    axes.set_xlabel('trial #')
+    axes.set_title('success rate')
+
     return axes
 
 def plot_reward_collection_rate(SessionDf, history=None, axes=None):
     """ plots success rate, if history given includes a rolling smooth """
     if axes is None:
         axes = plt.gca()
-
 
     S = SessionDf.groupby('successful').get_group(True)
     x = S.index.values+1
@@ -146,7 +150,9 @@ def plot_reward_collection_rate(SessionDf, history=None, axes=None):
         axes.plot(x,y_filt, color='C0',alpha=0.5)
 
     axes.set_ylabel('frac. rew collected')
-    axes.set_xlabel('trial #')    
+    axes.set_xlabel('trial #')
+    axes.set_title('reward collection rate')
+
     return axes
 
 def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
