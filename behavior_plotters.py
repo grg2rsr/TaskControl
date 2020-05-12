@@ -127,3 +127,43 @@ def plot_success_rate(SessionDf, history=None, axes=None):
     axes.set_ylabel('frac. successful')
     axes.set_xlabel('trial #')    
     return axes
+
+def plot_reward_collection_rate(SessionDf, history=None, axes=None):
+    """ plots success rate, if history given includes a rolling smooth """
+    if axes is None:
+        axes = plt.gca()
+
+
+    S = SessionDf.groupby('successful').get_group(True)
+    x = S.index.values+1
+
+    # grand average rate
+    y = sp.cumsum(S['reward_collected'].values) / (S.index.values+1)
+    axes.plot(x,y, color='C0')
+
+    if history is not None:
+        y_filt = S['reward_collected'].rolling(history).mean()
+        axes.plot(x,y_filt, color='C0',alpha=0.5)
+
+    axes.set_ylabel('frac. rew collected')
+    axes.set_xlabel('trial #')    
+    return axes
+
+def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
+    """ """
+    if axes is None:
+        axes = plt.gca()
+    
+    values = SessionDf.groupby('reward_collected').get_group(True)['rew_col_rt'].values
+    
+    if bins is None:
+        bins = sp.arange(0,values.max(),25)
+    
+    axes.hist(values,bins=bins, **kwargs)
+    # counts, bins = sp.histogram(values,bins=bins)
+    # axes.step(bins[1:], counts, color='r')
+    axes.set_xlabel('time (ms)')
+    axes.set_ylabel('count')
+    axes.set_title('reward collection RT')
+
+    return axes
