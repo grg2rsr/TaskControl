@@ -8,170 +8,45 @@ import pyqtgraph as pg
 import functions
 import pandas as pd
 import seaborn as sns
-# TODO those functions are not vis but more analysis utils
 
+import behavior_analysis_utils as bhv
 import utils
-from behavior_analysis_utils import parse_lines
-from behavior_analysis_utils import log2Span
-from behavior_analysis_utils import parse_trial
+
+# """
+# matplotlib in qt5
+# https://matplotlib.org/gallery/user_interfaces/embedding_in_qt_sgskip.html
+
+# plotting with pyqtgraph in qt5 widgets
+# https://www.learnpyqt.com/courses/graphics-plotting/plotting-pyqtgraph/
+# """
 
 """
-matplotlib in qt5
-https://matplotlib.org/gallery/user_interfaces/embedding_in_qt_sgskip.html
-
-plotting with pyqtgraph in qt5 widgets
-https://www.learnpyqt.com/courses/graphics-plotting/plotting-pyqtgraph/
-
-"""
-
-
-"""
-session summary view
-this would have trial rate
-%successful trials vs trial number
-number of trial vs time
-(this is until now generalizable)
-
-needs
-SessionDf
-2 kind of parameters:
-
-trial based
-shared
-trial number
-entry time
-
-which kind of trial
-opto
-requested fixation time
-
-
-performance parameter 
-completed/arborted
-such as fixation successful
-reward collected
-reaction time to reward cue (plt ylim based on percentile)
-trial init time
-these could almost be seperate dfs or finally use hierarchical indexing
-
-how to turn these into plots in a generelizable way 
-
-generation
-on each trial init comput this on the previous trial
-"""
-
-
-"""
-other things to code
-
-"trial engagement" (is trial rate?)
-reward collected
-reaction times
-- trial avail to trial init
-- reward avail to reward collect
+ 
+ ########     ###    ########   ######  ######## ########  
+ ##     ##   ## ##   ##     ## ##    ## ##       ##     ## 
+ ##     ##  ##   ##  ##     ## ##       ##       ##     ## 
+ ########  ##     ## ########   ######  ######   ########  
+ ##        ######### ##   ##         ## ##       ##   ##   
+ ##        ##     ## ##    ##  ##    ## ##       ##    ##  
+ ##        ##     ## ##     ##  ######  ######## ##     ## 
+ 
+general idea: the parser takes care of the incoming data and reformats
+it into data structures that can be used by the pg_plotters
 
 """
 
-class SessionVis(QtWidgets.QWidget):
-    def __init__(self, parent, CodesDf=None):
-        super(SessionVis, self).__init__(parent=parent)
-        self.setWindowFlags(QtCore.Qt.Window)
+class Signals(QtCore.QObject):
+    # explained here why this has to be within a QObject
+    # https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html
+    trial_data_available = QtCore.pyqtSignal(pd.DataFrame, pd.DataFrame)
 
+class LineParser():
+    def __init__(self, CodesDf, Metrics):
         self.CodesDf = CodesDf
+        self.Metrics = Metrics
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
-        self.SessionDf = pd.DataFrame(columns=['number','t','successful','reward_collected','rew_col_rt'])
         self.lines = []
-        self.initUI()
-
-    def initUI(self):
-        self.setWindowTitle("Session performance monitor")
-        self.Layout = QtWidgets.QHBoxLayout()
-        # self.setMinimumWidth(300) # FIXME hardcoded!
-
-        # self.Line
-
-        # Display and aesthetics
-        self.PlotWindow = pg.GraphicsWindow()
-
-        # uncomment for this task
-        # think about this: trial rate as a fraction of max trial rate
-        # this should show task engagement
-        # needs to be put in or as a 
-        self.TrialRateItem = self.PlotWindow.addPlot(title='trial rate')
-        self.TrialRateItem.setLabel("left",text="trial #")
-        self.TrialRateItem.setLabel("bottom",text="time",units="ms")
-        self.TrialRateLine = self.TrialRateItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
-        # self.PlotWindow.nextRow()
-        self.PlotWindow.nextColumn()
-
-        self.SuccessRateItem = self.PlotWindow.addPlot(title='success rate')
-        self.SuccessRateItem.setLabel("left",text="frac. successful trials")
-        self.SuccessRateItem.setLabel("bottom",text="trial #")
-        self.SuccessRateLine = self.SuccessRateItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
-        self.SuccessRateLine20 = self.SuccessRateItem.plot(pen=pg.mkPen(color=(100,200,100),width=2))
-        # self.PlotWindow.nextRow()
-        self.PlotWindow.nextColumn()
-
-        # make this a general thing for displaying the fraction of incoming binary data
-        self.RewardCollectedItem = self.PlotWindow.addPlot(title='reward collection rate')
-        self.RewardCollectedItem.setLabel("left",text="frac. collected rewards")
-        self.RewardCollectedItem.setLabel("bottom",text="successful trial #")
-        self.RewardCollectedLine = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
-        self.RewardCollectedLine20 = self.RewardCollectedItem.plot(pen=pg.mkPen(color=(100,200,100),width=2))
-        # self.PlotWindow.nextRow()
-        self.PlotWindow.nextColumn()
-
-        # reaction times to reward sound cue
-        # self.PlotWindow.nextRow()
-        self.RewardRtItem = self.PlotWindow.addPlot(title='reward collection reaction time')
-        self.RewardRtItem.setLabel("left",text="time (ms)")
-        self.RewardRtItem.setLabel("bottom",text="successful trial #")
-        self.RewardRtLine = self.RewardRtItem.plot(pen=pg.mkPen(color=(200,100,100),width=2))
-        
-        self.Layout.addWidget(self.PlotWindow)
-
-        self.setLayout(self.Layout)
-        self.show()
-
-    def update_plot(self):
-        hist = 20 # to be exposed in the future
-        # trial rate
-        x = self.SessionDf['t'].values
-        y = self.SessionDf['number'].values
-        self.TrialRateLine.setData(x=x, y=y)
-        
-        # trial success rate
-        x = self.SessionDf['number'].values
-        y = [sum(self.SessionDf.iloc[:i]['successful'])/(i+1) for i in range(self.SessionDf.shape[0])]
-        self.SuccessRateLine.setData(x=x, y=y)
-
-        if self.SessionDf.shape[0] > hist:
-            y = [sum(self.SessionDf.iloc[i-hist+1:i]['successful'])/hist for i in range(self.SessionDf.shape[0])]
-            self.SuccessRateLine20.setData(x=x, y=y)
-
-        # reward collected rate
-        try:
-            Df = self.SessionDf.groupby('successful').get_group(True)
-            x = Df['number'].values
-            y = [sum(Df.iloc[:i]['reward_collected'])/(i+1) for i in range(Df.shape[0])]
-            self.RewardCollectedLine.setData(x=x, y=y)
-
-            if self.SessionDf.shape[0] > hist:
-                y = [sum(Df.iloc[i-hist+1:i]['reward_collected'])/hist for i in range(Df.shape[0])]
-                self.RewardCollectedLine20.setData(x=x, y=y)
-        except KeyError:
-            pass
-
-        # reward reaction time
-        try:
-            Df = self.SessionDf.groupby('successful').get_group(True)
-            x = Df['number'].values
-            y = Df['rew_col_rt'].values
-            self.RewardRtLine.setData(x=x, y=y)
-        except KeyError:
-            # utils.debug_trace()
-            pass
-
+        self.Signals = Signals()
 
     def update(self,line):
         # if decodeable
@@ -180,45 +55,50 @@ class SessionVis(QtWidgets.QWidget):
             decoded = self.code_map[code]
             t = float(t)
 
-            if decoded == "TRIAL_AVAILABLE_STATE":
+            # the signal with which a trial ends
+            if decoded == "TRIAL_AVAILABLE_STATE": # TODO expose hardcode
                 # parse lines
-                try:
-                    Df = parse_lines(self.lines, code_map=self.code_map)
-                    S = parse_trial(Df)
-                    if S is not None:
-                        S['number'] = self.SessionDf.shape[0]
-                        self.SessionDf = self.SessionDf.append(S, ignore_index=True)
-                except ValueError:
-                    # this is thrown when lines are emtpy
-                    pass
+                TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map)
+                TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
                 
-                # update plot
-                self.update_plot()
+                # emit data
+                self.Signals.trial_data_available.emit(TrialDf,TrialMetricsDf)
 
                 # restart lines with current line
-                self.lines = []
-                self.lines.append(line)
+                self.lines = [line]
             else:
                 self.lines.append(line)
 
 
+"""
+ 
+ ######## ########  ####    ###    ##       ##     ## ####  ######  
+    ##    ##     ##  ##    ## ##   ##       ##     ##  ##  ##    ## 
+    ##    ##     ##  ##   ##   ##  ##       ##     ##  ##  ##       
+    ##    ########   ##  ##     ## ##       ##     ##  ##   ######  
+    ##    ##   ##    ##  ######### ##        ##   ##   ##        ## 
+    ##    ##    ##   ##  ##     ## ##         ## ##    ##  ##    ## 
+    ##    ##     ## #### ##     ## ########    ###    ####  ######  
+ 
+"""
+
 class TrialsVis(QtWidgets.QWidget):
-    def __init__(self, parent, CodesDf=None):
+    def __init__(self, parent, Parser, CodesDf=None):
         super(TrialsVis, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
-
-        # setting up data structures
-        # self.Data = pd.DataFrame(columns=['code','t','name'])
-        self.lines = []
 
         # code map related
         self.CodesDf = CodesDf
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
+        self.trial_counter = 0
+
         self.initUI()
+        self.Parser = Parser
+        self.Parser.Signals.trial_data_available.connect(self.update)
 
     def initUI(self):
-        self.setWindowTitle("Task overview monitor")
+        self.setWindowTitle("Trials overview")
         self.Layout = QtWidgets.QHBoxLayout()
         # self.setMinimumWidth(300) # FIXME hardcoded!
 
@@ -226,19 +106,17 @@ class TrialsVis(QtWidgets.QWidget):
         self.PlotWindow = pg.GraphicsWindow(title="my title")
         self.PlotItem = self.PlotWindow.addPlot(title='trials')
         self.PlotItem.setLabel("left",text="trial #")
-        self.PlotItem.setLabel("bottom",text="time", units="ms")
+        self.PlotItem.setLabel("bottom",text="time", units="ms") # FIXME -> s
         
-        # the names of the things present in the log
+        # the names of things that can possibly happen in the task
         self.span_names = [name.split('_ON')[0] for name in self.CodesDf['name'] if name.endswith('_ON')]
         self.event_names = [name.split('_EVENT')[0] for name in self.CodesDf['name'] if name.endswith('_EVENT')]
 
-        self.trial_counter = 0
-
-        # once code map is defined, colors can be as well
+        # from that: derived colors
         colors = sns.color_palette('husl',n_colors=len(self.event_names)+len(self.span_names))
         self.cdict = dict(zip(self.event_names+self.span_names,colors))
 
-        # take care of legend
+        # legend
         self.Legend = self.PlotItem.addLegend()
         for k,v in self.cdict.items():
             c = [val*255 for val in v]
@@ -247,73 +125,147 @@ class TrialsVis(QtWidgets.QWidget):
 
         self.Layout.addWidget(self.PlotWindow)
         self.setLayout(self.Layout)
-        self.show()        
+        self.show()
 
-    def update(self,line):
-        # if decodeable
-        if not line.startswith('<'):
-            code,t = line.split('\t')
-            decoded = self.code_map[code]
-            t = float(t)
+    def update(self, TrialDf, TrialMetricsDf):
+        self.plot_trial(TrialDf, self.trial_counter)
+        self.trial_counter += 1
 
-            if decoded == "TRIAL_AVAILABLE_STATE":
-                try:
-                    # parse lines
-                    Df = parse_lines(self.lines, code_map=self.code_map)
+    def plot_trial(self, TrialDf, row_index):
+        # TODO expose this
+        align_time = TrialDf.loc[TrialDf['name'] == 'TRIAL_ENTRY_EVENT']['t']
 
-                    self.trial_counter += 1
-                    row_index = self.trial_counter 
-                    
-                    # plot this Df
-                    self.plot_row(Df,row_index)
-                except ValueError:
-                    # this is thrown when lines are empty
-                    pass
+        # plotting events found in TrialDf
+        event_names = [name.split('_EVENT')[0] for name in TrialDf['name'].unique() if name.endswith('_EVENT')]
+       
+        EventsDict = bhv.get_events(TrialDf, event_names)
+        for event_name, EventsDf in EventsDict.items():
+            for i, row in EventsDf.iterrows():
+                t = row['t'] - align_time
+                rect = pg.QtGui.QGraphicsRectItem(t, row_index , 5, 1)
+                col = [v*255 for v in self.cdict[event_name]]
+                rect.setPen(pg.mkPen(col))
+                rect.setBrush(pg.mkBrush(col))
+                self.PlotItem.addItem(rect)
 
-                # clear lines
-                self.lines = []
-                self.lines.append(line)
-            else: 
-                self.lines.append(line)
+        # plotting spans found in TrialDf
+        span_names = [name.split('_ON')[0] for name in TrialDf['name'].unique() if name.endswith('_ON')]
+        SpansDict = bhv.get_spans(TrialDf, span_names)
+        for span_name, SpansDf in SpansDict.items():
+            for i,row in SpansDf.iterrows():
+                t = row['t_on'] - align_time
+                col = [v*255 for v in self.cdict[span_name]]
+                if span_name == 'LICK':
+                    col.append(150) # reduced opacity
+                    rect = pg.QtGui.QGraphicsRectItem(t, row_index+0.05, row['dt'], 0.9)
+                else:
+                    rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt'], 1)
+                rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt'], 1)
+                rect.setPen(pg.mkPen(col))
+                rect.setBrush(pg.mkBrush(col))
+                self.PlotItem.addItem(rect)
 
-    def plot_row(self,Df,row_index):
-        # all events
-        # make a selector for this
-        align_time = Df.loc[Df['name'] == 'TRIAL_ENTRY_EVENT']['t']
-        for event_name in self.event_names:
-            try:
-                df = Df.groupby('name').get_group(event_name+'_EVENT')
-                for i,row in df.iterrows():
-                    t = row['t'] - align_time
-                    rect = pg.QtGui.QGraphicsRectItem(t, row_index , 5, 1)
-                    col = [v*255 for v in self.cdict[event_name]]
-                    rect.setPen(pg.mkPen(col))
-                    rect.setBrush(pg.mkBrush(col))
-                    self.PlotItem.addItem(rect)
-            except KeyError:
-                pass
 
-        for span_name in self.span_names:
-            try:
-                df = log2Span(Df,span_name)
-                for i,row in df.iterrows():
-                    t = row['t_on'] - align_time
-                    try:
-                        col = [v*255 for v in self.cdict[span_name]]
-                        if span_name == 'LICK':
-                            col.append(150) # reduced opacity
-                            rect = pg.QtGui.QGraphicsRectItem(t, row_index+0.05, row['dt'], 0.9)
-                        else:
-                            rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt'], 1)
-                        rect = pg.QtGui.QGraphicsRectItem(t, row_index, row['dt'], 1)
-                        rect.setPen(pg.mkPen(col))
-                        rect.setBrush(pg.mkBrush(col))
-                        self.PlotItem.addItem(rect)
-                    except TypeError:
-                        pass
-            except KeyError:
-                pass
+"""
+ 
+  ######  ########  ######   ######  ####  #######  ##    ## ##     ## ####  ######  
+ ##    ## ##       ##    ## ##    ##  ##  ##     ## ###   ## ##     ##  ##  ##    ## 
+ ##       ##       ##       ##        ##  ##     ## ####  ## ##     ##  ##  ##       
+  ######  ######    ######   ######   ##  ##     ## ## ## ## ##     ##  ##   ######  
+       ## ##             ##       ##  ##  ##     ## ##  ####  ##   ##   ##        ## 
+ ##    ## ##       ##    ## ##    ##  ##  ##     ## ##   ###   ## ##    ##  ##    ## 
+  ######  ########  ######   ######  ####  #######  ##    ##    ###    ####  ######  
+ 
+"""
 
-    # def closeEvent(self, event):
-    #     # stub
-    #     self.close()
+class SessionVis(QtWidgets.QWidget):
+    """ A general visualizer for SessionDf """
+    def __init__(self, parent, Parser, CodesDf=None):
+        super(SessionVis, self).__init__(parent=parent)
+        self.setWindowFlags(QtCore.Qt.Window)
+
+        self.CodesDf = CodesDf
+        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
+
+        self.SessionDf = None
+        self.initUI()
+
+        self.Parser = Parser
+        self.Parser.Signals.trial_data_available.connect(self.update)
+
+    def add_LinePlot(self, pens, PlotWindow, title=None, xlabel=None, ylabel=None):
+        Item = PlotWindow.addPlot(title=title)
+        Item.setLabel("left", text=ylabel)
+        Item.setLabel("bottom", text=xlabel)
+        Lines = [Item.plot(pen=pen) for pen in pens]
+        return Lines
+
+    def initUI(self):
+        self.setWindowTitle("Session performance monitor")
+        self.Layout = QtWidgets.QHBoxLayout()
+        # self.setMinimumWidth(300) # FIXME hardcoded!
+
+        # Display and aesthetics
+        self.PlotWindow = pg.GraphicsWindow()
+
+        pen_1 = pg.mkPen(color=(200,100,100),width=2)
+        pen_2 = pg.mkPen(color=(200,100,100),width=2)
+
+        kwargs = dict(title="ITI", xlabel="trial #", ylabel="time (s)")
+        self.TrialRateLine, = self.add_LinePlot([pen_1], self.PLotWindow, **kwargs)
+        self.PlotWindow.nextColumn()
+
+        kwargs = dict(title="success rate", xlabel="trial #", ylabel="frac.")
+        self.SuccessRateLines = self.add_LinePlot([pen_1, pen_2], self.PLotWindow, **kwargs)
+        self.PlotWindow.nextColumn()
+
+        kwargs = dict(title="reward collection rate", xlabel="succ. trial #", ylabel="frac.")
+        self.RewardCollectedLines = self.add_LinePlot([pen_1, pen_2], self.PLotWindow, **kwargs)
+        self.PlotWindow.nextColumn()
+
+        kwargs = dict(title="reward collection RT", xlabel="succ. trial #", ylabel="time (ms)")
+        self.RewardRTLine, = self.add_LinePlot([pen_1], self.PLotWindow, **kwargs)
+        self.PlotWindow.nextColumn()
+       
+        self.Layout.addWidget(self.PlotWindow)
+
+        self.setLayout(self.Layout)
+        self.show()
+
+    def update_plot(self):
+        hist = 20 # to be exposed in the future
+        # ITI
+        x = self.SessionDfindex.values[1:]
+        y = sp.diff(self.SessionDf['t'].values / 1000)
+        self.TrialRateLine.setData(x=x, y=y)
+        
+        # success rate
+        # plt.plot(ix, SessionDf['successful'],'.')
+        # plt.plot(ix, succ_rate)
+        # plt.plot(ix, succ_rate_filt)
+        succ_rate = sp.cumsum(self.SessionDf['successful']) / (self.SessionDf.index.values+1)
+        succ_rate_filt = self.SessionDf['successful'].rolling(hist).mean()
+        x = self.SessionDf.index
+        self.SuccessRateLines[0].setData(x=x,y=succ_rate)
+        self.SuccessRateLines[1].setData(x=x,y=succ_rate_filt)
+
+        # reward collection rate
+        S = self.SessionDf.groupby('successful').get_group(True)
+        rew_col_rate = sp.cumsum(S['reward_collected']) / (self.SessionDf.index.values+1)
+        rew_col_rate_filt = S['reward_collected'].rolling(hist).mean()
+        self.RewardCollectedLines[0].setData(x=S.index.values+1,y=rew_col_rate)
+        self.RewardCollectedLines[1].setData(x=S.index.values+1,y=rew_col_rate_filt)
+       
+        # reward collection reaction time
+        S = self.SessionDf.groupby('reward_collected').get_group(True)
+        self.RewardTRLine.setData(x=S.index.values+1,y=S['rew_col_rt'])
+
+    def update(self, TrialsDf, TrialMetricsDf):
+        # append Trial
+        if self.SessionDf is None:
+            self.SessionDf = TrialMetricsDf
+        else:
+            self.SessionDf = self.SessionDf.append(TrialMetricsDf)
+        
+        self.update_plot()
+
