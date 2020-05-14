@@ -189,7 +189,7 @@ def parse_trials(TrialDfs, Metrics):
  
 """
 
-def parse_session(SessionDf, Metrics, session_number):
+def parse_session(SessionDf, Metrics):
     """ """
 
     metrics = [Metric(SessionDf) for Metric in Metrics]
@@ -198,9 +198,6 @@ def parse_session(SessionDf, Metrics, session_number):
     # correcting dtype
     for metric in metrics:
         SessionMetricsDf[metric.name] = SessionMetricsDf[metric.name].astype(metric.dtype)
-    
-    # adding session number
-    SessionMetricsDf['session'] = session_number
 
     return SessionMetricsDf
 
@@ -208,8 +205,8 @@ def parse_sessions(SessionDfs, Metrics):
     """ helper to run parse_session on multiple sessions.
     SessionDfs is a list of SessionDf """
 
-    PerformanceDf = pd.concat([parse_session(SessionDf, Metrics, SessionDf) for SessionDf in SessionDfs])
-    PerformanceDf = PerformanceDf.set_index('session')
+    PerformanceDf = pd.concat([parse_session(SessionDf, Metrics) for SessionDf in SessionDfs])
+    PerformanceDf = PerformanceDf.reset_index(drop = 'True')
 
     return PerformanceDf
 
@@ -232,7 +229,8 @@ def aggregate_session_logs(animal_path, task_name):
         date_format = '%Y-%m-%d'
 
         task = fd[20:]
-  
+        
+        # Checks if file format is not corrupted
         try:
             datetime.datetime.strptime(date, date_format)
 
@@ -317,7 +315,13 @@ def reward_collection_RT(TrialDf):
 
 def collected_rate(SessionDf):
 
-    reward_collected = sum(SessionDf['reward_collected'] == 'True')
-    successful_trials = sum(SessionDf['successful'] == 'True')
+    reward_collected = SessionDf.reward_collected.value_counts()[1]
+    successful_trials = SessionDf.successful.value_counts()[1]
 
-    return pd.Df(reward_collected/successful_trials, name='collected_rate')
+    return pd.Series(round(reward_collected/successful_trials,3), name='collected_rate')
+
+def mean_rt(SessionDf):
+
+    rtMean = SessionDf.rew_col_rt.mean(skipna='True')
+    
+    return pd.Series(round(rtMean,3), name='mean_rt')
