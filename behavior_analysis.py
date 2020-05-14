@@ -98,44 +98,26 @@ plot_dir = log_path.parent.joinpath('plots')
 os.makedirs(plot_dir,exist_ok=True)
 os.chdir(plot_dir)
 
-# %%
-# big overview
-print(LogDf.name.unique()) # for debug
-data = LogDf.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
-# data = LogDf.groupby('name').get_group('REWARD_AVAILABLE_EVENT')
-data = data.sort_values('t')
-data = data.reset_index()
-
-t_ref = data['t'].values
-pre, post = (-100,800)
-
-fig, axes = plt.subplots(figsize=[7,9])
-plot_session_overview(LogDf, t_ref, pre, post, axes, how='dots', cdict=cdict)
-fig.tight_layout()
-# fig.savefig()
-
-# %%
-# with Lick plot_psth below
+# %% Trials Overview - with Lick psth
 data = LogDf.groupby('name').get_group('TRIAL_ENTRY_EVENT')
 # data = LogDf.groupby('name').get_group(g) for g in ['TRIAL_COMPLETED_EVENT','TRIAL_ABORTED_EVENT']
-# data = LogDf.groupby('name').get_group('TRIAL_AVAILABLE_STATE')
-# data = LogDf.groupby('name').get_group('TRIAL_ABORTED_EVENT')
-# data = LogDf.groupby('name').get_group('TRIAL_COMPLETED_EVENT')
-# data = LogDf.groupby('name').get_group('REWARD_AVAILABLE_EVENT')
-# data = LogDf.groupby('name').get_group('LICK_ON')
-# data = data.iloc[20:420]
 data = data.sort_values('t')
 data = data.reset_index()
 t_ref = data['t'].values
 pre, post = (-100,200)
 
-fig, axes = plt.subplots(nrows=2,sharex=True,figsize=[7,9])
+kw = dict(height_ratios=[1,0.5])
 
-plot_session_overview(LogDf,t_ref,pre,post,axes[0],how='dots',cdict=cdict)
-plot_psth(t_ref, EventsDict['LICK'], pre, post, bin_width=20, axes=axes[1])
+fig, axes = plt.subplots(nrows=2,sharex=True,figsize=[4.25,5.5], gridspec_kw=kw)
+
+plot_session_overview(LogDf, t_ref, pre, post, axes=axes[0], how='dots', cdict=cdict)
+
+bin_width = 25
+bins = sp.arange(pre,post,bin_width)
+plot_psth(EventsDict['LICK'], t_ref, bins=bins, axes=axes[1])
 fig.tight_layout()
 
-# %% metrics on trials
+# %% Session metrics 
 Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
 
 # make SessionDf - slice into trials
@@ -149,15 +131,21 @@ for i, row in TrialSpans.iterrows():
 
 SessionDf = bhv.parse_trials(TrialDfs, Metrics)
 
-### plot recent success rate
-# %%
-fig, axes = plt.subplots()
-fig.suptitle('successful trials')
-x = SessionDf.index
-y = [sum(SessionDf.iloc[:i]['successful'])/(i+1) for i in range(SessionDf.shape[0])]
-axes.plot(x,y,lw=2,label='total',alpha=0.8,color="black")
-hist = 25
-y = [sum(SessionDf.iloc[i-hist:i]['successful'])/hist for i in range(SessionDf.shape[0])]
-axes.plot(x,y,lw=2,label='last 25')
-axes.set_xlabel('trials')
-axes.set_ylabel('fraction successful',alpha=0.8)
+hist = 20
+fig, axes = plt.subplots(ncols=3,figsize=[8,2.25])
+plot_success_rate(SessionDf, history=hist, axes=axes[0])
+plot_reward_collection_rate(SessionDf, history=hist, axes=axes[1])
+plot_reward_collection_RT(SessionDf, axes=axes[2])
+fig.tight_layout()
+
+
+# %% diagnostic plot
+# fig, axes = plt.subplots(nrows=2,sharex=True)
+# pre = -100
+# post = 200
+# bins = sp.arange(pre,post,10)
+# for b in bins:
+#     for ax in axes:
+#         ax.axvline(b,alpha=0.5)
+# plot_raster(EventsDict['LICK'], t_ref, pre, post, axes=axes[0])
+# plot_psth(EventsDict['LICK'], t_ref, bins=bins, axes=axes[1])
