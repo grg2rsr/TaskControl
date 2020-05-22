@@ -1,7 +1,7 @@
 import scipy as sp
 import pandas as pd
 import numpy as np
-import os
+import os 
 from pathlib import Path
 from functions import parse_code_map
 import utils
@@ -75,6 +75,26 @@ def get_events(LogDf, event_names):
         EventsDict[event_name] = get_events_from_name(LogDf, event_name)
  
     return EventsDict
+
+def filter_unreal_licks(min_time, max_time, SpansDict, LogDf, EventsDict):
+    """ 
+    Filter unrealistic licks from a SpansDict and adds Lick event to LogDf
+    """
+
+    bad_licks = np.logical_or(SpansDict['LICK']['dt'] < min_time , SpansDict['LICK']['dt'] > max_time)
+    SpansDict['LICK'] = SpansDict['LICK'].loc[~bad_licks]
+
+    # Add lick_event to LogDf
+    Lick_Event = pd.DataFrame(np.stack([['NA']*SpansDict['LICK'].shape[0],SpansDict['LICK']['t_on'].values,['LICK_EVENT']*SpansDict['LICK'].shape[0]]).T,columns=['code','t','name'])
+    Lick_Event['t'] = Lick_Event['t'].astype('float')
+    LogDf = LogDf.append(Lick_Event)
+    LogDf.sort_values('t')
+
+    # Add lick_event to EventsDict
+    EventsDict['LICK'] = get_events_from_name(LogDf,'LICK')
+    SpansDict.pop("LICK")
+
+    return SpansDict, EventsDict
 
 """
  
@@ -190,8 +210,9 @@ def parse_trials(TrialDfs, Metrics):
 """
 
 def parse_session(SessionDf, Metrics):
-    """ """
+    """ Applies 2nd level metrics to a session """
 
+    # Session is input to Metrics - list of callable functions, each a "Metric"
     metrics = [Metric(SessionDf) for Metric in Metrics]
     SessionMetricsDf = pd.DataFrame(metrics).T
 
@@ -210,7 +231,7 @@ def parse_sessions(SessionDfs, Metrics):
 
     return PerformanceDf
 
-def aggregate_session_logs(animal_path, task_name):
+def aggregate_session_logs(animal_path, input_task):
     """ 
     creates a list of LogDfs with all data obtained 
     using input task an path to animal's folder  
@@ -218,37 +239,38 @@ def aggregate_session_logs(animal_path, task_name):
 
     # search and store all folder paths (sessions) containing 
     # data obtained performing input task
-    folder_names = os.listdir(path= animal_path)
+    folder_paths = [fd for fd in animal_path.iterdir() if fd.is_dir()]
 
-    session_paths = [] 
+    log_paths = [] 
 
-    for fd in folder_names:
+    for fd in folder_paths:
 
-        # hacky way to retrieve information from path
-        date = fd[0:10]
-        date_format = '%Y-%m-%d'
+        # Parsing folder name by "_"
+        split_fd = fd.name.split("_")
 
-        task = fd[20:]
+        date = split_fd[0]
+        task_name = "_".join(split_fd[2:])
         
-        # Checks if file format is not corrupted
+        date_format = '%Y-%m-%d'
+        # Checks if date format is not corrupted
         try:
             datetime.datetime.strptime(date, date_format)
 
-            if task == task_name:
-                session_paths.append(animal_path.joinpath(fd, "arduino_log.txt")) 
+            if task_name == input_task:
+                log_paths.append(animal_path.joinpath(fd, "arduino_log.txt")) 
         except:
-            print("Folder/File " + fd + " is not a session using " + task_name)
+            print("Folder/File " + fd + " has corrupted date")
 
-    # turn each log into logDf and unite sessions into Series
-    code_map_path = session_paths[0].parent.joinpath("lick_for_reward_w_surpression","Arduino","src","event_codes.h")
+    # turn each log into logDf and unite logs into Series
+    code_map_path = log_paths[0].parent.joinpath(task_name ,"Arduino","src","event_codes.h")
     CodesDf = parse_code_map(code_map_path)
     code_map = dict(zip(CodesDf['code'],CodesDf['name']))
 
     LogDfs = []
-    for session in session_paths:
-        LogDfs.append(parse_arduino_log(session, code_map))
+    for log in log_paths:
+        LogDfs.append(parse_arduino_log(log, code_map))
 
-    return LogDfs, CodesDf
+    return LogDfs
 
 """
  
@@ -280,6 +302,7 @@ def time_slice(Df, t_min, t_max, col='t'):
  ##     ## ########    ##    ##     ## ####  ######   ######  
  
 """
+# Frist level metrics
 
 def is_successful(TrialDf):
     if "TRIAL_COMPLETED_EVENT" in TrialDf['name'].values:
@@ -311,10 +334,12 @@ def reward_collection_RT(TrialDf):
  
     return pd.Series(rew_col_rt, name='rew_col_rt')
 
-# Second level metrics (meta metrics based on first level)
+# Second level metrics (metrics based on computations on first level metrics)
 
 def collected_rate(SessionDf):
 
+    # Index [1] always selects "True" irrespective of the number of "True" values
+    # being higher or lower than "False" values
     reward_collected = SessionDf.reward_collected.value_counts()[1]
     successful_trials = SessionDf.successful.value_counts()[1]
 

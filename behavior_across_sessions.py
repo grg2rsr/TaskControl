@@ -9,8 +9,6 @@ from pathlib import Path
 import scipy as sp
 import seaborn as sns
 from tqdm import tqdm
-import os
-
 
 """
  
@@ -24,13 +22,19 @@ import os
  
 """
 
-animal_path = Path("C:/Users/Casa/Desktop/Paco/Champalimaud/behavior_data/JP9999/")
+with open('params.txt','r') as fH:
+    lines = fH.readlines()
+
+path = lines[0] # path is in the first line
+
+animal_path = Path(path)
 task_name = 'lick_for_reward_w_surpression'
 
-LogDfs, CodesDf = bhv.aggregate_session_logs(animal_path, task_name)
+LogDfs = bhv.aggregate_session_logs(animal_path, task_name)
 
-span_names = [name.split('_ON')[0] for name in CodesDf['name'] if name.endswith('_ON')]
-event_names = [name.split('_EVENT')[0] for name in CodesDf['name'] if name.endswith('_EVENT')]
+# list(set()) returns all the unique strings
+span_names = list(set([name.split('_ON')[0] for name in LogDfs[0].name if name.endswith('_ON')]))
+event_names = list(set([name.split('_EVENT')[0] for name in LogDfs[0].name if name.endswith('_EVENT')]))
 
 SpansDicts = []
 EventsDicts = []
@@ -51,27 +55,16 @@ for Df in LogDfs:
  
 """
 
-# filter unrealistic licks
-i = 0
+# filter unrealistic lick
+min_time = 20
+max_time = 100
+for i, SpansDict in enumerate(SpansDicts):
 
-for SpansDict in SpansDicts:
+    SpansDict, EventsDicts[i] = bhv.filter_unreal_licks(min_time, max_time, SpansDict, LogDfs[i], EventsDicts[i])
 
-    bad_licks = np.logical_or(SpansDict['LICK']['dt'] < 20,SpansDict['LICK']['dt'] > 100)
-    SpansDict['LICK'] = SpansDict['LICK'].loc[~bad_licks]
-
-    # add lick_event
-    Lick_Event = pd.DataFrame(np.stack([['NA']*SpansDict['LICK'].shape[0],SpansDict['LICK']['t_on'].values,['LICK_EVENT']*SpansDict['LICK'].shape[0]]).T,columns=['code','t','name'])
-    Lick_Event['t'] = Lick_Event['t'].astype('float')
-    LogDfs[i] = LogDfs[i].append(Lick_Event)
-    LogDfs[i].sort_values('t')
-
-    #event_names.append("LICK")
-    #EventsDicts['LICK'] = bhv.get_events_from_name(LogDfs[i],'LICK')
-
-    SpansDict.pop("LICK")
-    #span_names.remove("LICK")
-
-    i += 1
+# clean up
+event_names.append("LICK")
+span_names.remove("LICK")
 
 """
  
@@ -85,11 +78,12 @@ for SpansDict in SpansDicts:
  
 """
 
-# Make SessionDfs - slice into trials
+# Define metrics to be applied
 Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
 
 SessionDfs = []
 
+# Make SessionDfs
 for LogDf in LogDfs:
     TrialSpans = bhv.get_spans_from_event_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
 
@@ -101,7 +95,7 @@ for LogDf in LogDfs:
 
     SessionDfs.append(bhv.parse_trials(TrialDfs, Metrics))
 
-# Transform SessionDfs into PerformanceDf
+# Transform SessionDfs into PerformanceDf - single Df with behavioral summary statistics
 
 MetaMetrics = (bhv.collected_rate, bhv.mean_rt)
 

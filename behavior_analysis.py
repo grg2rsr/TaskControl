@@ -11,6 +11,7 @@ import pandas as pd
 # this should be changed ... 
 from pathlib import Path
 import scipy as sp
+import numpy as np
 import seaborn as sns
 from tqdm import tqdm
 import os
@@ -62,11 +63,11 @@ EventsDict = bhv.get_events(LogDf, event_names)
  
 """
 # filter unrealistic licks
-bad_licks = sp.logical_or(SpansDict['LICK']['dt'] < 20,SpansDict['LICK']['dt'] > 100)
+bad_licks = np.logical_or(SpansDict['LICK']['dt'] < 20,SpansDict['LICK']['dt'] > 100)
 SpansDict['LICK'] = SpansDict['LICK'].loc[~bad_licks]
 
 # add lick_event
-Lick_Event = pd.DataFrame(sp.stack([['NA']*SpansDict['LICK'].shape[0],SpansDict['LICK']['t_on'].values,['LICK_EVENT']*SpansDict['LICK'].shape[0]]).T,columns=['code','t','name'])
+Lick_Event = pd.DataFrame(np.stack([['NA']*SpansDict['LICK'].shape[0],SpansDict['LICK']['t_on'].values,['LICK_EVENT']*SpansDict['LICK'].shape[0]]).T,columns=['code','t','name'])
 Lick_Event['t'] = Lick_Event['t'].astype('float')
 LogDf = LogDf.append(Lick_Event)
 LogDf.sort_values('t')
@@ -113,7 +114,7 @@ fig, axes = plt.subplots(nrows=2,sharex=True,figsize=[4.25,5.5], gridspec_kw=kw)
 plot_session_overview(LogDf, t_ref, pre, post, axes=axes[0], how='dots', cdict=cdict)
 
 bin_width = 25
-bins = sp.arange(pre,post,bin_width)
+bins = np.arange(pre,post,bin_width)
 plot_psth(EventsDict['LICK'], t_ref, bins=bins, axes=axes[1])
 fig.tight_layout()
 
