@@ -236,40 +236,51 @@ class SessionVis(QtWidgets.QWidget):
         self.show()
 
     def update_plot(self):
-        print("update ploot")
         hist = 20 # to be exposed in the future
         # ITI
         x = self.SessionDf.index.values[1:]
         y = sp.diff(self.SessionDf['t'].values / 1000)
         self.TrialRateLine.setData(x=x, y=y)
         
-        # success rate
-        x = self.SessionDf.index.values+1
-        y = sp.cumsum(self.SessionDf['successful'].values) / (self.SessionDf.index.values+1)
-        y_filt = self.SessionDf['successful'].rolling(hist).mean()
-        self.SuccessRateLines[0].setData(x=x,y=y)
-        self.SuccessRateLines[1].setData(x=x,y=y_filt)
+        # # success rate
+        # x = self.SessionDf.index.values+1
+        # y = sp.cumsum(self.SessionDf['successful'].values) / (self.SessionDf.index.values+1)
+        # y_filt = self.SessionDf['successful'].rolling(hist).mean().values
+        
+        # self.SuccessRateLines[0].setData(x=x,y=y)
+        # self.SuccessRateLines[1].setData(x=x,y=y_filt)
 
-        # reward collection rate
-        SDf = self.SessionDf.groupby('successful').get_group(True)
-        x = SDf.index.values+1
-        y = sp.cumsum(SDf['reward_collected'].values) / (SDf.index.values+1)
-        y_filt = SDf['reward_collected'].rolling(hist).mean()
-        self.RewardCollectedLines[0].setData(x=x,y=y)
-        self.RewardCollectedLines[1].setData(x=x,y=y_filt)
+        # # reward collection rate
+        # try:
+        #     SDf = self.SessionDf.groupby('successful').get_group(True)
+        #     x = SDf.index.values+1
+        #     y = sp.cumsum(SDf['reward_collected'].values) / (SDf.index.values+1)
+        #     y_filt = SDf['reward_collected'].rolling(hist).mean().values
+        #     self.RewardCollectedLines[0].setData(x=x,y=y)
+        #     self.RewardCollectedLines[1].setData(x=x,y=y_filt)
+        # except KeyError:
+        #     # when no successful trials
+        #     pass
 
-        # reward collection reaction time
-        SDf = self.SessionDf.groupby('reward_collected').get_group(True)
-        x = SDf.index.values+1
-        y = SDf['rew_col_rt']
-        self.RewardTRLine.setData(x=x,y=y)
-
+        # # reward collection reaction time
+        # try:
+        #     SDf = self.SessionDf.groupby('reward_collected').get_group(True)
+        #     x = SDf.index.values+1
+        #     y = SDf['rew_col_rt']
+        #     self.RewardRTLine.setData(x=x,y=y)
+        # except KeyError:
+        #     # when no reward was collected
+        #     pass
+        
     def update(self, TrialsDf, TrialMetricsDf):
+        print(self.SessionDf)
+
         # append Trial
         if self.SessionDf is None:
             self.SessionDf = TrialMetricsDf
         else:
             self.SessionDf = self.SessionDf.append(TrialMetricsDf)
+            self.SessionDf = self.SessionDf.reset_index(drop=True)
         
         self.update_plot()
 

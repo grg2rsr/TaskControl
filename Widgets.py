@@ -231,12 +231,14 @@ class SettingsWidget(QtWidgets.QWidget):
         Parser = LineParser(CodesDf, Metrics)
         self.ArduinoController.Signals.serial_data_available.connect(Parser.update)
     
-        # from TaskVis_pg import SessionVis
-        # self.SessionVisWidget = SessionVis(self, Parser, CodesDf)
+        from TaskVis_pg import SessionVis, TrialsVis
+        self.SessionVisWidget = SessionVis(self, Parser, CodesDf)
+        self.TrialsVisWidget = TrialsVis(self, Parser, CodesDf)
+
+
         # self.ArduinoController.Signals.serial_data_available.connect(self.SessionVisWidget.update)
 
-        from TaskVis_pg import TrialsVis
-        self.TrialsVisWidget = TrialsVis(self, Parser, CodesDf)
+        # from TaskVis_pg import TrialsVis
         # self.ArduinoController.Signals.serial_data_available.connect(self.TrialsVisWidget.update)
 
     def closeEvent(self,event):

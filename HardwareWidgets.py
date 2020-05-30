@@ -100,6 +100,11 @@ class BonsaiController(QtWidgets.QWidget):
 
 """
 class LoadCellController(QtWidgets.QWidget):
+    """ 
+    gets data from bonsai on a udp port
+    processed data is written to a udp port? for display controller
+    sending data back to Task controlling arduino (via uart bridge)
+    """
 
     def __init__(self, parent):
         super(LoadCellController, self).__init__(parent=parent)
