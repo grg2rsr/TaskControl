@@ -146,25 +146,33 @@ def parse_trial(TrialDf, Metrics):
     notes: does not know about trial number
     """
     # FIXME this has to be checked with the online routine if necessary or can be caught otherwise
-    try:
-        # entry event
-        t = TrialDf.groupby('name').get_group('TRIAL_AVAILABLE_STATE').iloc[0]['t']
-    except KeyError:
-        # if TrialDf has no entry event - this happens online before first trial
+    # print(TrialDf)
+    # try:
+    #     # entry event
+    #     t = TrialDf.groupby('name').get_group('TRIAL_AVAILABLE_STATE').iloc[0]['t']
+    #     print("time is",t)
+    # except KeyError:
+    #     print("parse trial returns none")
+    #     # if TrialDf has no entry event - this happens online before first trial
+    #     return None
+    if TrialDf.shape[0] == 0:
         return None
-
-    # getting metrics
-    metrics = [Metric(TrialDf) for Metric in Metrics]
-    TrialMetricsDf = pd.DataFrame(metrics).T
     
-    # correcting dtype
-    for metric in metrics:
-        TrialMetricsDf[metric.name] = TrialMetricsDf[metric.name].astype(metric.dtype)
-    
-    # adding time
-    TrialMetricsDf['t'] = t
+    else:
+        t = TrialDf.iloc[0]['t']
 
-    return TrialMetricsDf
+        # getting metrics
+        metrics = [Metric(TrialDf) for Metric in Metrics]
+        TrialMetricsDf = pd.DataFrame(metrics).T
+        
+        # correcting dtype
+        for metric in metrics:
+            TrialMetricsDf[metric.name] = TrialMetricsDf[metric.name].astype(metric.dtype)
+        
+        # adding time
+        TrialMetricsDf['t'] = t
+
+        return TrialMetricsDf
     
 def parse_trials(TrialDfs, Metrics):
     """ helper to run parse_trial on multiple trials.

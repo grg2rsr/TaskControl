@@ -14,6 +14,8 @@ from functions import dtype_map
 import functions
 import utils
 
+import behavior_analysis_utils as bhv
+
 # import VisWidgets
 import ArduinoWidgets
 import HardwareWidgets
@@ -224,12 +226,13 @@ class SettingsWidget(QtWidgets.QWidget):
         CodesDf = functions.parse_code_map(path)
 
         from TaskVis_pg import LineParser
-        # Metrics = bhv.
+        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
+
         Parser = LineParser(CodesDf, Metrics)
         self.ArduinoController.Signals.serial_data_available.connect(Parser.update)
     
-        from TaskVis_pg import SessionVis
-        self.SessionVisWidget = SessionVis(self, Parser, CodesDf)
+        # from TaskVis_pg import SessionVis
+        # self.SessionVisWidget = SessionVis(self, Parser, CodesDf)
         # self.ArduinoController.Signals.serial_data_available.connect(self.SessionVisWidget.update)
 
         from TaskVis_pg import TrialsVis

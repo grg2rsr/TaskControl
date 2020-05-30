@@ -57,15 +57,19 @@ class LineParser():
 
             # the signal with which a trial ends
             if decoded == "TRIAL_AVAILABLE_STATE": # TODO expose hardcode
+                self.lines.append(line)
+
                 # parse lines
                 TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map)
                 TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
                 
-                # emit data
-                self.Signals.trial_data_available.emit(TrialDf,TrialMetricsDf)
+                if TrialMetricsDf is not None:
 
-                # restart lines with current line
-                self.lines = [line]
+                    # emit data
+                    self.Signals.trial_data_available.emit(TrialDf, TrialMetricsDf)
+
+                    # restart lines with current line
+                    self.lines = [line]
             else:
                 self.lines.append(line)
 
@@ -141,7 +145,7 @@ class TrialsVis(QtWidgets.QWidget):
         for event_name, EventsDf in EventsDict.items():
             for i, row in EventsDf.iterrows():
                 t = (row['t'] - align_time) / 1e3 # HARDCODE to second
-                rect = pg.QtGui.QGraphicsRectItem(t, row_index , 5, 1)
+                rect = pg.QtGui.QGraphicsRectItem(t, row_index , .005, 1)
                 col = [v*255 for v in self.cdict[event_name]]
                 rect.setPen(pg.mkPen(col))
                 rect.setBrush(pg.mkBrush(col))
@@ -211,19 +215,19 @@ class SessionVis(QtWidgets.QWidget):
         pen_2 = pg.mkPen(color=(150,100,100),width=2)
 
         kwargs = dict(title="ITI", xlabel="trial #", ylabel="time (s)")
-        self.TrialRateLine, = self.add_LinePlot([pen_1], self.PLotWindow, **kwargs)
+        self.TrialRateLine, = self.add_LinePlot([pen_1], self.PlotWindow, **kwargs)
         self.PlotWindow.nextColumn()
 
         kwargs = dict(title="success rate", xlabel="trial #", ylabel="frac.")
-        self.SuccessRateLines = self.add_LinePlot([pen_1, pen_2], self.PLotWindow, **kwargs)
+        self.SuccessRateLines = self.add_LinePlot([pen_1, pen_2], self.PlotWindow, **kwargs)
         self.PlotWindow.nextColumn()
 
         kwargs = dict(title="reward collection rate", xlabel="succ. trial #", ylabel="frac.")
-        self.RewardCollectedLines = self.add_LinePlot([pen_1, pen_2], self.PLotWindow, **kwargs)
+        self.RewardCollectedLines = self.add_LinePlot([pen_1, pen_2], self.PlotWindow, **kwargs)
         self.PlotWindow.nextColumn()
 
         kwargs = dict(title="reward collection RT", xlabel="succ. trial #", ylabel="time (ms)")
-        self.RewardRTLine, = self.add_LinePlot([pen_1], self.PLotWindow, **kwargs)
+        self.RewardRTLine, = self.add_LinePlot([pen_1], self.PlotWindow, **kwargs)
         self.PlotWindow.nextColumn()
        
         self.Layout.addWidget(self.PlotWindow)
@@ -232,9 +236,10 @@ class SessionVis(QtWidgets.QWidget):
         self.show()
 
     def update_plot(self):
+        print("update ploot")
         hist = 20 # to be exposed in the future
         # ITI
-        x = self.SessionDfindex.values[1:]
+        x = self.SessionDf.index.values[1:]
         y = sp.diff(self.SessionDf['t'].values / 1000)
         self.TrialRateLine.setData(x=x, y=y)
         
