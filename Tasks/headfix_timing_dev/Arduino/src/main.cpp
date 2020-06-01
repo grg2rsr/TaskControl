@@ -37,13 +37,7 @@ unsigned long tone_duration = 50;
 int n_intervals = 6;
 unsigned long[n_intervals] tone_intervals = [400,800,1400,1600,2200,2600]; // in ms, bc will be compared to now()
 unsigned long interval_boundary = 1500;
-float[n_intervals] p_interval = [0.5,0,0,0,0,0.5];
-float[n_intervals] p_interval_cs;
 unsigned long this_interval;
-
-int[n_intervals] n_trials = [0,0,0,0,0,0];
-float[n_trials] n_trials_succ = [0,0,0,0,0,0];
-float[n_trials] succ_rate = [0,0,0,0,0,0];
 
 // loadcell related
 unsigned int zone; // 0=left, 1=center, 2=right
@@ -167,56 +161,65 @@ void RewardValveController(){
 |  |  |  | |  `--'  |    \    /    |  | |  |\   | |  |__| |       \    / /  _____  \  |  |\  \----.----)   |
 |__|  |__|  \______/      \__/     |__| |__| \__|  \______|        \__/ /__/     \__\ | _| `._____|_______/
 
+
+this is an entire topic in itself - let it rest for now and do random trials
 */
 
-int ix; // trial index
+// float[n_intervals] p_interval = [0.5,0,0,0,0,0.5];
+// float[n_intervals] p_interval_cs;
 
-// normalize the probabilities
-void normalize_stim_probs(){
-    float P = 0;
+// int[n_intervals] n_trials = [0,0,0,0,0,0];
+// float[n_trials] n_trials_succ = [0,0,0,0,0,0];
+// float[n_trials] succ_rate = [0,0,0,0,0,0];
 
-    // sum
-    for (int i = 0; i < n_intervals; i++){
-        P += p_interval[i];
-    }
+// int ix; // trial index
 
-    // divide
-    for (int i = 0; i < n_intervals; i++){
-        p_interval[i] = p_interval[i] / P;
-    }
-}
+// // normalize the probabilities
+// void normalize_stim_probs(){
+//     float P = 0;
 
-void cumsum_stim_probs(){
-    p_interval_cs[0] = 0.0;
-    for (int i = 1; i < n_intervals; i++){
-        p_interval_cs[i] = p_interval_cs[i-1] + p_interval[i-1];
-    }
-}
+//     // sum
+//     for (int i = 0; i < n_intervals; i++){
+//         P += p_interval[i];
+//     }
 
-int get_interval_index(){
-    float r = random(1000) / 1000.0;
-    // determine the corresponding bin
-    for (int i = 0; i < n_intervals-1; i++){
-        if (r > p_interval_cs[i] && r < p_interval_cs[i+1]){
-            return i;
-        }
-    }
-    return n_intervals; // return the last
-}
+//     // divide
+//     for (int i = 0; i < n_intervals; i++){
+//         p_interval[i] = p_interval[i] / P;
+//     }
+// }
 
-// adjust probabilities based on performance
-void update_stim_probs(){
-    for (int i = 0; i < (n_intervals/2); i++){
-        if (succ_rate[i] > 0.8){
-            p_interval[i+1] += 0.1;
-        }
-    }
-    for (int i = n_intervals-1; i > (n_intervals/2), i--){
-        if (succ_rate[i] > 0.8){
-            p_interval[i-1] += 0.1;
-        }
-    }
-}
+// void cumsum_stim_probs(){
+//     p_interval_cs[0] = 0.0;
+//     for (int i = 1; i < n_intervals; i++){
+//         p_interval_cs[i] = p_interval_cs[i-1] + p_interval[i-1];
+//     }
+// }
+
+// int get_interval_index(){
+//     float r = random(1000) / 1000.0;
+//     // determine the corresponding bin
+//     for (int i = 0; i < n_intervals-1; i++){
+//         if (r > p_interval_cs[i] && r < p_interval_cs[i+1]){
+//             return i;
+//         }
+//     }
+//     return n_intervals; // return the last
+// }
+
+// // adjust probabilities based on performance
+// void update_stim_probs(){
+//     for (int i = 0; i < (n_intervals/2); i++){
+//         if (succ_rate[i] > 0.8){
+//             p_interval[i+1] = constrain(p_interval[i+1] + 0.1, 0, 1);
+//         }
+//     }
+//     for (int i = n_intervals-1; i > (n_intervals/2), i--){
+//         if (succ_rate[i] > 0.8){
+//             p_interval[i-1] = constrain(p_interval[i-1] - 0.1, 0, 1);
+//         }
+//     }
+// }
 
 /*
  _______     _______..___  ___.
@@ -269,14 +272,13 @@ void finite_state_machine() {
                 state_entry_common();
                 log_code(TRIAL_ENTRY_EVENT);
 
-                // draw stimulus from list of intervals
-                // random
-                // ix = random(0,n_intervals);
-                // this_interval = tone_intervals[ix];
+                // draw stimulus from list of intervals at random
+                ix = random(0,n_intervals);
+                this_interval = tone_intervals[ix];
                 
-                // weighted
-                ix = get_interval_index();
-                n_trials[ix] += 1;
+                // for future: weighted
+                // ix = get_interval_index();
+                // n_trials[ix] += 1;
 
                 // report interval for this trial
                 log_msg(String("this_interval "+String(this_interval)));
@@ -377,9 +379,9 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-                reward_collected = false;
                 log_code(REWARD_AVAILABLE_EVENT);
                 tone_controller.play(reward_cue_freq, tone_duration);
+                reward_collected = false;
             }
 
             // update
@@ -392,11 +394,11 @@ void finite_state_machine() {
 
                     // update the correct trials and the rates
                     // TODO this could have div by 0 problems
-                    n_trials_succ[ix] =+ 1;
-                    for (int i; i < n_intervals; i++){
-                        succ_rate[i] = n_trials_succ[i] / n_trials[i];
-                    }
-                    update_stim_probs();
+                    // n_trials_succ[ix] =+ 1;
+                    // for (int i; i < n_intervals; i++){
+                    //     succ_rate[i] = n_trials_succ[i] / n_trials[i];
+                    // }
+                    // update_stim_probs();
                 }
             }
 
@@ -484,6 +486,8 @@ void loop() {
     // raw data via serial - the loadcell data
     getRawData();
     processRawData();
+    
+    process_loadcell();
 
     // for clocking execution speed
     if (toggle == false){
