@@ -17,22 +17,45 @@
 
 */
 
+// for checking loop speed
+bool toggle = false;
+
 // int current_state = INI_STATE; // starting at this, aleady declared in interface.cpp
-int last_state = FIXATE_STATE; // whatever other state
+int last_state = TIMEOUT_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
-unsigned long this_ITI_dur = ITI_dur;
 
 // flow control flags
 bool lick_in = false;
 bool reward_collected = false;
 
-// speakers
-Tone reward_tone_controller;
-Tone punish_tone_controller;
-unsigned long tone_duration = 200;
+// speaker
+Tone tone_controller;
+unsigned long tone_duration = 50; 
 
-unsigned long this_fix_dur;
+// unexposed interval tones
+int n_intervals = 6;
+unsigned long[n_intervals] tone_intervals = [400,800,1400,1600,2200,2600]; // in ms, bc will be compared to now()
+unsigned long interval_boundary = 1500;
+float[n_intervals] p_interval = [0.5,0,0,0,0,0.5];
+float[n_intervals] p_interval_cs;
+unsigned long this_interval;
+
+int[n_intervals] n_trials = [0,0,0,0,0,0];
+float[n_trials] n_trials_succ = [0,0,0,0,0,0];
+float[n_trials] succ_rate = [0,0,0,0,0,0];
+
+// loadcell related
+unsigned int zone; // 0=left, 1=center, 2=right
+
+unsigned int left = 0;
+unsigned int center = 1;
+unsigned int right = 2;
+
+unsigned int choice;
+unsigned int correct_side;
+
+bool left_short = true; // TODO expose or change to non-bool
 
 /*
  __        ______     _______
@@ -48,10 +71,6 @@ float now(){
     return (unsigned long) micros() / 1000;
 }
 
-// void log_current_state(){
-//     Serial.println(String(current_state) + '\t' + String(now()));
-// }
-
 void log_code(int code){
     Serial.println(String(code) + '\t' + String(micros()/1000.0));
 }
@@ -60,6 +79,14 @@ void log_msg(String Message){
     Serial.println("<MSG "+Message+" >");
 }
 
+void log_choice(){
+    if (zone == right){
+        log_code(CHOICE_RIGHT_EVENT);
+    }
+    if (zone == left){
+        log_code(CHOICE_LEFT_EVENT);
+    }
+}
 /*
      _______. _______ .__   __.      _______.  ______   .______          _______.
     /       ||   ____||  \ |  |     /       | /  __  \  |   _  \        /       |
@@ -80,6 +107,19 @@ void read_lick(){
   }
 }
 
+void process_loadcell() {
+    // for now, just bins X into zones
+    zone = center;
+    
+    if (X < X_left_thresh){
+        zone = left;
+    }
+
+    if (X > X_right_thresh){
+        zone = right;
+    }
+}
+
 /*
 ____    ____  ___       __      ____    ____  _______
 \   \  /   / /   \     |  |     \   \  /   / |   ____|
@@ -95,15 +135,16 @@ float ul2time(unsigned long reward_volume){
 }
 
 bool reward_valve_closed = true;
-// bool deliver_reward = false; // already forward declared in interface_template.cpp
+// bool deliver_reward = false; // already forward declared in interface.cpp
 unsigned long reward_valve_open_time = max_future;
-float reward_valve_dur = 0;
+float reward_valve_dur;
 
 void RewardValveController(){
-    // practically a self terminating digital pin blink
+    // a self terminating digital pin switch
+    // flipped by setting deliver_reward to true somewhere in the FSM
     if (reward_valve_closed == true && deliver_reward == true) {
-        reward_tone_controller.play(reward_tone_freq, tone_duration);
-        digitalWrite(REWARD_VALVE_PIN,HIGH);
+        tone_controller.play(reward_tone_freq, tone_duration);
+        digitalWrite(REWARD_VALVE_PIN, HIGH);
         log_code(REWARD_VALVE_ON);
         reward_valve_closed = false;
         reward_valve_dur = ul2time(reward_magnitude);
@@ -112,7 +153,7 @@ void RewardValveController(){
     }
 
     if (reward_valve_closed == false && now() - reward_valve_open_time > reward_valve_dur) {
-        digitalWrite(REWARD_VALVE_PIN,LOW);
+        digitalWrite(REWARD_VALVE_PIN, LOW);
         log_code(REWARD_VALVE_OFF);
         reward_valve_closed = true;
     }
@@ -128,21 +169,52 @@ void RewardValveController(){
 
 */
 
-void increment_fix_dur(){
-    if (fix_dur_lower < fix_dur_target){
-        fix_dur_lower = constrain(fix_dur_lower + fix_dur_lower * fix_increment, fix_dur_min, fix_dur_target);
-        fix_dur_upper = constrain(fix_dur_upper + fix_dur_upper * fix_increment, fix_dur_min, fix_dur_target);
-        Serial.println("<VAR fix_dur_lower "+String(fix_dur_lower)+String(">"));
-        Serial.println("<VAR fix_dur_upper "+String(fix_dur_upper)+String(">"));
+int ix; // trial index
+
+// normalize the probabilities
+void normalize_stim_probs(){
+    float P = 0;
+
+    // sum
+    for (int i = 0; i < n_intervals; i++){
+        P += p_interval[i];
+    }
+
+    // divide
+    for (int i = 0; i < n_intervals; i++){
+        p_interval[i] = p_interval[i] / P;
     }
 }
 
-void decrement_fix_dur(){
-    if (fix_dur_lower > fix_dur_min){
-        fix_dur_lower = constrain(fix_dur_lower - fix_dur_lower * fix_decrement, fix_dur_min, fix_dur_target);
-        fix_dur_upper = constrain(fix_dur_upper - fix_dur_upper * fix_decrement, fix_dur_min, fix_dur_target);
-        Serial.println("<VAR fix_dur_lower "+String(fix_dur_lower)+String(">"));
-        Serial.println("<VAR fix_dur_upper "+String(fix_dur_upper)+String(">"));
+void cumsum_stim_probs(){
+    p_interval_cs[0] = 0.0;
+    for (int i = 1; i < n_intervals; i++){
+        p_interval_cs[i] = p_interval_cs[i-1] + p_interval[i-1];
+    }
+}
+
+int get_interval_index(){
+    float r = random(1000) / 1000.0;
+    // determine the corresponding bin
+    for (int i = 0; i < n_intervals-1; i++){
+        if (r > p_interval_cs[i] && r < p_interval_cs[i+1]){
+            return i;
+        }
+    }
+    return n_intervals; // return the last
+}
+
+// adjust probabilities based on performance
+void update_stim_probs(){
+    for (int i = 0; i < (n_intervals/2); i++){
+        if (succ_rate[i] > 0.8){
+            p_interval[i+1] += 0.1;
+        }
+    }
+    for (int i = n_intervals-1; i > (n_intervals/2), i--){
+        if (succ_rate[i] > 0.8){
+            p_interval[i-1] += 0.1;
+        }
     }
 }
 
@@ -153,37 +225,6 @@ void decrement_fix_dur(){
 |   __|     \   \    |  |\/|  |
 |  |    .----)   |   |  |  |  |
 |__|    |_______/    |__|  |__|
-
-to be taken into account when these are written 
-https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
-exit condition has to include condition || last_state != current_state
-so it can get called when state is manually changed
-will not work as exit functions contain transition to next state ... 
-
-new idea to this: make a req_state variable (requested state) and check if
-req and the current state are different
-
-# exit function
-if (exit_condition || req_state != current_state) {
-    current_state = req_state
-}
-but then this needs to get deactivated after one execution, so extra flag is needed
-
-if (exit_condition || (req_state != current_state && state_change_requested == True) ) {
-    // exit actions
-    .
-    .
-    .
-    
-    if (req_state != current_state && state_change_requested == True) {
-        // forced transition
-        current_state = req_state;
-        state_change_requested = False;
-    }
-}
-then, state change is requested by 
-<SET req_state state>
-<SET state_change_requested true>
 */
 
 void state_entry_common(){
@@ -203,11 +244,10 @@ void finite_state_machine() {
 
         case TRIAL_AVAILABLE_STATE:
             // state entry
-            // this directly goes to fixate state thus restarts the hold
-            // aka "autostart"
             if (current_state != last_state){
                 state_entry_common();
-                reward_tone_controller.play(trial_avail_cue_freq, tone_duration);
+                // change this to a small LED?
+                // tone_controller.play(trial_avail_cue_freq, tone_duration);
             }
 
             // update
@@ -216,8 +256,9 @@ void finite_state_machine() {
             }
             
             // exit condition
-            if (true) {
-                // no action required, trial autostarts
+            if (now() - state_entry > autostart_dur) {
+                // currently "autostarts" after some time
+                // for future: push/pull on manipulandum?
                 current_state = PRESENT_INTERVAL_STATE;
             }
             break;
@@ -226,8 +267,23 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
+                log_code(TRIAL_ENTRY_EVENT);
+
                 // draw stimulus from list of intervals
+                // random
+                // ix = random(0,n_intervals);
+                // this_interval = tone_intervals[ix];
+                
+                // weighted
+                ix = get_interval_index();
+                n_trials[ix] += 1;
+
+                // report interval for this trial
+                log_msg(String("this_interval "+String(this_interval)));
+
                 // present first tone
+                log_code(FIRST_TONE_EVENT);
+                tone_controller.play(stim_tone_freq, tone_duration);
             }
 
             // update
@@ -235,11 +291,25 @@ void finite_state_machine() {
 
             }
             
-            // exit condition
-            // time has passed to play second tone
-            if (...)
-                // play second tone
-                current_state = CHOICE_STATE;
+            // exit conditions
+            if (now() - state_entry > this_interval || zone != center) {
+            
+                // premature choice
+                if (zone != center) {
+                    log_choice();
+                    log_code(TRIAL_ABORTED_EVENT);
+                    
+                    // TODO punish cue?
+                    current_state = TIMEOUT_STATE;
+                }
+
+                // interval has passed
+                if (now() - state_entry > this_interval){
+                    // play second tone
+                    log_code(SECOND_TONE_EVENT);
+                    tone_controller.play(stim_tone_freq, tone_duration);
+                    current_state = CHOICE_STATE;
+                }
             }
             break;        
         
@@ -247,99 +317,69 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-                // await response
-                
+
+                // determine what would be a correct answer
+                if (left_short == true){
+                    if (this_interval < interval_boundary){
+                        correct_side = left;
+                    }
+                    else {
+                        correct_side = right;
+                    }
+                }
+                else {
+                    if (this_interval < interval_boundary){
+                        correct_side = right;
+                    }
+                    else {
+                        correct_side = left;
+                    }
+                }
+                // for future:
+                // choice availability could be cued also
             }
 
             // update
             if (last_state == current_state){
-
+            
             }
             
-            // exit condition
-            // if no response -> timeout
-            // if response -> correct or wrong?
-            if (...)
+            // exit conditions
+            if (zone != center || now() - state_entry > choice_dur){
+                // no report, timeout
+                if (now() - state_entry > choice_dur){
+                    log_code(CHOICE_MISSED_EVENT);
+                    // TODO cues? play noise?
+                    current_state = TIMEOUT_STATE;
+                }
                 
+                // choice was made
+                if (zone != center) {
+                    log_choice();
+
+                    // determine success
+                    if (zone == correct_side){
+                        // correct trial
+                        log_code(CHOICE_CORRECT_EVENT);
+                        current_state = REWARD_AVAILABLE_STATE;
+                        
+                    }
+                    else {
+                        // wrong trial
+                        log_code(CHOICE_WRONG_EVENT);
+                        current_state = ITI_STATE; // or timeout?
+                    }
+                }
             }
             break;        
         
-
-
-        // case FIXATE_STATE:
-        //     // state entry
-        //     if (current_state != last_state){
-        //         state_entry_common();
-        //         log_code(TRIAL_ENTRY_EVENT);
-        //         this_fix_dur = random(fix_dur_lower,fix_dur_upper);
-        //         // Serial.println("<VAR this_fix_dur "+String(this_fix_dur)+String(">")); // this causes the variableswidget to try to update a not present varialbe
-        //         log_msg(String("this_fix_dur "+String(this_fix_dur)));
-
-        //         // entry actions
-        //         // cue fixation period
-        //         // LED?
-        //     }
-
-        //     // update
-        //     if (last_state == current_state){
-        //         // if premature lick, timeout
-        //         if (lick_in == true){
-        //             log_code(BROKEN_FIXATION_EVENT);
-        //             log_code(TRIAL_ABORTED_EVENT);
-
-        //             // cue wrong action
-        //             punish_tone_controller.play(punish_tone_freq, tone_duration);
-
-        //             // "soft version" : after broken fixation, restart immediately
-        //             current_state = ITI_STATE;
-
-        //             // "hard version" : broken fixation leads to timeout
-        //             // current_state = TIMEOUT_STATE;
-
-        //             // sweep down fix_dur
-        //             decrement_fix_dur();
-        //             break; // this could fix the dual exit problem
-
-        //         }
-        //     }
-
-        //     // exit condition
-        //     if (now() - state_entry > this_fix_dur) {
-        //         // if successfully withhold movement for enough time:
-        //         // go to reward available state
-        //         log_code(SUCCESSFUL_FIXATION_EVENT);
-        //         log_code(TRIAL_COMPLETED_EVENT);
-        //         current_state = REWARD_AVAILABLE_STATE;
-        //     }
-        //     break;
-
-        // case TIMEOUT_STATE:
-        //     // state entry
-        //     if (current_state != last_state){
-        //         state_entry_common();
-        //         // punish with loud tone
-        //         punish_tone_controller.play(punish_tone_freq, tone_duration);
-        //     }
-
-        //     // update
-        //     if (last_state == current_state){
-        //         // state actions
-        //     }
-
-        //     // exit condition
-        //     if (now() - state_entry > timeout_dur) {
-        //         // after timeout, transit to trial available again
-        //         current_state = TRIAL_AVAILABLE_STATE;
-        //     }
-        //     break;
-
         case REWARD_AVAILABLE_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
                 reward_collected = false;
                 log_code(REWARD_AVAILABLE_EVENT);
-                reward_tone_controller.play(reward_cue_freq, tone_duration);
+                tone_controller.play(reward_cue_freq, tone_duration);
             }
 
             // update
@@ -349,6 +389,14 @@ void finite_state_machine() {
                     log_code(REWARD_COLLECTED_EVENT);
                     deliver_reward = true;
                     reward_collected = true;
+
+                    // update the correct trials and the rates
+                    // TODO this could have div by 0 problems
+                    n_trials_succ[ix] =+ 1;
+                    for (int i; i < n_intervals; i++){
+                        succ_rate[i] = n_trials_succ[i] / n_trials[i];
+                    }
+                    update_stim_probs();
                 }
             }
 
@@ -357,18 +405,30 @@ void finite_state_machine() {
                 // transit to ITI after certain time (reward not collected) or after reward collection
                 if (reward_collected == false) {
                     log_code(REWARD_MISSED_EVENT);
-                    // keep fix dur the same if reward is missed
-                    // decrement_fix_dur();
-                }
-                
-                // only sweep up fix dur if reward is collected. 
-                if (reward_collected == true) {
-                    increment_fix_dur();
                 }
                 current_state = ITI_STATE;
             }
             break;
-            
+
+        case TIMEOUT_STATE:
+            // state entry
+            if (current_state != last_state){
+                state_entry_common();
+                // TODO turn off the ambient light
+            }
+
+            // update
+            if (last_state == current_state){
+                // state actions
+            }
+
+            // exit condition
+            if (now() - state_entry > timeout_dur) {
+                // after timeout, transit to trial available again
+                current_state = TRIAL_AVAILABLE_STATE;
+            }
+            break;            
+
         case ITI_STATE:
             // state entry
             if (current_state != last_state){
@@ -382,13 +442,7 @@ void finite_state_machine() {
 
             // exit condition
             if (now() - state_entry > ITI_dur) {
-                // ITI has to be long enough to not make the mice lick themselves into a timeout
-
-                // normal version: after ITI, transit to trial available
                 current_state = TRIAL_AVAILABLE_STATE;
-
-                // lick for reward version
-                // current_state = REWARD_AVAILABLE_STATE;
             }
             break;
     }
@@ -404,16 +458,13 @@ void finite_state_machine() {
 
 */
 void setup() {
-    Serial.begin(115200);
-    Serial1.begin(115200); // receives loadcell data
+    Serial.begin(115200); // main serial communication with computer
+    Serial1.begin(115200); // serial line for receiving (processed) loadcell X,Y
 
-    reward_tone_controller.begin(REWARD_SPEAKER_PIN);
-    punish_tone_controller.begin(PUNISH_SPEAKER_PIN);
+    tone_controller.begin(SPEAKER_PIN);
     Serial.println("<Arduino is ready to receive commands>");
     delay(1000);
 }
-
-bool toggle = false;
 
 void loop() {
     if (run == true){
@@ -426,27 +477,21 @@ void loop() {
     // sample sensors
     read_lick();
 
-    // serial communication
+    // serial communication with main PC
     getSerialData();
     processSerialData();
 
-    // raw data via serial
+    // raw data via serial - the loadcell data
     getRawData();
     processRawData();
 
-    // punish
-    if (punish == true){
-        punish_tone_controller.play(punish_tone_freq, tone_duration);
-        punish = false;
-    }
-
     // for clocking execution speed
     if (toggle == false){
-        digitalWrite(7,HIGH);
+        digitalWrite(LOOP_PIN, HIGH);
         toggle = true;
     }
     else {
-        digitalWrite(7,LOW);
+        digitalWrite(LOOP_PIN, LOW);
         toggle = false;
     }
 }

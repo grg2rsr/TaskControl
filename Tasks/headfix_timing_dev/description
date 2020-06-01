@@ -9,3 +9,15 @@ training procedure - naive first guess
 3 - push left or right only rewarded after cue
 
 4 - 
+
+# arduino state machine notes
+
+trial avail
+
+present interval
+
+hold
+
+choice
+
+timeout
