@@ -35,9 +35,12 @@ unsigned long tone_duration = 50;
 
 // unexposed interval tones
 int n_intervals = 6;
-unsigned long[n_intervals] tone_intervals = [400,800,1400,1600,2200,2600]; // in ms, bc will be compared to now()
+unsigned long tone_intervals[] = {400, 800, 1400, 1600, 2200, 2600}; // in ms, bc will be compared to now()
 unsigned long interval_boundary = 1500;
 unsigned long this_interval;
+
+int ix; // trial index
+
 
 // loadcell related
 unsigned int zone; // 0=left, 1=center, 2=right
@@ -172,8 +175,6 @@ this is an entire topic in itself - let it rest for now and do random trials
 // float[n_trials] n_trials_succ = [0,0,0,0,0,0];
 // float[n_trials] succ_rate = [0,0,0,0,0,0];
 
-// int ix; // trial index
-
 // // normalize the probabilities
 // void normalize_stim_probs(){
 //     float P = 0;
@@ -251,6 +252,7 @@ void finite_state_machine() {
                 state_entry_common();
                 // change this to a small LED?
                 // tone_controller.play(trial_avail_cue_freq, tone_duration);
+                Serial.println("<RET LOADCELL CURSOR_RESET>");
             }
 
             // update
@@ -302,6 +304,7 @@ void finite_state_machine() {
                     log_code(TRIAL_ABORTED_EVENT);
                     
                     // TODO punish cue?
+                    tone_controller.play(punish_tone_freq, tone_duration);
                     current_state = TIMEOUT_STATE;
                 }
 
@@ -352,6 +355,7 @@ void finite_state_machine() {
                 if (now() - state_entry > choice_dur){
                     log_code(CHOICE_MISSED_EVENT);
                     // TODO cues? play noise?
+                    tone_controller.play(punish_tone_freq, tone_duration);
                     current_state = TIMEOUT_STATE;
                 }
                 
@@ -370,6 +374,7 @@ void finite_state_machine() {
                         // wrong trial
                         log_code(CHOICE_WRONG_EVENT);
                         current_state = ITI_STATE; // or timeout?
+                        tone_controller.play(punish_tone_freq, tone_duration);
                     }
                 }
             }

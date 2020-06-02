@@ -235,7 +235,7 @@ class LoadCellController(QtWidgets.QWidget):
         Fm = sp.array([Fx,Fy])
         
         # physical cursor implementation
-        m = 50 # mass
+        m = 20 # mass
         lam = 1000 # friction factor
 
         # friction as a force acting in the opposite direction of F and proportional to v
@@ -262,7 +262,7 @@ class LoadCellController(QtWidgets.QWidget):
         self.send()
 
     def send(self):
-        ba = struct.pack("ff",self.X[0],self.X[1])
+        ba = struct.pack("ff",self.X[1],self.X[0]) # FIXME INVERSION
         if self.transmission:
             # emit signal for DisplayController
             self.Signals.loadcell_data_available.emit(*self.X)
@@ -276,14 +276,14 @@ class LoadCellController(QtWidgets.QWidget):
             self.udp_out_sock.sendto(ba, (self.UDP_IP_out, int(self.UDP_PORT_out)))
 
     def on_serial(self,line):
-        if line.startswith('<') and line.endswith('>'):
-                    read = line[1:-1].split(' ')
-                    if read[0] == "RET" and read[1] == "LOADCELL":
-                        if read[2] == "CURSOR_RESET":
-                            self.v_last = sp.array([0,0])
-                            self.X_last = sp.array([0,0])
-                            self.X = sp.array([0,0])
-                            self.send()
+        if line.startswith('<'):
+            read = line[1:-1].split(' ')
+            if read[0] == "RET" and read[1] == "LOADCELL":
+                if read[2] == "CURSOR_RESET":
+                    self.v_last = sp.array([0,0])
+                    self.X_last = sp.array([0,0])
+                    self.X = sp.array([0,0])
+                    self.send()
                             
     def closeEvent(self, event):
         # if serial connection is open, close it
@@ -333,6 +333,7 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.LineFB = self.PlotItemFB.plot(x=sp.arange(300), y=self.lc_raw_data[:,1], pen=(200,200,200))
         self.PlotItemFB_pp = self.PlotWindow.addPlot(title='front / back')
         self.LineFB_pp = self.PlotItemFB_pp.plot(x=sp.arange(300), y=self.lc_data[:,0], pen=(200,100,100))
+        self.PlotItemFB_pp.setYRange(-10,10)
 
         self.PlotWindow.nextRow()
 
@@ -340,6 +341,7 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.LineLR = self.PlotItemLR.plot(x=sp.arange(300), y=self.lc_raw_data[:,2], pen=(200,200,200))
         self.PlotItemLR_pp = self.PlotWindow.addPlot(title='left / right')
         self.LineLR_pp = self.PlotItemLR_pp.plot(x=sp.arange(300), y=self.lc_data[:,1], pen=(200,100,100))
+        self.PlotItemLR_pp.setYRange(-10,10)
 
         # # Display and aesthetics
         # self.PlotWindow = pg.GraphicsWindow(title="LoadCell raw data monitor")
@@ -378,7 +380,6 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.lc_data[-1,:] = [x,y]
         self.LineFB_pp.setData(y=self.lc_data[:,0])
         self.LineLR_pp.setData(y=self.lc_data[:,1])
-
 
     def closeEvent(self, event):
         # stub
