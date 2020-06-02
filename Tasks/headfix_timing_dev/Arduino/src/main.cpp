@@ -168,45 +168,45 @@ void RewardValveController(){
 this is an entire topic in itself - let it rest for now and do random trials
 */
 
-// float[n_intervals] p_interval = [0.5,0,0,0,0,0.5];
-// float[n_intervals] p_interval_cs;
+float p_interval[6] = {1,1,1,1,1,1};
+float p_interval_cs[6];
 
 // int[n_intervals] n_trials = [0,0,0,0,0,0];
 // float[n_trials] n_trials_succ = [0,0,0,0,0,0];
 // float[n_trials] succ_rate = [0,0,0,0,0,0];
 
-// // normalize the probabilities
-// void normalize_stim_probs(){
-//     float P = 0;
+void normalize_stim_probs(){
+    // sum
+    float p_sum = 0;
+    for (int i = 0; i < n_intervals; i++){
+        p_sum += p_interval[i];
+    }
 
-//     // sum
-//     for (int i = 0; i < n_intervals; i++){
-//         P += p_interval[i];
-//     }
+    // normalize
+    for (int i = 0; i < n_intervals; i++){
+        p_interval[i] = p_interval[i] / p_sum;
+    }
+}
 
-//     // divide
-//     for (int i = 0; i < n_intervals; i++){
-//         p_interval[i] = p_interval[i] / P;
-//     }
-// }
+void cumsum_stim_probs(){
+    p_interval_cs[0] = 0.0;
+    for (int i = 1; i < n_intervals; i++){
+        p_interval_cs[i] = p_interval_cs[i-1] + p_interval[i-1];
+    }
+}
 
-// void cumsum_stim_probs(){
-//     p_interval_cs[0] = 0.0;
-//     for (int i = 1; i < n_intervals; i++){
-//         p_interval_cs[i] = p_interval_cs[i-1] + p_interval[i-1];
-//     }
-// }
-
-// int get_interval_index(){
-//     float r = random(1000) / 1000.0;
-//     // determine the corresponding bin
-//     for (int i = 0; i < n_intervals-1; i++){
-//         if (r > p_interval_cs[i] && r < p_interval_cs[i+1]){
-//             return i;
-//         }
-//     }
-//     return n_intervals; // return the last
-// }
+int get_interval_index(){
+    normalize_stim_probs();
+    cumsum_stim_probs();
+    float r = random(1000) / 1000.0;
+    // determine the corresponding bin
+    for (int i = 0; i < n_intervals-1; i++){
+        if (r > p_interval_cs[i] && r < p_interval_cs[i+1]){
+            return i;
+        }
+    }
+    return n_intervals-1; // return the last
+}
 
 // // adjust probabilities based on performance
 // void update_stim_probs(){
@@ -275,12 +275,14 @@ void finite_state_machine() {
                 log_code(TRIAL_ENTRY_EVENT);
 
                 // draw stimulus from list of intervals at random
-                ix = random(0,n_intervals);
-                this_interval = tone_intervals[ix];
+                // ix = random(0,n_intervals);
                 
                 // for future: weighted
-                // ix = get_interval_index();
+                ix = get_interval_index();
                 // n_trials[ix] += 1;
+                // Serial.println(ix);
+
+                this_interval = tone_intervals[ix];
 
                 // report interval for this trial
                 log_msg(String("this_interval "+String(this_interval)));
