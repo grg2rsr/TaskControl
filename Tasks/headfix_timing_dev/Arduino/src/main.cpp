@@ -73,7 +73,7 @@ void log_code(int code){
 }
 
 void log_msg(String Message){
-    Serial.println("<MSG "+Message+" >");
+    Serial.println("<MSG "+Message+">");
 }
 
 void log_choice(){
@@ -222,6 +222,8 @@ int get_interval_index(){
 //     }
 // }
 
+// reporting the probs
+
 /*
  _______     _______..___  ___.
 |   ____|   /       ||   \/   |
@@ -252,7 +254,9 @@ void finite_state_machine() {
                 state_entry_common();
                 // change this to a small LED?
                 // tone_controller.play(trial_avail_cue_freq, tone_duration);
-                Serial.println("<RET LOADCELL CURSOR_RESET>");
+
+                // tell loadcell controller to recenter
+                log_msg("LOADCELL CURSOR_RESET");
             }
 
             // update
@@ -273,6 +277,10 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 log_code(TRIAL_ENTRY_EVENT);
+                // sync w load cell
+                digitalWrite(LC_SYNC_PIN,HIGH);
+                delay(5);
+                digitalWrite(LC_SYNC_PIN,LOW);
 
                 // draw stimulus from list of intervals at random
                 // ix = random(0,n_intervals);

@@ -278,7 +278,7 @@ class LoadCellController(QtWidgets.QWidget):
     def on_serial(self,line):
         if line.startswith('<'):
             read = line[1:-1].split(' ')
-            if read[0] == "RET" and read[1] == "LOADCELL":
+            if read[0] == "MSG" and read[1] == "LOADCELL":
                 if read[2] == "CURSOR_RESET":
                     self.v_last = sp.array([0,0])
                     self.X_last = sp.array([0,0])
@@ -293,6 +293,9 @@ class LoadCellController(QtWidgets.QWidget):
         self.stopped = True
         # self.th_read.join()
         self.close()
+
+    def stop(self):
+        pass
 
 """
 .___  ___.   ______   .__   __.  __  .___________.  ______   .______
