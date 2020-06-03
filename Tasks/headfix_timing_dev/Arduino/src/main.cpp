@@ -208,7 +208,7 @@ int get_interval_index(){
     return n_intervals-1; // return the last
 }
 
-// // adjust probabilities based on performance
+// adjust probabilities based on performance
 // void update_stim_probs(){
 //     for (int i = 0; i < (n_intervals/2); i++){
 //         if (succ_rate[i] > 0.8){
@@ -221,6 +221,19 @@ int get_interval_index(){
 //         }
 //     }
 // }
+
+void update_stim_probs(){
+    for (int i = 0; i < (n_intervals/2); i++){
+        if (succ_rate[i] > 0.8){
+            p_interval[i+1] = constrain(p_interval[i+1] + 0.1, 0, 1);
+        }
+    }
+    for (int i = n_intervals-1; i > (n_intervals/2), i--){
+        if (succ_rate[i] > 0.8){
+            p_interval[i-1] = constrain(p_interval[i-1] - 0.1, 0, 1);
+        }
+    }
+}
 
 // reporting the probs
 
@@ -442,7 +455,7 @@ void finite_state_machine() {
             // exit condition
             if (now() - state_entry > timeout_dur) {
                 // after timeout, transit to trial available again
-                current_state = TRIAL_AVAILABLE_STATE;
+                current_state = ITI_STATE;
             }
             break;            
 
@@ -450,6 +463,7 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
+                log_msg("REQUEST TRIAL_PROBS"); // now is a good moment?
             }
 
             // update

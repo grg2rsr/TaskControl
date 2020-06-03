@@ -30,6 +30,58 @@ import HardwareWidgets
 
 """
 
+class TrialTypeController(QtWidgets.QWidget):
+    def __init__(self, parent, ArduinoController):
+        super(TrialTypeController, self).__init__(parent=parent)
+
+        # needs an arduinocontroller to be instantiated
+        self.ArduinoController = ArduinoController
+        self.AduinoController.Signals.serial_data_available.connect(self.on_serial)
+
+        # calculate current engagement from behav data
+
+        # calculate trial hardness from behav data
+
+        # send new p values to arduino
+
+        # plot them
+
+    def initUI(self):
+        """ plots of the current p values """
+        pass
+
+    def on_serial(self,line):
+        # if arduino requests action
+        if line == "<MSG REQUEST TRIAL_PROBS>":
+            E = calculate_task_engagement()
+            H = calculate_trial_difficulty()
+            W = calculate_trial_weights(E,H)
+
+    def calculate_task_engagement(self):
+        n_trial_types = 6 # HARDCODE
+        P_default = sp.array([0.5,0,0,0,0,0.5])
+        history = 10 # past trials to take into consideration 
+
+        # get the data
+
+        # do the calc
+
+        pass
+
+    def calculate_trial_difficulty(self):
+        # get the data (same data?)
+
+        # do the calc
+        # what to do if there are less than 10 past trials
+
+    def send_probabilities(self):
+        # uses arduinocontroller to send
+        for i in range(n_trial_types):
+
+
+    def update_plot(self):
+        pass
+
 class SettingsWidget(QtWidgets.QWidget):
     """
     The main toplevel widget. Is parent of all controllers. Brings together all animal and task related information
