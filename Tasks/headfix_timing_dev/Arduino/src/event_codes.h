@@ -30,6 +30,7 @@ const unsigned int TRIAL_ABORTED_EVENT = 21;
 const unsigned int CHOICE_MISSED_EVENT = 22;
 const unsigned int CHOICE_WRONG_EVENT = 23;
 const unsigned int CHOICE_CORRECT_EVENT = 24;
+const unsigned int TRIAL_SUCCESSFUL_EVENT = 25;
 
 // reward related
 const unsigned int REWARD_AVAILABLE_EVENT = 30;

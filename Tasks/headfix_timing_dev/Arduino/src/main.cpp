@@ -390,6 +390,7 @@ void finite_state_machine() {
                     if (zone == correct_side){
                         // correct trial
                         log_code(CHOICE_CORRECT_EVENT);
+                        log_code(TRIAL_SUCCESSFUL_EVENT);
                         current_state = REWARD_AVAILABLE_STATE;
                         
                     }
