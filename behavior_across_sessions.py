@@ -62,7 +62,7 @@ LogDfs = [bhv.filter_bad_licks(LogDf) for LogDf in LogDfs]
  
 """
 
-# Define metrics to be applied
+# Define metrics to be applied on the individual trials
 TrialsMetrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
 
 SessionDfs = []
@@ -79,9 +79,8 @@ for LogDf in LogDfs:
 
     SessionDfs.append(bhv.parse_trials(TrialDfs, TrialsMetrics))
 
-# Transform SessionDfs into PerformanceDf - single Df with behavioral summary statistics
+# define the metrics to be applied on the Sessions
+SessionMetrics = (bhv.rewards_collected, bhv.mean_reward_collection_rt)
 
-MetaMetrics = (bhv.collected_rate, bhv.mean_rt)
-
-bhv.parse_sessions(SessionDfs, MetaMetrics)
+bhv.parse_sessions(SessionDfs, SessionMetrics)
                                    
