@@ -54,19 +54,21 @@ class ArduinoController(QtWidgets.QWidget):
         self.VariableController = ArduinoVariablesWidget(self,Df)
 
         path = self.task_folder.joinpath('Arduino','src','event_codes.h')
-        Df = functions.parse_code_map(path)
-        self.code_map = dict(zip(Df['code'], Df['name']))
+        CodesDf = functions.parse_code_map(path)
+        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
+        # online analyzer
+        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT) # HARDCODE
+        self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
+    
         # take care of the kids
-        self.Children = [self.VariableController]
+        self.Children = [self.VariableController, self.OnlineDataAnalyser]
 
         # signals
         self.Signals = Signals()
-        self.Signals.serial_data_available.connect(self.parse_line)
-        # self.Data = pd.DataFrame(columns=['code','t','name'])
+        # self.Signals.serial_data_available.connect(self.parse_line) # TODO
 
         self.stopped = False
-        # self.reprogram = True # TODO remove this variable
 
         self.initUI()
     
@@ -351,6 +353,7 @@ class ArduinoController(QtWidgets.QWidget):
         print("listening on serial port has started")
 
     def parse_line(self,line):
+        # TODO FIXME this should be part of the VariableController
         # if report
         if line.startswith('<'):
             if line[1:-1].split(' ')[0] == 'VAR':
@@ -361,26 +364,14 @@ class ArduinoController(QtWidgets.QWidget):
                 Df.reset_index(drop=True,inplace=True)
                 self.VariableController.VariableEditWidget.set_entries(Df)
 
+        # TODO FIXME this should be now part of the online analyzer
         # normal read
         if '\t' in line:
             code = line.split('\t')[0]
             decoded = self.code_map[code]
             line = '\t'.join([decoded,line.split('\t')[1]])
 
-            # update counters
-            if decoded == 'TRIAL_COMPLETED_EVENT':
-                self.parent().TrialCounter.increment(successful=True)
-
-            if decoded == 'TRIAL_ABORTED_EVENT':
-                self.parent().TrialCounter.increment(successful=False)
-
-            if decoded == 'REWARD_COLLECTED_EVENT':
-                VarsDf = self.VariableController.VariableEditWidget.get_entries()
-                if 'reward_magnitude' in VarsDf['name'].values:
-                    VarsDf.index = VarsDf.name
-                    current_magnitude = VarsDf.loc['reward_magnitude','value']
-                    self.parent().WaterCounter.increment(current_magnitude)
-
+            
     def closeEvent(self, event):
 
         # take care of ending the threads
@@ -566,6 +557,151 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
            
         except KeyError:
             print("trying to use last vars, but animal has not been run on this task before.")
+
+
+"""
+ 
+  #######  ##    ## ##       #### ##    ## ########       ###    ##    ##    ###    ##       ##    ##  ######  ####  ######  
+ ##     ## ###   ## ##        ##  ###   ## ##            ## ##   ###   ##   ## ##   ##        ##  ##  ##    ##  ##  ##    ## 
+ ##     ## ####  ## ##        ##  ####  ## ##           ##   ##  ####  ##  ##   ##  ##         ####   ##        ##  ##       
+ ##     ## ## ## ## ##        ##  ## ## ## ######      ##     ## ## ## ## ##     ## ##          ##     ######   ##   ######  
+ ##     ## ##  #### ##        ##  ##  #### ##          ######### ##  #### ######### ##          ##          ##  ##        ## 
+ ##     ## ##   ### ##        ##  ##   ### ##          ##     ## ##   ### ##     ## ##          ##    ##    ##  ##  ##    ## 
+  #######  ##    ## ######## #### ##    ## ########    ##     ## ##    ## ##     ## ########    ##     ######  ####  ######  
+ 
+"""
+
+class OnlineDataAnalyser(QtCore.QObject):
+    """ listens to serial port, analyzes arduino data as it comes in """
+    def __init__(self, parent, CodesDf, Metrics):
+        super(OnlineDataAnalyser, self).__init__(parent=parent)
+        self.CodesDf = CodesDf
+        self.Metrics = Metrics
+        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
+        
+        self.lines = []
+        self.SessionDf = None
+
+        self.Signals = Signals()
+
+        self.parent = parent
+        parent.Signals.serial_data_available.connect(self.update)
+
+    def update(self,line): # this is horrible
+        # if decodeable
+        if not line.startswith('<'):
+            code,t = line.split('\t')
+            decoded = self.code_map[code]
+            t = float(t)
+
+            # update counters
+            if decoded == 'TRIAL_COMPLETED_EVENT': # FIXME TODO
+                self.parent().parent().TrialCounter.increment(successful=True)
+
+            if decoded == 'TRIAL_ABORTED_EVENT':
+                self.parent().parent().TrialCounter.increment(successful=False)
+
+            if decoded == 'REWARD_COLLECTED_EVENT':
+                VarsDf = self.parent().VariableController.VariableEditWidget.get_entries()
+                if 'reward_magnitude' in VarsDf['name'].values:
+                    VarsDf.index = VarsDf.name
+                    current_magnitude = VarsDf.loc['reward_magnitude','value']
+                    self.parent().parent().WaterCounter.increment(current_magnitude)
+
+            # the signal with which a trial ends
+            if decoded == "TRIAL_AVAILABLE_STATE": # TODO expose hardcode
+                self.lines.append(line)
+
+                # parse lines
+                TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map)
+                TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
+                
+                if TrialMetricsDf is not None:
+                    # update SessionDf
+                    if self.SessionDf is None: # on first
+                        self.SessionDf = TrialMetricsDf
+                    else:
+                        self.SessionDf = self.SessionDf.append(TrialMetricsDf)
+                        self.SessionDf = self.SessionDf.reset_index(drop=True)
+
+                    # emit data
+                    self.Signals.trial_data_available.emit(TrialDf, TrialMetricsDf)
+
+                    # restart lines with current line
+                    self.lines = [line]
+            else:
+                self.lines.append(line)    
+
+"""
+ 
+ ########  #######      ######   #######  ########  ######## 
+    ##    ##     ##    ##    ## ##     ## ##     ##    ##    
+    ##    ##     ##    ##       ##     ## ##     ##    ##    
+    ##    ##     ##     ######  ##     ## ########     ##    
+    ##    ##     ##          ## ##     ## ##   ##      ##    
+    ##    ##     ##    ##    ## ##     ## ##    ##     ##    
+    ##     #######      ######   #######  ##     ##    ##    
+ 
+"""
+
+class TrialTypeController(QtWidgets.QWidget):
+    def __init__(self, parent, ArduinoController, OnlineDataAnalyser):
+        super(TrialTypeController, self).__init__(parent=parent)
+
+        # needs an arduinocontroller to be instantiated
+        self.ArduinoController = ArduinoController
+        self.AduinoController.Signals.serial_data_available.connect(self.on_serial)
+
+        self.OnlineDataAnalyzer = OnlineDataAnalyser
+
+        # calculate current engagement from behav data
+
+        # calculate trial hardness from behav data
+
+        # send new p values to arduino
+
+        # plot them
+
+    def initUI(self):
+        """ plots of the current p values """
+        pass
+
+    def on_serial(self,line):
+        # if arduino requests action
+        if line == "<MSG REQUEST TRIAL_PROBS>":
+            E = calculate_task_engagement()
+            H = calculate_trial_difficulty()
+            W = calculate_trial_weights(E,H)
+
+            self.update_plot()
+
+    def calculate_task_engagement(self):
+        n_trial_types = 6 # HARDCODE
+        P_default = sp.array([0.5,0,0,0,0,0.5])
+        history = 10 # past trials to take into consideration 
+
+        # get the data
+
+        # do the calc
+
+        pass
+
+    def calculate_trial_difficulty(self):
+        # get the data (same data?)
+
+        # do the calc
+        # what to do if there are less than 10 past trials
+
+    def send_probabilities(self):
+        # uses arduinocontroller to send
+        for i in range(n_trial_types):
+            cmd = ' '.join(['UPD',str(i),str(self.P[i])])
+            cmd = '<'+cmd+'>'
+            bytestr = str.encode(cmd)
+            self.ArduinoController.send_raw(bytestr)
+
+    def update_plot(self):
+        pass
 
 """
 .___  ___.   ______   .__   __.  __  .___________.  ______   .______

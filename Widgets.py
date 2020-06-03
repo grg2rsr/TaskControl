@@ -219,8 +219,8 @@ class SettingsWidget(QtWidgets.QWidget):
     def update_plot(self):
         """ launches the plotters """
         from TaskVis_pg import SessionVis, TrialsVis
-        self.SessionVisWidget = SessionVis(self, self.OnlineDataAnalyser)
-        self.TrialsVisWidget = TrialsVis(self, self.OnlineDataAnalyser)
+        self.SessionVisWidget = SessionVis(self, self.ArduinoController.OnlineDataAnalyser)
+        self.TrialsVisWidget = TrialsVis(self, self.ArduinoController.OnlineDataAnalyser)
 
     def closeEvent(self,event):
         # TODO iterate over controllers and close all
@@ -290,12 +290,6 @@ class SettingsWidget(QtWidgets.QWidget):
 
             self.running = True
 
-            # start the online data analyzer
-            path = self.task_folder.joinpath('Arduino','src','event_codes.h')
-            CodesDf = functions.parse_code_map(path)
-            Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT) # FIXME HARDCODED!!!
-            self.OnlineDataAnalyser = OnlineDataAnalyser(self.ArduinoController, CodesDf, Metrics)
-        
             # gray out button, set to running
             self.Plot_button.setEnabled(True)
 
@@ -310,53 +304,6 @@ class SettingsWidget(QtWidgets.QWidget):
         else:
             # Here - change button to stop
             print("Task is already running! ")
-
-    # def update_counter(self,line):
-    #     # even better would be to have this guy only incrementing / decrementing etc
-    #     # and then take care within the controller if it should be incremented
-    #     # if report a change in a var value
-    #     if line.startswith('<'):
-    #         if line[1:-1].split(' ')[0] == 'VAR':
-    #             cmd,var,value = line[1:-1].split(' ')
-    #             Df = self.ArduinoController.VariableController.VariableEditWidget.get_entries()
-    #             Df.index = Df.name
-    #             Df.loc[var,'value'] = int(value)
-    #             Df.reset_index(drop=True,inplace=True)
-    #             self.ArduinoController.VariableController.VariableEditWidget.set_entries(Df)
-    #             return None
-
-    #     # classic decodeable
-    #     if '\t' in line:
-    #         code = line.split('\t')[0]
-    #         decoded = self.ArduinoController.StateMachineMonitor.code_map[code] # FIXME
-    #         line = '\t'.join([decoded,line.split('\t')[1]])
-
-    #         # update counters
-    #         if decoded == 'TRIAL_COMPLETED_EVENT' or decoded == 'TRIAL_ABORTED_EVENT':
-    #             TrialCounter = self.parent().parent().TrialCounter
-    #             vals = [int(v) for v in TrialCounter.text().split('\t')[0].split('/')]
-    #             if decoded == 'TRIAL_COMPLETED_EVENT':
-    #                 vals[0] += 1
-    #                 vals[2] += 1
-    #             if decoded == 'TRIAL_ABORTED_EVENT':
-    #                 vals[1] += 1
-    #                 vals[2] += 1
-
-    #             new_frac = sp.around(vals[0]/vals[2],2)
-    #             TrialCounter.setText('/'.join([str(v) for v in vals]) + '\t' + str(new_frac))
-
-    #         if decoded == 'REWARD_COLLECTED_EVENT':
-    #             amount = int(self.parent().parent().WaterCounter.text())
-    #             VarsDf = self.parent().VariableController.VariableEditWidget.get_entries()
-
-    #             if 'reward_magnitude' in VarsDf['name'].values:
-    #                 VarsDf.index = VarsDf.name
-    #                 amount += VarsDf.loc['reward_magnitude','value']
-    #                 self.parent().parent().WaterCounter.setText(str(int(amount)))
-
-    #     except:
-    #         # print("SerialMon update failed on line: ",line)
-    #         pass        
 
     def Done(self):
         """ finishing the session """
@@ -471,7 +418,6 @@ class SettingsWidget(QtWidgets.QWidget):
 
         self.layout_controllers()
 
-
     def time_handler(self):
         # called every second by QTimer
         # FIXME rounding errors
@@ -492,13 +438,6 @@ class SettingsWidget(QtWidgets.QWidget):
                 self.Done()
             if current_num_trials >= max_trials and max_trials > 0:
                 self.Done()
-
-       
-
-
-
-
-
 
 
 class AnimalInfoWidget(QtWidgets.QWidget):
@@ -541,119 +480,6 @@ class AnimalInfoWidget(QtWidgets.QWidget):
             pass
 
 """
- 
- ########  #######      ######   #######  ########  ######## 
-    ##    ##     ##    ##    ## ##     ## ##     ##    ##    
-    ##    ##     ##    ##       ##     ## ##     ##    ##    
-    ##    ##     ##     ######  ##     ## ########     ##    
-    ##    ##     ##          ## ##     ## ##   ##      ##    
-    ##    ##     ##    ##    ## ##     ## ##    ##     ##    
-    ##     #######      ######   #######  ##     ##    ##    
- 
-"""
-
-
-class OnlineDataAnalyser(QtCore.QObject):
-    def __init__(self, ArduinoController, CodesDf, Metrics):
-        self.CodesDf = CodesDf
-        self.Metrics = Metrics
-        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
-        
-        self.lines = []
-        self.SessionDf = None
-
-        self.Signals = Signals()
-
-        ArduinoController.Signals.serial_data_available.connect(self.update)
-
-    def update(self,line):
-        # if decodeable
-        if not line.startswith('<'):
-            code,t = line.split('\t')
-            decoded = self.code_map[code]
-            t = float(t)
-
-            # the signal with which a trial ends
-            if decoded == "TRIAL_AVAILABLE_STATE": # TODO expose hardcode
-                self.lines.append(line)
-
-                # parse lines
-                TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map)
-                TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
-                
-                if TrialMetricsDf is not None:
-                    # update SessionDf
-                    if self.SessionDf is None: # on first
-                        self.SessionDf = TrialMetricsDf
-                    else:
-                        self.SessionDf = self.SessionDf.append(TrialMetricsDf)
-                        self.SessionDf = self.SessionDf.reset_index(drop=True)
-
-                    # emit data
-                    self.Signals.trial_data_available.emit(TrialDf, TrialMetricsDf)
-
-                    # restart lines with current line
-                    self.lines = [line]
-            else:
-                self.lines.append(line)    
-
-
-class TrialTypeController(QtWidgets.QWidget):
-    def __init__(self, parent, ArduinoController):
-        super(TrialTypeController, self).__init__(parent=parent)
-
-        # needs an arduinocontroller to be instantiated
-        self.ArduinoController = ArduinoController
-        self.AduinoController.Signals.serial_data_available.connect(self.on_serial)
-
-        # calculate current engagement from behav data
-
-        # calculate trial hardness from behav data
-
-        # send new p values to arduino
-
-        # plot them
-
-    def initUI(self):
-        """ plots of the current p values """
-        pass
-
-    def on_serial(self,line):
-        # if arduino requests action
-        if line == "<MSG REQUEST TRIAL_PROBS>":
-            E = calculate_task_engagement()
-            H = calculate_trial_difficulty()
-            W = calculate_trial_weights(E,H)
-
-            self.update_plot()
-
-    def calculate_task_engagement(self):
-        n_trial_types = 6 # HARDCODE
-        P_default = sp.array([0.5,0,0,0,0,0.5])
-        history = 10 # past trials to take into consideration 
-
-        # get the data
-
-        # do the calc
-
-        pass
-
-    def calculate_trial_difficulty(self):
-        # get the data (same data?)
-
-        # do the calc
-        # what to do if there are less than 10 past trials
-
-    def send_probabilities(self):
-        # uses arduinocontroller to send
-        for i in range(n_trial_types):
-
-
-    def update_plot(self):
-        pass
-
-
-"""
 .______     ______   .______    __    __  .______     _______.
 |   _  \   /  __  \  |   _  \  |  |  |  | |   _  \   /       |
 |  |_)  | |  |  |  | |  |_)  | |  |  |  | |  |_)  | |   (----`
@@ -662,7 +488,6 @@ class TrialTypeController(QtWidgets.QWidget):
 | _|       \______/  | _|       \______/  | _|   |_______/
 
 """
-
 
 class RunInfoWidget(QtWidgets.QDialog):
     """ collects all that is left required manual input by the user upon run """
@@ -922,6 +747,7 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
 
         Df = pd.DataFrame(rows, columns=['name', 'value', 'dtype'])
         return Df
+
 
 class ErrorWidget(QtWidgets.QMessageBox):
     # TODO implement me
