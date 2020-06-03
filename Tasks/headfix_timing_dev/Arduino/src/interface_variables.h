@@ -6,7 +6,7 @@ int stim_tone_freq = 10000;
 int reward_cue_freq = 12000;
 int reward_tone_freq = 12000;
 
-unsigned long autostart_dur = 1000;
+unsigned long trial_avail_dur = 10000;
 unsigned long choice_dur = 2000;
 unsigned long timeout_dur = 4000;
 unsigned long ITI_dur = 5000;
@@ -18,3 +18,6 @@ unsigned long reward_available_dur = 1000;
 
 float X_left_thresh = -5;
 float X_right_thresh = 5;
+
+float Y_back_thresh = -5;
+float Y_front_thresh = 5;

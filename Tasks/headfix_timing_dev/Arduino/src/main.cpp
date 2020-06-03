@@ -45,9 +45,15 @@ int ix; // trial index
 // loadcell related
 unsigned int zone; // 0=left, 1=center, 2=right
 
-unsigned int left = 0;
-unsigned int center = 1;
-unsigned int right = 2;
+unsigned int left_back = 1;
+unsigned int back = 2;
+unsigned int right_back = 3;
+unsigned int left = 4;
+unsigned int center = 5;
+unsigned int right = 6;
+unsigned int left_front = 7;
+unsigned int front = 8;
+unsigned int right_front = 9;
 
 unsigned int choice;
 unsigned int correct_side;
@@ -105,15 +111,42 @@ void read_lick(){
 }
 
 void process_loadcell() {
-    // for now, just bins X into zones
-    zone = center;
+    // for now, just bins into zones
     
-    if (X < X_left_thresh){
+    if (X < X_left_thresh && Y < Y_back_thresh){
+        zone = left_back;
+    }
+
+    if (X > X_left_thresh && X < X_right_thresh && Y < Y_back_thresh){
+        zone = back;
+    }
+
+    if (X > X_right_thresh && Y < Y_back_thresh){
+        zone = right_back;
+    }
+    
+    if (X < X_left_thresh && Y > Y_back_thresh && Y < Y_front_thresh){
         zone = left;
     }
 
-    if (X > X_right_thresh){
+    if (X > X_left_thresh && X < X_right_thresh && Y > Y_back_thresh && Y < Y_front_thresh){
+        zone = center;
+    }
+
+    if (X > X_right_thresh && Y > Y_back_thresh && Y < Y_front_thresh){
         zone = right;
+    }
+
+    if (X < X_left_thresh && Y > Y_front_thresh){
+        zone = left_front;
+    }
+
+    if (X > X_left_thresh && X < X_right_thresh &&  Y > Y_front_thresh){
+        zone = front;
+    }
+
+    if (X > X_right_thresh && Y > Y_front_thresh){
+        zone = right_front;
     }
 }
 
@@ -157,23 +190,20 @@ void RewardValveController(){
 }
 
 /*
-.___  ___.   ______   ____    ____  __  .__   __.   _______    ____    ____  ___      .______          _______.
-|   \/   |  /  __  \  \   \  /   / |  | |  \ |  |  /  _____|   \   \  /   / /   \     |   _  \        /       |
-|  \  /  | |  |  |  |  \   \/   /  |  | |   \|  | |  |  __      \   \/   / /  ^  \    |  |_)  |      |   (----`
-|  |\/|  | |  |  |  |   \      /   |  | |  . `  | |  | |_ |      \      / /  /_\  \   |      /        \   \
-|  |  |  | |  `--'  |    \    /    |  | |  |\   | |  |__| |       \    / /  _____  \  |  |\  \----.----)   |
-|__|  |__|  \______/      \__/     |__| |__| \__|  \______|        \__/ /__/     \__\ | _| `._____|_______/
-
-
-this is an entire topic in itself - let it rest for now and do random trials
+ 
+ ######## ########  ####    ###    ##           ######  ##     ##  #######  ####  ######  ######## 
+    ##    ##     ##  ##    ## ##   ##          ##    ## ##     ## ##     ##  ##  ##    ## ##       
+    ##    ##     ##  ##   ##   ##  ##          ##       ##     ## ##     ##  ##  ##       ##       
+    ##    ########   ##  ##     ## ##          ##       ######### ##     ##  ##  ##       ######   
+    ##    ##   ##    ##  ######### ##          ##       ##     ## ##     ##  ##  ##       ##       
+    ##    ##    ##   ##  ##     ## ##          ##    ## ##     ## ##     ##  ##  ##    ## ##       
+    ##    ##     ## #### ##     ## ########     ######  ##     ##  #######  ####  ######  ######## 
+ 
 */
 
+// hardcoded for now - p_trial
 float p_interval[6] = {1,1,1,1,1,1};
 float p_interval_cs[6];
-
-// int[n_intervals] n_trials = [0,0,0,0,0,0];
-// float[n_trials] n_trials_succ = [0,0,0,0,0,0];
-// float[n_trials] succ_rate = [0,0,0,0,0,0];
 
 void normalize_stim_probs(){
     // sum
@@ -208,35 +238,6 @@ int get_interval_index(){
     return n_intervals-1; // return the last
 }
 
-// adjust probabilities based on performance
-// void update_stim_probs(){
-//     for (int i = 0; i < (n_intervals/2); i++){
-//         if (succ_rate[i] > 0.8){
-//             p_interval[i+1] = constrain(p_interval[i+1] + 0.1, 0, 1);
-//         }
-//     }
-//     for (int i = n_intervals-1; i > (n_intervals/2), i--){
-//         if (succ_rate[i] > 0.8){
-//             p_interval[i-1] = constrain(p_interval[i-1] - 0.1, 0, 1);
-//         }
-//     }
-// }
-
-void update_stim_probs(){
-    for (int i = 0; i < (n_intervals/2); i++){
-        if (succ_rate[i] > 0.8){
-            p_interval[i+1] = constrain(p_interval[i+1] + 0.1, 0, 1);
-        }
-    }
-    for (int i = n_intervals-1; i > (n_intervals/2), i--){
-        if (succ_rate[i] > 0.8){
-            p_interval[i-1] = constrain(p_interval[i-1] - 0.1, 0, 1);
-        }
-    }
-}
-
-// reporting the probs
-
 /*
  _______     _______..___  ___.
 |   ____|   /       ||   \/   |
@@ -265,7 +266,8 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-                // change this to a small LED?
+                // TODO turn on trial_available LED
+
                 // tone_controller.play(trial_avail_cue_freq, tone_duration);
 
                 // tell loadcell controller to recenter
@@ -278,10 +280,17 @@ void finite_state_machine() {
             }
             
             // exit condition
-            if (now() - state_entry > autostart_dur) {
-                // currently "autostarts" after some time
-                // for future: push/pull on manipulandum?
-                current_state = PRESENT_INTERVAL_STATE;
+            if (now() - state_entry > trial_avail_dur || zone == back) {
+                // TODO turn trail avail LED off
+
+                if (now() - state_entry > trial_avail_dur){
+                    // missed trial init -> to to ITI again
+                    current_state = ITI_STATE;
+                }
+                if (zone == front){
+                    // trial initiated
+                    current_state = PRESENT_INTERVAL_STATE;
+                }
             }
             break;
 
@@ -420,14 +429,6 @@ void finite_state_machine() {
                     log_code(REWARD_COLLECTED_EVENT);
                     deliver_reward = true;
                     reward_collected = true;
-
-                    // update the correct trials and the rates
-                    // TODO this could have div by 0 problems
-                    // n_trials_succ[ix] =+ 1;
-                    // for (int i; i < n_intervals; i++){
-                    //     succ_rate[i] = n_trials_succ[i] / n_trials[i];
-                    // }
-                    // update_stim_probs();
                 }
             }
 
