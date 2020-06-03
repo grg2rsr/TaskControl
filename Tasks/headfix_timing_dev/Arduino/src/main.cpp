@@ -21,7 +21,7 @@
 bool toggle = false;
 
 // int current_state = INI_STATE; // starting at this, aleady declared in interface.cpp
-int last_state = TIMEOUT_STATE; // whatever other state
+int last_state = ITI_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
 
@@ -41,22 +41,21 @@ unsigned long this_interval;
 
 int ix; // trial index
 
+// loadcell binning
+int zone;
 
-// loadcell related
-unsigned int zone; // 0=left, 1=center, 2=right
+int left_back = 1;
+int back = 2;
+int right_back = 3;
+int left = 4;
+int center = 5;
+int right = 6;
+int left_front = 7;
+int front = 8;
+int right_front = 9;
 
-unsigned int left_back = 1;
-unsigned int back = 2;
-unsigned int right_back = 3;
-unsigned int left = 4;
-unsigned int center = 5;
-unsigned int right = 6;
-unsigned int left_front = 7;
-unsigned int front = 8;
-unsigned int right_front = 9;
-
-unsigned int choice;
-unsigned int correct_side;
+int choice;
+int correct_side;
 
 bool left_short = true; // TODO expose or change to non-bool
 
@@ -112,7 +111,6 @@ void read_lick(){
 
 void process_loadcell() {
     // for now, just bins into zones
-    
     if (X < X_left_thresh && Y < Y_back_thresh){
         zone = left_back;
     }
@@ -202,7 +200,7 @@ void RewardValveController(){
 */
 
 // hardcoded for now - p_trial
-float p_interval[6] = {1,1,1,1,1,1};
+float p_interval[6] = {1,0.5,0,0,0.5,1}; // FIXME - this is called p_trial in the interface
 float p_interval_cs[6];
 
 void normalize_stim_probs(){
@@ -268,8 +266,6 @@ void finite_state_machine() {
                 state_entry_common();
                 // TODO turn on trial_available LED
 
-                // tone_controller.play(trial_avail_cue_freq, tone_duration);
-
                 // tell loadcell controller to recenter
                 log_msg("LOADCELL CURSOR_RESET");
             }
@@ -299,22 +295,21 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 log_code(TRIAL_ENTRY_EVENT);
-                // sync w load cell
+                // sync w load cell TODO test this!
                 digitalWrite(LC_SYNC_PIN,HIGH);
                 delay(5);
                 digitalWrite(LC_SYNC_PIN,LOW);
 
-                // draw stimulus from list of intervals at random
+                // draw trial type at random
                 // ix = random(0,n_intervals);
                 
-                // for future: weighted
+                // weighted
                 ix = get_interval_index();
-                // n_trials[ix] += 1;
-                // Serial.println(ix);
 
                 this_interval = tone_intervals[ix];
 
                 // report interval for this trial
+                log_msg(String("trial_index "+String(ix)));
                 log_msg(String("this_interval "+String(this_interval)));
 
                 // present first tone
@@ -335,7 +330,7 @@ void finite_state_machine() {
                     log_choice();
                     log_code(TRIAL_ABORTED_EVENT);
                     
-                    // TODO punish cue?
+                    // punish cue - potential problem: tones are generalized
                     tone_controller.play(punish_tone_freq, tone_duration);
                     current_state = TIMEOUT_STATE;
                 }
@@ -355,7 +350,7 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
 
-                // determine what would be a correct answer
+                // determine what would be a correct answer in this trial
                 if (left_short == true){
                     if (this_interval < interval_boundary){
                         correct_side = left;
@@ -372,17 +367,17 @@ void finite_state_machine() {
                         correct_side = left;
                     }
                 }
+
                 // for future:
                 // choice availability could be cued also
             }
 
             // update
             if (last_state == current_state){
-            
             }
             
             // exit conditions
-            if (zone != center || now() - state_entry > choice_dur){
+            if (zone == left || zone == right || now() - state_entry > choice_dur){
                 // no report, timeout
                 if (now() - state_entry > choice_dur){
                     log_code(CHOICE_MISSED_EVENT);
@@ -392,7 +387,7 @@ void finite_state_machine() {
                 }
                 
                 // choice was made
-                if (zone != center) {
+                if (zone == left || zone == right) {
                     log_choice();
 
                     // determine success
@@ -401,7 +396,6 @@ void finite_state_machine() {
                         log_code(CHOICE_CORRECT_EVENT);
                         log_code(TRIAL_SUCCESSFUL_EVENT);
                         current_state = REWARD_AVAILABLE_STATE;
-                        
                     }
                     else {
                         // wrong trial
