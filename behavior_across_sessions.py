@@ -25,46 +25,30 @@ from tqdm import tqdm
 with open('params.txt','r') as fH:
     lines = fH.readlines()
 
-path = lines[0] # path is in the first line
+# path = lines[0] # path is in the first line
 
 animal_path = Path(path)
+
+animal_folder = Path("/home/georg/data/Animals/JP2079")
 task_name = 'lick_for_reward_w_surpression'
 
-LogDfs = bhv.aggregate_session_logs(animal_path, task_name)
+LogDfs = bhv.aggregate_session_logs(animal_folder, task_name)
 
-# list(set()) returns all the unique strings
-span_names = list(set([name.split('_ON')[0] for name in LogDfs[0].name if name.endswith('_ON')]))
-event_names = list(set([name.split('_EVENT')[0] for name in LogDfs[0].name if name.endswith('_EVENT')]))
+# preprocess
+LogDfs = [bhv.filter_bad_licks(LogDf) for LogDf in LogDfs]
 
-SpansDicts = []
-EventsDicts = []
+# # currently unused?
+# SpansDicts = []
+# EventsDicts = []
 
-for Df in LogDfs:
-    SpansDicts.append(bhv.get_spans(Df, span_names))
-    EventsDicts.append(bhv.get_events(Df, event_names))
+# for LogDf in LogDfs:
+#     names = LogDf['name'].unique()
+#     span_names = list(set([name.split('_ON')[0] for name in names if name.endswith('_ON')]))
+#     event_names = list(set([name.split('_EVENT')[0] for name in names if name.endswith('_EVENT')]))
 
-"""
- 
- ########  ########  ######## ########  ########   #######   ######   ########  ######   ######  
- ##     ## ##     ## ##       ##     ## ##     ## ##     ## ##    ##  ##       ##    ## ##    ## 
- ##     ## ##     ## ##       ##     ## ##     ## ##     ## ##        ##       ##       ##       
- ########  ########  ######   ########  ########  ##     ## ##        ######    ######   ######  
- ##        ##   ##   ##       ##        ##   ##   ##     ## ##        ##             ##       ## 
- ##        ##    ##  ##       ##        ##    ##  ##     ## ##    ##  ##       ##    ## ##    ## 
- ##        ##     ## ######## ##        ##     ##  #######   ######   ########  ######   ######  
- 
-"""
+#     SpansDicts.append(bhv.get_spans(Df, span_names))
+#     EventsDicts.append(bhv.get_events(Df, event_names))
 
-# filter unrealistic lick
-min_time = 20
-max_time = 100
-for i, SpansDict in enumerate(SpansDicts):
-
-    SpansDict, EventsDicts[i] = bhv.filter_unreal_licks(min_time, max_time, SpansDict, LogDfs[i], EventsDicts[i])
-
-# clean up
-event_names.append("LICK")
-span_names.remove("LICK")
 
 """
  
@@ -79,7 +63,7 @@ span_names.remove("LICK")
 """
 
 # Define metrics to be applied
-Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
+TrialsMetrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
 
 SessionDfs = []
 
@@ -93,7 +77,7 @@ for LogDf in LogDfs:
         ind_stop = LogDf.loc[LogDf['t'] == row['t_off']].index[0]
         TrialDfs.append(LogDf.iloc[ind_start:ind_stop+1])
 
-    SessionDfs.append(bhv.parse_trials(TrialDfs, Metrics))
+    SessionDfs.append(bhv.parse_trials(TrialDfs, TrialsMetrics))
 
 # Transform SessionDfs into PerformanceDf - single Df with behavioral summary statistics
 

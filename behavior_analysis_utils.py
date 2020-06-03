@@ -76,25 +76,26 @@ def get_events(LogDf, event_names):
  
     return EventsDict
 
-def filter_unreal_licks(min_time, max_time, SpansDict, LogDf, EventsDict):
+def filter_bad_licks(LogDf, min_time=50, max_time=200, remove=False):
     """ 
-    Filter unrealistic licks from a SpansDict and adds Lick event to LogDf
+    Process recorded LICK_ON and LICK_OFF into realistic licks and add them as an event to the LogDf
     """
+    LickSpan = get_spans_from_event_names(LogDf,'LICK_ON','LICK_OFF')
 
-    bad_licks = np.logical_or(SpansDict['LICK']['dt'] < min_time , SpansDict['LICK']['dt'] > max_time)
-    SpansDict['LICK'] = SpansDict['LICK'].loc[~bad_licks]
+    bad_licks = np.logical_or(LickSpan['dt'] < min_time , LickSpan['dt'] > max_time)
+    LickSpan = LickSpan.loc[~bad_licks]
 
     # Add lick_event to LogDf
-    Lick_Event = pd.DataFrame(np.stack([['NA']*SpansDict['LICK'].shape[0],SpansDict['LICK']['t_on'].values,['LICK_EVENT']*SpansDict['LICK'].shape[0]]).T,columns=['code','t','name'])
+    Lick_Event = pd.DataFrame(np.stack([['NA']*LickSpan.shape[0],LickSpan['t_on'].values,['LICK_EVENT']*LickSpan.shape[0]]).T,columns=['code','t','name'])
     Lick_Event['t'] = Lick_Event['t'].astype('float')
     LogDf = LogDf.append(Lick_Event)
     LogDf.sort_values('t')
 
-    # Add lick_event to EventsDict
-    EventsDict['LICK'] = get_events_from_name(LogDf,'LICK')
-    SpansDict.pop("LICK")
+    if remove is True:
+        # TODO
+        pass
 
-    return SpansDict, EventsDict
+    return LogDf
 
 """
  
@@ -239,7 +240,7 @@ def parse_sessions(SessionDfs, Metrics):
 
     return PerformanceDf
 
-def aggregate_session_logs(animal_path, input_task):
+def aggregate_session_logs(animal_path, task):
     """ 
     creates a list of LogDfs with all data obtained 
     using input task an path to animal's folder  
@@ -264,12 +265,12 @@ def aggregate_session_logs(animal_path, input_task):
         try:
             datetime.datetime.strptime(date, date_format)
 
-            if task_name == input_task:
+            if task_name == task:
                 log_paths.append(animal_path.joinpath(fd, "arduino_log.txt")) 
         except:
             print("Folder/File " + fd + " has corrupted date")
 
-    # turn each log into logDf and unite logs into Series
+    # turn each log into LogDf and unite logs into Series
     code_map_path = log_paths[0].parent.joinpath(task_name ,"Arduino","src","event_codes.h")
     CodesDf = parse_code_map(code_map_path)
     code_map = dict(zip(CodesDf['code'],CodesDf['name']))
@@ -310,10 +311,10 @@ def time_slice(Df, t_min, t_max, col='t'):
  ##     ## ########    ##    ##     ## ####  ######   ######  
  
 """
-# Frist level metrics
+# Trial level metrics
 
 def is_successful(TrialDf):
-    if "TRIAL_COMPLETED_EVENT" in TrialDf['name'].values:
+    if "TRIAL_SUCCESSFUL_EVENT" in TrialDf['name'].values:
         succ = True
     else:
         succ = False    
@@ -333,28 +334,27 @@ def reward_collected(TrialDf):
     return pd.Series(rew_col, name='reward_collected')
 
 def reward_collection_RT(TrialDf):
+    """ calculate the reaction time from reward availability cue to reward collection """
     if is_successful(TrialDf).values[0] == False or reward_collected(TrialDf).values[0] == False:
-        rew_col_rt = np.NaN
+        rt = np.NaN
     else:
         t_rew_col = TrialDf.groupby('name').get_group("REWARD_COLLECTED_EVENT").iloc[-1]['t']
         t_rew_avail = TrialDf.groupby('name').get_group("REWARD_AVAILABLE_EVENT").iloc[-1]['t']
-        rew_col_rt = t_rew_col - t_rew_avail
+        rt = t_rew_col - t_rew_avail
  
-    return pd.Series(rew_col_rt, name='rew_col_rt')
+    return pd.Series(rt, name='reward_collected_rt')
 
-# Second level metrics (metrics based on computations on first level metrics)
+# Session level metrics
 
-def collected_rate(SessionDf):
+def rewards_collected(SessionDf):
+    """ calculate the fraction of collected rewards across the session """
+    n_rewards_collected = SessionDf['reward_collected'].sum()
+    n_successful_trials = SessionDf['successful'].sum()
 
-    # Index [1] always selects "True" irrespective of the number of "True" values
-    # being higher or lower than "False" values
-    reward_collected = SessionDf.reward_collected.value_counts()[1]
-    successful_trials = SessionDf.successful.value_counts()[1]
+    return pd.Series(n_rewards_collected/n_successful_trials, name='rewards_collected')
 
-    return pd.Series(round(reward_collected/successful_trials,3), name='collected_rate')
+def mean_reward_collection_rt(SessionDf):
+    """ calculate mean reward collection reaction time across session """
+    rt = SessionDf['reward_collected_rt'].mean(skipna=True)
 
-def mean_rt(SessionDf):
-
-    rtMean = SessionDf.rew_col_rt.mean(skipna='True')
-    
-    return pd.Series(round(rtMean,3), name='mean_rt')
+    return pd.Series(rt, name='mean_reward_collection_rt')
