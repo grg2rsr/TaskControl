@@ -20,6 +20,7 @@ import behavior_analysis_utils as bhv
 import ArduinoWidgets
 import HardwareWidgets
 
+
 """
 .___  ___.      ___       __  .__   __.    ____    __    ____  __   _______   _______  _______ .___________.    _______.
 |   \/   |     /   \     |  | |  \ |  |    \   \  /  \  /   / |  | |       \ /  _____||   ____||           |   /       |
@@ -29,58 +30,6 @@ import HardwareWidgets
 |__|  |__| /__/     \__\ |__| |__| \__|        \__/  \__/     |__| |_______/ \______| |_______|    |__|    |_______/
 
 """
-
-class TrialTypeController(QtWidgets.QWidget):
-    def __init__(self, parent, ArduinoController):
-        super(TrialTypeController, self).__init__(parent=parent)
-
-        # needs an arduinocontroller to be instantiated
-        self.ArduinoController = ArduinoController
-        self.AduinoController.Signals.serial_data_available.connect(self.on_serial)
-
-        # calculate current engagement from behav data
-
-        # calculate trial hardness from behav data
-
-        # send new p values to arduino
-
-        # plot them
-
-    def initUI(self):
-        """ plots of the current p values """
-        pass
-
-    def on_serial(self,line):
-        # if arduino requests action
-        if line == "<MSG REQUEST TRIAL_PROBS>":
-            E = calculate_task_engagement()
-            H = calculate_trial_difficulty()
-            W = calculate_trial_weights(E,H)
-
-    def calculate_task_engagement(self):
-        n_trial_types = 6 # HARDCODE
-        P_default = sp.array([0.5,0,0,0,0,0.5])
-        history = 10 # past trials to take into consideration 
-
-        # get the data
-
-        # do the calc
-
-        pass
-
-    def calculate_trial_difficulty(self):
-        # get the data (same data?)
-
-        # do the calc
-        # what to do if there are less than 10 past trials
-
-    def send_probabilities(self):
-        # uses arduinocontroller to send
-        for i in range(n_trial_types):
-
-
-    def update_plot(self):
-        pass
 
 class SettingsWidget(QtWidgets.QWidget):
     """
@@ -267,31 +216,11 @@ class SettingsWidget(QtWidgets.QWidget):
         for child in self.Children:
             child.layout()
 
-
     def update_plot(self):
-        """ emtpy """
-        # TODO deal with this entire functionality
-        # https://matplotlib.org/2.1.0/gallery/user_interfaces/embedding_in_qt5_sgskip.html
-        # self.PlotWidget = VisWidgets.MyMplCanvas(self)
-    
-        path = self.task_folder.joinpath('Arduino','src','event_codes.h')
-        CodesDf = functions.parse_code_map(path)
-
-        from TaskVis_pg import LineParser
-        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
-
-        Parser = LineParser(CodesDf, Metrics)
-        self.ArduinoController.Signals.serial_data_available.connect(Parser.update)
-    
+        """ launches the plotters """
         from TaskVis_pg import SessionVis, TrialsVis
-        self.SessionVisWidget = SessionVis(self, Parser, CodesDf)
-        self.TrialsVisWidget = TrialsVis(self, Parser, CodesDf)
-
-
-        # self.ArduinoController.Signals.serial_data_available.connect(self.SessionVisWidget.update)
-
-        # from TaskVis_pg import TrialsVis
-        # self.ArduinoController.Signals.serial_data_available.connect(self.TrialsVisWidget.update)
+        self.SessionVisWidget = SessionVis(self, self.OnlineDataAnalyser)
+        self.TrialsVisWidget = TrialsVis(self, self.OnlineDataAnalyser)
 
     def closeEvent(self,event):
         # TODO iterate over controllers and close all
@@ -360,6 +289,13 @@ class SettingsWidget(QtWidgets.QWidget):
                 # place here other controllers
 
             self.running = True
+
+            # start the online data analyzer
+            path = self.task_folder.joinpath('Arduino','src','event_codes.h')
+            CodesDf = functions.parse_code_map(path)
+            Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT) # FIXME HARDCODED!!!
+            self.OnlineDataAnalyser = OnlineDataAnalyser(self.ArduinoController, CodesDf, Metrics)
+        
             # gray out button, set to running
             self.Plot_button.setEnabled(True)
 
@@ -603,6 +539,118 @@ class AnimalInfoWidget(QtWidgets.QWidget):
             self.Table.setModel(model)
         except ValueError:
             pass
+
+"""
+ 
+ ########  #######      ######   #######  ########  ######## 
+    ##    ##     ##    ##    ## ##     ## ##     ##    ##    
+    ##    ##     ##    ##       ##     ## ##     ##    ##    
+    ##    ##     ##     ######  ##     ## ########     ##    
+    ##    ##     ##          ## ##     ## ##   ##      ##    
+    ##    ##     ##    ##    ## ##     ## ##    ##     ##    
+    ##     #######      ######   #######  ##     ##    ##    
+ 
+"""
+
+
+class OnlineDataAnalyser(QtCore.QObject):
+    def __init__(self, ArduinoController, CodesDf, Metrics):
+        self.CodesDf = CodesDf
+        self.Metrics = Metrics
+        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
+        
+        self.lines = []
+        self.SessionDf = None
+
+        self.Signals = Signals()
+
+        ArduinoController.Signals.serial_data_available.connect(self.update)
+
+    def update(self,line):
+        # if decodeable
+        if not line.startswith('<'):
+            code,t = line.split('\t')
+            decoded = self.code_map[code]
+            t = float(t)
+
+            # the signal with which a trial ends
+            if decoded == "TRIAL_AVAILABLE_STATE": # TODO expose hardcode
+                self.lines.append(line)
+
+                # parse lines
+                TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map)
+                TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
+                
+                if TrialMetricsDf is not None:
+                    # update SessionDf
+                    if self.SessionDf is None: # on first
+                        self.SessionDf = TrialMetricsDf
+                    else:
+                        self.SessionDf = self.SessionDf.append(TrialMetricsDf)
+                        self.SessionDf = self.SessionDf.reset_index(drop=True)
+
+                    # emit data
+                    self.Signals.trial_data_available.emit(TrialDf, TrialMetricsDf)
+
+                    # restart lines with current line
+                    self.lines = [line]
+            else:
+                self.lines.append(line)    
+
+
+class TrialTypeController(QtWidgets.QWidget):
+    def __init__(self, parent, ArduinoController):
+        super(TrialTypeController, self).__init__(parent=parent)
+
+        # needs an arduinocontroller to be instantiated
+        self.ArduinoController = ArduinoController
+        self.AduinoController.Signals.serial_data_available.connect(self.on_serial)
+
+        # calculate current engagement from behav data
+
+        # calculate trial hardness from behav data
+
+        # send new p values to arduino
+
+        # plot them
+
+    def initUI(self):
+        """ plots of the current p values """
+        pass
+
+    def on_serial(self,line):
+        # if arduino requests action
+        if line == "<MSG REQUEST TRIAL_PROBS>":
+            E = calculate_task_engagement()
+            H = calculate_trial_difficulty()
+            W = calculate_trial_weights(E,H)
+
+            self.update_plot()
+
+    def calculate_task_engagement(self):
+        n_trial_types = 6 # HARDCODE
+        P_default = sp.array([0.5,0,0,0,0,0.5])
+        history = 10 # past trials to take into consideration 
+
+        # get the data
+
+        # do the calc
+
+        pass
+
+    def calculate_trial_difficulty(self):
+        # get the data (same data?)
+
+        # do the calc
+        # what to do if there are less than 10 past trials
+
+    def send_probabilities(self):
+        # uses arduinocontroller to send
+        for i in range(n_trial_types):
+
+
+    def update_plot(self):
+        pass
 
 
 """

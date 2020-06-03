@@ -22,59 +22,6 @@ import utils
 
 """
  
- ########     ###    ########   ######  ######## ########  
- ##     ##   ## ##   ##     ## ##    ## ##       ##     ## 
- ##     ##  ##   ##  ##     ## ##       ##       ##     ## 
- ########  ##     ## ########   ######  ######   ########  
- ##        ######### ##   ##         ## ##       ##   ##   
- ##        ##     ## ##    ##  ##    ## ##       ##    ##  
- ##        ##     ## ##     ##  ######  ######## ##     ## 
- 
-general idea: the parser takes care of the incoming data and reformats
-it into data structures that can be used by the pg_plotters
-
-"""
-
-class Signals(QtCore.QObject):
-    # explained here why this has to be within a QObject
-    # https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html
-    trial_data_available = QtCore.pyqtSignal(pd.DataFrame, pd.DataFrame)
-
-class LineParser():
-    def __init__(self, CodesDf, Metrics):
-        self.CodesDf = CodesDf
-        self.Metrics = Metrics
-        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
-        self.lines = []
-        self.Signals = Signals()
-
-    def update(self,line):
-        # if decodeable
-        if not line.startswith('<'):
-            code,t = line.split('\t')
-            decoded = self.code_map[code]
-            t = float(t)
-
-            # the signal with which a trial ends
-            if decoded == "TRIAL_AVAILABLE_STATE": # TODO expose hardcode
-                self.lines.append(line)
-
-                # parse lines
-                TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map)
-                TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
-                
-                if TrialMetricsDf is not None:
-
-                    # emit data
-                    self.Signals.trial_data_available.emit(TrialDf, TrialMetricsDf)
-
-                    # restart lines with current line
-                    self.lines = [line]
-            else:
-                self.lines.append(line)
-
-"""
- 
  ######## ########  ####    ###    ##       ##     ## ####  ######  
     ##    ##     ##  ##    ## ##   ##       ##     ##  ##  ##    ## 
     ##    ##     ##  ##   ##   ##  ##       ##     ##  ##  ##       
@@ -86,19 +33,19 @@ class LineParser():
 """
 
 class TrialsVis(QtWidgets.QWidget):
-    def __init__(self, parent, Parser, CodesDf=None):
+    def __init__(self, parent, OnlineDataAnalyser, CodesDf=None):
         super(TrialsVis, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
 
-        # code map related
+        # code map related - FIXME think about this, is only used for colors here
         self.CodesDf = CodesDf
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
         self.trial_counter = 0
 
         self.initUI()
-        self.Parser = Parser
-        self.Parser.Signals.trial_data_available.connect(self.update)
+        self.OnlineDataAnalyser = OnlineDataAnalyser
+        self.OnlineDataAnalyser.Signals.trial_data_available.connect(self.update)
 
     def initUI(self):
         self.setWindowTitle("Trials overview")
@@ -183,18 +130,11 @@ class TrialsVis(QtWidgets.QWidget):
 
 class SessionVis(QtWidgets.QWidget):
     """ A general visualizer for SessionDf """
-    def __init__(self, parent, Parser, CodesDf=None):
+    def __init__(self, parent, OnlineDataAnalyser):
         super(SessionVis, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
-
-        self.CodesDf = CodesDf
-        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
-
-        self.SessionDf = None
         self.initUI()
-
-        self.Parser = Parser
-        self.Parser.Signals.trial_data_available.connect(self.update)
+        OnlineDataAnalyser.Signals.trial_data_available.connect(self.update)
 
     def add_LinePlot(self, pens, PlotWindow, title=None, xlabel=None, ylabel=None):
         Item = PlotWindow.addPlot(title=title)
@@ -235,7 +175,7 @@ class SessionVis(QtWidgets.QWidget):
         self.setLayout(self.Layout)
         self.show()
 
-    def update_plot(self):
+    def update(self, TrialsDf, TrialMetricsDf):
         hist = 20 # to be exposed in the future
         # ITI
         x = self.SessionDf.index.values[1:]
@@ -271,16 +211,4 @@ class SessionVis(QtWidgets.QWidget):
         # except KeyError:
         #     # when no reward was collected
         #     pass
-        
-    def update(self, TrialsDf, TrialMetricsDf):
-        print(self.SessionDf)
-
-        # append Trial
-        if self.SessionDf is None:
-            self.SessionDf = TrialMetricsDf
-        else:
-            self.SessionDf = self.SessionDf.append(TrialMetricsDf)
-            self.SessionDf = self.SessionDf.reset_index(drop=True)
-        
-        self.update_plot()
 
