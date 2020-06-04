@@ -200,7 +200,7 @@ void RewardValveController(){
 */
 
 // hardcoded for now - p_trial
-float p_interval[6] = {1,0.5,0,0,0.5,1}; // FIXME - this is called p_trial in the interface
+float p_interval[6] = {1,0.5,0,0,0.5,1}; // FIXME HARDCODE
 float p_interval_cs[6];
 
 void normalize_stim_probs(){

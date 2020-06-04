@@ -20,6 +20,8 @@ import functions
 import utils 
 import interface_generator
 
+import behavior_analysis_utils as bhv
+
 class Signals(QtCore.QObject):
     # explained here why this has to be within a QObject
     # https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html
@@ -57,19 +59,18 @@ class ArduinoController(QtWidgets.QWidget):
         CodesDf = functions.parse_code_map(path)
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
-        # online analyzer
-        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT) # HARDCODE
-        self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
-    
-        # take care of the kids
-        self.Children = [self.VariableController, self.OnlineDataAnalyser]
-
         # signals
         self.Signals = Signals()
         # self.Signals.serial_data_available.connect(self.parse_line) # TODO
 
-        self.stopped = False
+        # online analyzer
+        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT) # HARDCODE
+        self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
 
+        # take care of the kids
+        self.Children = [self.VariableController]
+        
+        self.stopped = False
         self.initUI()
     
     def initUI(self):
@@ -691,14 +692,16 @@ class TrialTypeController(QtWidgets.QWidget):
 
         # do the calc
         # what to do if there are less than 10 past trials
+        pass
 
     def send_probabilities(self):
         # uses arduinocontroller to send
-        for i in range(n_trial_types):
-            cmd = ' '.join(['UPD',str(i),str(self.P[i])])
-            cmd = '<'+cmd+'>'
-            bytestr = str.encode(cmd)
-            self.ArduinoController.send_raw(bytestr)
+        # for i in range(n_trial_types):
+        #     cmd = ' '.join(['UPD',str(i),str(self.P[i])])
+        #     cmd = '<'+cmd+'>'
+        #     bytestr = str.encode(cmd)
+        #     self.ArduinoController.send_raw(bytestr)
+        pass
 
     def update_plot(self):
         pass

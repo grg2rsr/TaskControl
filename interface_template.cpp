@@ -18,7 +18,7 @@ bool deliver_reward = false;
 int current_state = 0; // WATCH OUT this is ini state
 
 // HARDCODED trial type probabilites
-float p_trial[6];
+float p_interval[6];
 
 void getSerialData() {
     // check if command data is available and if yes read it
@@ -127,7 +127,7 @@ void processSerialData() {
         if (strcmp(mode,"UPD")==0){
             int ix = atoi(varname);
             float p = atof(varvalue);
-            p_trial[ix] = p;
+            p_interval[ix] = p;
         }
 
         // CMD

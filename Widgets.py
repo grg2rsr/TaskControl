@@ -150,7 +150,6 @@ class SettingsWidget(QtWidgets.QWidget):
         self.timer.timeout.connect(self.time_handler)
 
         # display number of trials
-        # TODO correct way to deal with the counters is to just write classes
         # currently the updating is done within a Monitor!
         self.TrialCounter = TrialCounter(self)
         FormLayout.addRow('completed/aborted/total',self.TrialCounter)

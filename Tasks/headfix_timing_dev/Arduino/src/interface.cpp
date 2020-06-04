@@ -17,6 +17,9 @@ bool deliver_reward = false;
 
 int current_state = 0; // WATCH OUT this is ini state
 
+// HARDCODED trial type probabilites
+float p_interval[6];
+
 void getSerialData() {
     // check if command data is available and if yes read it
     // all commands are flanked by <>
@@ -100,8 +103,8 @@ void processSerialData() {
                 Serial.println(String("<")+String(varname)+String("=")+String(reward_tone_freq)+String(">"));
             }
     
-            if (strcmp(varname,"autostart_dur")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(autostart_dur)+String(">"));
+            if (strcmp(varname,"trial_avail_dur")==0){
+                Serial.println(String("<")+String(varname)+String("=")+String(trial_avail_dur)+String(">"));
             }
     
             if (strcmp(varname,"choice_dur")==0){
@@ -134,6 +137,14 @@ void processSerialData() {
     
             if (strcmp(varname,"X_right_thresh")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(X_right_thresh)+String(">"));
+            }
+    
+            if (strcmp(varname,"Y_back_thresh")==0){
+                Serial.println(String("<")+String(varname)+String("=")+String(Y_back_thresh)+String(">"));
+            }
+    
+            if (strcmp(varname,"Y_front_thresh")==0){
+                Serial.println(String("<")+String(varname)+String("=")+String(Y_front_thresh)+String(">"));
             }
                 if (strcmp(varname,"current_state")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
@@ -185,8 +196,8 @@ void processSerialData() {
                 reward_tone_freq = atoi(varvalue);
             }
     
-            if (strcmp(varname,"autostart_dur")==0){
-                autostart_dur = strtoul(varvalue,NULL,10);
+            if (strcmp(varname,"trial_avail_dur")==0){
+                trial_avail_dur = strtoul(varvalue,NULL,10);
             }
     
             if (strcmp(varname,"choice_dur")==0){
@@ -221,6 +232,22 @@ void processSerialData() {
                 X_right_thresh = atof(varvalue);
             }
     
+            if (strcmp(varname,"Y_back_thresh")==0){
+                Y_back_thresh = atof(varvalue);
+            }
+    
+            if (strcmp(varname,"Y_front_thresh")==0){
+                Y_front_thresh = atof(varvalue);
+            }
+    
+        }
+
+        // UPD - update trial probs - HARDCODED for now, n trials
+        // format UPD 0 0.031 or similar
+        if (strcmp(mode,"UPD")==0){
+            int ix = atoi(varname);
+            float p = atof(varvalue);
+            p_interval[ix] = p;
         }
 
         // CMD
