@@ -163,36 +163,6 @@ class ArduinoController(QtWidgets.QWidget):
                 ref = self.Children[i-1]
             functions.tile_Widgets(child, ref, where='below',gap=big_gap)
 
-    # def get_com_ports(self):
-    #     """ returns com ports with descriptors : separated """
-    #     command = ' '.join([self.parent().profiles['General']['platformio_cmd'],"device","list"])
-    #     return_value = subprocess.check_output(command,shell=True).decode('utf-8')
-
-    #     lines = [line.strip() for line in return_value.split(os.linesep)]
-
-    #     # os agnostic parser - not really bc
-    #     com_ports = []
-    #     for i,line in enumerate(lines):
-    #         if line.startswith('COM') or '/dev/tty' in line:
-    #             com_port = line
-    #             descr = lines[i+3].split('Description: ')[1]
-    #             com_ports.append(':'.join([com_port,descr]))
-
-    #     return com_ports
-
-    # def com_port_changed(self):
-    #     # for logging only
-    #     self.task_config['com_port'] = self.ComPortChoiceWidget.get_value()
-    #     print("Arduino COM port: "+self.task_config['com_port'])
-
-    # FUTURE TODO implement baud rate selector
-
-    # def reprogramCheckBox_changed(self):
-    #     if self.reprogramCheckBox.checkState() == 2:
-    #         self.reprogram = True
-    #     else:
-    #         self.reprogram = False
-
     def send(self,command):
         """ sends string command interface to arduino, interface compatible """
         if hasattr(self,'connection'):
@@ -603,12 +573,12 @@ class OnlineDataAnalyser(QtCore.QObject):
             # if decoded == 'TRIAL_ABORTED_EVENT':
             #     self.parent().parent().TrialCounter.increment(successful=False)
 
-            # if decoded == 'REWARD_COLLECTED_EVENT':
-            #     VarsDf = self.parent().VariableController.VariableEditWidget.get_entries()
-            #     if 'reward_magnitude' in VarsDf['name'].values:
-            #         VarsDf.index = VarsDf.name
-            #         current_magnitude = VarsDf.loc['reward_magnitude','value']
-            #         self.parent().parent().WaterCounter.increment(current_magnitude)
+            if decoded == 'REWARD_COLLECTED_EVENT':
+                VarsDf = self.parent.VariableController.VariableEditWidget.get_entries()
+                if 'reward_magnitude' in VarsDf['name'].values:
+                    VarsDf.index = VarsDf.name
+                    current_magnitude = VarsDf.loc['reward_magnitude','value']
+                    self.parent.parent().WaterCounter.increment(current_magnitude)
 
             # the signal with which a trial ends
             if decoded == "TRIAL_AVAILABLE_STATE": # TODO expose hardcode

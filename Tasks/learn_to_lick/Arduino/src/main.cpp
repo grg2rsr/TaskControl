@@ -17,7 +17,7 @@
 */
 
 // int current_state = INI_STATE; // starting at this, aleady declared in interface.cpp
-int last_state = TRIAL_AVAILABLE_STATE; // whatever other state
+int last_state = REWARD_AVAILABLE_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
 
@@ -172,6 +172,7 @@ void finite_state_machine() {
                 state_entry_common();
                 // calculate length of this ITI
                 this_ITI_dur = random(ITI_dur_min, ITI_dur_max);
+                log_msg(String("this_ITI_dur "+String(this_ITI_dur)));
             }
 
             // update
@@ -182,7 +183,7 @@ void finite_state_machine() {
             // exit condition
             if (now() - state_entry > this_ITI_dur) {
                 // ITI has to be long enough to not make the mice lick themselves into a timeout
-                current_state = TRIAL_AVAILABLE_STATE;
+                current_state = REWARD_AVAILABLE_STATE;
             }
             break;
     }

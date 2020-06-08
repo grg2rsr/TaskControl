@@ -1,0 +1,161 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WorkflowBuilder Version="2.4.0"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xmlns:osc="clr-namespace:Bonsai.Osc;assembly=Bonsai.Osc"
+                 xmlns:q1="clr-namespace:Bonsai.Harp;assembly=Bonsai.Harp"
+                 xmlns:q2="clr-namespace:Bonsai.Harp.CF;assembly=Bonsai.Harp.CF"
+                 xmlns:q3="clr-namespace:Bonsai.Scripting;assembly=Bonsai.Scripting"
+                 xmlns:dsp="clr-namespace:Bonsai.Dsp;assembly=Bonsai.Dsp"
+                 xmlns:rx="clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core"
+                 xmlns="https://bonsai-rx.org/2018/workflow">
+  <Workflow>
+    <Nodes>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="osc:CreateUdpClient">
+          <osc:Name>upd server</osc:Name>
+          <osc:Port>0</osc:Port>
+          <osc:RemoteHostName>127.0.0.1</osc:RemoteHostName>
+          <osc:RemotePort>4001</osc:RemotePort>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="SubscribeSubject">
+        <Name>base_name</Name>
+      </Expression>
+      <Expression xsi:type="Add">
+        <Operand xsi:type="StringProperty">
+          <Value>harp_log.bin</Value>
+        </Operand>
+      </Expression>
+      <Expression xsi:type="PropertyMapping">
+        <PropertyMappings>
+          <Property Name="Path" />
+        </PropertyMappings>
+      </Expression>
+      <Expression xsi:type="Disable">
+        <Builder xsi:type="ExternalizedMapping">
+          <Property Name="Value" DisplayName="com_port" />
+        </Builder>
+      </Expression>
+      <Expression xsi:type="Disable">
+        <Builder xsi:type="Combinator">
+          <Combinator xsi:type="StringProperty">
+            <Value>COM11</Value>
+          </Combinator>
+        </Builder>
+      </Expression>
+      <Expression xsi:type="Disable">
+        <Builder xsi:type="PropertyMapping">
+          <PropertyMappings>
+            <Property Name="PortName" />
+          </PropertyMappings>
+        </Builder>
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="q1:Device">
+          <q1:PortName>COM11</q1:PortName>
+          <q1:DeviceState>Active</q1:DeviceState>
+          <q1:DumpRegisters>true</q1:DumpRegisters>
+          <q1:LedState>On</q1:LedState>
+          <q1:VisualIndicators>On</q1:VisualIndicators>
+          <q1:Heartbeat>Disable</q1:Heartbeat>
+          <q1:IgnoreErrors>false</q1:IgnoreErrors>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="q2:LoadCellsEvent">
+        <q2:Type>Forces</q2:Type>
+      </Expression>
+      <Expression xsi:type="q3:ExpressionTransform">
+        <q3:Expression>it.getReal(0)</q3:Expression>
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="dsp:Buffer">
+          <dsp:Count>10</dsp:Count>
+          <dsp:Skip>10</dsp:Skip>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="dsp:Average" />
+      </Expression>
+      <Expression xsi:type="MemberSelector">
+        <Selector>Val0</Selector>
+      </Expression>
+      <Expression xsi:type="q3:ExpressionTransform">
+        <q3:Expression>it.getReal(1)</q3:Expression>
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="dsp:Buffer">
+          <dsp:Count>10</dsp:Count>
+          <dsp:Skip>10</dsp:Skip>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="dsp:Average" />
+      </Expression>
+      <Expression xsi:type="MemberSelector">
+        <Selector>Val0</Selector>
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="rx:Zip" />
+      </Expression>
+      <Expression xsi:type="osc:SendMessage">
+        <osc:Connection>upd server</osc:Connection>
+        <osc:Address>/</osc:Address>
+      </Expression>
+      <Expression xsi:type="MemberSelector">
+        <Selector>MessageBytes</Selector>
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="dsp:MatrixWriter">
+          <dsp:Path>D:\TaskControl\Animals\123\2020-01-28_14-29-31_headfix_habituation\bonsai_harp_log.bin</dsp:Path>
+          <dsp:Suffix>None</dsp:Suffix>
+          <dsp:Overwrite>true</dsp:Overwrite>
+          <dsp:Layout>ColumnMajor</dsp:Layout>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="q2:LoadCellsEvent">
+        <q2:Type>Input</q2:Type>
+      </Expression>
+      <Expression xsi:type="MemberSelector">
+        <Selector>Seconds</Selector>
+      </Expression>
+      <Expression xsi:type="ExternalizedMapping">
+        <Property Name="Value" DisplayName="save_path" />
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="StringProperty">
+          <Value>D:\TaskControl\Animals\123\2020-01-28_14-29-31_headfix_habituation\bonsai_</Value>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="ReplaySubject">
+        <Name>base_name</Name>
+        <BufferSize xsi:nil="true" />
+      </Expression>
+    </Nodes>
+    <Edges>
+      <Edge From="1" To="2" Label="Source1" />
+      <Edge From="2" To="3" Label="Source1" />
+      <Edge From="3" To="20" Label="Source2" />
+      <Edge From="4" To="5" Label="Source1" />
+      <Edge From="5" To="6" Label="Source1" />
+      <Edge From="6" To="7" Label="Source1" />
+      <Edge From="7" To="8" Label="Source1" />
+      <Edge From="7" To="19" Label="Source1" />
+      <Edge From="7" To="21" Label="Source1" />
+      <Edge From="8" To="9" Label="Source1" />
+      <Edge From="8" To="13" Label="Source1" />
+      <Edge From="9" To="10" Label="Source1" />
+      <Edge From="10" To="11" Label="Source1" />
+      <Edge From="11" To="12" Label="Source1" />
+      <Edge From="12" To="17" Label="Source1" />
+      <Edge From="13" To="14" Label="Source1" />
+      <Edge From="14" To="15" Label="Source1" />
+      <Edge From="15" To="16" Label="Source1" />
+      <Edge From="16" To="17" Label="Source2" />
+      <Edge From="17" To="18" Label="Source1" />
+      <Edge From="19" To="20" Label="Source1" />
+      <Edge From="21" To="22" Label="Source1" />
+      <Edge From="23" To="24" Label="Source1" />
+      <Edge From="24" To="25" Label="Source1" />
+    </Edges>
+  </Workflow>
+</WorkflowBuilder>

@@ -1,0 +1,27 @@
+# dev started
+
+training procedure - naive first guess
+things they need to get:
+licking
+trial init by push (or pull)
+
+
+1 - lick for reward and reward cue
+
+2 - push left or right gives reward (alternating? - balance bias)
+
+3 - push left or right only rewarded after cue
+
+4 - 
+
+# arduino state machine notes
+
+trial avail
+
+present interval
+
+hold
+
+choice
+
+timeout

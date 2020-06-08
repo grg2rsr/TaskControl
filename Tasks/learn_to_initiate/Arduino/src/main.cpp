@@ -318,16 +318,16 @@ void finite_state_machine() {
             }
             
             // exit condition
-            if (now() - state_entry > trial_avail_dur || zone == back) {
+            if (now() - state_entry > trial_avail_dur || zone == front) {
                 if (now() - state_entry > trial_avail_dur){
                     // missed trial init -> to to ITI again
                     lights_off();
                     current_state = ITI_STATE;
                 }
-                if (zone == back){
+                if (zone == front){
                     // trial initiated
                     lights_on();
-                    current_state = PRESENT_INTERVAL_STATE;
+                    current_state = REWARD_AVAILABLE_STATE;
                 }
             }
             break;
