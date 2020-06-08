@@ -21,7 +21,7 @@
 bool toggle = false;
 
 // int current_state = INI_STATE; // starting at this, aleady declared in interface.cpp
-int last_state = ITI_STATE; // whatever other state
+int last_state = TIMEOUT_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
 
@@ -200,7 +200,7 @@ void RewardValveController(){
 */
 
 // hardcoded for now - p_trial
-float p_interval[6] = {1,0.5,0,0,0.5,1}; // FIXME HARDCODE
+// float p_interval[6] = {1,0.5,0,0,0.5,1}; // FIXME HARDCODE
 float p_interval_cs[6];
 
 void normalize_stim_probs(){
@@ -257,7 +257,7 @@ void finite_state_machine() {
     switch (current_state) {
 
         case INI_STATE:
-            current_state = ITI_STATE;
+            current_state = TRIAL_AVAILABLE_STATE;
             break;
 
         case TRIAL_AVAILABLE_STATE:
@@ -283,7 +283,7 @@ void finite_state_machine() {
                     // missed trial init -> to to ITI again
                     current_state = ITI_STATE;
                 }
-                if (zone == front){
+                if (zone == back){
                     // trial initiated
                     current_state = PRESENT_INTERVAL_STATE;
                 }
@@ -323,10 +323,10 @@ void finite_state_machine() {
             }
             
             // exit conditions
-            if (now() - state_entry > this_interval || zone != center) {
+            if (now() - state_entry > this_interval || zone == left || zone == right) {
             
                 // premature choice
-                if (zone != center) {
+                if (zone == left || zone == right) {
                     log_choice();
                     log_code(TRIAL_ABORTED_EVENT);
                     

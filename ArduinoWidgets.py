@@ -26,6 +26,7 @@ class Signals(QtCore.QObject):
     # explained here why this has to be within a QObject
     # https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html
     serial_data_available = QtCore.pyqtSignal(str)
+    trial_data_available = QtCore.pyqtSignal(pd.DataFrame,pd.DataFrame)
 
 """
   ______   ______   .__   __. .___________..______        ______    __       __       _______ .______
@@ -596,18 +597,18 @@ class OnlineDataAnalyser(QtCore.QObject):
             t = float(t)
 
             # update counters
-            if decoded == 'TRIAL_COMPLETED_EVENT': # FIXME TODO
-                self.parent().parent().TrialCounter.increment(successful=True)
+            # if decoded == 'TRIAL_COMPLETED_EVENT': # FIXME TODO
+            #     self.parent().parent().TrialCounter.increment(successful=True)
 
-            if decoded == 'TRIAL_ABORTED_EVENT':
-                self.parent().parent().TrialCounter.increment(successful=False)
+            # if decoded == 'TRIAL_ABORTED_EVENT':
+            #     self.parent().parent().TrialCounter.increment(successful=False)
 
-            if decoded == 'REWARD_COLLECTED_EVENT':
-                VarsDf = self.parent().VariableController.VariableEditWidget.get_entries()
-                if 'reward_magnitude' in VarsDf['name'].values:
-                    VarsDf.index = VarsDf.name
-                    current_magnitude = VarsDf.loc['reward_magnitude','value']
-                    self.parent().parent().WaterCounter.increment(current_magnitude)
+            # if decoded == 'REWARD_COLLECTED_EVENT':
+            #     VarsDf = self.parent().VariableController.VariableEditWidget.get_entries()
+            #     if 'reward_magnitude' in VarsDf['name'].values:
+            #         VarsDf.index = VarsDf.name
+            #         current_magnitude = VarsDf.loc['reward_magnitude','value']
+            #         self.parent().parent().WaterCounter.increment(current_magnitude)
 
             # the signal with which a trial ends
             if decoded == "TRIAL_AVAILABLE_STATE": # TODO expose hardcode
