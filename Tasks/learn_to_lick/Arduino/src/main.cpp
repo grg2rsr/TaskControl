@@ -20,16 +20,17 @@
 int last_state = TRIAL_AVAILABLE_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
-unsigned long this_ITI_dur = ITI_dur;
 
 // flow control flags
 bool lick_in = false;
 bool reward_collected = false;
 
 // speakers
-Tone reward_tone_controller;
-Tone punish_tone_controller;
-unsigned long tone_duration = 200;
+Tone tone_controller;
+unsigned long tone_duration = 200; // FIXME CHECK THIS / expose this
+
+//
+unsigned long this_ITI_dur;
 
 /*
  __        ______     _______
@@ -95,7 +96,7 @@ float reward_valve_dur = 0;
 void RewardValveController(){
     // practically a self terminating digital pin blink
     if (reward_valve_closed == true && deliver_reward == true) {
-        reward_tone_controller.play(reward_tone_freq, tone_duration);
+        tone_controller.play(reward_tone_freq, tone_duration);
         digitalWrite(REWARD_VALVE_PIN,HIGH);
         log_code(REWARD_VALVE_ON);
         reward_valve_closed = false;
@@ -119,36 +120,6 @@ void RewardValveController(){
 |  |    .----)   |   |  |  |  |
 |__|    |_______/    |__|  |__|
 
-to be taken into account when these are written 
-https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
-exit condition has to include condition || last_state != current_state
-so it can get called when state is manually changed
-will not work as exit functions contain transition to next state ... 
-
-new idea to this: make a req_state variable (requested state) and check if
-req and the current state are different
-
-# exit function
-if (exit_condition || req_state != current_state) {
-    current_state = req_state
-}
-but then this needs to get deactivated after one execution, so extra flag is needed
-
-if (exit_condition || (req_state != current_state && state_change_requested == True) ) {
-    // exit actions
-    .
-    .
-    .
-    
-    if (req_state != current_state && state_change_requested == True) {
-        // forced transition
-        current_state = req_state;
-        state_change_requested = False;
-    }
-}
-then, state change is requested by 
-<SET req_state state>
-<SET state_change_requested true>
 */
 
 void state_entry_common(){
@@ -165,60 +136,14 @@ void finite_state_machine() {
         case INI_STATE:
             current_state = ITI_STATE;
             break;
-
-        case TRIAL_AVAILABLE_STATE:
-            // state entry
-            // "autostart"
-            if (current_state != last_state){
-                state_entry_common();
-                // reward_tone_controller.play(trial_avail_cue_freq, tone_duration);
-            }
-
-            // update
-            if (last_state == current_state){
-                // nothing
-            }
-            
-            // exit condition
-            if (true) {
-                log_code(TRIAL_ENTRY_EVENT); // just for plotting purposes (align on this)
-                // draw next trial
-                if (random(1000) < reward_prob*1000){
-                    current_state = REWARD_AVAILABLE_STATE;
-                }
-                else {
-                    current_state = NO_REWARD_AVAILABLE_STATE;
-                }
-            }
-            break;
              
-        case NO_REWARD_AVAILABLE_STATE:
-            // state entry
-            if (current_state != last_state){
-                state_entry_common();
-                log_code(NO_REWARD_AVAILABLE_EVENT);
-                punish_tone_controller.play(punish_cue_freq, tone_duration);
-            }
-
-            // update
-            if (last_state == current_state){
-                // nothing
-            }
-
-            // exit condition
-            if (true){
-                // auto exit
-                current_state = ITI_STATE;
-            }
-            break;
-
         case REWARD_AVAILABLE_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
                 reward_collected = false;
                 log_code(REWARD_AVAILABLE_EVENT);
-                reward_tone_controller.play(reward_cue_freq, tone_duration);
+                tone_controller.play(reward_cue_freq, tone_duration);
             }
 
             // update
@@ -245,6 +170,8 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
+                // calculate length of this ITI
+                this_ITI_dur = random(ITI_dur_min, ITI_dur_max);
             }
 
             // update
@@ -253,7 +180,7 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (now() - state_entry > ITI_dur) {
+            if (now() - state_entry > this_ITI_dur) {
                 // ITI has to be long enough to not make the mice lick themselves into a timeout
                 current_state = TRIAL_AVAILABLE_STATE;
             }
@@ -272,13 +199,10 @@ void finite_state_machine() {
 */
 void setup() {
     Serial.begin(115200);
-    reward_tone_controller.begin(REWARD_SPEAKER_PIN);
-    punish_tone_controller.begin(PUNISH_SPEAKER_PIN);
+    tone_controller.begin(SPEAKER_PIN);
     Serial.println("<Arduino is ready to receive commands>");
     delay(5000);
 }
-
-bool toggle = false;
 
 void loop() {
     if (run == true){
@@ -294,20 +218,4 @@ void loop() {
     // serial communication
     getSerialData();
     processSerialData();
-
-    // punish
-    if (punish == true){
-        punish_tone_controller.play(punish_cue_freq, tone_duration);
-        punish = false;
-    }
-
-    // for clocking execution speed
-    // if (toggle == false){
-    //     digitalWrite(7,HIGH);
-    //     toggle = true;
-    // }
-    // else {
-    //     digitalWrite(7,LOW);
-    //     toggle = false;
-    // }
 }

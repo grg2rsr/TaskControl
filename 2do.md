@@ -1,4 +1,14 @@
 # 2do
+implement learn to initiate task
+
+implement learn to push task
+
+implement 2d force overview
+
+probabilistic trial choice - check implementation
+-> implement the calculation of p_interval in python
+
+
 the training variables issue
 test it! 
 [ ] think about last variables when training different animals
