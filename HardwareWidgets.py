@@ -19,8 +19,8 @@ import time
 import pyqtgraph as pg 
 
 class Signals(QtCore.QObject):
-    loadcell_data_available = QtCore.pyqtSignal(float,float)
-    udp_data_available = QtCore.pyqtSignal(float,float,float)
+    processed_lc_data_available = QtCore.pyqtSignal(float,float)
+    raw_lc_data_available = QtCore.pyqtSignal(float,float,float)
 
 """
 .______     ______   .__   __.      _______.     ___       __
@@ -108,73 +108,49 @@ class LoadCellController(QtWidgets.QWidget):
 
     def __init__(self, parent):
         super(LoadCellController, self).__init__(parent=parent)
-        print("LC initialized")
-        self.setWindowFlags(QtCore.Qt.Window)
-        # self.parent = parent
-        
         self.task_config = parent.task_config['LoadCell']
-        
+       
+        # signals related - TODO check how this could be set up more efficiently        
         self.Signals = Signals()
-        self.Signals.udp_data_available.connect(self.process_data)
+        self.Signals.raw_lc_data_available.connect(self.on_data)
         self.parent().ArduinoController.Signals.serial_data_available.connect(self.on_serial)
 
+        # data related
+        self.Buffer = sp.zeros((100,2))
         self.X_last = sp.zeros(2)
         self.v_last = sp.zeros(2)
         self.t_last = 0
         self.Fx_off = 0
         self.Fy_off = 0
 
-        self.Buffer = sp.zeros((100,2))
-
         self.stopped = False
 
+        # LC monitor
         self.LoadCellMonitor = LoadCellMonitor(self)
-        self.init_udp_server()
-        self.initUI()
 
-    def init_udp_server(self):
-        self.UDP_IP_out, self.UDP_PORT_out = self.task_config['udp_out'].split(':')
-        self.udp_out_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # sock.bind((UDP_IP, int(UDP_PORT)))
+        # the 2nd serial (uart) serial connection to the arduino for writing processed data back
+        self.arduino_2nd_ser = self.connect()
+
+        self.initUI()
+        print("LC initialized")
 
     def initUI(self):
         self.setWindowTitle("Loadcell controller")
         self.Layout = QtWidgets.QHBoxLayout()
         self.setMinimumWidth(300) # FIXME hardcoded!
-
-        # the 2nd serial (uart) serial connection to the arduino for writing raw data back
-        self.arduino_2nd_ser = self.connect()
-
-        # transmission toggle button
-        self.transmission = False
-        self.udp_out_transmission = True
-        self.Btn = QtWidgets.QPushButton()
-        self.Btn.setText('transmission is off')
-        self.Btn.setCheckable(True)
-        self.Btn.setStyleSheet("background-color:  light gray")
-        self.Btn.clicked.connect(self.toggle_transmission)
+        self.setWindowFlags(QtCore.Qt.Window)
 
         self.ZeroBtn = QtWidgets.QPushButton()
-        self.ZeroBtn.setText("read baseline values")
+        self.ZeroBtn.setText("remove offset")
         self.ZeroBtn.clicked.connect(self.zero)
 
-        self.Layout.addWidget(self.Btn)
         self.Layout.addWidget(self.ZeroBtn)
         self.setLayout(self.Layout)
         self.show()        
 
     def zero(self):
+        """ remove offset from signal by subtracting the average """
         self.Fx_off, self.Fy_off = sp.average(self.Buffer,0)
-
-    def toggle_transmission(self):
-        if self.transmission:
-            self.transmission = False
-            self.Btn.setText('transmission is off')
-            self.Btn.setStyleSheet("background-color:  light gray")
-        else: 
-            self.transmission = True
-            self.Btn.setText('transmission is on')
-            self.Btn.setStyleSheet("background-color:  green")
 
     def connect(self):
         """ establish connection for raw serial data sending to the arduino via com_port2 """
@@ -197,10 +173,12 @@ class LoadCellController(QtWidgets.QWidget):
 
 
     def Run(self, folder):
-        # needs to be called after the Run of BonsaiController running Harp
+        """ note: needs to be called after the Run of BonsaiController running Harp 
+        why?
+        """
 
+        # connect to the bonsai UDP server serving LC raw force data
         UDP_IP, UDP_PORT = self.task_config['udp_in'].split(':')
-
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
         sock.bind((UDP_IP, int(UDP_PORT)))
         sock.setblocking(False) # non-blocking mode: recv doesn't receive data, exception is raised
@@ -211,87 +189,86 @@ class LoadCellController(QtWidgets.QWidget):
             while not self.stopped:
                 try:
                     # read data and publish it via a qt signal
-                    # raw_read = sock.recv(12) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
-                    raw_read = sock.recv(24) # replace chunk size stuff with 1 int 2 floats or whatever you get from bonsai
+                    raw_read = sock.recv(24) # getting three floats from bonsai
                     t,Fx,Fy = struct.unpack('>ddd',raw_read)
-                    # Fx *= -1
-                    self.Signals.udp_data_available.emit(t,Fx,Fy)
-
+                    self.Signals.raw_lc_data_available.emit(t,Fx,Fy)
                 except BlockingIOError:
                     pass
         
+        # start a the udp reader in a seperate thread
         self.th_read = threading.Thread(target=udp_reader)
         self.th_read.start()
 
-    def process_data(self,t,Fx,Fy):
-        # FIXME this needs to be tested / reworked ... 
+    def on_data(self,t,Fx,Fy):
+        """ called when UDP payload with raw force data is received """
 
+        # store data
         self.Buffer = sp.roll(self.Buffer,-1,0)
         self.Buffer[-1,:] = [Fx,Fy]
 
+        # remove offset
         Fx -= self.Fx_off
         Fy -= self.Fy_off
 
         Fm = sp.array([Fx,Fy])
         
-        # physical cursor implementation
-        m = 20 # mass
-        lam = 1000 # friction factor
+        # # physical cursor
+        # m = 20 # mass
+        # lam = 1000 # friction factor
 
-        # friction as a force acting in the opposite direction of F and proportional to v
-        Ff = self.v_last*lam*-1
+        # # friction as a force acting in the opposite direction of F and proportional to v
+        # Ff = self.v_last*lam*-1
 
-        Fges = Fm+Ff
+        # Fges = Fm+Ff
 
-        # dt = t - self.t_last # to catch first data sample error
-        # if dt > 0.05:
-        #     dt = 0.01
-        dt = 0.01
+        # # dt = t - self.t_last # to catch first data sample error
+        # # if dt > 0.05:
+        # #     dt = 0.01
+        # dt = 0.01 # this depends on the bonsai sketch
 
-        dv = Fges/m * dt
+        # dv = Fges/m * dt
 
-        v = self.v_last + dv
+        # v = self.v_last + dv
 
-        self.X = self.X_last + v * dt
-        self.X = sp.clip(self.X,-10,10)
+        # self.X = self.X_last + v * dt
+        # self.X = sp.clip(self.X,-10,10)
 
-        self.t_last = t
-        self.v_last = v
-        self.X_last = self.X
+        # self.t_last = t
+        # self.v_last = v
+        # self.X_last = self.X
 
-        self.send()
+        # send the processed data to arduino
+        # ba = struct.pack("ff",self.X[0],self.X[1])
+        # self.Signals.processed_lc_data_available.emit(*self.X)
 
-    def send(self):
-        ba = struct.pack("ff",self.X[1],self.X[0]) # FIXME INVERSION
-        if self.transmission:
-            # emit signal for DisplayController
-            self.Signals.loadcell_data_available.emit(*self.X)
-            # send coordinates to Arduino via second serial
-            cmd = str.encode('[') + ba + str.encode(']')
-            self.arduino_2nd_ser.write(cmd)
-            # TODO check the order of these two - delays wrt timing
+        # emit signal for DisplayController
+        self.Signals.processed_lc_data_available.emit(Fx, Fy)
 
-        # send via udp
-        if self.udp_out_transmission:
-            self.udp_out_sock.sendto(ba, (self.UDP_IP_out, int(self.UDP_PORT_out)))
-
+        # send coordinates to Arduino via second serial
+        ba = struct.pack("ff",Fx,Fy)
+        cmd = str.encode('[') + ba + str.encode(']')
+        self.arduino_2nd_ser.write(cmd)
+        
     def on_serial(self,line):
-        if line.startswith('<'):
-            read = line[1:-1].split(' ')
-            if read[0] == "MSG" and read[1] == "LOADCELL":
-                if read[2] == "CURSOR_RESET":
-                    self.v_last = sp.array([0,0])
-                    self.X_last = sp.array([0,0])
-                    self.X = sp.array([0,0])
-                    self.send()
+        # if line.startswith('<'):
+        #     read = line[1:-1].split(' ')
+        #     if read[0] == "MSG" and read[1] == "LOADCELL":
+        #         if read[2] == "CURSOR_RESET":
+        #             self.v_last = sp.array([0,0])
+        #             self.X_last = sp.array([0,0])
+        #             self.X = sp.array([0,0])
+        pass
+
                             
     def closeEvent(self, event):
         # if serial connection is open, close it
         if hasattr(self,'arduino_2nd_ser'):
             self.arduino_2nd_ser.close()
+        
+        # close UDP server?
 
+        # stop reader thread
         self.stopped = True
-        # self.th_read.join()
         self.close()
 
     def stop(self):
@@ -315,12 +292,11 @@ class LoadCellMonitor(QtWidgets.QWidget):
         super(LoadCellMonitor, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
 
-        parent.Signals.udp_data_available.connect(self.on_udp_data)
-        parent.Signals.loadcell_data_available.connect(self.on_lc_data)
+        parent.Signals.raw_lc_data_available.connect(self.on_udp_data)
+        # parent.Signals.processed_lc_data_available.connect(self.on_lc_data)
 
-        # self.N_history = 100
-        self.lc_raw_data = sp.zeros((300,3)) # FIXME hardcode hardcode history length
-        self.lc_data = sp.zeros((300,2))
+        self.lc_raw_data = sp.zeros((100,2)) # FIXME hardcode hardcode history length
+        # self.lc_data = sp.zeros((300,2))
 
         self.initUI()
 
@@ -332,34 +308,18 @@ class LoadCellMonitor(QtWidgets.QWidget):
         # Display and aesthetics
         self.PlotWindow = pg.GraphicsWindow(title="LoadCell raw data monitor")
 
-        self.PlotItemFB = self.PlotWindow.addPlot(title='front / back')
-        self.LineFB = self.PlotItemFB.plot(x=sp.arange(300), y=self.lc_raw_data[:,1], pen=(200,200,200))
-        self.PlotItemFB_pp = self.PlotWindow.addPlot(title='front / back')
-        self.LineFB_pp = self.PlotItemFB_pp.plot(x=sp.arange(300), y=self.lc_data[:,0], pen=(200,100,100))
-        self.PlotItemFB_pp.setYRange(-10,10)
+        self.PlotItem = pg.PlotItem()
+        self.PlotWindow.addItem(self.PlotItem)
+        self.PlotItem.disableAutoRange()
+        self.PlotItem.setYRange(-10000,10000)
+        self.PlotItem.setAspectLocked(True)
+        self.PlotItem.showGrid(x=True,y=True)
+        self.cursor = self.PlotItem.plot(x=[0], y=[0],
+                                         pen=(255,255,255), symbolBrush=(255,255,255),
+                                         symbolPen='w', symbolSize=20)
 
-        self.PlotWindow.nextRow()
-
-        self.PlotItemLR = self.PlotWindow.addPlot(title='left / right')
-        self.LineLR = self.PlotItemLR.plot(x=sp.arange(300), y=self.lc_raw_data[:,2], pen=(200,200,200))
-        self.PlotItemLR_pp = self.PlotWindow.addPlot(title='left / right')
-        self.LineLR_pp = self.PlotItemLR_pp.plot(x=sp.arange(300), y=self.lc_data[:,1], pen=(200,100,100))
-        self.PlotItemLR_pp.setYRange(-10,10)
-
-        # # Display and aesthetics
-        # self.PlotWindow = pg.GraphicsWindow(title="LoadCell raw data monitor")
-        # self.PlotItemFB = self.PlotWindow.addPlot(title='front / back')
-        # # self.LineFB = self.PlotItemFB.plot(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,1], pen=(200,200,200))
-        # # self.LineFB_pp = pg.PlotCurveItem(x=self.lc_raw_data[:,0], y=self.lc_data[:,0], pen=(200,100,100))
-        # self.LineFB = self.PlotItemFB.plot(x=sp.arange(300), y=self.lc_raw_data[:,1], pen=(200,200,200))
-        # self.LineFB_pp = pg.PlotCurveItem(x=sp.arange(300), y=self.lc_data[:,0], pen=(200,100,100))
-        # self.PlotItemFB.addItem(self.LineFB_pp)
-
-        # self.PlotWindow.nextRow()
-        # self.PlotItemLR = self.PlotWindow.addPlot(title='left / right')
-        # self.LineLR = self.PlotItemLR.plot(x=sp.arange(300), y=self.lc_raw_data[:,2], pen=(200,200,200))
-        # self.LineLR_pp = pg.PlotCurveItem(x=sp.arange(300), y=self.lc_data[:,1], pen=(200,100,100))
-        # self.PlotItemLR.addItem(self.LineLR_pp)
+        n_hist = self.lc_raw_data.shape[0]
+        self.cursor_hist = self.PlotItem.plot(x=sp.zeros(n_hist), y=sp.zeros(n_hist), pen=pg.mkPen((255,255,255), width=2, alpha=0.5))
 
         self.Layout.addWidget(self.PlotWindow)
         self.setLayout(self.Layout)
@@ -367,69 +327,20 @@ class LoadCellMonitor(QtWidgets.QWidget):
 
     def on_udp_data(self,t,x,y):
         """ update display """
+        self.cursor.setData(x=[x-self.parent().Fx_off], 
+                            y=[y-self.parent().Fy_off])
+
         self.lc_raw_data = sp.roll(self.lc_raw_data,-1,0)
-        self.lc_raw_data[-1,:] = [t,x,y]
+        self.lc_raw_data[-1,:] = [x,y]
 
-        self.lc_raw_data[-1,1] -= self.parent().Fx_off
-        self.lc_raw_data[-1,2] -= self.parent().Fy_off
-
-        # self.LineFB.setData(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,1])
-        # self.LineLR.setData(x=self.lc_raw_data[:,0], y=self.lc_raw_data[:,2])
-        self.LineLR.setData(y=self.lc_raw_data[:,2])
-        self.LineFB.setData(y=self.lc_raw_data[:,1])
-
-    def on_lc_data(self,x,y):
-        self.lc_data = sp.roll(self.lc_data,-1,0)
-        self.lc_data[-1,:] = [x,y]
-        self.LineFB_pp.setData(y=self.lc_data[:,0])
-        self.LineLR_pp.setData(y=self.lc_data[:,1])
+        self.cursor_hist.setData(x=self.lc_raw_data[:,0]-self.parent().Fx_off,
+                                 y=self.lc_raw_data[:,1]-self.parent().Fy_off)
 
     def closeEvent(self, event):
         # stub
         self.close()
 
-""" copy paste working script from the computer downstairs """
-# ###
-# import sys, os
-# import configparser
 
-# # from PyQt5 import QtWidgets
-# # run the application
-
-# from pyqtgraph.Qt import QtGui, QtCore
-# import pyqtgraph as pg
-
-# display_for_mouse = True
-
-# app = QtGui.QApplication([])
-
-# pg.setConfigOptions(antialias=True)
-
-# # cont view
-# Plot_Cont_Widget = pg.PlotWidget() # A GraphicsView
-# Plot_Cont = Plot_Cont_Widget.window() # a PlotWindow
-
-# # yes, this is weird and I don't get it. This was empirically done ... 
-# Plot_Cont.show()
-# if display_for_mouse==False:
-
-#     # get screens
-#     displays = app.screens()
-
-#     x = displays[0].geometry().width()
-#     Plot_Cont.move(QtCore.QPoint(x,0))
-#     Plot_Cont.windowHandle().setScreen(displays[1])
-#     Plot_Cont_Widget.showFullScreen() # maximises on screen 1
-
-# # deco
-# Plot_Cont.hideAxis('left')
-# Plot_Cont.hideAxis('bottom')
-# Plot_Cont.setAspectLocked(True)
-# Plot_Cont.setYRange(-10,10)
-# Plot_Cont.showGrid(x=True,y=True,alpha=0.5)
-# Plot_Cont.plot(x=[0],y=[0], pen=(200,200,200), symbolBrush=(100,100,100), symbolPen='w',symbolSize=50)
-
-# app.exec_()
 
 """
  _______   __       _______..______    __          ___   ____    ____
@@ -454,7 +365,7 @@ class DisplayController(QtWidgets.QWidget):
 
         # connecting to the relevant signals
         parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
-        parent.LoadCellController.Signals.loadcell_data_available.connect(self.on_lc_data)
+        parent.LoadCellController.Signals.processed_lc_data_available.connect(self.on_lc_data)
 
         self.state = "IDLE"
         self.display_for_mouse = True
@@ -555,7 +466,7 @@ class DisplayController(QtWidgets.QWidget):
 #         # here all the other stuff goes in from the computer downstairs ... 
 
 #         parent.ArduinoController.Signals.serial_data_available.connect(self.on_serial)
-#         parent.LoadCellController.Signals.loadcell_data_available.connect(self.on_lc_data)
+#         parent.LoadCellController.Signals.processed_lc_data_available.connect(self.on_lc_data)
 
 #         self.state = "IDLE"
 #         self.display_for_mouse = True
