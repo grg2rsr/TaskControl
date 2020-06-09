@@ -250,13 +250,15 @@ class LoadCellController(QtWidgets.QWidget):
         self.arduino_2nd_ser.write(cmd)
         
     def on_serial(self,line):
-        # if line.startswith('<'):
-        #     read = line[1:-1].split(' ')
-        #     if read[0] == "MSG" and read[1] == "LOADCELL":
-        #         if read[2] == "CURSOR_RESET":
-        #             self.v_last = sp.array([0,0])
-        #             self.X_last = sp.array([0,0])
-        #             self.X = sp.array([0,0])
+        if line.startswith('<'):
+            read = line[1:-1].split(' ')
+            if read[0] == "MSG" and read[1] == "LOADCELL":
+                if read[2] == "REMOVE_OFFSET":
+                    self.zero()
+                # if read[2] == "CURSOR_RESET":
+                #     self.v_last = sp.array([0,0])
+                #     self.X_last = sp.array([0,0])
+                #     self.X = sp.array([0,0])
         pass
 
                             
@@ -321,9 +323,16 @@ class LoadCellMonitor(QtWidgets.QWidget):
         n_hist = self.lc_raw_data.shape[0]
         self.cursor_hist = self.PlotItem.plot(x=sp.zeros(n_hist), y=sp.zeros(n_hist), pen=pg.mkPen((255,255,255), width=2, alpha=0.5))
 
+        # adding the threshold as lines
+        pen = pg.mkPen((255,255,255,100), width=1)
+        self.PlotItem.addItem(pg.InfiniteLine(pos=2000, pen=pen))
+        self.PlotItem.addItem(pg.InfiniteLine(pos=-2000, pen=pen))
+        self.PlotItem.addItem(pg.InfiniteLine(pos=2000, pen=pen, angle=0))
+        self.PlotItem.addItem(pg.InfiniteLine(pos=-2000, pen=pen, angle=0))
+
         self.Layout.addWidget(self.PlotWindow)
         self.setLayout(self.Layout)
-        self.show()        
+        self.show()
 
     def on_udp_data(self,t,x,y):
         """ update display """

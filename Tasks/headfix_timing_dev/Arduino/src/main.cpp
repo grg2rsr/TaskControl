@@ -309,7 +309,7 @@ void finite_state_machine() {
                 lights_on_orange();
 
                 // tell loadcell controller to recenter
-                log_msg("LOADCELL CURSOR_RESET");
+                log_msg("LOADCELL REMOVE_OFFSET");
             }
 
             // update
@@ -318,13 +318,13 @@ void finite_state_machine() {
             }
             
             // exit condition
-            if (now() - state_entry > trial_avail_dur || zone == back) {
+            if (now() - state_entry > trial_avail_dur || zone == front) {
                 if (now() - state_entry > trial_avail_dur){
                     // missed trial init -> to to ITI again
                     lights_off();
                     current_state = ITI_STATE;
                 }
-                if (zone == back){
+                if (zone == front){
                     // trial initiated
                     lights_on();
                     current_state = PRESENT_INTERVAL_STATE;
@@ -393,7 +393,6 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-                log_msg("LOADCELL CURSOR_RESET");
 
                 // determine what would be a correct answer in this trial
                 if (left_short == true){
@@ -445,7 +444,7 @@ void finite_state_machine() {
                     else {
                         // wrong trial
                         log_code(CHOICE_WRONG_EVENT);
-                        current_state = ITI_STATE; // or timeout?
+                        current_state = TIMEOUT_STATE;
                         lights_off();
                         tone_controller.play(punish_tone_freq, tone_duration);
                     }

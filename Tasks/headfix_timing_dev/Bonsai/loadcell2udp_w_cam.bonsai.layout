@@ -105,7 +105,7 @@
     <WindowState>Normal</WindowState>
   </DialogSettings>
   <DialogSettings>
-    <Visible>true</Visible>
+    <Visible>false</Visible>
     <Location>
       <X>104</X>
       <Y>104</Y>
@@ -119,8 +119,8 @@
     <VisualizerSettings>
       <TimeSeriesVisualizer>
         <Capacity>640</Capacity>
-        <Min>-40000</Min>
-        <Max>40000</Max>
+        <Min>2440</Min>
+        <Max>2510</Max>
         <AutoScale>true</AutoScale>
       </TimeSeriesVisualizer>
     </VisualizerSettings>
@@ -171,7 +171,7 @@
     <WindowState>Normal</WindowState>
   </DialogSettings>
   <DialogSettings>
-    <Visible>true</Visible>
+    <Visible>false</Visible>
     <Location>
       <X>208</X>
       <Y>208</Y>
@@ -185,8 +185,8 @@
     <VisualizerSettings>
       <TimeSeriesVisualizer>
         <Capacity>640</Capacity>
-        <Min>-25000</Min>
-        <Max>20000</Max>
+        <Min>-2870</Min>
+        <Max>-2790</Max>
         <AutoScale>true</AutoScale>
       </TimeSeriesVisualizer>
     </VisualizerSettings>
@@ -348,10 +348,10 @@
     <WindowState>Normal</WindowState>
   </DialogSettings>
   <DialogSettings>
-    <Visible>false</Visible>
+    <Visible>true</Visible>
     <Location>
-      <X>208</X>
-      <Y>208</Y>
+      <X>206</X>
+      <Y>329</Y>
     </Location>
     <Size>
       <Width>336</Width>
@@ -390,8 +390,8 @@
   <DialogSettings>
     <Visible>false</Visible>
     <Location>
-      <X>52</X>
-      <Y>52</Y>
+      <X>78</X>
+      <Y>78</Y>
     </Location>
     <Size>
       <Width>416</Width>
@@ -403,7 +403,7 @@
       <ScalarVisualizer>
         <Capacity>640</Capacity>
         <Min>0</Min>
-        <Max>25000</Max>
+        <Max>200</Max>
         <AutoScale>true</AutoScale>
       </ScalarVisualizer>
     </VisualizerSettings>
@@ -423,8 +423,8 @@
     <VisualizerSettings>
       <TimeSeriesVisualizer>
         <Capacity>640</Capacity>
-        <Min>22500</Min>
-        <Max>23000</Max>
+        <Min>0</Min>
+        <Max>200</Max>
         <AutoScale>true</AutoScale>
       </TimeSeriesVisualizer>
     </VisualizerSettings>
