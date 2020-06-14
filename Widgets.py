@@ -17,8 +17,8 @@ import utils
 import behavior_analysis_utils as bhv
 
 # import VisWidgets
-import ArduinoWidgets
-import HardwareWidgets
+# import ArduinoWidgets
+# import HardwareWidgets
 
 
 """
@@ -299,7 +299,6 @@ class SettingsWidget(QtWidgets.QWidget):
             # reset the counters and connect them
             self.TrialCounter.setText('0/0/0\t--')
             self.WaterCounter.setText('0')
-            # self.ArduinoController.Signals.serial_data_available.connect(self.update_counters)
         else:
             # Here - change button to stop
             print("Task is already running! ")
@@ -398,20 +397,23 @@ class SettingsWidget(QtWidgets.QWidget):
             # closes present controllers and reopens
             print("initializing "+section)
             if section == 'Arduino':
-                self.ArduinoController = ArduinoWidgets.ArduinoController(self)
+                from ArduinoWidgets import ArduinoController
+                self.ArduinoController = ArduinoController(self)
                 self.Controllers.append(self.ArduinoController)
 
             if section == 'Bonsai':
-                self.BonsaiController = HardwareWidgets.BonsaiController(self)
+                from BonsaiWidgets import BonsaiController
+                self.BonsaiController = BonsaiController(self)
                 self.Controllers.append(self.BonsaiController)
 
             if section == 'LoadCell':
-                self.LoadCellController = HardwareWidgets.LoadCellController(self)
+                from LoadCellWidgets import LoadCellController
+                self.LoadCellController = LoadCellController(self)
                 self.Controllers.append(self.LoadCellController)
 
-            if section == 'Display':
-                self.DisplayController = HardwareWidgets.DisplayController(self)
-                self.Controllers.append(self.DisplayController)
+            # if section == 'Display':
+            #     self.DisplayController = HardwareWidgets.DisplayController(self)
+            #     self.Controllers.append(self.DisplayController)
 
         self.profile['last_task'] = self.task
 

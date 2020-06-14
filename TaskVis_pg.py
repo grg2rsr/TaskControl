@@ -33,19 +33,17 @@ import utils
 """
 
 class TrialsVis(QtWidgets.QWidget):
-    def __init__(self, parent, OnlineDataAnalyser, CodesDf=None):
+    def __init__(self, parent, OnlineDataAnalyser):
         super(TrialsVis, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
 
         # code map related - FIXME think about this, is only used for colors here
-        self.CodesDf = CodesDf
-        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
-
+        self.OnlineDataAnalyser = OnlineDataAnalyser
+        self.CodesDf = self.OnlineDataAnalyser.CodesDf
         self.trial_counter = 0
 
         self.initUI()
-        self.OnlineDataAnalyser = OnlineDataAnalyser
-        self.OnlineDataAnalyser.Signals.trial_data_available.connect(self.update)
+        self.OnlineDataAnalyser.trial_data_available.connect(self.update)
 
     def initUI(self):
         self.setWindowTitle("Trials overview")
@@ -92,6 +90,7 @@ class TrialsVis(QtWidgets.QWidget):
         for event_name, EventsDf in EventsDict.items():
             for i, row in EventsDf.iterrows():
                 t = (row['t'] - align_time) / 1e3 # HARDCODE to second
+                t = t.values
                 rect = pg.QtGui.QGraphicsRectItem(t, row_index , .005, 1)
                 col = [v*255 for v in self.cdict[event_name]]
                 rect.setPen(pg.mkPen(col))
@@ -104,6 +103,7 @@ class TrialsVis(QtWidgets.QWidget):
         for span_name, SpansDf in SpansDict.items():
             for i,row in SpansDf.iterrows():
                 t = (row['t_on'] - align_time) / 1e3 # HARDCODE to second
+                t = t.values
                 col = [v*255 for v in self.cdict[span_name]]
                 if span_name == 'LICK':
                     col.append(150) # reduced opacity
@@ -134,7 +134,8 @@ class SessionVis(QtWidgets.QWidget):
         super(SessionVis, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
         self.initUI()
-        OnlineDataAnalyser.Signals.trial_data_available.connect(self.update)
+        self.OnlineDataAnalyser = OnlineDataAnalyser
+        OnlineDataAnalyser.trial_data_available.connect(self.update)
 
     def add_LinePlot(self, pens, PlotWindow, title=None, xlabel=None, ylabel=None):
         Item = PlotWindow.addPlot(title=title)
@@ -178,8 +179,8 @@ class SessionVis(QtWidgets.QWidget):
     def update(self, TrialsDf, TrialMetricsDf):
         hist = 20 # to be exposed in the future
         # ITI
-        x = self.SessionDf.index.values[1:]
-        y = sp.diff(self.SessionDf['t'].values / 1000)
+        x = self.OnlineDataAnalyser.SessionDf.index.values[1:]
+        y = sp.diff(self.OnlineDataAnalyser.SessionDf['t'].values / 1000)
         self.TrialRateLine.setData(x=x, y=y)
         
         # # success rate
