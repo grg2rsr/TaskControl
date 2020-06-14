@@ -15,7 +15,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>D:\TaskControl\Animals\JP2017\2020-03-09_10-53-50_learn_to_lick\bonsai_</Value>
+          <Value>D:\TaskControl\Animals\JJP-00885\2020-06-13_11-08-32_learn_to_lick\bonsai_</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">
@@ -125,7 +125,7 @@
         <Selector>Metadata.embeddedFrameCounter,Metadata.embeddedTimeStamp,Metadata.embeddedGPIOPinState</Selector>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>D:\TaskControl\Animals\JP2017\2020-03-09_10-53-50_learn_to_lick\bonsai_frame_stamps.csv</io:FileName>
+        <io:FileName>D:\TaskControl\Animals\JJP-00885\2020-06-13_11-08-32_learn_to_lick\bonsai_frame_stamps.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>

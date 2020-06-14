@@ -328,6 +328,7 @@ void finite_state_machine() {
                     // trial initiated
                     lights_on();
                     current_state = PRESENT_INTERVAL_STATE;
+                    // current_state = REWARD_AVAILABLE_STATE;
                 }
             }
             break;
