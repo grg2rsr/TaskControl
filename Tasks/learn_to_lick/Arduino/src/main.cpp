@@ -143,6 +143,9 @@ void finite_state_machine() {
                 state_entry_common();
                 reward_collected = false;
                 log_code(REWARD_AVAILABLE_EVENT);
+                // these two are just for the plotter
+                log_code(TRIAL_AVAILABLE_EVENT);
+                log_code(TRIAL_ENTRY_EVENT);
                 tone_controller.play(reward_cue_freq, tone_duration);
             }
 

@@ -451,7 +451,6 @@ class AnimalInfoWidget(QtWidgets.QWidget):
     def initUI(self):
         # self.TextBrowser = QtWidgets.QTextBrowser(self)
         self.Table = QtWidgets.QTableView()
-
         self.Layout = QtWidgets.QHBoxLayout()
         # self.Layout.addWidget(self.TextBrowser)
         self.Layout.addWidget(self.Table)

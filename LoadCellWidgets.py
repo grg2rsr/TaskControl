@@ -208,6 +208,11 @@ class LoadCellController(QtWidgets.QWidget):
 
         # stop reader thread
         self.stopped = True
+
+        # close children
+        for child in self.Children:
+            child.close()
+            
         self.close()
 
     def stop(self):

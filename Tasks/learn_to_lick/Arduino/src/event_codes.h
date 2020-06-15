@@ -22,5 +22,7 @@ const unsigned int REWARD_VALVE_OFF = 13;
 const unsigned int REWARD_AVAILABLE_EVENT = 30;
 const unsigned int REWARD_COLLECTED_EVENT = 31;
 const unsigned int REWARD_MISSED_EVENT = 32;
+const unsigned int TRIAL_AVAILABLE_EVENT = 33;
+const unsigned int TRIAL_ENTRY_EVENT = 34;
 
 
