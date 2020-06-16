@@ -22,6 +22,7 @@
 int last_state = TIMEOUT_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
+unsigned long this_ITI_dur;
 
 // flow control flags
 bool lick_in = false;
@@ -58,9 +59,6 @@ int correct_side;
 
 bool left_short = true; // TODO expose
 
-// LED strip related
-#define NUM_LEDS 21 // num of LEDs in strip minus one, which is the cue LED
-CRGB leds[NUM_LEDS]; // Define the array of leds
 
 // buzzer related
 Tone buzz_controller;
@@ -125,7 +123,9 @@ void read_lick(){
   }
 }
 
-bool cue_leaving_center = false;
+unsigned long last_center_leave = max_future;
+unsigned long last_buzz = max_future;
+unsigned long debounce = 250;
 
 void process_loadcell() {
     // bin zones into 9 pad
@@ -167,20 +167,17 @@ void process_loadcell() {
 
     if (current_zone != last_zone){
         log_var("current_zone", String(current_zone));
-        // this adds a bump every time center is left
-        // if (last_zone == center && cue_leaving_center == true) {
-        //     buzz_controller.play(10,235);
-        //     cue_leaving_center = false;
-        // }
-        // alternatively: make center leaving always bumpy
-        // this makes more sense
 
+        // on center leave
         if (last_zone == center) {
-            buzz_controller.play(10,235);
+            last_center_leave = now();
+            if (last_center_leave - last_buzz > debounce){
+                buzz_controller.play(6,235);
+                last_buzz = now();
+            }
         }
         last_zone = current_zone;
     }
-
 }
 
 /*
@@ -231,6 +228,12 @@ void RewardValveController(){
 ##       ##       ##     ##
 ######## ######## ########
 */
+// LED strip related
+#define NUM_LEDS 21 // num of LEDs in strip minus one, which is the cue LED
+CRGB leds[NUM_LEDS]; // Define the array of leds
+CRGB cue_led[NUM_LEDS]; // Define array of 1 for cue led
+
+bool lights_are_on = false;
 
 void lights_on_blue(){
     // turn LEDs on
@@ -238,6 +241,7 @@ void lights_on_blue(){
         leds[i] = CRGB::Blue;
     }
     FastLED.show();
+    lights_are_on = true;
 }
 
 void lights_on_orange(){
@@ -248,6 +252,7 @@ void lights_on_orange(){
         }
     }
     FastLED.show();
+    lights_are_on = true;
 }
 
 void lights_off(){
@@ -256,28 +261,33 @@ void lights_off(){
         leds[i] = CRGB::Black;
     }
     FastLED.show();
+    lights_are_on = false;
 }
-bool cue_led_on = false;
+bool cue_led_is_on = false;
 bool switch_cue_led_on = false;
 unsigned long cue_led_on_time = max_future;
 unsigned long cue_led_time = 100; // in
 
 void CueLEDController(){
     // a self terminating digital pin switch
-    if (cue_led_on == false && switch_cue_led_on == true) {
+    if (cue_led_is_on == false && switch_cue_led_on == true) {
         log_code(CUE_LED_ON_EVENT);
         // turn cue led on
-        lights_on_blue();
-        cue_led_on = true;
+        cue_led[0] = CRGB::White;
+        FastLED.show();
+
+        cue_led_is_on = true;
         switch_cue_led_on = false;
         cue_led_on_time = now();
     }
 
-    if (cue_led_on == true && now() - cue_led_on_time > cue_led_time) {
+    if (cue_led_is_on == true && now() - cue_led_on_time > cue_led_time) {
         // turn led off
         log_code(CUE_LED_OFF_EVENT);
-        lights_off();
-        cue_led_on = false;
+
+        cue_led[0] = CRGB::Black;
+        FastLED.show();
+        cue_led_is_on = false;
     }
 }
 
@@ -403,7 +413,7 @@ void finite_state_machine() {
                 }
                 if (current_zone == front){
                     // trial initiated
-                    lights_off();
+                    lights_on_blue();
                     current_state = PRESENT_INTERVAL_STATE;
                 }
             }
@@ -469,9 +479,6 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-
-                // for this trial, make the center leave bumpy
-                cue_leaving_center = true;
 
                 // determine what would be a correct answer in this trial
                 if (left_short == true){
@@ -584,16 +591,21 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 log_msg("REQUEST TRIAL_PROBS"); // now is a good moment?
+                this_ITI_dur = random(ITI_dur_min, ITI_dur_max);
                 lights_off();
             }
 
             // update
             if (last_state == current_state){
                 // state actions
+                // turn lights off 1s after state entry
+                if (now() - state_entry > 1000 && lights_are_on){
+                    lights_off();
+                }
             }
 
             // exit condition
-            if (now() - state_entry > ITI_dur) {
+            if (now() - state_entry > this_ITI_dur) {
                 current_state = TRIAL_AVAILABLE_STATE;
             }
             break;
@@ -616,10 +628,11 @@ void setup() {
     Serial1.begin(115200); // serial line for receiving (processed) loadcell X,Y
 
     FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
+    FastLED.addLeds<WS2812B, CUE_LED_PIN, GRB>(cue_led, NUM_LEDS);
+
     lights_off();
 
     tone_controller.begin(SPEAKER_PIN);
-
     buzz_controller.begin(BUZZ_PIN);
 
     Serial.println("<Arduino is ready to receive commands>");

@@ -125,6 +125,10 @@ void read_lick(){
   }
 }
 
+unsigned long last_center_leave = max_future;
+unsigned long last_buzz = max_future;
+unsigned long debounce = 250;
+
 void process_loadcell() {
     // bin zones into 9 pad
     if (X < X_left_thresh && Y < Y_back_thresh){
@@ -165,8 +169,14 @@ void process_loadcell() {
 
     if (current_zone != last_zone){
         log_var("current_zone", String(current_zone));
+
+        // on center leave
         if (last_zone == center) {
-            buzz_controller.play(10,235);
+            last_center_leave = now();
+            if (last_center_leave - last_buzz > debounce){
+                buzz_controller.play(6,235);
+                last_buzz = now();
+            }
         }
         last_zone = current_zone;
     }
@@ -256,7 +266,9 @@ void CueLEDController(){
     if (cue_led_on == false && switch_cue_led_on == true) {
         log_code(CUE_LED_ON_EVENT);
         // turn cue led on
-        lights_on_blue();
+        // lights_on_blue();
+        digitalWrite(CUE_LED_PIN, HIGH);
+
         cue_led_on = true;
         switch_cue_led_on = false;
         cue_led_on_time = now();
@@ -265,7 +277,8 @@ void CueLEDController(){
     if (cue_led_on == true && now() - cue_led_on_time > cue_led_time) {
         // turn led off
         log_code(CUE_LED_OFF_EVENT);
-        lights_off();
+        digitalWrite(CUE_LED_PIN, LOW);
+        // lights_off();
         cue_led_on = false;
     }
 }
@@ -373,6 +386,8 @@ void finite_state_machine() {
 
                 // tell loadcell controller to recenter
                 log_msg("LOADCELL REMOVE_OFFSET");
+
+                // lights_on_blue();
             }
 
             // update
@@ -530,10 +545,12 @@ void loop() {
     // for clocking execution speed
     if (toggle == false){
         digitalWrite(LOOP_PIN, HIGH);
+        digitalWrite(2, HIGH);
         toggle = true;
     }
     else {
         digitalWrite(LOOP_PIN, LOW);
+        digitalWrite(2, LOW);
         toggle = false;
     }
 }

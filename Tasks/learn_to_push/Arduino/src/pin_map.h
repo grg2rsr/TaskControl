@@ -5,3 +5,4 @@ const int BUZZ_PIN = 28;
 const int LOOP_PIN = 7;
 const int LC_SYNC_PIN = 44;
 const int LED_PIN = 48;
+const int CUE_LED_PIN = 14;

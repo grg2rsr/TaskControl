@@ -544,7 +544,7 @@ class OnlineDataAnalyser(QtCore.QObject):
     def update(self,line): # FIXME the self.parent.parent() is absolutely hideous
 
         # if decodeable
-        if not line.startswith('<'):
+        if not line.startswith('<') and not line.startswith('<VAR'):
             code,t = line.split('\t')
             decoded = self.code_map[code]
             # self.decoded_data_available.emit(decoded)

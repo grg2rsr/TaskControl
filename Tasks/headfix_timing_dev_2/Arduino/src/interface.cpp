@@ -119,8 +119,12 @@ void processSerialData() {
                 Serial.println(String("<")+String(varname)+String("=")+String(timeout_dur)+String(">"));
             }
     
-            if (strcmp(varname,"ITI_dur")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(ITI_dur)+String(">"));
+            if (strcmp(varname,"ITI_dur_min")==0){
+                Serial.println(String("<")+String(varname)+String("=")+String(ITI_dur_min)+String(">"));
+            }
+    
+            if (strcmp(varname,"ITI_dur_max")==0){
+                Serial.println(String("<")+String(varname)+String("=")+String(ITI_dur_max)+String(">"));
             }
     
             if (strcmp(varname,"reward_magnitude")==0){
@@ -216,8 +220,12 @@ void processSerialData() {
                 timeout_dur = strtoul(varvalue,NULL,10);
             }
     
-            if (strcmp(varname,"ITI_dur")==0){
-                ITI_dur = strtoul(varvalue,NULL,10);
+            if (strcmp(varname,"ITI_dur_min")==0){
+                ITI_dur_min = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"ITI_dur_max")==0){
+                ITI_dur_max = strtoul(varvalue,NULL,10);
             }
     
             if (strcmp(varname,"reward_magnitude")==0){
