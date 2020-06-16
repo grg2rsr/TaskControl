@@ -22,6 +22,7 @@
 int last_state = ITI_STATE; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
+unsigned long this_ITI_dur;
 
 // flow control flags
 bool lick_in = false;
@@ -32,12 +33,12 @@ Tone tone_controller;
 unsigned long tone_duration = 100;
 
 // unexposed interval tones
-int n_intervals = 6;
-unsigned long tone_intervals[] = {400, 800, 1400, 1600, 2200, 2600}; // in ms, bc will be compared to now()
-unsigned long interval_boundary = 1500;
-unsigned long this_interval;
+// int n_intervals = 6;
+// unsigned long tone_intervals[] = {400, 800, 1400, 1600, 2200, 2600}; // in ms, bc will be compared to now()
+// unsigned long interval_boundary = 1500;
+// unsigned long this_interval;
 
-int ix; // trial index
+// int ix; // trial index
 
 // loadcell binning
 int current_zone;
@@ -58,13 +59,10 @@ int correct_zone;
 
 bool left_short = true; // TODO expose
 
-// LED strip related
-#define NUM_LEDS 21 // num of LEDs in strip minus one, which is the cue LED
-CRGB leds[NUM_LEDS]; // Define the array of leds
-
 // buzzer related
 Tone buzz_controller;
-unsigned long buzz_duration = 50; 
+unsigned long buzz_duration = 50;
+unsigned long choice_buzz_duration = 100;
 
 // for checking loop speed
 bool toggle = false;
@@ -174,7 +172,7 @@ void process_loadcell() {
         if (last_zone == center) {
             last_center_leave = now();
             if (last_center_leave - last_buzz > debounce){
-                buzz_controller.play(6,235);
+                buzz_controller.play(6,230);
                 last_buzz = now();
             }
         }
@@ -231,57 +229,68 @@ void RewardValveController(){
 ######## ######## ########
 */
 
-void lights_on_blue(){
-    // turn LEDs on
-    for (int i = 0; i < NUM_LEDS; i++){
-        leds[i] = CRGB::Blue;
-    }
-    FastLED.show();
-}
+// LED strip related
+// #define NUM_LEDS 21 // num of LEDs in strip minus one, which is the cue LED
+// CRGB leds[NUM_LEDS]; // Define the array of leds
+// CRGB cue_led[NUM_LEDS]; // Define array of 1 for cue led
 
-void lights_on_orange(){
-    // turn LEDs orange
-    for (int i = 0; i < NUM_LEDS; i++){
-        if (i % 2 == 0){
-            leds[i] = CRGB::Orange;
-        }
-    }
-    FastLED.show();
-}
+// bool lights_are_on = false;
 
-void lights_off(){
-    // turn LEDs off
-    for (int i = 0; i < NUM_LEDS; i++){
-        leds[i] = CRGB::Black;
-    }
-    FastLED.show();
-}
-bool cue_led_on = false;
-bool switch_cue_led_on = false;
-unsigned long cue_led_on_time = max_future;
-unsigned long cue_led_time = 100; // in
+// void lights_on_blue(){
+//     // turn LEDs on
+//     for (int i = 0; i < NUM_LEDS; i++){
+//         leds[i] = CRGB::Blue;
+//     }
+//     FastLED.show();
+//     lights_are_on = true;
+// }
 
-void CueLEDController(){
-    // a self terminating digital pin switch
-    if (cue_led_on == false && switch_cue_led_on == true) {
-        log_code(CUE_LED_ON_EVENT);
-        // turn cue led on
-        // lights_on_blue();
-        digitalWrite(CUE_LED_PIN, HIGH);
+// void lights_on_orange(){
+//     // turn LEDs orange
+//     for (int i = 0; i < NUM_LEDS; i++){
+//         if (i % 2 == 0){
+//             leds[i] = CRGB::Orange;
+//         }
+//     }
+//     FastLED.show();
+//     lights_are_on = true;
+// }
 
-        cue_led_on = true;
-        switch_cue_led_on = false;
-        cue_led_on_time = now();
-    }
+// void lights_off(){
+//     // turn LEDs off
+//     for (int i = 0; i < NUM_LEDS; i++){
+//         leds[i] = CRGB::Black;
+//     }
+//     FastLED.show();
+//     lights_are_on = false;
+// }
+// bool cue_led_is_on = false;
+// bool switch_cue_led_on = false;
+// unsigned long cue_led_on_time = max_future;
+// unsigned long cue_led_time = 100; // in
 
-    if (cue_led_on == true && now() - cue_led_on_time > cue_led_time) {
-        // turn led off
-        log_code(CUE_LED_OFF_EVENT);
-        digitalWrite(CUE_LED_PIN, LOW);
-        // lights_off();
-        cue_led_on = false;
-    }
-}
+// void CueLEDController(){
+//     // a self terminating digital pin switch
+//     if (cue_led_is_on == false && switch_cue_led_on == true) {
+//         log_code(CUE_LED_ON_EVENT);
+//         // turn cue led on
+//         cue_led[0] = CRGB::White;
+//         FastLED.show();
+
+//         cue_led_is_on = true;
+//         switch_cue_led_on = false;
+//         cue_led_on_time = now();
+//     }
+
+//     if (cue_led_is_on == true && now() - cue_led_on_time > cue_led_time) {
+//         // turn led off
+//         log_code(CUE_LED_OFF_EVENT);
+
+//         cue_led[0] = CRGB::Black;
+//         FastLED.show();
+//         cue_led_is_on = false;
+//     }
+// }
 
 /*
  ######  ##     ## ########  ######
@@ -293,11 +302,11 @@ void CueLEDController(){
  ######   #######  ########  ######
 */
 
-void timing_cue_1(){
-    log_code(FIRST_TIMING_CUE_EVENT);
-    // light
-    switch_cue_led_on = true;
-}
+// void timing_cue_1(){
+//     log_code(FIRST_TIMING_CUE_EVENT);
+//     // light
+//     switch_cue_led_on = true;
+// }
 
 void timing_cue_2(){
     log_code(SECOND_TIMING_CUE_EVENT);
@@ -319,40 +328,40 @@ void timing_cue_2(){
 
 // hardcoded for now - p_trial
 // float p_interval[6] = {1,0.5,0,0,0.5,1}; // FIXME HARDCODE
-float p_interval_cs[6];
+// float p_interval_cs[6];
 
-void normalize_stim_probs(){
-    // sum
-    float p_sum = 0;
-    for (int i = 0; i < n_intervals; i++){
-        p_sum += p_interval[i];
-    }
+// void normalize_stim_probs(){
+//     // sum
+//     float p_sum = 0;
+//     for (int i = 0; i < n_intervals; i++){
+//         p_sum += p_interval[i];
+//     }
 
-    // normalize
-    for (int i = 0; i < n_intervals; i++){
-        p_interval[i] = p_interval[i] / p_sum;
-    }
-}
+//     // normalize
+//     for (int i = 0; i < n_intervals; i++){
+//         p_interval[i] = p_interval[i] / p_sum;
+//     }
+// }
 
-void cumsum_stim_probs(){
-    p_interval_cs[0] = 0.0;
-    for (int i = 1; i < n_intervals; i++){
-        p_interval_cs[i] = p_interval_cs[i-1] + p_interval[i-1];
-    }
-}
+// void cumsum_stim_probs(){
+//     p_interval_cs[0] = 0.0;
+//     for (int i = 1; i < n_intervals; i++){
+//         p_interval_cs[i] = p_interval_cs[i-1] + p_interval[i-1];
+//     }
+// }
 
-int get_interval_index(){
-    normalize_stim_probs();
-    cumsum_stim_probs();
-    float r = random(1000) / 1000.0;
-    // determine the corresponding bin
-    for (int i = 0; i < n_intervals-1; i++){
-        if (r > p_interval_cs[i] && r < p_interval_cs[i+1]){
-            return i;
-        }
-    }
-    return n_intervals-1; // return the last
-}
+// int get_interval_index(){
+//     normalize_stim_probs();
+//     cumsum_stim_probs();
+//     float r = random(1000) / 1000.0;
+//     // determine the corresponding bin
+//     for (int i = 0; i < n_intervals-1; i++){
+//         if (r > p_interval_cs[i] && r < p_interval_cs[i+1]){
+//             return i;
+//         }
+//     }
+//     return n_intervals-1; // return the last
+// }
 
 /*
 ########  ######  ##     ##
@@ -384,10 +393,11 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
 
+                // cue orange light
+                // lights_on_orange();
+
                 // tell loadcell controller to recenter
                 log_msg("LOADCELL REMOVE_OFFSET");
-
-                // lights_on_blue();
             }
 
             // update
@@ -400,8 +410,8 @@ void finite_state_machine() {
                 current_state = CHOICE_STATE;
             }
             break;
-        
-        case CHOICE_STATE:
+
+                case CHOICE_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
@@ -419,7 +429,6 @@ void finite_state_machine() {
 
                 // 2nd timing cue
                 timing_cue_2();
-
             }
 
             // update
@@ -438,10 +447,12 @@ void finite_state_machine() {
                 // choice was made
                 if (current_zone == correct_zone) {
                     log_choice();
+                    // choice buzz
+                    buzz_controller.play(235,choice_buzz_duration);
                     current_state = REWARD_AVAILABLE_STATE;
                 }
             }
-            break;        
+            break;       
         
         case REWARD_AVAILABLE_STATE:
             // state entry
@@ -470,24 +481,29 @@ void finite_state_machine() {
                 }
                 current_state = ITI_STATE;
             }
-            break;       
+            break;      
 
         case ITI_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
                 log_msg("REQUEST TRIAL_PROBS"); // now is a good moment?
-                lights_off();
+                this_ITI_dur = random(ITI_dur_min, ITI_dur_max);
+                // lights_off();
             }
 
             // update
             if (last_state == current_state){
                 // state actions
+                // turn lights off 1s after state entry
+                // if (now() - state_entry > 1000 && lights_are_on){
+                //     lights_off();
+                // }
             }
 
             // exit condition
-            if (now() - state_entry > ITI_dur) {
-                current_state = CHOICE_STATE;
+            if (now() - state_entry > this_ITI_dur) {
+                current_state = TRIAL_AVAILABLE_STATE;
             }
             break;
     }
@@ -508,11 +524,12 @@ void setup() {
     Serial.begin(115200); // main serial communication with computer
     Serial1.begin(115200); // serial line for receiving (processed) loadcell X,Y
 
-    FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
-    lights_off();
+    // FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
+    // FastLED.addLeds<WS2812B, CUE_LED_PIN, GRB>(cue_led, NUM_LEDS);
+
+    // lights_off();
 
     tone_controller.begin(SPEAKER_PIN);
-
     buzz_controller.begin(BUZZ_PIN);
 
     Serial.println("<Arduino is ready to receive commands>");
@@ -526,7 +543,7 @@ void loop() {
     }
     // Controllers
     RewardValveController();
-    CueLEDController();
+    // CueLEDController();
 
     // sample sensors
     read_lick();
@@ -545,12 +562,10 @@ void loop() {
     // for clocking execution speed
     if (toggle == false){
         digitalWrite(LOOP_PIN, HIGH);
-        digitalWrite(2, HIGH);
         toggle = true;
     }
     else {
         digitalWrite(LOOP_PIN, LOW);
-        digitalWrite(2, LOW);
         toggle = false;
     }
 }

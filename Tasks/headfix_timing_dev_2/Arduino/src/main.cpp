@@ -62,7 +62,8 @@ bool left_short = true; // TODO expose
 
 // buzzer related
 Tone buzz_controller;
-unsigned long buzz_duration = 50; 
+unsigned long buzz_duration = 50;
+unsigned long choice_buzz_duration = 100;
 
 // for checking loop speed
 bool toggle = false;
@@ -519,6 +520,8 @@ void finite_state_machine() {
                 // choice was made
                 if (current_zone == left || current_zone == right) {
                     log_choice();
+                    // choice buzz
+                    buzz_controller.play(235,choice_buzz_duration);
 
                     // determine success
                     if (current_zone == correct_side){

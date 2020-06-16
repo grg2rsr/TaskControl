@@ -87,16 +87,8 @@ void processSerialData() {
 
             // INSERT_GETTERS
 
-            if (strcmp(varname,"stage")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(stage)+String(">"));
-            }
-    
             if (strcmp(varname,"punish_tone_freq")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(punish_tone_freq)+String(">"));
-            }
-    
-            if (strcmp(varname,"stim_tone_freq")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(stim_tone_freq)+String(">"));
             }
     
             if (strcmp(varname,"reward_cue_freq")==0){
@@ -188,16 +180,8 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
-            if (strcmp(varname,"stage")==0){
-                stage = atoi(varvalue);
-            }
-    
             if (strcmp(varname,"punish_tone_freq")==0){
                 punish_tone_freq = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"stim_tone_freq")==0){
-                stim_tone_freq = atoi(varvalue);
             }
     
             if (strcmp(varname,"reward_cue_freq")==0){
