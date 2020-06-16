@@ -23,13 +23,15 @@ import interface_generator
 import behavior_analysis_utils as bhv
 
 """
-  ______   ______   .__   __. .___________..______        ______    __       __       _______ .______
- /      | /  __  \  |  \ |  | |           ||   _  \      /  __  \  |  |     |  |     |   ____||   _  \
-|  ,----'|  |  |  | |   \|  | `---|  |----`|  |_)  |    |  |  |  | |  |     |  |     |  |__   |  |_)  |
-|  |     |  |  |  | |  . `  |     |  |     |      /     |  |  |  | |  |     |  |     |   __|  |      /
-|  `----.|  `--'  | |  |\   |     |  |     |  |\  \----.|  `--'  | |  `----.|  `----.|  |____ |  |\  \----.
- \______| \______/  |__| \__|     |__|     | _| `._____| \______/  |_______||_______||_______|| _| `._____|
-
+ 
+  ######   #######  ##    ## ######## ########   #######  ##       ##       ######## ########  
+ ##    ## ##     ## ###   ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
+ ##       ##     ## ####  ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
+ ##       ##     ## ## ## ##    ##    ########  ##     ## ##       ##       ######   ########  
+ ##       ##     ## ##  ####    ##    ##   ##   ##     ## ##       ##       ##       ##   ##   
+ ##    ## ##     ## ##   ###    ##    ##    ##  ##     ## ##       ##       ##       ##    ##  
+  ######   #######  ##    ##    ##    ##     ##  #######  ######## ######## ######## ##     ## 
+ 
 """
 
 class ArduinoController(QtWidgets.QWidget):
@@ -182,12 +184,12 @@ class ArduinoController(QtWidgets.QWidget):
         which is in turn specified in the task_config.ini """
 
         # building interface
-        print(" --- generating interface --- ")
+        print(" --- generating interface.cpp --- ")
         interface_generator.run(self.vars_path)
-     
+
         # uploading code onto arduino
-        # replace whatever com port is in the platformio.ini
-        # with the one from task config
+
+        # replace whatever com port is in the platformio.ini with the one from task config
         pio_config = configparser.ConfigParser()
         self.pio_config_path = self.task_folder.joinpath(self.task_config['pio_project_folder'],"platformio.ini")
         pio_config.read(self.pio_config_path)
@@ -207,6 +209,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         # backing up original values
         shutil.copy(self.vars_path,self.vars_path.with_suffix('.default'))
+
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
 
@@ -239,7 +242,7 @@ class ArduinoController(QtWidgets.QWidget):
         shutil.copytree(src,target)
 
     def connect(self):
-        """ establish connection with the board """
+        """ establish serial connection with the arduino board """
         
         com_port = self.task_config['com_port'].split(':')[0]
         baud_rate = self.task_config['baud_rate']
@@ -262,10 +265,6 @@ class ArduinoController(QtWidgets.QWidget):
         """ folder is the logging folder """
         self.run_folder = folder # to be kept for the close_event
 
-        # log code
-        if self.parent().logging:
-            self.log_task(folder)
-
         # upload
         if self.reprogramCheckBox.checkState() == 2: # true when checked
             self.upload()
@@ -275,9 +274,7 @@ class ArduinoController(QtWidgets.QWidget):
         # connect to serial port
         self.connection = self.connect()      
 
-        # open file for writing
-        if self.parent().logging:
-            fH = open(folder.joinpath('arduino_log.txt'),'w')
+        fH = open(folder.joinpath('arduino_log.txt'),'w')
 
         # multithreading taken from
         # https://stackoverflow.com/questions/17553543/pyserial-non-blocking-read-loop
@@ -291,13 +288,13 @@ class ArduinoController(QtWidgets.QWidget):
                 try:
                     line = ser.readline().decode('utf-8').strip()
                     if line is not '': # filtering out empty reads
-                        if self.parent().logging:
-                            fH.write(line+os.linesep) # external logging
+                        fH.write(line+os.linesep) # external logging
                         
                         # publishing data
                         self.serial_data_available.emit(line)
 
                 except:
+                    # TODO work on this: if ser.is_open() could be the single function call that fixes this
                     # fails when port not open
                     # FIXME CHECK if this will also fail on failed reads!
                     break
@@ -305,76 +302,6 @@ class ArduinoController(QtWidgets.QWidget):
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()
         print("listening on serial port has started")
-
-    def parse_line(self,line):
-        # TODO FIXME this should be part of the VariableController
-        # if report
-        if line.startswith('<'):
-            if line[1:-1].split(' ')[0] == 'VAR':
-                cmd,var,value = line[1:-1].split(' ')
-                Df = self.VariableController.VariableEditWidget.get_entries()
-                Df.index = Df.name
-                Df.loc[var,'value'] = int(value)
-                Df.reset_index(drop=True,inplace=True)
-                self.VariableController.VariableEditWidget.set_entries(Df)
-
-        # TODO FIXME this should be now part of the online analyzer
-        # normal read
-        if '\t' in line:
-            code = line.split('\t')[0]
-            decoded = self.code_map[code]
-            line = '\t'.join([decoded,line.split('\t')[1]])
-
-            
-    def closeEvent(self, event):
-
-        # take care of ending the threads
-        self.stopped = True
-        # self.thread.join()
-
-        # overwrite logged arduino vars file
-        if self.parent().logging:
-            try:
-                target = self.run_folder.joinpath(self.task)
-                self.VariableController.write_variables(target.joinpath('Arduino','src',self.task_config['var_fname']))
-            except AttributeError:
-                # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
-                pass
-
-        # if serial connection is open, close it
-        if hasattr(self,'connection'):
-            self.connection.close()
-            self.SerialMonitor.close()
-        self.VariableController.close()
-
-        # read in original task config
-        task_config = configparser.ConfigParser()
-        task_config_path = self.task_folder.joinpath("task_config.ini")
-        task_config.read(task_config_path)
-        
-        # these are obsolete currently, as there is no way to change things in the task config interactively
-        # could be interesting to keep it though in order to run several boxes from one computer
-
-        # update all changes in this section
-        # for key,value in self.task_config.items():
-            # task_config.set('Arduino',key,value)
-
-        # com port: remove descriptor
-        # task_config.set('Arduino','com_port',self.task_config['com_port'].split(':')[0])
-
-        # write it
-        # if self.parent().logging:
-        #     with open(task_config_path, 'w') as task_config_fH:
-        #         task_config.write(task_config_fH)
-        #     print("logging arduino section of task config to :", task_config_path)
-
-        # remove everything that is written nontheless
-        if not self.parent().logging:
-            shutil.rmtree(self.run_folder)
-
-        for child in self.Children:
-            child.close()
-        self.close()
     
     def stop(self):
         """ when session is finished """
@@ -383,15 +310,69 @@ class ArduinoController(QtWidgets.QWidget):
         self.RunBtn.setStyleSheet("background-color: green")
     pass
 
+    # def parse_line(self,line):
+    #     # TODO FIXME this should be part of the VariableController
+    #     # TODO the entire VAR functionality needs to be reworked
+    #     # if report
+    #     if line.startswith('<'):
+    #         if line[1:-1].split(' ')[0] == 'VAR':
+    #             cmd,var,value = line[1:-1].split(' ')
+    #             Df = self.VariableController.VariableEditWidget.get_entries()
+    #             Df.index = Df.name
+    #             Df.loc[var,'value'] = int(value)
+    #             Df.reset_index(drop=True,inplace=True)
+    #             self.VariableController.VariableEditWidget.set_entries(Df)
+
+    #     # TODO FIXME this should be now part of the online analyzer
+    #     # normal read
+    #     if '\t' in line:
+    #         code = line.split('\t')[0]
+    #         decoded = self.code_map[code]
+    #         line = '\t'.join([decoded,line.split('\t')[1]])
+
+    def closeEvent(self, event):
+        # take care of ending the threads
+        self.stopped = True
+        # self.thread.join()
+
+        # overwrite logged arduino vars file
+        try:
+            target = self.run_folder.joinpath(self.task)
+            self.VariableController.write_variables(target.joinpath('Arduino','src',self.task_config['var_fname']))
+        except AttributeError:
+            # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
+            pass
+
+        # if serial connection is open, close it
+        if hasattr(self,'connection'):
+            if self.connection.is_open():
+                self.connection.close()
+            self.SerialMonitor.close()
+        self.VariableController.close()
+
+        # read in original task config - why?
+        task_config = configparser.ConfigParser()
+        task_config_path = self.task_folder.joinpath("task_config.ini")
+        task_config.read(task_config_path)
+        
+        # remove everything that is written nontheless
+        shutil.rmtree(self.run_folder)
+
+        # take care of the kids
+        for child in self.Children:
+            child.close()
+        self.close()
 
 """
-____    ____  ___      .______       __       ___      .______    __       _______     _______.
-\   \  /   / /   \     |   _  \     |  |     /   \     |   _  \  |  |     |   ____|   /       |
- \   \/   / /  ^  \    |  |_)  |    |  |    /  ^  \    |  |_)  | |  |     |  |__     |   (----`
-  \      / /  /_\  \   |      /     |  |   /  /_\  \   |   _  <  |  |     |   __|     \   \
-   \    / /  _____  \  |  |\  \----.|  |  /  _____  \  |  |_)  | |  `----.|  |____.----)   |
-    \__/ /__/     \__\ | _| `._____||__| /__/     \__\ |______/  |_______||_______|_______/
-
+ 
+ ##     ##    ###    ########  ####    ###    ########  ##       ########  ######  
+ ##     ##   ## ##   ##     ##  ##    ## ##   ##     ## ##       ##       ##    ## 
+ ##     ##  ##   ##  ##     ##  ##   ##   ##  ##     ## ##       ##       ##       
+ ##     ## ##     ## ########   ##  ##     ## ########  ##       ######    ######  
+  ##   ##  ######### ##   ##    ##  ######### ##     ## ##       ##             ## 
+   ## ##   ##     ## ##    ##   ##  ##     ## ##     ## ##       ##       ##    ## 
+    ###    ##     ## ##     ## #### ##     ## ########  ######## ########  ######  
+ 
 """
 
 class ArduinoVariablesWidget(QtWidgets.QWidget):
@@ -526,7 +507,6 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
 class OnlineDataAnalyser(QtCore.QObject):
     """ listens to serial port, analyzes arduino data as it comes in """
-    # decoded_data_available = QtCore.pyqtSignal(str)
     trial_data_available = QtCore.pyqtSignal(pd.DataFrame,pd.DataFrame)
 
     def __init__(self, parent, CodesDf, Metrics):
@@ -539,35 +519,37 @@ class OnlineDataAnalyser(QtCore.QObject):
         self.SessionDf = None
 
         self.parent = parent
+        self.TrialCounter = parent.parent().TrialCounter
+        self.WaterCounter = parent.parent().WaterCounter
         parent.serial_data_available.connect(self.update)
 
-    def update(self,line): # FIXME the self.parent.parent() is absolutely hideous
+    def update(self,line):
 
-        # if decodeable
-        if not line.startswith('<') and not line.startswith('<VAR'):
-            code,t = line.split('\t')
-            decoded = self.code_map[code]
-            # self.decoded_data_available.emit(decoded)
+        # if normally decodeable
+        if not line.startswith('<'):
+            self.lines.append(line)
 
+            code, t = line.split('\t')
             t = float(t)
+            decoded = self.code_map[code]
 
             # update counters
             if decoded == 'TRIAL_SUCCESSFUL_EVENT':
-                self.parent.parent().TrialCounter.increment(successful=True) # FIXME
+                self.TrialCounter.increment(successful=True)
 
-            if decoded == 'TRIAL_ABORTED_EVENT':
-                self.parent.parent().TrialCounter.increment(successful=False) # FIXME
+            if decoded == 'TRIAL_UNSUCCESSFUL_EVENT':
+                self.TrialCounter.increment(successful=False)
 
+            # update water counter if reward was collected
             if decoded == 'REWARD_COLLECTED_EVENT':
                 VarsDf = self.parent.VariableController.VariableEditWidget.get_entries()
                 if 'reward_magnitude' in VarsDf['name'].values:
                     VarsDf.index = VarsDf.name
                     current_magnitude = VarsDf.loc['reward_magnitude','value']
-                    self.parent.parent().WaterCounter.increment(current_magnitude) # FIXME
+                    self.WaterCounter.increment(current_magnitude)
 
-            # the signal with which a trial ends
-            if decoded == "TRIAL_AVAILABLE_STATE": # HARDCODE: this is the event that seperates trials
-                self.lines.append(line)
+            # the event that separates the stream of data into chunks of trials
+            if decoded == "TRIAL_AVAILABLE_STATE": # HARDCODE
 
                 # parse lines
                 TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map)
@@ -586,18 +568,16 @@ class OnlineDataAnalyser(QtCore.QObject):
 
                     # restart lines with current line
                     self.lines = [line]
-            else:
-                self.lines.append(line)    
 
 """
  
- ########  #######      ######   #######  ########  ######## 
-    ##    ##     ##    ##    ## ##     ## ##     ##    ##    
-    ##    ##     ##    ##       ##     ## ##     ##    ##    
-    ##    ##     ##     ######  ##     ## ########     ##    
-    ##    ##     ##          ## ##     ## ##   ##      ##    
-    ##    ##     ##    ##    ## ##     ## ##    ##     ##    
-    ##     #######      ######   #######  ##     ##    ##    
+ ######## ########  ####    ###    ##           ######   #######  ##    ## ######## ########   #######  ##       ##       ######## ########  
+    ##    ##     ##  ##    ## ##   ##          ##    ## ##     ## ###   ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
+    ##    ##     ##  ##   ##   ##  ##          ##       ##     ## ####  ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
+    ##    ########   ##  ##     ## ##          ##       ##     ## ## ## ##    ##    ########  ##     ## ##       ##       ######   ########  
+    ##    ##   ##    ##  ######### ##          ##       ##     ## ##  ####    ##    ##   ##   ##     ## ##       ##       ##       ##   ##   
+    ##    ##    ##   ##  ##     ## ##          ##    ## ##     ## ##   ###    ##    ##    ##  ##     ## ##       ##       ##       ##    ##  
+    ##    ##     ## #### ##     ## ########     ######   #######  ##    ##    ##    ##     ##  #######  ######## ######## ######## ##     ## 
  
 """
 
@@ -663,13 +643,15 @@ class TrialTypeController(QtWidgets.QWidget):
         pass
 
 """
-.___  ___.   ______   .__   __.  __  .___________.  ______   .______
-|   \/   |  /  __  \  |  \ |  | |  | |           | /  __  \  |   _  \
-|  \  /  | |  |  |  | |   \|  | |  | `---|  |----`|  |  |  | |  |_)  |
-|  |\/|  | |  |  |  | |  . `  | |  |     |  |     |  |  |  | |      /
-|  |  |  | |  `--'  | |  |\   | |  |     |  |     |  `--'  | |  |\  \----.
-|__|  |__|  \______/  |__| \__| |__|     |__|      \______/  | _| `._____|
-
+ 
+ ##     ##  #######  ##    ## #### ########  #######  ########  
+ ###   ### ##     ## ###   ##  ##     ##    ##     ## ##     ## 
+ #### #### ##     ## ####  ##  ##     ##    ##     ## ##     ## 
+ ## ### ## ##     ## ## ## ##  ##     ##    ##     ## ########  
+ ##     ## ##     ## ##  ####  ##     ##    ##     ## ##   ##   
+ ##     ## ##     ## ##   ###  ##     ##    ##     ## ##    ##  
+ ##     ##  #######  ##    ## ####    ##     #######  ##     ## 
+ 
 """
 
 class SerialMonitorWidget(QtWidgets.QWidget):
@@ -677,7 +659,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
     open upon connect and received data
     """
 
-    def __init__(self, parent, code_map=None):
+    def __init__(self, parent, code_map):
         super(SerialMonitorWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
         self.initUI()
@@ -705,13 +687,11 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.layout()
 
     def update(self,line):
-        # decoding line if code_map is passed
+        # TODO filter out high freq events like lick and zone
         if not line.startswith('<'):
-            if self.code_map is not None:
-                if '\t' in line:
-                    code = line.split('\t')[0]
-                    decoded = self.code_map[code]
-                    line = '\t'.join([decoded,line.split('\t')[1]])
+            code = line.split('\t')[0]
+            decoded = self.code_map[code]
+            line = '\t'.join([decoded,line.split('\t')[1]])
 
         # TODO deal with the history functionality
         history_len = 100 # FIXME expose this property? or remove it. for now for debugging
@@ -738,15 +718,13 @@ class SerialMonitorWidget(QtWidgets.QWidget):
 
 
 class StateMachineMonitorWidget(QtWidgets.QWidget):
-    # TODO - this is not a monitor but also a controller!
-    """ """
+    
     def __init__(self,parent, code_map=None):
         super(StateMachineMonitorWidget, self).__init__(parent=parent)
 
         # code_map related
         self.code_map = code_map
-        self.code_map_inv = dict(zip(code_map.values(),code_map.keys()))
-
+        
         # connect to parent signals
         parent.serial_data_available.connect(self.update)
 
@@ -770,7 +748,7 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
             Btn = QtWidgets.QPushButton()
             Btn.setText(name)
             if kind == 'STATE':
-                # Btn.setCheckable(True)
+                Btn.setCheckable(False)
                 self.States_Layout.addWidget(Btn)
             if kind == 'ON':
                 Btn.setCheckable(False)
@@ -782,11 +760,6 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
             self.Btns.append((full_name,Btn))
 
         self.Layout.addLayout(self.States_Layout)
-        for i in range(self.States_Layout.count()):
-            state = self.States_Layout.itemAt(i).widget().text()
-            # https://stackoverflow.com/a/42945033/4749250
-            self.States_Layout.itemAt(i).widget().clicked.connect(partial(self.set_state, state))
-
         self.Layout.addLayout(self.Spans_Layout)
         self.Layout.addLayout(self.Events_Layout)
 
@@ -794,13 +767,6 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         self.setWindowTitle("State Machine Monitor")
 
         self.show()
-    
-    # in this case it becomes a controller ... 
-    def set_state(self, state):
-        state += '_STATE'
-        code = self.code_map_inv[state]
-        cmd = "SET current_state " + code
-        self.parent().send(cmd)
 
     def update(self,line):
         try:

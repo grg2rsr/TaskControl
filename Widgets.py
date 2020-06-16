@@ -47,7 +47,6 @@ class SettingsWidget(QtWidgets.QWidget):
         self.Controllers = []
         self.Children = []
         self.main = main
-        self.logging = True
         self.running = False
         self.initUI()
 
@@ -101,12 +100,6 @@ class SettingsWidget(QtWidgets.QWidget):
         if tasks.index(self.task) == 0:
             self.task_changed()
         FormLayout.addRow('Task', self.TaskChoiceWidget)
-
-        # logging checkbox
-        self.logCheckBox = QtWidgets.QCheckBox()
-        self.logCheckBox.setChecked(True)
-        self.logCheckBox.stateChanged.connect(self.logCheckBox_changed)
-        FormLayout.addRow("logging enabled", self.logCheckBox)
 
         # sep
         line = QtWidgets.QFrame(self)
@@ -328,12 +321,6 @@ class SettingsWidget(QtWidgets.QWidget):
         # bonus TODO
         # send me a mail / slack message
         # https://github.com/slackapi/python-slackclient
-
-    def logCheckBox_changed(self):
-        if self.logCheckBox.checkState() == 2:
-            self.logging = True
-        else:
-            self.logging = False
 
     def selfTerminateCheckBox_changed(self):
         if self.selfTerminateCheckBox.checkState() == 2:
