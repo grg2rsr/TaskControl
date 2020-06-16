@@ -125,6 +125,8 @@ void read_lick(){
   }
 }
 
+bool cue_leaving_center = false;
+
 void process_loadcell() {
     // bin zones into 9 pad
     if (X < X_left_thresh && Y < Y_back_thresh){
@@ -165,6 +167,17 @@ void process_loadcell() {
 
     if (current_zone != last_zone){
         log_var("current_zone", String(current_zone));
+        // this adds a bump every time center is left
+        // if (last_zone == center && cue_leaving_center == true) {
+        //     buzz_controller.play(10,235);
+        //     cue_leaving_center = false;
+        // }
+        // alternatively: make center leaving always bumpy
+        // this makes more sense
+
+        if (last_zone == center) {
+            buzz_controller.play(10,235);
+        }
         last_zone = current_zone;
     }
 
@@ -456,6 +469,9 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
+
+                // for this trial, make the center leave bumpy
+                cue_leaving_center = true;
 
                 // determine what would be a correct answer in this trial
                 if (left_short == true){

@@ -165,9 +165,11 @@ void process_loadcell() {
 
     if (current_zone != last_zone){
         log_var("current_zone", String(current_zone));
+        if (last_zone == center) {
+            buzz_controller.play(10,235);
+        }
         last_zone = current_zone;
     }
-
 }
 
 /*
@@ -399,6 +401,10 @@ void finite_state_machine() {
                 else {
                     correct_zone = right;
                 }
+
+                // 2nd timing cue
+                timing_cue_2();
+
             }
 
             // update
