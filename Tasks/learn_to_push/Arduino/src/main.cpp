@@ -19,11 +19,11 @@
 */
 
 // int current_state = INI_STATE; // starting at this, aleady declared in interface.cpp
-int last_state = ITI_STATE; // whatever other state
+int last_state = -1; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
 unsigned long this_ITI_dur;
-
+unsigned long this_trial_entry_pause_dur;
 // flow control flags
 bool lick_in = false;
 bool reward_collected = false;
@@ -100,6 +100,13 @@ void log_choice(){
     if (current_zone == left){
         log_code(CHOICE_LEFT_EVENT);
     }
+}
+
+void send_sync_pulse(){
+    // sync w load cell TODO test if 1 ms is enough to do this
+    digitalWrite(LC_SYNC_PIN,HIGH);
+    delay(1);
+    digitalWrite(LC_SYNC_PIN,LOW);
 }
 
 /*
@@ -230,67 +237,67 @@ void RewardValveController(){
 */
 
 // LED strip related
-// #define NUM_LEDS 21 // num of LEDs in strip minus one, which is the cue LED
-// CRGB leds[NUM_LEDS]; // Define the array of leds
-// CRGB cue_led[NUM_LEDS]; // Define array of 1 for cue led
+#define NUM_LEDS 21 // num of LEDs in strip minus one, which is the cue LED
+CRGB leds[NUM_LEDS]; // Define the array of leds
+CRGB cue_led[NUM_LEDS]; // Define array of 1 for cue led
 
-// bool lights_are_on = false;
+bool lights_are_on = false;
 
-// void lights_on_blue(){
-//     // turn LEDs on
-//     for (int i = 0; i < NUM_LEDS; i++){
-//         leds[i] = CRGB::Blue;
-//     }
-//     FastLED.show();
-//     lights_are_on = true;
-// }
+void lights_on_blue(){
+    // turn LEDs on
+    for (int i = 0; i < NUM_LEDS; i++){
+        leds[i] = CRGB::Blue;
+    }
+    FastLED.show();
+    lights_are_on = true;
+}
 
-// void lights_on_orange(){
-//     // turn LEDs orange
-//     for (int i = 0; i < NUM_LEDS; i++){
-//         if (i % 2 == 0){
-//             leds[i] = CRGB::Orange;
-//         }
-//     }
-//     FastLED.show();
-//     lights_are_on = true;
-// }
+void lights_on_orange(){
+    // turn LEDs orange
+    for (int i = 0; i < NUM_LEDS; i++){
+        if (i % 2 == 0){
+            leds[i] = CRGB::Orange;
+        }
+    }
+    FastLED.show();
+    lights_are_on = true;
+}
 
-// void lights_off(){
-//     // turn LEDs off
-//     for (int i = 0; i < NUM_LEDS; i++){
-//         leds[i] = CRGB::Black;
-//     }
-//     FastLED.show();
-//     lights_are_on = false;
-// }
-// bool cue_led_is_on = false;
-// bool switch_cue_led_on = false;
-// unsigned long cue_led_on_time = max_future;
-// unsigned long cue_led_time = 100; // in
+void lights_off(){
+    // turn LEDs off
+    for (int i = 0; i < NUM_LEDS; i++){
+        leds[i] = CRGB::Black;
+    }
+    FastLED.show();
+    lights_are_on = false;
+}
+bool cue_led_is_on = false;
+bool switch_cue_led_on = false;
+unsigned long cue_led_on_time = max_future;
+unsigned long cue_led_time = 100; // in
 
-// void CueLEDController(){
-//     // a self terminating digital pin switch
-//     if (cue_led_is_on == false && switch_cue_led_on == true) {
-//         log_code(CUE_LED_ON_EVENT);
-//         // turn cue led on
-//         cue_led[0] = CRGB::White;
-//         FastLED.show();
+void CueLEDController(){
+    // a self terminating digital pin switch
+    if (cue_led_is_on == false && switch_cue_led_on == true) {
+        log_code(CUE_LED_ON_EVENT);
+        // turn cue led on
+        cue_led[0] = CRGB::White;
+        FastLED.show();
 
-//         cue_led_is_on = true;
-//         switch_cue_led_on = false;
-//         cue_led_on_time = now();
-//     }
+        cue_led_is_on = true;
+        switch_cue_led_on = false;
+        cue_led_on_time = now();
+    }
 
-//     if (cue_led_is_on == true && now() - cue_led_on_time > cue_led_time) {
-//         // turn led off
-//         log_code(CUE_LED_OFF_EVENT);
+    if (cue_led_is_on == true && now() - cue_led_on_time > cue_led_time) {
+        // turn led off
+        log_code(CUE_LED_OFF_EVENT);
 
-//         cue_led[0] = CRGB::Black;
-//         FastLED.show();
-//         cue_led_is_on = false;
-//     }
-// }
+        cue_led[0] = CRGB::Black;
+        FastLED.show();
+        cue_led_is_on = false;
+    }
+}
 
 /*
  ######  ##     ## ########  ######
@@ -302,11 +309,11 @@ void RewardValveController(){
  ######   #######  ########  ######
 */
 
-// void timing_cue_1(){
-//     log_code(FIRST_TIMING_CUE_EVENT);
-//     // light
-//     switch_cue_led_on = true;
-// }
+void timing_cue_1(){
+    log_code(FIRST_TIMING_CUE_EVENT);
+    // light
+    switch_cue_led_on = true;
+}
 
 void timing_cue_2(){
     log_code(SECOND_TIMING_CUE_EVENT);
@@ -385,19 +392,27 @@ void finite_state_machine() {
     switch (current_state) {
 
         case INI_STATE:
-            current_state = TRIAL_AVAILABLE_STATE;
+            current_state = TRIAL_ENTRY_STATE;
             break;
 
-        case TRIAL_AVAILABLE_STATE:
+        case TRIAL_ENTRY_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
+                log_code(TRIAL_AVAILABLE_STATE); // for plotting purposes
+                log_code(TRIAL_ENTRY_EVENT);
+
+                // sync at trial entry
+                send_sync_pulse();
 
                 // cue orange light
-                // lights_on_orange();
+                lights_on_blue();
 
                 // tell loadcell controller to recenter
                 log_msg("LOADCELL REMOVE_OFFSET");
+
+                this_trial_entry_pause_dur = random(trial_entry_pause_dur_min, trial_entry_pause_dur_max);
+
             }
 
             // update
@@ -405,13 +420,14 @@ void finite_state_machine() {
 
             }
             
-            // exit condition - autostart
-            if (true) {
+            // exit condition
+            // min pause + fix dur immobility
+            if (now() - state_entry > this_trial_entry_pause_dur  && now() - last_center_leave > min_fix_dur) {
                 current_state = CHOICE_STATE;
             }
             break;
 
-                case CHOICE_STATE:
+        case CHOICE_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
@@ -426,6 +442,7 @@ void finite_state_machine() {
                 else {
                     correct_zone = right;
                 }
+                log_var("correct_zone", String(correct_zone));
 
                 // 2nd timing cue
                 timing_cue_2();
@@ -440,7 +457,7 @@ void finite_state_machine() {
                 // no report, timeout
                 if (now() - state_entry > choice_dur){
                     log_code(CHOICE_MISSED_EVENT);
-                    tone_controller.play(punish_tone_freq, tone_duration);
+                    // tone_controller.play(punish_tone_freq, tone_duration);
                     current_state = ITI_STATE;
                 }
                 
@@ -489,21 +506,21 @@ void finite_state_machine() {
                 state_entry_common();
                 log_msg("REQUEST TRIAL_PROBS"); // now is a good moment?
                 this_ITI_dur = random(ITI_dur_min, ITI_dur_max);
-                // lights_off();
+                lights_off();
             }
 
             // update
             if (last_state == current_state){
                 // state actions
                 // turn lights off 1s after state entry
-                // if (now() - state_entry > 1000 && lights_are_on){
-                //     lights_off();
-                // }
+                if (now() - state_entry > 1000 && lights_are_on){
+                    lights_off();
+                }
             }
 
             // exit condition
             if (now() - state_entry > this_ITI_dur) {
-                current_state = TRIAL_AVAILABLE_STATE;
+                current_state = TRIAL_ENTRY_STATE;
             }
             break;
     }
@@ -524,10 +541,10 @@ void setup() {
     Serial.begin(115200); // main serial communication with computer
     Serial1.begin(115200); // serial line for receiving (processed) loadcell X,Y
 
-    // FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
-    // FastLED.addLeds<WS2812B, CUE_LED_PIN, GRB>(cue_led, NUM_LEDS);
+    FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
+    FastLED.addLeds<WS2812B, CUE_LED_PIN, GRB>(cue_led, NUM_LEDS);
 
-    // lights_off();
+    lights_off();
 
     tone_controller.begin(SPEAKER_PIN);
     buzz_controller.begin(BUZZ_PIN);
@@ -543,7 +560,7 @@ void loop() {
     }
     // Controllers
     RewardValveController();
-    // CueLEDController();
+    CueLEDController();
 
     // sample sensors
     read_lick();

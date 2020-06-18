@@ -99,6 +99,14 @@ void processSerialData() {
                 Serial.println(String("<")+String(varname)+String("=")+String(reward_tone_freq)+String(">"));
             }
     
+            if (strcmp(varname,"trial_entry_pause_dur_min")==0){
+                Serial.println(String("<")+String(varname)+String("=")+String(trial_entry_pause_dur_min)+String(">"));
+            }
+    
+            if (strcmp(varname,"trial_entry_pause_dur_max")==0){
+                Serial.println(String("<")+String(varname)+String("=")+String(trial_entry_pause_dur_max)+String(">"));
+            }
+    
             if (strcmp(varname,"choice_dur")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(choice_dur)+String(">"));
             }
@@ -109,6 +117,10 @@ void processSerialData() {
     
             if (strcmp(varname,"ITI_dur_max")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(ITI_dur_max)+String(">"));
+            }
+    
+            if (strcmp(varname,"min_fix_dur")==0){
+                Serial.println(String("<")+String(varname)+String("=")+String(min_fix_dur)+String(">"));
             }
     
             if (strcmp(varname,"reward_magnitude")==0){
@@ -166,9 +178,9 @@ void processSerialData() {
             strlcpy(varvalue, line+split+1, len-split+1);
 
             // for the state machine "force state" buttons
-            if (strcmp(varname,"current_state")==0){
-                current_state = atoi(varvalue);
-            }
+            // if (strcmp(varname,"current_state")==0){
+            //     current_state = atoi(varvalue);
+            // }
 
             // INSERT_SETTERS
 
@@ -184,6 +196,14 @@ void processSerialData() {
                 reward_tone_freq = atoi(varvalue);
             }
     
+            if (strcmp(varname,"trial_entry_pause_dur_min")==0){
+                trial_entry_pause_dur_min = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"trial_entry_pause_dur_max")==0){
+                trial_entry_pause_dur_max = strtoul(varvalue,NULL,10);
+            }
+    
             if (strcmp(varname,"choice_dur")==0){
                 choice_dur = strtoul(varvalue,NULL,10);
             }
@@ -194,6 +214,10 @@ void processSerialData() {
     
             if (strcmp(varname,"ITI_dur_max")==0){
                 ITI_dur_max = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"min_fix_dur")==0){
+                min_fix_dur = strtoul(varvalue,NULL,10);
             }
     
             if (strcmp(varname,"reward_magnitude")==0){
