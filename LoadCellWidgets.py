@@ -36,7 +36,7 @@ class LoadCellController(QtWidgets.QWidget):
         parent.ArduinoController.serial_data_available.connect(self.on_serial)
 
         # data related
-        self.Buffer = sp.zeros((100,2))
+        self.Buffer = sp.zeros((1000,2))
         self.X_last = sp.zeros(2)
         self.v_last = sp.zeros(2)
         self.t_last = 0
@@ -142,6 +142,9 @@ class LoadCellController(QtWidgets.QWidget):
         self.Buffer = sp.roll(self.Buffer,-1,0)
         self.Buffer[-1,:] = [Fx,Fy]
 
+        # calculate offset
+        self.Fx_off, self.Fy_off = sp.median(self.Buffer,0)
+
         # remove offset
         Fx -= self.Fx_off
         Fy -= self.Fy_off
@@ -183,7 +186,9 @@ class LoadCellController(QtWidgets.QWidget):
         # send coordinates to Arduino via second serial
         ba = struct.pack("ff",Fx,Fy)
         cmd = str.encode('[') + ba + str.encode(']')
-        self.arduino_2nd_ser.write(cmd)
+
+        if self.arduino_2nd_ser.is_open:
+            self.arduino_2nd_ser.write(cmd)
         
     def on_serial(self,line):
         """ listens to the arduino MSGs """
@@ -191,7 +196,8 @@ class LoadCellController(QtWidgets.QWidget):
             read = line[1:-1].split(' ')
             if read[0] == "MSG" and read[1] == "LOADCELL":
                 if read[2] == "REMOVE_OFFSET":
-                    self.zero()
+                    # self.zero()
+                    pass
                 # if read[2] == "CURSOR_RESET":
                 #     self.v_last = sp.array([0,0])
                 #     self.X_last = sp.array([0,0])
@@ -254,20 +260,24 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.PlotItem = pg.PlotItem()
         self.PlotWindow.addItem(self.PlotItem)
         self.PlotItem.disableAutoRange()
-        self.PlotItem.setYRange(-10000,10000)
+        self.PlotItem.setYRange(-8000,8000)
         self.PlotItem.setAspectLocked(True)
         self.PlotItem.showGrid(x=True,y=True)
         self.cursor = self.PlotItem.plot(x=[0], y=[0],
                                          pen=(255,255,255), symbolBrush=(255,255,255),
                                          symbolPen='w', symbolSize=20)
 
+        self.cursor_raw = self.PlotItem.plot(x=[0], y=[0],
+                                         pen=(100,100,100), symbolBrush=(100,100,100),
+                                         symbolSize=10)
+
         n_hist = self.lc_raw_data.shape[0]
         self.cursor_hist = self.PlotItem.plot(x=sp.zeros(n_hist), y=sp.zeros(n_hist), pen=pg.mkPen((255,255,255), width=2, alpha=0.5))
 
         # adding the threshold as lines
         pen = pg.mkPen((255,255,255,100), width=1)
-        self.PlotItem.addItem(pg.InfiniteLine(pos=2000, pen=pen))
-        self.PlotItem.addItem(pg.InfiniteLine(pos=-2000, pen=pen))
+        self.PlotItem.addItem(pg.InfiniteLine(pos=1500, pen=pen))
+        self.PlotItem.addItem(pg.InfiniteLine(pos=-1500, pen=pen))
         self.PlotItem.addItem(pg.InfiniteLine(pos=2000, pen=pen, angle=0))
         self.PlotItem.addItem(pg.InfiniteLine(pos=-2000, pen=pen, angle=0))
 
@@ -279,6 +289,9 @@ class LoadCellMonitor(QtWidgets.QWidget):
         """ update display """
         self.cursor.setData(x=[x - self.Controller.Fx_off], 
                             y=[y - self.Controller.Fy_off])
+
+        self.cursor_raw.setData(x=[x], 
+                                y=[y])
 
         self.lc_raw_data = sp.roll(self.lc_raw_data,-1,0)
         self.lc_raw_data[-1,:] = [x,y]
