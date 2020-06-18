@@ -214,7 +214,7 @@ class ArduinoController(QtWidgets.QWidget):
         self.VariableController.write_variables(self.vars_path)
 
         # if self.parent().logging:
-            # self.VariableController.write_variables(os.path.join('src',self.task_config['var_fname']))
+        #     self.VariableController.write_variables(os.path.join('src',self.task_config['var_fname']))
 
         # upload
         print(" --- uploading code on arduino --- ")
@@ -265,6 +265,9 @@ class ArduinoController(QtWidgets.QWidget):
         """ folder is the logging folder """
         self.run_folder = folder # to be kept for the close_event
 
+        # logging the code
+        self.log_task(folder)
+
         # upload
         if self.reprogramCheckBox.checkState() == 2: # true when checked
             self.upload()
@@ -273,6 +276,9 @@ class ArduinoController(QtWidgets.QWidget):
 
         # connect to serial port
         self.connection = self.connect()      
+
+        # start up the online data analyzer
+        self.OnlineDataAnalyser.run()
 
         fH = open(folder.joinpath('arduino_log.txt'),'w')
 
@@ -333,19 +339,21 @@ class ArduinoController(QtWidgets.QWidget):
     def closeEvent(self, event):
         # take care of ending the threads
         self.stopped = True
+
         # self.thread.join()
 
         # overwrite logged arduino vars file
-        try:
-            target = self.run_folder.joinpath(self.task)
-            self.VariableController.write_variables(target.joinpath('Arduino','src',self.task_config['var_fname']))
-        except AttributeError:
-            # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
-            pass
+        # FIXME this currently crashes
+        # try:
+        #     target = self.run_folder.joinpath(self.task)
+        #     self.VariableController.write_variables(target.joinpath('Arduino','src',self.task_config['var_fname']))
+        # except AttributeError:
+        #     # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
+        #     pass
 
         # if serial connection is open, close it
         if hasattr(self,'connection'):
-            if self.connection.is_open():
+            if self.connection.is_open:
                 self.connection.close()
             self.SerialMonitor.close()
         self.VariableController.close()
@@ -356,7 +364,7 @@ class ArduinoController(QtWidgets.QWidget):
         task_config.read(task_config_path)
         
         # remove everything that is written nontheless
-        shutil.rmtree(self.run_folder)
+        # shutil.rmtree(self.run_folder)
 
         # take care of the kids
         for child in self.Children:
@@ -519,9 +527,12 @@ class OnlineDataAnalyser(QtCore.QObject):
         self.SessionDf = None
 
         self.parent = parent
-        self.TrialCounter = parent.parent().TrialCounter
-        self.WaterCounter = parent.parent().WaterCounter
-        parent.serial_data_available.connect(self.update)
+    
+    def run(self):
+        # needed like this because of init order
+        self.TrialCounter = self.parent.parent().TrialCounter
+        self.WaterCounter = self.parent.parent().WaterCounter
+        self.parent.serial_data_available.connect(self.update)
 
     def update(self,line):
 

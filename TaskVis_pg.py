@@ -90,7 +90,7 @@ class TrialsVis(QtWidgets.QWidget):
         for event_name, EventsDf in EventsDict.items():
             for i, row in EventsDf.iterrows():
                 t = (row['t'] - align_time) / 1e3 # HARDCODE to second
-                t = t.values
+                t = t.values[0]
                 rect = pg.QtGui.QGraphicsRectItem(t, row_index , .005, 1)
                 col = [v*255 for v in self.cdict[event_name]]
                 rect.setPen(pg.mkPen(col))
@@ -103,7 +103,7 @@ class TrialsVis(QtWidgets.QWidget):
         for span_name, SpansDf in SpansDict.items():
             for i,row in SpansDf.iterrows():
                 t = (row['t_on'] - align_time) / 1e3 # HARDCODE to second
-                t = t.values
+                t = t.values[0]
                 col = [v*255 for v in self.cdict[span_name]]
                 if span_name == 'LICK':
                     col.append(150) # reduced opacity

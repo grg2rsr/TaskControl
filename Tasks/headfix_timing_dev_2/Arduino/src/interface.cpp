@@ -174,9 +174,9 @@ void processSerialData() {
             strlcpy(varvalue, line+split+1, len-split+1);
 
             // for the state machine "force state" buttons
-            if (strcmp(varname,"current_state")==0){
-                current_state = atoi(varvalue);
-            }
+            // if (strcmp(varname,"current_state")==0){
+            //     current_state = atoi(varvalue);
+            // }
 
             // INSERT_SETTERS
 

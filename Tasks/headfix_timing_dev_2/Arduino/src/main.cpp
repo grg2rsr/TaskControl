@@ -103,6 +103,13 @@ void log_choice(){
     }
 }
 
+void send_sync_pulse(){
+    // sync w load cell TODO test if 1 ms is enough to do this
+    digitalWrite(LC_SYNC_PIN,HIGH);
+    delay(1);
+    digitalWrite(LC_SYNC_PIN,LOW);
+}
+
 /*
  ######  ######## ##    ##  ######   #######  ########   ######
 ##    ## ##       ###   ## ##    ## ##     ## ##     ## ##    ##
@@ -398,6 +405,9 @@ void finite_state_machine() {
 
                 // tell loadcell controller to recenter
                 log_msg("LOADCELL REMOVE_OFFSET");
+
+                // sync at trial avail
+                send_sync_pulse();
             }
 
             // update
@@ -425,11 +435,6 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 log_code(TRIAL_ENTRY_EVENT);
-
-                // sync w load cell TODO test this!
-                digitalWrite(LC_SYNC_PIN,HIGH);
-                delay(5);
-                digitalWrite(LC_SYNC_PIN,LOW);
 
                 // draw trial type at random
                 // ix = random(0,n_intervals);
