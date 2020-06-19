@@ -44,12 +44,14 @@ class ArduinoController(QtWidgets.QWidget):
 
     def __init__(self, parent):
         super(ArduinoController, self).__init__(parent=parent)
-        self.setWindowFlags(QtCore.Qt.Window)
-
+        
         # for abbreviation bc if changed, objects are reinstantiated anyways
         self.task = self.parent().task
         self.task_folder = Path(self.parent().profile['tasks_folder']).joinpath(self.task)
         self.task_config = self.parent().task_config['Arduino']
+
+        self.Children = []
+        self.stopped = False # for killing the thread that reads from serial port
 
         # TODO here: copy these variables to the temp vars path and overwrite the path here
         # then - all operations should be done on this
@@ -58,6 +60,7 @@ class ArduinoController(QtWidgets.QWidget):
         self.vars_path = self.task_folder.joinpath('Arduino','src',self.task_config['var_fname'])
         Df = functions.parse_arduino_vars(self.vars_path)
         self.VariableController = ArduinoVariablesWidget(self,Df)
+        self.Children.append(self.VariableController)
 
         path = self.task_folder.joinpath('Arduino','src','event_codes.h')
         CodesDf = functions.parse_code_map(path)
@@ -66,15 +69,21 @@ class ArduinoController(QtWidgets.QWidget):
         # online analyzer
         Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT) # HARDCODE
         self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
+        # don't add him to children bc doesn't have a UI
 
-        # take care of the kids
-        self.Children = [self.VariableController]
+        # open serial monitor
+        self.SerialMonitor = SerialMonitorWidget(self, code_map=self.code_map)
+        self.Children.append(self.SerialMonitor)
+
+        # Statemachine Monitor
+        self.StateMachineMonitor = StateMachineMonitorWidget(self, code_map=self.code_map)
+        self.Children.append(self.StateMachineMonitor)
         
-        self.stopped = False
         self.initUI()
     
     def initUI(self):
         # the formlayout
+        self.setWindowFlags(QtCore.Qt.Window)
         self.FormLayout = QtWidgets.QFormLayout()
         self.FormLayout.setVerticalSpacing(10)
         self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
@@ -116,21 +125,13 @@ class ArduinoController(QtWidgets.QWidget):
         self.setLayout(Full_Layout)
         self.setWindowTitle("Arduino controller")
 
-        # the children
-        # open serial monitor
-        self.SerialMonitor = SerialMonitorWidget(self, code_map=self.code_map)
-        self.Children.append(self.SerialMonitor)
-
-        # Statemachine Monitor
-        self.StateMachineMonitor = StateMachineMonitorWidget(self, code_map=self.code_map)
-        self.Children.append(self.StateMachineMonitor)
+        
 
         self.layout()
         self.show()
 
     def keyPressEvent(self, event):
-        """ reimplementation to send single keystrokes
-        makes keyboardinteraction widget useless"""
+        """ reimplementation to send single keystrokes """
         self.send("CMD " + event.text())
 
     def layout(self):

@@ -244,6 +244,7 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.setWindowFlags(QtCore.Qt.Window)
 
         self.Controller.raw_lc_data_available.connect(self.on_udp_data)
+        # self.Controller.parent().ArduinoController.serial_data_available.connect(self.on_serial)
 
         self.lc_raw_data = sp.zeros((100,2)) # FIXME hardcode hardcode history length
 
@@ -276,10 +277,11 @@ class LoadCellMonitor(QtWidgets.QWidget):
 
         # adding the threshold as lines
         pen = pg.mkPen((255,255,255,100), width=1)
-        self.PlotItem.addItem(pg.InfiniteLine(pos=1500, pen=pen))
-        self.PlotItem.addItem(pg.InfiniteLine(pos=-1500, pen=pen))
-        self.PlotItem.addItem(pg.InfiniteLine(pos=2000, pen=pen, angle=0))
-        self.PlotItem.addItem(pg.InfiniteLine(pos=-2000, pen=pen, angle=0))
+        self.lim_lines = {}
+        self.lim_lines['front'] = self.PlotItem.addItem(pg.InfiniteLine(pos=1500, pen=pen))
+        self.lim_lines['back'] = self.PlotItem.addItem(pg.InfiniteLine(pos=-1500, pen=pen))
+        self.lim_lines['right'] = self.PlotItem.addItem(pg.InfiniteLine(pos=2000, pen=pen, angle=0))
+        self.lim_lines['left'] = self.PlotItem.addItem(pg.InfiniteLine(pos=-2000, pen=pen, angle=0))
 
         self.Layout.addWidget(self.PlotWindow)
         self.setLayout(self.Layout)
@@ -302,5 +304,23 @@ class LoadCellMonitor(QtWidgets.QWidget):
     def closeEvent(self, event):
         # stub
         self.close()
+
+    # def on_serial(self,line):
+    #     """ listens to the arduino, updates variable line """
+    #     if line.startswith('<VAR'):
+    #         read = line[1:-1].split(' ')
+    #         if read[1] == "X_left_thresh":
+    #             lim_line = self.lim_lines['left']
+    #             lim_line.setValue(float(read[2]))
+    #         if read[1] == "X_right_thresh":
+    #             lim_line = self.lim_lines['right']
+    #             lim_line.setValue(float(read[2]))
+    #         if read[1] == "Y_front_thresh":
+    #             lim_line = self.lim_lines['front']
+    #             lim_line.setValue(float(read[2]))
+    #         if read[1] == "Y_back_thresh":
+    #             lim_line = self.lim_lines['back']
+    #             lim_line.setValue(float(read[2]))
+    #     pass
 
 

@@ -105,7 +105,7 @@ def run(variables_path):
 
     getter_template = """
             if (strcmp(varname,"VARNAME")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(VARNAME)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(VARNAME)+String(">"));
             }
     """
 
