@@ -42,6 +42,9 @@ class TrialsVis(QtWidgets.QWidget):
         self.CodesDf = self.OnlineDataAnalyser.CodesDf
         self.trial_counter = 0
 
+        # hardcode filter
+        self.event_filter = ["TRIAL_ENTRY_EVENT", "TRIAL_ABORTED_EVENT", "CHOICE_MISSED_EVENT", "CHOICE_CORRECT_EVENT", "CHOICE_INCORRECT_EVENT"]
+
         self.initUI()
         self.OnlineDataAnalyser.trial_data_available.connect(self.update)
 
@@ -61,8 +64,12 @@ class TrialsVis(QtWidgets.QWidget):
         self.event_names = [name.split('_EVENT')[0] for name in self.CodesDf['name'] if name.endswith('_EVENT')]
 
         # from that: derived colors
-        colors = sns.color_palette('husl',n_colors=len(self.event_names)+len(self.span_names))
-        self.cdict = dict(zip(self.event_names+self.span_names,colors))
+        # colors = sns.color_palette('husl',n_colors=len(self.event_names)+len(self.span_names))
+        # self.cdict = dict(zip(self.event_names+self.span_names,colors))
+
+        # with the filter
+        colors = sns.color_palette('husl',n_colors=len(self.event_filter)+len(self.span_names))
+        self.cdict = dict(zip(self.event_filter+self.span_names,colors))
 
         # legend
         self.Legend = self.PlotItem.addLegend()
@@ -76,7 +83,10 @@ class TrialsVis(QtWidgets.QWidget):
         self.show()
 
     def update(self, TrialDf, TrialMetricsDf):
-        self.plot_trial(TrialDf, self.trial_counter)
+        try:
+            self.plot_trial(TrialDf, self.trial_counter)
+        except:
+            pass
         self.trial_counter += 1
 
     def plot_trial(self, TrialDf, row_index):
@@ -88,14 +98,15 @@ class TrialsVis(QtWidgets.QWidget):
        
         EventsDict = bhv.get_events(TrialDf, event_names)
         for event_name, EventsDf in EventsDict.items():
-            for i, row in EventsDf.iterrows():
-                t = (row['t'] - align_time) / 1e3 # HARDCODE to second
-                t = t.values[0]
-                rect = pg.QtGui.QGraphicsRectItem(t, row_index , .005, 1)
-                col = [v*255 for v in self.cdict[event_name]]
-                rect.setPen(pg.mkPen(col))
-                rect.setBrush(pg.mkBrush(col))
-                self.PlotItem.addItem(rect)
+            if event_name in self.event_filter: # Filter irrelevant events
+                for i, row in EventsDf.iterrows():
+                    t = (row['t'] - align_time) / 1e3 # HARDCODE to second
+                    t = t.values[0]
+                    rect = pg.QtGui.QGraphicsRectItem(t, row_index , .005, 1)
+                    col = [v*255 for v in self.cdict[event_name]]
+                    rect.setPen(pg.mkPen(col))
+                    rect.setBrush(pg.mkBrush(col))
+                    self.PlotItem.addItem(rect)
 
         # plotting spans found in TrialDf
         span_names = [name.split('_ON')[0] for name in TrialDf['name'].unique() if name.endswith('_ON')]
@@ -135,7 +146,9 @@ class SessionVis(QtWidgets.QWidget):
         self.setWindowFlags(QtCore.Qt.Window)
         self.initUI()
         self.OnlineDataAnalyser = OnlineDataAnalyser
-        OnlineDataAnalyser.trial_data_available.connect(self.update)
+
+        OnlineDataAnalyser.trial_data_available.connect(self.on_data)
+        print("constructor")
 
     def add_LinePlot(self, pens, PlotWindow, title=None, xlabel=None, ylabel=None):
         Item = PlotWindow.addPlot(title=title)
@@ -145,6 +158,7 @@ class SessionVis(QtWidgets.QWidget):
         return Lines
 
     def initUI(self):
+        print("ini start")
         self.setWindowTitle("Session performance monitor")
         self.Layout = QtWidgets.QHBoxLayout()
         # self.setMinimumWidth(300) # FIXME hardcoded!
@@ -165,51 +179,61 @@ class SessionVis(QtWidgets.QWidget):
 
         kwargs = dict(title="reward collection rate", xlabel="succ. trial #", ylabel="frac.")
         self.RewardCollectedLines = self.add_LinePlot([pen_1, pen_2], self.PlotWindow, **kwargs)
-        self.PlotWindow.nextColumn()
+        self.PlotWindow.nextRow()
 
         kwargs = dict(title="reward collection RT", xlabel="succ. trial #", ylabel="time (ms)")
         self.RewardRTLine, = self.add_LinePlot([pen_1], self.PlotWindow, **kwargs)
+        self.PlotWindow.nextColumn()
+
+        kwargs = dict(title="choice RT", xlabel="trial #", ylabel="time (ms)")
+        self.ChoiceRTLine, = self.add_LinePlot([pen_1], self.PlotWindow, **kwargs)
         self.PlotWindow.nextColumn()
        
         self.Layout.addWidget(self.PlotWindow)
 
         self.setLayout(self.Layout)
         self.show()
+        print("ini end")
 
-    def update(self, TrialsDf, TrialMetricsDf):
+    def on_data(self, TrialsDf, TrialMetricsDf):
         hist = 20 # to be exposed in the future
-        # ITI
-        x = self.OnlineDataAnalyser.SessionDf.index.values[1:]
-        y = sp.diff(self.OnlineDataAnalyser.SessionDf['t'].values / 1000)
-        self.TrialRateLine.setData(x=x, y=y)
-        
-        # # success rate
-        # x = self.SessionDf.index.values+1
-        # y = sp.cumsum(self.SessionDf['successful'].values) / (self.SessionDf.index.values+1)
-        # y_filt = self.SessionDf['successful'].rolling(hist).mean().values
-        
-        # self.SuccessRateLines[0].setData(x=x,y=y)
-        # self.SuccessRateLines[1].setData(x=x,y=y_filt)
+        if  self.OnlineDataAnalyser.SessionDf is not None:
+            SessionDf = self.OnlineDataAnalyser.SessionDf
 
-        # # reward collection rate
-        # try:
-        #     SDf = self.SessionDf.groupby('successful').get_group(True)
-        #     x = SDf.index.values+1
-        #     y = sp.cumsum(SDf['reward_collected'].values) / (SDf.index.values+1)
-        #     y_filt = SDf['reward_collected'].rolling(hist).mean().values
-        #     self.RewardCollectedLines[0].setData(x=x,y=y)
-        #     self.RewardCollectedLines[1].setData(x=x,y=y_filt)
-        # except KeyError:
-        #     # when no successful trials
-        #     pass
+            # ITI
+            x = SessionDf.index.values[1:]
+            y = sp.diff(SessionDf['t'].values / 1000)
 
-        # # reward collection reaction time
-        # try:
-        #     SDf = self.SessionDf.groupby('reward_collected').get_group(True)
-        #     x = SDf.index.values+1
-        #     y = SDf['rew_col_rt']
-        #     self.RewardRTLine.setData(x=x,y=y)
-        # except KeyError:
-        #     # when no reward was collected
-        #     pass
+            self.TrialRateLine.setData(x=x, y=y)
+            
+            # success rate
+            x = SessionDf.index.values+1
+            y = sp.cumsum(SessionDf['successful'].values) / (SessionDf.index.values+1)
 
+            y_filt = SessionDf['successful'].rolling(hist).mean().values
+            
+            self.SuccessRateLines[0].setData(x=x,y=y)
+            self.SuccessRateLines[1].setData(x=x,y=y_filt)
+
+            # reward collection rate
+            if True in SessionDf['successful'].values:
+                SDf = SessionDf.groupby('successful').get_group(True)
+                x = SDf.index.values+1
+                y = sp.cumsum(SDf['reward_collected'].values) / (SDf.index.values+1)
+                y_filt = SDf['reward_collected'].rolling(hist).mean().values
+                self.RewardCollectedLines[0].setData(x=x,y=y)
+                self.RewardCollectedLines[1].setData(x=x,y=y_filt)
+ 
+            # reward collection reaction time
+            if True in SessionDf['reward_collected'].values:
+                SDf = SessionDf.groupby('reward_collected').get_group(True)
+                x = SDf.index.values+1
+                y = SDf['reward_collected_rt'].values
+                self.RewardRTLine.setData(x=x,y=y)
+
+            # choice reaction time
+            if True in SessionDf['has_choice'].values:
+                SDf = SessionDf.groupby('has_choice').get_group(True)
+                x = SDf.index.values+1
+                y = SDf['choice_rt'].values
+                self.ChoiceRTLine.setData(x=x,y=y)

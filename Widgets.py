@@ -165,7 +165,7 @@ class SettingsWidget(QtWidgets.QWidget):
         
         FormLayout.addRow("self terminate", self.selfTerminateCheckBox)
         Df = pd.DataFrame([['after (min) ',  60,   'int32'],
-                           ['after (ml) ',   1000, 'int32'],
+                           ['after (ul) ',   1000, 'int32'],
                            ['after #trials ',0,    'int32']],
                            columns=['name','value','dtype'])
 

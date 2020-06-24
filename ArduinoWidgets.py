@@ -67,7 +67,7 @@ class ArduinoController(QtWidgets.QWidget):
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
         # online analyzer
-        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT) # HARDCODE
+        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT, bhv.has_choice, bhv.choice_RT) # HARDCODE
         self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
         # don't add him to children bc doesn't have a UI
 
@@ -700,33 +700,36 @@ class SerialMonitorWidget(QtWidgets.QWidget):
 
     def update(self,line):
         # TODO filter out high freq events like lick and zone
-        if not line.startswith('<'):
-            code = line.split('\t')[0]
-            decoded = self.code_map[code]
-            line = '\t'.join([decoded,line.split('\t')[1]])
+        # w checkbox
 
-        # TODO deal with the history functionality
-        history_len = 100 # FIXME expose this property? or remove it. for now for debugging
+        if not line.startswith('<VAR current_zone') and not line.startswith('LICK'):
+            if not line.startswith('<'):
+                code = line.split('\t')[0]
+                decoded = self.code_map[code]
+                line = '\t'.join([decoded,line.split('\t')[1]])
 
-        if len(self.lines) < history_len:
-            self.lines.append(line)
-        else:
-            self.lines.append(line)
-            self.lines = self.lines[1:]
+            # TODO deal with the history functionality
+            history_len = 100 # FIXME expose this property? or remove it. for now for debugging
 
-        # print lines in window
-        sb = self.TextBrowser.verticalScrollBar()
-        sb_prev_value = sb.value()
-        self.TextBrowser.setPlainText('\n'.join(self.lines))
-        
-        # scroll to end
-        sb.setValue(sb.maximum())
+            if len(self.lines) < history_len:
+                self.lines.append(line)
+            else:
+                self.lines.append(line)
+                self.lines = self.lines[1:]
 
-        # BUG does not work!
-        # if self.update_CheckBox.checkState() == 2:
-        #    sb.setValue(sb.maximum())
-        # else:
-        #     sb.setValue(sb_prev_value)
+            # print lines in window
+            sb = self.TextBrowser.verticalScrollBar()
+            sb_prev_value = sb.value()
+            self.TextBrowser.setPlainText('\n'.join(self.lines))
+            
+            # scroll to end
+            sb.setValue(sb.maximum())
+
+            # BUG does not work!
+            # if self.update_CheckBox.checkState() == 2:
+            #    sb.setValue(sb.maximum())
+            # else:
+            #     sb.setValue(sb_prev_value)
 
 
 class StateMachineMonitorWidget(QtWidgets.QWidget):
