@@ -312,6 +312,13 @@ def time_slice(Df, t_min, t_max, col='t'):
  
 """
 # Trial level metrics
+def has_choice(TrialDf):
+    if "CHOICE_EVENT" in TrialDf['name'].values:
+        choice = True
+    else:
+        choice = False    
+ 
+    return pd.Series(choice, name='has_choice')
 
 def is_successful(TrialDf):
     if "TRIAL_SUCCESSFUL_EVENT" in TrialDf['name'].values:
@@ -343,6 +350,17 @@ def reward_collection_RT(TrialDf):
         rt = t_rew_col - t_rew_avail
  
     return pd.Series(rt, name='reward_collected_rt')
+
+def choice_RT(TrialDf):
+    """ RT between go cue and decision """
+    if has_choice(TrialDf).values[0] == False:
+        rt = np.NaN
+    else:
+        t_go_cue = TrialDf.groupby('name').get_group("GO_CUE_EVENT").iloc[-1]['t']
+        t_choice = TrialDf.groupby('name').get_group("CHOICE_EVENT").iloc[-1]['t']
+        rt = t_choice - t_go_cue
+ 
+    return pd.Series(rt, name='choice_rt')
 
 # Session level metrics
 
