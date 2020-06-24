@@ -6,7 +6,7 @@ int reward_tone_freq = 12000;
 
 unsigned long trial_entry_pause_dur_min = 500;
 unsigned long trial_entry_pause_dur_max = 1000;
-unsigned long choice_dur = 4000;
+unsigned long choice_dur = 5000;
 unsigned long ITI_dur_min = 1000;
 unsigned long ITI_dur_max = 3000;
 unsigned long min_fix_dur = 2000;

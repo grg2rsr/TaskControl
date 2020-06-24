@@ -96,6 +96,7 @@ void log_var(String name, String value){
 }
 
 void log_choice(){
+    log_code(CHOICE_EVENT);
     if (current_zone == right){
         log_code(CHOICE_RIGHT_EVENT);
     }
@@ -132,7 +133,7 @@ void read_lick(){
   }
 }
 
-unsigned long last_center_leave = max_future;
+unsigned long last_center_leave = 0;
 unsigned long last_buzz = max_future;
 unsigned long debounce = 250;
 
@@ -319,6 +320,7 @@ void timing_cue_1(){
 
 void timing_cue_2(){
     log_code(SECOND_TIMING_CUE_EVENT);
+    log_code(GO_CUE_EVENT);
     // buzz
     buzz_controller.play(235, buzz_duration);
 }
@@ -400,7 +402,7 @@ void finite_state_machine() {
     switch (current_state) {
 
         case INI_STATE:
-            current_state = TRIAL_ENTRY_STATE;
+            current_state = ITI_STATE;
             break;
 
         case TRIAL_ENTRY_STATE:
@@ -474,6 +476,7 @@ void finite_state_machine() {
                 // no report, timeout
                 if (now() - state_entry > choice_dur){
                     log_code(CHOICE_MISSED_EVENT);
+                    log_code(TRIAL_UNSUCCESSFUL_EVENT);
                     punish_cue();
                     succ_trial_counter = 0;
                     current_state = ITI_STATE;
@@ -482,6 +485,7 @@ void finite_state_machine() {
                 // choice was made
                 if (current_zone == correct_zone) {
                     log_code(CHOICE_CORRECT_EVENT);
+                    log_code(TRIAL_SUCCESSFUL_EVENT);
                     log_choice();
                     // choice buzz
                     buzz_controller.play(235,choice_buzz_duration);
@@ -491,6 +495,7 @@ void finite_state_machine() {
                 }
                 else {
                     log_code(CHOICE_INCORRECT_EVENT);
+                    log_code(TRIAL_UNSUCCESSFUL_EVENT);
                     log_choice();
 
                     // punish

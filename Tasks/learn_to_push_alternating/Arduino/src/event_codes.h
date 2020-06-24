@@ -42,12 +42,14 @@ const unsigned int REWARD_COLLECTED_EVENT = 31;
 const unsigned int REWARD_MISSED_EVENT = 33;
 
 // choice related
-const unsigned int CHOICE_LEFT_EVENT = 40;
-const unsigned int CHOICE_RIGHT_EVENT = 41;
+const unsigned int CHOICE_EVENT = 40;
+const unsigned int CHOICE_LEFT_EVENT = 41;
+const unsigned int CHOICE_RIGHT_EVENT = 42;
 
 // stim and cue stuff
 const unsigned int FIRST_TIMING_CUE_EVENT = 50;
 const unsigned int SECOND_TIMING_CUE_EVENT = 51;
 const unsigned int CUE_LED_ON_EVENT = 52;
 const unsigned int CUE_LED_OFF_EVENT = 53;
+const unsigned int GO_CUE_EVENT = 54;
 

@@ -13,7 +13,7 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 bool deliver_reward = false;
-// bool punish = false;
+bool punish = false;
 
 int current_state = 0; // WATCH OUT this is ini state
 
@@ -173,9 +173,9 @@ void processSerialData() {
                 deliver_reward = true;
             }
 
-            // if (strcmp(CMD,"p")==0){
-            //     punish = true;
-            // }
+            if (strcmp(CMD,"p")==0){
+                punish = true;
+            }
         }
 
         newData = false;

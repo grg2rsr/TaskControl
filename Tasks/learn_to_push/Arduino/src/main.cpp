@@ -408,9 +408,6 @@ void finite_state_machine() {
                 // cue orange light
                 lights_on_blue();
 
-                // tell loadcell controller to recenter
-                log_msg("LOADCELL REMOVE_OFFSET");
-
                 this_trial_entry_pause_dur = random(trial_entry_pause_dur_min, trial_entry_pause_dur_max);
 
             }
@@ -543,7 +540,6 @@ void setup() {
 
     FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
     FastLED.addLeds<WS2812B, CUE_LED_PIN, GRB>(cue_led, NUM_LEDS);
-
     lights_off();
 
     tone_controller.begin(SPEAKER_PIN);
