@@ -97,6 +97,29 @@ def filter_bad_licks(LogDf, min_time=50, max_time=200, remove=False):
 
     return LogDf
 
+
+# def moving_median_removal(data, window_size):
+#     " Removing force offset computed by running median 
+#       Only works with numpy matrices and its clunky
+#      "
+
+#     aux = np.zeros(data.shape)
+#     half_window = int(window_size/2)
+
+#     for i in range(0,data.shape[1]):
+#         # Beginning of data array
+#         if i < (half_window):
+#             aux[:,i] = data[:,i] - np.median(data[:, 0:(i+half_window)], 1)
+
+#         # End of data data array
+#         elif i > (data.shape[1] - (half_window)):
+#             aux[:,i] = data[:,i] - np.median(data[:, (i-half_window):-1], 1)
+
+#         else:
+#             aux[:,i] = data[:,i] - np.median(data[:, (i-half_window):(i+half_window)], 1)
+#     return aux
+
+
 """
  
   ######  ########     ###    ##    ##  ######  
@@ -356,9 +379,12 @@ def choice_RT(TrialDf):
     if has_choice(TrialDf).values[0] == False:
         rt = np.NaN
     else:
-        t_go_cue = TrialDf.groupby('name').get_group("GO_CUE_EVENT").iloc[-1]['t']
-        t_choice = TrialDf.groupby('name').get_group("CHOICE_EVENT").iloc[-1]['t']
-        rt = t_choice - t_go_cue
+        try:
+            t_go_cue = TrialDf.groupby('name').get_group("GO_CUE_EVENT").iloc[-1]['t']
+            t_choice = TrialDf.groupby('name').get_group("CHOICE_EVENT").iloc[-1]['t']
+            rt = t_choice - t_go_cue
+        except KeyError:
+            rt = np.NaN
  
     return pd.Series(rt, name='choice_rt')
 

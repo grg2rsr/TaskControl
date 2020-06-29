@@ -43,7 +43,7 @@ class TrialsVis(QtWidgets.QWidget):
         self.trial_counter = 0
 
         # hardcode filter
-        self.event_filter = ["TRIAL_ENTRY_EVENT", "TRIAL_ABORTED_EVENT", "CHOICE_MISSED_EVENT", "CHOICE_CORRECT_EVENT", "CHOICE_INCORRECT_EVENT"]
+        self.event_filter = ["TRIAL_ENTRY_EVENT", "TRIAL_ABORTED_EVENT", "CHOICE_EVENT", "SECOND_TIMING_CUE_EVENT", "REWARD_AVAILABLE_EVENT"]
 
         self.initUI()
         self.OnlineDataAnalyser.trial_data_available.connect(self.update)

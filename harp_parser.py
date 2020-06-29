@@ -5,11 +5,12 @@ import pandas as pd
 from pathlib import Path
 from scipy import stats
 import scipy as sp
+from scipy.signal import medfilt
 from tqdm import tqdm
 import behavior_analysis_utils as bhv
 from matplotlib import cm
 
-path = Path(r"D:\TaskControl\Animals\JJP-00885\2020-06-17_13-53-13_learn_to_push")
+path = Path(r"D:\TaskControl\Animals\JJP-00885\2020-06-24_13-50-31_learn_to_push_alternating")
 
 # def sync_harp_arudino(harp_csv_path, arduino_log_path):
 
@@ -35,7 +36,7 @@ for line in tqdm(lines[1:]):
                 t_sync.append(float(line[2])*1000) # convert to ms
 
 LoadCellDf = pd.DataFrame(LoadCellDf,columns=['t','x','y'],dtype='float')
-LoadCellDf['t_harp'] = LoadCellDf['t']
+LoadCellDf['t_harp'] = LoadCellDf['t'] # keeps the original
 LoadCellDf['t'] = LoadCellDf['t'] * 1000
 
 # write to disk
@@ -44,7 +45,7 @@ np.save(path / "loadcell_sync.npy", np.array(t_sync,dtype='float32'))
 
 # get the arduino log
 log_path = path / "arduino_log.txt"
-code_map_path = path / "learn_to_push" / "Arduino" / "src" / "event_codes.h"
+code_map_path = path / "learn_to_push_alternating" / "Arduino" / "src" / "event_codes.h"
 
 ### READ 
 CodesDf = bhv.parse_code_map(code_map_path)
@@ -61,7 +62,7 @@ plt.figure()
 plt.plot(sp.diff(t_arduino))
 plt.plot(sp.diff(t_harp))
 
-res = stats.linregress(t_arduino,t_harp[1:])
+res = stats.linregress(t_arduino,t_harp) # sometimes hacky +1 -1 here
 m,b = res.slope,res.intercept
 
 LogDf['t_arduino'] = LogDf['t']
@@ -79,10 +80,14 @@ LogDf.to_csv(path / "LogDf.csv")
 ##        ##       ##     ##    ##    ##    ##
 ##        ########  #######     ##     ######
 """
-
+# %%
 """
     TRAJECTORIES
 """
+
+window_size = 1000
+LoadCellDf['x'] = LoadCellDf['x'].rolling(window_size).median()
+LoadCellDf['y'] = LoadCellDf['y'].rolling(window_size).median()
 
 fig, axes = plt.subplots(ncols=2,sharex=True,sharey=True)
 pre,post = -500,500
@@ -95,7 +100,7 @@ event_times = bhv.get_events_from_name(LogDf,"CHOICE_LEFT")
 F = []
 
 for t in event_times['t']:
-    trial = bhv.time_slice(LoadCellDf,t+pre,t+post)
+    trial = bhv.time_slice(LCDf_med,t+pre,t+post)
     F.append(trial.to_numpy())
 
 F_split = np.array_split(F,no_splits)
@@ -105,14 +110,13 @@ for i, (chunk, clr) in enumerate(zip(F_split,colors)):
     avg_chunk = np.average(chunk,0) # average along trials
     axes[0].plot(avg_chunk[:,1], avg_chunk[:,2], alpha=0.5, lw=1, color = clr)
 
-
 event_times = bhv.get_events_from_name(LogDf,"CHOICE_RIGHT")
 
 # 1st dim is number of events, 2nd is window width, 3rd columns of Df (x an y are 3nd and 4th)
 F = []
 
 for t in event_times['t']:
-    trial = bhv.time_slice(LoadCellDf,t+pre,t+post)
+    trial = bhv.time_slice(LCDf_med,t+pre,t+post)
     F.append(trial.to_numpy())
 
 F_split = np.array_split(F,no_splits)
@@ -127,10 +131,6 @@ axes[1].set_ylim([-2500,2500])
 axes[0].set_xlim([-2500,2500])
 axes[1].set_xlim([-2500,2500])
 
-# center
-F['x'] = F['x'] - sp.average(F['x'])
-F['y'] = F['y'] - sp.average(F['y'])
-
 """
     MAGNITUDE
 """
@@ -140,10 +140,14 @@ pre,post = -2000,2000
 tvec = sp.arange(pre,post,1)
 ys = []
 for t in event_times['t']:
-    F = bhv.time_slice(LoadCellDf,t+pre,t+post)
+    F = bhv.time_slice(LCDf_med,t+pre,t+post)
     y = sp.sqrt(F['x']**2+F['y']**2)
     ys.append(y)
     axes.plot(tvec,y,lw=1,alpha=0.5)
+
+# center
+F['x'] = F['x'] - sp.average(F['x'])
+F['y'] = F['y'] - sp.average(F['y'])
 
 Fmag = np.array(ys).T
 axes.plot(tvec,sp.average(Fmag,1),'k',lw=3)
@@ -153,22 +157,71 @@ axes.axvline(0, linestyle=':',alpha=0.5)
     HEATMAPS
 """
 
+# %%
+pre,post = -1000,5000
+event_times = bhv.get_events_from_name(LogDf,"SECOND_TIMING_CUE")
+# event_times = bhv.get_events_from_name(LogDf,"TRIAL_SUCCESSFUL")
+
 Fx = []
 Fy = []
 for t in event_times['t']:
-    F = bhv.time_slice(LoadCellDf,t+pre,t+post)
+    F = bhv.time_slice(LCDf_med,t+pre,t+post)
     Fx.append(F['x'])
     Fy.append(F['y'])
+
+# Removing offset and truncating ends
 Fx = np.array(Fx)
 Fy = np.array(Fy)
 
-fig, axes = plt.subplots(ncols=2,sharex=True,sharey=True)
-axes[0].matshow(Fx,cmap='PiYG',vmin=-2000,vmax=2000)
-axes[1].matshow(Fy,cmap='PiYG',vmin=-2000,vmax=2000)
+force_tresh = 1500
+
+fig, axes = plt.subplots(ncols=2, sharex=True, sharey=True)
+heat1 = axes[0].matshow(Fx,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,)
+heat2 = axes[1].matshow(Fy,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,)
+
+# Labels, title and formatting
+axes[0].set_title('Forces in X axis')
+cbar = plt.colorbar(heat1, ax=axes[0], orientation='horizontal')
+cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Left","Right"])
+
+axes[1].set_title('Forces in Y axis')
+cbar = plt.colorbar(heat2, ax=axes[1], orientation='horizontal')
+cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Down","Up"])
+
+# In seconds
+plt.setp(axes, xticks=np.arange(pre, post), xticklabels=np.arange(pre//1000, post//1000, 0.5))
+
+# " Plotting black tick marks signalling whatever the input "
+# correct_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_CORRECT')
+# #correct_choiceDf.insert(1, "Choice", "Correct") 
+
+# incorrect_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_INCORRECT')
+# #incorrect_choiceDf.insert(1, "Choice", "Incorrect") 
+
+# choice_times = correct_choiceDf.append(incorrect_choiceDf).sort_index(axis = 0)
+# choice_times = choice_times.to_numpy() - event_times.to_numpy() + 1000
+
+# axes[0].vlines(choice_times, ymin, ymax, colors='black')
+# axes[1].vlines(choice_times, ymin, ymax, colors='black')
+
+plt.xlabel('Time')
+plt.ylabel('Trials')
+
 for ax in axes:
     ax.set_aspect('auto')
+plt.tight_layout()
 
-# Fx and Fy exploration
+
+"""
+    Reaction time plots
+"""
+
+
+
+# %%
+"""
+    Fx and Fy exploration
+"""
 # (same data as previous heatmaps)
 fig = plt.figure()
 
@@ -203,9 +256,4 @@ for i, (chunk_x, chunk_y, clr) in enumerate(zip(Fx_split, Fy_split, colors),1):
 
     fig.tight_layout()
 
-fig, axes = plt.subplots(ncols=10)
-
-# 2D histogram of Fx and Fy across time
-#for ax, chunk_x, chunk_y, clr in zip(axes.flat[1:], Fx_split, Fy_split, colors):
-#    
-#    ax.hist2d(chunk_x.reshape(-1,1), chunk_y.reshape(-1,1), bins = 50, color = clr, density=1, alpha=0.5)
+#fig, axes = plt.subplots(ncols=10)
