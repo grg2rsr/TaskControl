@@ -36,10 +36,10 @@ def plot_session_overview(LogDf, t_ref, pre, post, axes=None, how='dots',cdict=N
     for i,t in enumerate(tqdm(t_ref)):
         Df = bhv.time_slice(LogDf,t+pre,t+post,'t')
 
-        for name,group in Df.groupby('name'):
+        for name, group in Df.groupby('name'):
             # plot events
             if name.endswith("_EVENT"):
-                event_name = name.split("_EVENT")[0]
+                event_name = name
                 times = group['t'] - t
                 
                 if how == 'dots':
@@ -56,7 +56,7 @@ def plot_session_overview(LogDf, t_ref, pre, post, axes=None, how='dots',cdict=N
                 # Df_sliced = bhv.spans_from_event_names(Df, span_name+'_ON', span_name+'_OFF')
                 on_name = span_name + '_ON'
                 off_name = span_name + '_OFF'
-                SpansDf = bhv.get_spans_from_event_names(Df, on_name, off_name)
+                SpansDf = bhv.get_spans_from_names(Df, on_name, off_name)
                 for j, row_s in SpansDf.iterrows():
                     time = row_s['t_on'] - t
                     dur = row_s['dt']
@@ -248,15 +248,15 @@ def plot_sessions_overview(LogDfs, task_name, axes=None):
 
     for LogDf in LogDfs:
         # Total number of trials performed
-        event_times = bhv.get_events_from_name(LogDf,"SECOND_TIMING_CUE")
+        event_times = bhv.get_events_from_name(LogDf,"SECOND_TIMING_CUE_EVENT")
         trials_performed.append(len(event_times))
 
         # Number of sucessful trials 
-        correct_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_CORRECT')
+        correct_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_CORRECT_EVENT')
         trials_sucessful.append(len(correct_choiceDf))
         
         # Number of unsucessful trials 
-        incorrect_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_INCORRECT')
+        incorrect_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_INCORRECT_EVENT')
         trials_unsucessful.append(len(incorrect_choiceDf))
 
         # Weight

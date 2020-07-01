@@ -38,18 +38,6 @@ LogDfs = bhv.aggregate_session_logs(animal_folder, task_name)
 # preprocess
 LogDfs = [bhv.filter_bad_licks(LogDf) for LogDf in LogDfs]
 
-# # currently unused?
-# SpansDicts = []
-# EventsDicts = []
-
-# for LogDf in LogDfs:
-#     names = LogDf['name'].unique()
-#     span_names = list(set([name.split('_ON')[0] for name in names if name.endswith('_ON')]))
-#     event_names = list(set([name.split('_EVENT')[0] for name in names if name.endswith('_EVENT')]))
-
-#     SpansDicts.append(bhv.get_spans(Df, span_names))
-#     EventsDicts.append(bhv.get_events(Df, event_names))
-
 axes = bhv_plt.plot_sessions_overview(LogDfs, task_name)
 plt.show()
 
@@ -73,7 +61,7 @@ SessionDfs = []
 
 # Make SessionDfs
 for LogDf in LogDfs:
-    TrialSpans = bhv.get_spans_from_event_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
+    TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
 
     TrialDfs = []
     for i, row in TrialSpans.iterrows():

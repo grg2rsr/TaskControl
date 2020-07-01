@@ -109,7 +109,8 @@ class MyMplCanvas(FigureCanvas):
                                 
         # the names of the things present in the log
         span_names = [name.split('_ON')[0] for name in self.Code_Map['name'] if name.endswith('_ON')]
-        event_names = [name.split('_EVENT')[0] for name in self.Code_Map['name'] if name.endswith('_EVENT')]
+        # event_names = [name.split('_EVENT')[0] for name in self.Code_Map['name'] if name.endswith('_EVENT')]
+        event_names = [name for name in self.Code_Map['name'] if name.endswith('_EVENT')]
 
         Spans = vis.log2Spans(self.Data, span_names)
         Events = vis.log2Events(self.Data, event_names)

@@ -61,7 +61,8 @@ class TrialsVis(QtWidgets.QWidget):
         
         # the names of things that can possibly happen in the task
         self.span_names = [name.split('_ON')[0] for name in self.CodesDf['name'] if name.endswith('_ON')]
-        self.event_names = [name.split('_EVENT')[0] for name in self.CodesDf['name'] if name.endswith('_EVENT')]
+        # self.event_names = [name.split('_EVENT')[0] for name in self.CodesDf['name'] if name.endswith('_EVENT')]
+        self.event_names = [name for name in self.CodesDf['name'] if name.endswith('_EVENT')]
 
         # from that: derived colors
         # colors = sns.color_palette('husl',n_colors=len(self.event_names)+len(self.span_names))
@@ -94,11 +95,14 @@ class TrialsVis(QtWidgets.QWidget):
         align_time = TrialDf.loc[TrialDf['name'] == 'TRIAL_ENTRY_EVENT']['t']
 
         # plotting events found in TrialDf
-        event_names = [name.split('_EVENT')[0] for name in TrialDf['name'].unique() if name.endswith('_EVENT')]
+        # event_names = [name.split('_EVENT')[0] for name in TrialDf['name'].unique() if name.endswith('_EVENT')]
+        
+        # new version
+        event_names = [name for name in TrialDf['name'] if name.endswith('_EVENT')]
        
         EventsDict = bhv.get_events(TrialDf, event_names)
         for event_name, EventsDf in EventsDict.items():
-            if event_name in self.event_filter: # Filter irrelevant events
+            if event_name in self.event_filter: # Filter events
                 for i, row in EventsDf.iterrows():
                     t = (row['t'] - align_time) / 1e3 # HARDCODE to second
                     t = t.values[0]

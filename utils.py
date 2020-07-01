@@ -2,7 +2,7 @@ import sys, os
 import pandas as pd
 import scipy as sp 
 import pathlib
-
+from pathlib import Path
 # TODO each of these functions should return a dataframe, with a 'path' column and other interesting info ... 
 # most of this is now performed by a function in the "first look" behavior stuff on the laptop
 # get it!!!
@@ -52,9 +52,27 @@ def get_sessions(folder):
     return Df
 
 def debug_trace():
-  """ Set a tracepoint in the Python debugger that works with Qt
-  https://stackoverflow.com/a/1745965/4749250 """
-  from PyQt5 import QtCore
-  from pdb import set_trace
-  QtCore.pyqtRemoveInputHook()
-  set_trace()
+    """ Set a tracepoint in the Python debugger that works with Qt
+    https://stackoverflow.com/a/1745965/4749250 """
+    from PyQt5 import QtCore
+    from pdb import set_trace
+    QtCore.pyqtRemoveInputHook()
+    set_trace()
+
+
+
+def get_file_dialog(initial_dir="D:/TaskControl/Animals"):
+    from tkinter import Tk
+    from tkinter import filedialog
+    root = Tk()         # create the Tkinter widget
+    root.withdraw()     # hide the Tkinter root window
+
+    # Windows specific; forces the window to appear in front
+    root.attributes("-topmost", True)
+
+    path = Path(filedialog.askopenfilename(initialdir=initial_dir, title="Select file"))
+
+    root.destroy()
+
+    return path
+

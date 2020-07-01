@@ -94,7 +94,7 @@ pre,post = -500,500
 no_splits = 5
 colors = cm.RdPu(np.linspace(0, 1, no_splits))
 
-event_times = bhv.get_events_from_name(LogDf,"CHOICE_LEFT")
+event_times = bhv.get_events_from_name(LogDf,"CHOICE_LEFT_EVENT")
 
 # 1st dim is number of events, 2nd is window width, 3rd columns of Df (x an y are 3nd and 4th)
 F = []
@@ -110,7 +110,7 @@ for i, (chunk, clr) in enumerate(zip(F_split,colors)):
     avg_chunk = np.average(chunk,0) # average along trials
     axes[0].plot(avg_chunk[:,1], avg_chunk[:,2], alpha=0.5, lw=1, color = clr)
 
-event_times = bhv.get_events_from_name(LogDf,"CHOICE_RIGHT")
+event_times = bhv.get_events_from_name(LogDf,"CHOICE_RIGHT_EVENT")
 
 # 1st dim is number of events, 2nd is window width, 3rd columns of Df (x an y are 3nd and 4th)
 F = []
@@ -134,7 +134,7 @@ axes[1].set_xlim([-2000,2000])
 """
     MAGNITUDE
 """
-event_times = bhv.get_events_from_name(LogDf,"SECOND_TIMING_CUE")
+event_times = bhv.get_events_from_name(LogDf,"SECOND_TIMING_CUE_EVENT")
 
 fig, axes = plt.subplots()
 pre,post = -2000,2000
@@ -166,7 +166,7 @@ axes.axvline(0, linestyle=':',alpha=0.5)
 """
 fig = plt.figure()
 
-spans = bhv.get_spans_from_event_names(LogDf, 'TRIAL_ENTRY_EVENT', 'ITI_STATE')
+spans = bhv.get_spans_from_names(LogDf, 'TRIAL_ENTRY_EVENT', 'ITI_STATE')
 TrialDfs = []
 for i,span in spans.iterrows():
     TrialDfs.append(bhv.time_slice(LogDf,span['t_on'],span['t_off']))

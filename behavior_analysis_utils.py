@@ -6,6 +6,8 @@ from pathlib import Path
 from functions import parse_code_map
 import utils
 import datetime
+from tqdm import tqdm
+import behavior_analysis_utils as bhv
 
 """
  
@@ -18,6 +20,20 @@ import datetime
  ##        ##     ## ##     ##  ######  ######## ##     ## 
  
 """
+
+def get_LogDf_from_path(log_path):
+    """ helper to infer taks name and get code_map """
+    # infer
+    task_name = '_'.join(log_path.parent.name.split('_')[2:])
+    code_map_path = log_path.parent / task_name / "Arduino" / "src" / "event_codes.h"
+
+    # and read
+    CodesDf = bhv.parse_code_map(code_map_path)
+    code_map = dict(zip(CodesDf['code'],CodesDf['name']))
+    LogDf = bhv.parse_arduino_log(log_path, code_map)
+
+    return LogDf
+
 def parse_arduino_log(log_path, code_map=None):
     """ create a DataFrame representation of an arduino log. If a code map is passed 
     a corresponding decoded column will be created
@@ -73,7 +89,7 @@ def parse_messages(lines):
 def get_events_from_name(LogDf, event_name):
     """ extracts event times from LogDf as a pd.DataFrame """
     try:
-        EventsDf = LogDf.groupby('name').get_group(event_name+'_EVENT')[['t']]
+        EventsDf = LogDf.groupby('name').get_group(event_name)[['t']]
     except KeyError:
         # this gets thrown when the event is not in the log
         return pd.DataFrame(columns=['t'])
@@ -91,7 +107,7 @@ def filter_bad_licks(LogDf, min_time=50, max_time=200, remove=False):
     """ 
     Process recorded LICK_ON and LICK_OFF into realistic licks and add them as an event to the LogDf
     """
-    LickSpan = get_spans_from_event_names(LogDf,'LICK_ON','LICK_OFF')
+    LickSpan = get_spans_from_names(LogDf,'LICK_ON','LICK_OFF')
 
     bad_licks = np.logical_or(LickSpan['dt'] < min_time , LickSpan['dt'] > max_time)
     LickSpan = LickSpan.loc[~bad_licks]
@@ -141,7 +157,7 @@ def filter_bad_licks(LogDf, min_time=50, max_time=200, remove=False):
  
 """
 
-def get_spans_from_event_names(LogDf, on_name, off_name):
+def get_spans_from_names(LogDf, on_name, off_name):
     """
     like log2span although with arbitrary events
     this function takes care of above problems actually
@@ -176,7 +192,7 @@ def get_spans(LogDf,span_names):
     for span_name in span_names:
         on_name = span_name + '_ON'
         off_name = span_name + '_OFF'
-        SpansDict[span_name] = get_spans_from_event_names(LogDf, on_name, off_name)
+        SpansDict[span_name] = get_spans_from_names(LogDf, on_name, off_name)
     
     return SpansDict
 
@@ -304,13 +320,14 @@ def aggregate_session_logs(animal_path, task):
             print("Folder/File " + fd + " has corrupted date")
     
     # turn each log into LogDf and unite logs into Series
-    code_map_path = log_paths[-1].parent.joinpath(task ,"Arduino","src","event_codes.h") # choose the codemap from last version of given task
-    CodesDf = parse_code_map(code_map_path)
-    code_map = dict(zip(CodesDf['code'],CodesDf['name']))
+    # code_map_path = log_paths[-1].parent.joinpath(task ,"Arduino","src","event_codes.h") # choose the codemap from last version of given task
+    # CodesDf = parse_code_map(code_map_path)
+    # code_map = dict(zip(CodesDf['code'],CodesDf['name']))
 
     LogDfs = []
     for log in log_paths:
-        LogDfs.append(parse_arduino_log(log, code_map))
+        # LogDfs.append(parse_arduino_log(log, code_map))
+        LogDfs.append(get_LogDf_from_path(log))
 
     return LogDfs
 
@@ -399,6 +416,8 @@ def choice_RT(TrialDf):
  
     return pd.Series(rt, name='choice_rt')
 
+# def get_interval(TrialDf):
+
 # Session level metrics
 
 def rewards_collected(SessionDf):
@@ -413,3 +432,91 @@ def mean_reward_collection_rt(SessionDf):
     rt = SessionDf['reward_collected_rt'].mean(skipna=True)
 
     return pd.Series(rt, name='mean_reward_collection_rt')
+
+
+"""
+##     ##    ###    ########  ########
+##     ##   ## ##   ##     ## ##     ##
+##     ##  ##   ##  ##     ## ##     ##
+######### ##     ## ########  ########
+##     ## ######### ##   ##   ##
+##     ## ##     ## ##    ##  ##
+##     ## ##     ## ##     ## ##
+"""
+
+def parse_harp_csv(harp_csv_path, save=True):
+    """ gets the loadcell data and the sync times from a harp csv log """
+
+    with open(harp_csv_path,'r') as fH:
+        lines = fH.readlines()
+
+    header = lines[0].split(',')
+
+    t_sync = []
+    LoadCellDf = []
+
+    for line in tqdm(lines[1:],desc="parsing harp log"):
+        elements = line.split(',')
+        if elements[0] == '3': # line is an event
+            if elements[1] == '33': # line is a load cell read
+                data = line.split(',')[2:5]
+                LoadCellDf.append(data)
+            if elements[1] == '34': # line is a digital input timestamp
+                line = line.strip().split(',')
+                if line[3] == '1':
+                    t_sync.append(float(line[2])*1000) # convert to ms
+
+    LoadCellDf = pd.DataFrame(LoadCellDf,columns=['t','x','y'],dtype='float')
+    LoadCellDf['t_original'] = LoadCellDf['t'] # keeps the original
+    LoadCellDf['t'] = LoadCellDf['t'] * 1000
+
+    if save:
+        # write to disk
+        LoadCellDf.to_csv(harp_csv_path.parent / "loadcell_data.csv")
+        pd.DataFrame(t_sync,columns=['t']).to_csv(harp_csv_path.parent / "harp_sync.csv")
+            
+        # np.save(path / "loadcell_sync.npy", np.array(t_sync,dtype='float32'))
+    
+    return LoadCellDf
+
+def get_arduino_sync(log_path, sync_event_name="TRIAL_AVAILABLE_STATE", save=True):
+    """ extracts arduino sync times from an arduino log """ 
+
+    # TODO this should be an util func
+    task_name = '_'.join(log_path.parent.name.split('_')[2:])
+    code_map_path = log_path.parent / task_name / "Arduino" / "src" / "event_codes.h"
+
+    ### READ 
+    CodesDf = bhv.parse_code_map(code_map_path)
+    code_map = dict(zip(CodesDf['code'],CodesDf['name']))
+    LogDf = bhv.parse_arduino_log(log_path, code_map)
+
+    SyncEvent = bhv.get_events_from_name(LogDf, sync_event_name)
+
+    if save:
+        SyncEvent.to_csv(log_path.parent / "arduino_sync.csv")
+
+    return SyncEvent
+
+def sync_clocks(t_harp, t_arduino, log_path=None):
+    """ linregress between two clocks - master clock is harp
+    if LogDf is given, save the corrected clock to it"""
+
+    if t_harp.shape != t_arduino.shape:
+        print("unequal number of sync pulses in the two files! ")
+
+    # plt.figure()
+    # plt.plot(sp.diff(t_arduino))
+    # plt.plot(sp.diff(t_harp))
+    from scipy import stats
+
+    res = stats.linregress(t_arduino,t_harp)
+    m,b = res.slope,res.intercept
+
+    if log_path is not None:
+        LogDf = get_LogDf_from_path(log_path)
+        LogDf['t_original'] = LogDf['t'] # store original time stampts
+        LogDf['t'] = LogDf['t']*m + b
+        LogDf.to_csv(log_path.parent / "LogDf.csv")
+
+    return m, b

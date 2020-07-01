@@ -15,6 +15,7 @@ import numpy as np
 import seaborn as sns
 from tqdm import tqdm
 import os
+import utils
 
 from behavior_plotters import *
 
@@ -31,18 +32,8 @@ from behavior_plotters import *
  
 """
 
-# %% Get log filepath
-from tkinter import Tk
-from tkinter import filedialog
-root = Tk()         # create the Tkinter widget
-root.withdraw()     # hide the Tkinter root window
-
-# Windows specific; forces the window to appear in front
-root.attributes("-topmost", True)
-
-log_path = Path(filedialog.askopenfilename(initialdir="D:/TaskControl/Animals",title="Select log file"))
-
-root.destroy()
+# %%
+log_path = utils.get_file_dialog()
 
 # %%
 
@@ -58,7 +49,7 @@ LogDf = bhv.parse_arduino_log(log_path, code_map)
 ### COMMON
 # the names of the things present in the log
 span_names = [name.split('_ON')[0] for name in CodesDf['name'] if name.endswith('_ON')]
-event_names = [name.split('_EVENT')[0] for name in CodesDf['name'] if name.endswith('_EVENT')]
+event_names = [name for name in CodesDf['name'] if name.endswith('_EVENT')]
 
 SpansDict = bhv.get_spans(LogDf, span_names)
 EventsDict = bhv.get_events(LogDf, event_names)
@@ -85,8 +76,8 @@ Lick_Event['t'] = Lick_Event['t'].astype('float')
 LogDf = LogDf.append(Lick_Event)
 LogDf.sort_values('t')
 
-event_names.append("LICK")
-EventsDict['LICK'] = bhv.get_events_from_name(LogDf,'LICK')
+event_names.append("LICK_EVENT")
+EventsDict['LICK_EVENT'] = bhv.get_events_from_name(LogDf,'LICK_EVENT')
 
 SpansDict.pop("LICK")
 span_names.remove("LICK")
@@ -113,7 +104,7 @@ os.makedirs(plot_dir,exist_ok=True)
 os.chdir(plot_dir)
 
 # %% Trials Overview - with Lick psth
-data = LogDf.groupby('name').get_group('CHOICE_INCORRECT_EVENT')
+data = LogDf.groupby('name').get_group('CHOICE_EVENT')
 # data = LogDf.groupby('name').get_group(g) for g in ['TRIAL_COMPLETED_EVENT','TRIAL_ABORTED_EVENT']
 data = data.sort_values('t')
 data = data.reset_index()
@@ -128,14 +119,14 @@ plot_session_overview(LogDf, t_ref, pre, post, axes=axes[0], how='dots', cdict=c
 
 bin_width = 25
 bins = np.arange(pre,post,bin_width)
-plot_psth(EventsDict['LICK'], t_ref, bins=bins, axes=axes[1])
+plot_psth(EventsDict['LICK_EVENT'], t_ref, bins=bins, axes=axes[1])
 fig.tight_layout()
 
  # %% Session metrics 
 Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
 
 # make SessionDf - slice into trials
-TrialSpans = bhv.get_spans_from_event_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
+TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
 
 TrialDfs = []
 for i, row in TrialSpans.iterrows():
@@ -151,6 +142,23 @@ plot_success_rate(SessionDf, history=hist, axes=axes[0])
 plot_reward_collection_rate(SessionDf, history=hist, axes=axes[1])
 plot_reward_collection_RT(SessionDf, axes=axes[2])
 fig.tight_layout()
+
+# %% 
+
+bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv")
+
+# %%
+bhv.get_arduino_sync(log_path)
+
+t_harp = pd.read_csv(log_path.parent / "harp_sync.csv")['t'].values
+t_arduino = pd.read_csv(log_path.parent / "arduino_sync.csv")['t'].values
+
+m,b = bhv.sync_clocks(t_harp, t_arduino, log_path)
+
+# %% zero time
+LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
+# t0 = LogDf.iloc[sp.argmax(LogDf.name == 'TRIAL_ENTRY_EVENT')]['t']
+# LogDf['t'] = LogDf['t'] - t0
 
 # %% psychometric
 TrialDfs = []
@@ -169,6 +177,51 @@ for line in lines:
         msgs.append(line)
     if line.startswith('<VAR'):
         var_msgs.append(line)
+
+changing_vars = []
+for line in var_msgs:
+    _, name, value, t = line[1:-1].split(' ')
+    changing_vars.append((name,float(value),float(t))) # TODO dtype awareness!!
+    
+ChangingVarsDf = pd.DataFrame(changing_vars, columns=['name','value','t'])
+
+ChangingVarsDf['t_original'] = ChangingVarsDf['t']
+ChangingVarsDf['t'] = ChangingVarsDf['t']*m + b
+
+# %% get 
+
+
+# make SessionDf - slice into trials
+TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
+
+TrialDfs = []
+for i, row in TrialSpans.iterrows():
+    TrialDfs.append(bhv.time_slice(LogDf, row['t_on'],row['t_off']))
+
+TrialDf = TrialDfs[0]
+
+def get_interval(TrialDf):
+    group = ChangingVarsDf.groupby('name').get_group('this_interval')
+    t_start = TrialDf.iloc[0]['t']
+    t_stop = TrialDf.iloc[-1]['t']
+    interval = bhv.time_slice(group, t_start, t_stop).iloc[0]['value']
+    return pd.Series(interval, name="timing_interval")
+
+SessionDf = bhv.parse_trials(TrialDfs, (bhv.is_successful, get_interval))
+
+# %%
+from sklearn.linear_model import LogisticRegression
+LR = LogisticRegression()
+x = SessionDf['t'].values[:,sp.newaxis]
+y = SessionDf['successful'].values.astype('int32')[:,sp.newaxis]
+LR.fit(x,y)
+
+# %%
+x_fit = sp.linspace(0,3000,100)[:,sp.newaxis]
+y_fit = LR.predict(x_fit)
+plt.plot(x_fit.flatten(), y_fit.flatten())
+    
+
 # %% diagnostic plot
 # fig, axes = plt.subplots(nrows=2,sharex=True)
 # pre = -100
