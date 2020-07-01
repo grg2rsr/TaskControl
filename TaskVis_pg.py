@@ -188,7 +188,12 @@ class SessionVis(QtWidgets.QWidget):
         kwargs = dict(title="choice RT", xlabel="trial #", ylabel="time (ms)")
         self.ChoiceRTLine, = self.add_LinePlot([pen_1], self.PlotWindow, **kwargs)
         self.PlotWindow.nextColumn()
-       
+
+        # kwargs = dict(title="psychometric", xlabel="time (s)", ylabel="p")
+        # self.PsychLine, = self.add_LinePlot([pen_1], self.PlotWindow, **kwargs)
+        # self.PlotWindow.nextColumn()
+
+        # done 
         self.Layout.addWidget(self.PlotWindow)
 
         self.setLayout(self.Layout)
@@ -237,3 +242,8 @@ class SessionVis(QtWidgets.QWidget):
                 x = SDf.index.values+1
                 y = SDf['choice_rt'].values
                 self.ChoiceRTLine.setData(x=x,y=y)
+
+            # psychometric
+            # if True in SessionDf['has_choice'].values:
+            #     pass
+

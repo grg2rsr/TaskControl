@@ -47,6 +47,17 @@ def parse_lines(lines, code_map=None):
 
     return LogDf
 
+def parse_messages(lines):
+    lines = [line.strip() for line in lines]
+    msgs = []
+    var_msgs = []
+    for line in lines:
+        if line.startswith('<MSG'):
+            msgs.append(line)
+        if line.startswith('<VAR'):
+            var_msgs.append(line)
+    return msgs, var_msgs
+
 """
  
  ######## ##     ## ######## ##    ## ########  ######  
@@ -99,10 +110,8 @@ def filter_bad_licks(LogDf, min_time=50, max_time=200, remove=False):
 
 
 # def moving_median_removal(data, window_size):
-#     " Removing force offset computed by running median 
-#       Only works with numpy matrices and its clunky
-#      "
-
+#     " Running median (only works with numpy matrices and it's clunky) "
+#      
 #     aux = np.zeros(data.shape)
 #     half_window = int(window_size/2)
 
@@ -289,12 +298,13 @@ def aggregate_session_logs(animal_path, task):
             datetime.datetime.strptime(date, date_format)
 
             if task_name == task:
-                log_paths.append(animal_path.joinpath(fd, "arduino_log.txt")) 
+                log_paths.append(animal_path.joinpath(fd, "arduino_log.txt"))
+                print(log_paths) 
         except:
             print("Folder/File " + fd + " has corrupted date")
-
+    
     # turn each log into LogDf and unite logs into Series
-    code_map_path = log_paths[0].parent.joinpath(task_name ,"Arduino","src","event_codes.h")
+    code_map_path = log_paths[-1].parent.joinpath(task ,"Arduino","src","event_codes.h") # choose the codemap from last version of given task
     CodesDf = parse_code_map(code_map_path)
     code_map = dict(zip(CodesDf['code'],CodesDf['name']))
 
@@ -384,6 +394,7 @@ def choice_RT(TrialDf):
             t_choice = TrialDf.groupby('name').get_group("CHOICE_EVENT").iloc[-1]['t']
             rt = t_choice - t_go_cue
         except KeyError:
+            # TODO debug when this is thrown
             rt = np.NaN
  
     return pd.Series(rt, name='choice_rt')

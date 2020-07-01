@@ -15,6 +15,7 @@ import numpy as np
 import seaborn as sns
 from tqdm import tqdm
 import os
+
 from behavior_plotters import *
 
 # %%
@@ -30,12 +31,24 @@ from behavior_plotters import *
  
 """
 
-# path to arduino_log.txt
-# log_path = Path("/media/georg/htcondor/shared-paton/georg/Animals_new/JP2078/2020-02-24_11-31-03_lick_for_reward_w_surpression/arduino_log.txt")
-log_path = Path("C:/Users/Casa/Desktop/Paco/Champalimaud/behavior_data/JP2079/2020-02-12_17-21-01_lick_for_reward_w_surpression/arduino_log.txt")
+# %% Get log filepath
+from tkinter import Tk
+from tkinter import filedialog
+root = Tk()         # create the Tkinter widget
+root.withdraw()     # hide the Tkinter root window
+
+# Windows specific; forces the window to appear in front
+root.attributes("-topmost", True)
+
+log_path = Path(filedialog.askopenfilename(initialdir="D:/TaskControl/Animals",title="Select log file"))
+
+root.destroy()
+
+# %%
 
 # infer
-code_map_path = log_path.parent.joinpath("lick_for_reward_w_surpression","Arduino","src","event_codes.h")
+task_name = '_'.join(log_path.parent.name.split('_')[2:])
+code_map_path = log_path.parent.joinpath(task_name,"Arduino","src","event_codes.h")
 
 ### READ 
 CodesDf = bhv.parse_code_map(code_map_path)
@@ -100,12 +113,12 @@ os.makedirs(plot_dir,exist_ok=True)
 os.chdir(plot_dir)
 
 # %% Trials Overview - with Lick psth
-data = LogDf.groupby('name').get_group('TRIAL_ENTRY_EVENT')
+data = LogDf.groupby('name').get_group('CHOICE_INCORRECT_EVENT')
 # data = LogDf.groupby('name').get_group(g) for g in ['TRIAL_COMPLETED_EVENT','TRIAL_ABORTED_EVENT']
 data = data.sort_values('t')
 data = data.reset_index()
 t_ref = data['t'].values
-pre, post = (-100,200)
+pre, post = (-100,2000)
 
 kw = dict(height_ratios=[1,0.5])
 
@@ -118,7 +131,7 @@ bins = np.arange(pre,post,bin_width)
 plot_psth(EventsDict['LICK'], t_ref, bins=bins, axes=axes[1])
 fig.tight_layout()
 
-# %% Session metrics 
+ # %% Session metrics 
 Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
 
 # make SessionDf - slice into trials
@@ -139,7 +152,23 @@ plot_reward_collection_rate(SessionDf, history=hist, axes=axes[1])
 plot_reward_collection_RT(SessionDf, axes=axes[2])
 fig.tight_layout()
 
+# %% psychometric
+TrialDfs = []
+for i, row in TrialSpans.iterrows():
+    TrialDfs.append(bhv.time_slice(LogDf,row['t_on'],row['t_off']))
 
+# %%
+with open(log_path,'r') as fH:
+    lines = fH.readlines()
+
+lines = [line.strip() for line in lines]
+msgs = []
+var_msgs = []
+for line in lines:
+    if line.startswith('<MSG'):
+        msgs.append(line)
+    if line.startswith('<VAR'):
+        var_msgs.append(line)
 # %% diagnostic plot
 # fig, axes = plt.subplots(nrows=2,sharex=True)
 # pre = -100

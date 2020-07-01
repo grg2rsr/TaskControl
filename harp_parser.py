@@ -86,8 +86,8 @@ LogDf.to_csv(path / "LogDf.csv")
 """
 
 window_size = 1000
-LoadCellDf['x'] = LoadCellDf['x'].rolling(window_size).median()
-LoadCellDf['y'] = LoadCellDf['y'].rolling(window_size).median()
+LoadCellDf['x'] = LoadCellDf['x'] - LoadCellDf['x'].rolling(window_size).median()
+LoadCellDf['y'] = LoadCellDf['y'] - LoadCellDf['y'].rolling(window_size).median()
 
 fig, axes = plt.subplots(ncols=2,sharex=True,sharey=True)
 pre,post = -500,500
@@ -100,7 +100,7 @@ event_times = bhv.get_events_from_name(LogDf,"CHOICE_LEFT")
 F = []
 
 for t in event_times['t']:
-    trial = bhv.time_slice(LCDf_med,t+pre,t+post)
+    trial = bhv.time_slice(LoadCellDf,t+pre,t+post)
     F.append(trial.to_numpy())
 
 F_split = np.array_split(F,no_splits)
@@ -116,7 +116,7 @@ event_times = bhv.get_events_from_name(LogDf,"CHOICE_RIGHT")
 F = []
 
 for t in event_times['t']:
-    trial = bhv.time_slice(LCDf_med,t+pre,t+post)
+    trial = bhv.time_slice(LoadCellDf,t+pre,t+post)
     F.append(trial.to_numpy())
 
 F_split = np.array_split(F,no_splits)
@@ -126,21 +126,22 @@ for i, (chunk, clr) in enumerate(zip(F_split,colors)):
     avg_chunk = np.average(chunk,0) # average along trials
     axes[1].plot(avg_chunk[:,1], avg_chunk[:,2], alpha=0.5, lw=1, color = clr)
 
-axes[0].set_ylim([-2500,2500])
-axes[1].set_ylim([-2500,2500])
-axes[0].set_xlim([-2500,2500])
-axes[1].set_xlim([-2500,2500])
+axes[0].set_ylim([-2000,2000])
+axes[1].set_ylim([-2000,2000])
+axes[0].set_xlim([-2000,2000])
+axes[1].set_xlim([-2000,2000])
 
 """
     MAGNITUDE
 """
+event_times = bhv.get_events_from_name(LogDf,"SECOND_TIMING_CUE")
 
 fig, axes = plt.subplots()
 pre,post = -2000,2000
 tvec = sp.arange(pre,post,1)
 ys = []
 for t in event_times['t']:
-    F = bhv.time_slice(LCDf_med,t+pre,t+post)
+    F = bhv.time_slice(LoadCellDf,t+pre,t+post)
     y = sp.sqrt(F['x']**2+F['y']**2)
     ys.append(y)
     axes.plot(tvec,y,lw=1,alpha=0.5)
@@ -157,66 +158,54 @@ axes.axvline(0, linestyle=':',alpha=0.5)
     HEATMAPS
 """
 
+
+
 # %%
-pre,post = -1000,5000
-event_times = bhv.get_events_from_name(LogDf,"SECOND_TIMING_CUE")
-# event_times = bhv.get_events_from_name(LogDf,"TRIAL_SUCCESSFUL")
-
-Fx = []
-Fy = []
-for t in event_times['t']:
-    F = bhv.time_slice(LCDf_med,t+pre,t+post)
-    Fx.append(F['x'])
-    Fy.append(F['y'])
-
-# Removing offset and truncating ends
-Fx = np.array(Fx)
-Fy = np.array(Fy)
-
-force_tresh = 1500
-
-fig, axes = plt.subplots(ncols=2, sharex=True, sharey=True)
-heat1 = axes[0].matshow(Fx,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,)
-heat2 = axes[1].matshow(Fy,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,)
-
-# Labels, title and formatting
-axes[0].set_title('Forces in X axis')
-cbar = plt.colorbar(heat1, ax=axes[0], orientation='horizontal')
-cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Left","Right"])
-
-axes[1].set_title('Forces in Y axis')
-cbar = plt.colorbar(heat2, ax=axes[1], orientation='horizontal')
-cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Down","Up"])
-
-# In seconds
-plt.setp(axes, xticks=np.arange(pre, post), xticklabels=np.arange(pre//1000, post//1000, 0.5))
-
-# " Plotting black tick marks signalling whatever the input "
-# correct_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_CORRECT')
-# #correct_choiceDf.insert(1, "Choice", "Correct") 
-
-# incorrect_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_INCORRECT')
-# #incorrect_choiceDf.insert(1, "Choice", "Incorrect") 
-
-# choice_times = correct_choiceDf.append(incorrect_choiceDf).sort_index(axis = 0)
-# choice_times = choice_times.to_numpy() - event_times.to_numpy() + 1000
-
-# axes[0].vlines(choice_times, ymin, ymax, colors='black')
-# axes[1].vlines(choice_times, ymin, ymax, colors='black')
-
-plt.xlabel('Time')
-plt.ylabel('Trials')
-
-for ax in axes:
-    ax.set_aspect('auto')
-plt.tight_layout()
-
-
 """
     Reaction time plots
 """
+fig = plt.figure()
+
+spans = bhv.get_spans_from_event_names(LogDf, 'TRIAL_ENTRY_EVENT', 'ITI_STATE')
+TrialDfs = []
+for i,span in spans.iterrows():
+    TrialDfs.append(bhv.time_slice(LogDf,span['t_on'],span['t_off']))
+
+# # Getting a list of trialDfs in which trials are both sucessfull and left choice
+# OurTrialDfs = []
+# for TrialDf in TrialDfs:
+#     if "CHOICE_LEFT_EVENT" in TrialDf.name.values and "TRIAL_SUCCESSFUL_EVENT" in TrialDf.name.values:
+#         OurTrialDfs.append(TrialDf)
+
+# Getting rt's from left choice trials
+left_choice_Dfs, right_choice_Dfs = [],[]
+rt_left_choice, rt_right_choice = [],[]
+for TrialDf in TrialDfs:
+    if "CHOICE_LEFT_EVENT" in TrialDf.name.values:
+        left_choice_Dfs.append(TrialDf)
+
+        left_choice_time = TrialDf.loc[TrialDf['name'] == 'CHOICE_LEFT_EVENT']['t']
+        second_cue_time = TrialDf.loc[TrialDf['name'] == 'SECOND_TIMING_CUE_EVENT']['t']
+
+        rt_left_choice.append(int(left_choice_time.values - second_cue_time.values))
+
+    if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
+        right_choice_Dfs.append(TrialDf)
+
+        right_choice_time = TrialDf.loc[TrialDf['name'] == 'CHOICE_RIGHT_EVENT']['t']
+        second_cue_time = TrialDf.loc[TrialDf['name'] == 'SECOND_TIMING_CUE_EVENT']['t']
+
+        rt_right_choice.append(int(right_choice_time.values - second_cue_time.values))
 
 
+plt.hist(rt_left_choice, 25, range = (0,2000), 
+        alpha=0.5, color='red', edgecolor='none', label = 'Left choice')
+plt.hist(rt_right_choice, 25, range = (0,2000), 
+        alpha=0.5, color='green', edgecolor='none', label = 'Right choice')
+plt.ylabel('Number of trials')
+plt.xlabel('Reaction time (ms)')
+
+plt.legend(loc='upper right', frameon=False)          
 
 # %%
 """
@@ -257,3 +246,6 @@ for i, (chunk_x, chunk_y, clr) in enumerate(zip(Fx_split, Fy_split, colors),1):
     fig.tight_layout()
 
 #fig, axes = plt.subplots(ncols=10)
+
+
+# %%

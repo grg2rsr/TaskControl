@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 
+import behavior_plotters as bhv_plt
 import behavior_analysis_utils as bhv
 import pandas as pd
 import numpy as np
@@ -22,15 +23,15 @@ from tqdm import tqdm
  
 """
 
-with open('params.txt','r') as fH:
-    lines = fH.readlines()
+# with open('params.txt','r') as fH:
+#     lines = fH.readlines()
 
 # path = lines[0] # path is in the first line
 
-animal_path = Path(path)
+#animal_path = Path(path)
 
-animal_folder = Path("/home/georg/data/Animals/JP2079")
-task_name = 'lick_for_reward_w_surpression'
+animal_folder = Path("D:/TaskControl/Animals/JJP-00885")
+task_name = 'learn_to_push_alternating'
 
 LogDfs = bhv.aggregate_session_logs(animal_folder, task_name)
 
@@ -49,7 +50,10 @@ LogDfs = [bhv.filter_bad_licks(LogDf) for LogDf in LogDfs]
 #     SpansDicts.append(bhv.get_spans(Df, span_names))
 #     EventsDicts.append(bhv.get_events(Df, event_names))
 
+axes = bhv_plt.plot_sessions_overview(LogDfs, task_name)
+plt.show()
 
+# %%
 """
  
   ######  ########  ######   ######  ####  #######  ##    ##  ######  

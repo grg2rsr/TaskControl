@@ -160,7 +160,7 @@ def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
     if axes is None:
         axes = plt.gca()
     
-    values = SessionDf.groupby('reward_collected').get_group(True)['rew_col_rt'].values
+    values = SessionDf.groupby('reward_collected').get_group(True)['reward_collected_rt'].values
     
     if bins is None:
         bins = sp.arange(0,values.max(),25)
@@ -171,5 +171,102 @@ def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
     axes.set_xlabel('time (ms)')
     axes.set_ylabel('count')
     axes.set_title('reward collection RT')
+
+    return axes
+
+def plot_lc_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post, axes=None, **kwargs):
+
+    event_times = bhv.get_events_from_name(LogDf, align_reference)
+
+    Fx = []
+    Fy = []
+    for t in event_times['t']:
+        F = bhv.time_slice(LoadCellDf,t+pre,t+post)
+        Fx.append(F['x'])
+        Fy.append(F['y'])
+
+    Fx = np.array(Fx)
+    Fy = np.array(Fy)
+
+    force_tresh = 1500
+
+    fig, axes = plt.subplots(ncols=2, sharex=True, sharey=True)
+    heat1 = axes[0].matshow(Fx,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,alpha =0.75)
+    heat2 = axes[1].matshow(Fy,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,alpha =0.75)
+
+    # Ticks in seconds
+    plt.setp(axes, xticks=np.arange(pre, post+1, 500), xticklabels=np.arange(pre//1000, (post//1000)+0.5, 0.5))
+
+    # Labels, title and formatting
+    axes[0].set_title('Forces in X axis')
+    cbar = plt.colorbar(heat1, ax=axes[0], orientation='horizontal')
+    cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Left","Right"])
+
+    axes[1].set_title('Forces in Y axis')
+    cbar = plt.colorbar(heat2, ax=axes[1], orientation='horizontal')
+    cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Down","Up"])
+
+    ' Plotting black tick marks signalling whatever the input HARDCODED RIGHT NOW '
+    correct_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_CORRECT')
+    incorrect_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_INCORRECT')
+
+    choice_times = correct_choiceDf.append(incorrect_choiceDf).sort_index(axis = 0)
+    choice_times = choice_times.to_numpy() - event_times.to_numpy() - pre # Since Pre starts at -1s
+
+    ymin = np.arange(-0.5,len(choice_times)) # need to shift since line starts at center of trial
+    ymax = np.arange(0.5,len(choice_times)+1)
+
+    axes[0].vlines(choice_times, ymin, ymax, colors='black')
+    axes[1].vlines(choice_times, ymin, ymax, colors='black')
+
+    plt.xlabel('Time (s)')
+    plt.ylabel('Trials')
+
+    for ax in axes:
+        ax.set_aspect('auto')
+
+"""
+ 
+  ######  ########  ######   ######  ####  #######  ##    ##  ######  
+ ##    ## ##       ##    ## ##    ##  ##  ##     ## ###   ## ##    ## 
+ ##       ##       ##       ##        ##  ##     ## ####  ## ##       
+  ######  ######    ######   ######   ##  ##     ## ## ## ##  ######  
+       ## ##             ##       ##  ##  ##     ## ##  ####       ## 
+ ##    ## ##       ##    ## ##    ##  ##  ##     ## ##   ### ##    ## 
+  ######  ########  ######   ######  ####  #######  ##    ##  ######  
+ 
+"""
+
+def plot_sessions_overview(LogDfs, task_name, axes=None):
+
+    if axes is None:
+        axes = plt.gca()
+
+    trials_performed = []
+    trials_sucessful = []
+    trials_unsucessful = []
+
+    for LogDf in LogDfs:
+        # Total number of trials performed
+        event_times = bhv.get_events_from_name(LogDf,"SECOND_TIMING_CUE")
+        trials_performed.append(len(event_times))
+
+        # Number of sucessful trials 
+        correct_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_CORRECT')
+        trials_sucessful.append(len(correct_choiceDf))
+        
+        # Number of unsucessful trials 
+        incorrect_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_INCORRECT')
+        trials_unsucessful.append(len(incorrect_choiceDf))
+
+        # Weight
+    
+    axes.plot(trials_performed, color = 'black', label = 'Performed')
+    axes.plot(trials_sucessful, color = 'green', label = 'Sucessful')
+    axes.plot(trials_unsucessful, color = 'red', label = 'Unsucessful')
+    axes.set_ylabel('Count (#)')
+    axes.set_xlabel('Session number')
+    axes.set_title('Trial overview across sessions in task:  ' + task_name)
+    axes.legend(loc='upper right', frameon=False)   
 
     return axes
