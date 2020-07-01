@@ -57,7 +57,10 @@ int right_front = 9;
 
 int choice;
 int correct_zone;
-int last_correct_zone = right; // starting out always with right
+// int last_correct_zone = right; // starting out always with right
+
+String last_correct_trial_type = "short";
+String this_trial_type = "long";
 
 bool left_short = true; // TODO expose
 
@@ -466,6 +469,28 @@ void finite_state_machine() {
                 // cue orange light
                 lights_on_blue();
 
+                // determine the type of trial:
+                // alternating, but if on a streak, random
+                if (succ_trial_counter < 4 && forced_alternating == true){ // TODO expose streak
+
+                    if (last_correct_trial_type == "short"){
+                        this_trial_type = "long";
+                    }
+                    if (last_correct_trial_type == "long"){
+                        this_trial_type = "short";
+                    }
+                }
+                else {
+                    float r = random(0,100) / 100.0;
+
+                    if (r > 0.5){
+                        this_trial_type = "short";
+                    }
+                    else {
+                        this_trial_type = "long";
+                    }
+                }
+
                 this_trial_entry_pause_dur = random(trial_entry_pause_dur_min, trial_entry_pause_dur_max);
 
             }
@@ -487,7 +512,15 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
 
-                this_interval = random(100,2900);
+
+                //
+                if (this_trial_type == "short") {
+                    this_interval = random(100,1500);
+                }
+                if (this_trial_type == "long"){
+                    this_interval = random(1500,2900);
+                }
+
                 log_var("this_interval",String(this_interval));
 
                 //timing cue 1
@@ -572,7 +605,9 @@ void finite_state_machine() {
                     buzz_controller.play(235,choice_buzz_duration);
                     current_state = REWARD_AVAILABLE_STATE;
                     increment_moving_vars();
+                    last_correct_trial_type = this_trial_type;
                 }
+
                 else {
                     log_code(CHOICE_INCORRECT_EVENT);
                     log_code(TRIAL_UNSUCCESSFUL_EVENT);

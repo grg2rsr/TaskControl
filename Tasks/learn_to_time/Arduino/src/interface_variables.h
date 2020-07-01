@@ -15,6 +15,7 @@ float valve_ul_ms = 0.07487586;
 
 unsigned long reward_available_dur = 1000;
 
+bool forced_alternating = true;
 
 float X_start_thresh = 1000;
 float X_thresh = 1000;
