@@ -106,7 +106,7 @@ void log_choice(){
 }
 
 void send_sync_pulse(){
-    // sync w load cell TODO test if 1 ms is enough to do this
+    // sync w load cell
     digitalWrite(LC_SYNC_PIN,HIGH);
     delay(1);
     digitalWrite(LC_SYNC_PIN,LOW);
@@ -139,39 +139,39 @@ unsigned long debounce = 250;
 
 void process_loadcell() {
     // bin zones into 9 pad
-    if (X < X_left_thresh && Y < Y_back_thresh){
+    if (X < (-1*X_thresh) && Y < (-1*Y_thresh)){
         current_zone = left_back;
     }
 
-    if (X > X_left_thresh && X < X_right_thresh && Y < Y_back_thresh){
+    if (X > (-1*X_thresh) && X < X_thresh && Y < (-1*Y_thresh)){
         current_zone = back;
     }
 
-    if (X > X_right_thresh && Y < Y_back_thresh){
+    if (X > X_thresh && Y < (-1*Y_thresh)){
         current_zone = right_back;
     }
     
-    if (X < X_left_thresh && Y > Y_back_thresh && Y < Y_front_thresh){
+    if (X < (-1*X_thresh) && Y > (-1*Y_thresh) && Y < Y_thresh){
         current_zone = left;
     }
 
-    if (X > X_left_thresh && X < X_right_thresh && Y > Y_back_thresh && Y < Y_front_thresh){
+    if (X > (-1*X_thresh) && X < X_thresh && Y > (-1*Y_thresh) && Y < Y_thresh){
         current_zone = center;
     }
 
-    if (X > X_right_thresh && Y > Y_back_thresh && Y < Y_front_thresh){
+    if (X > X_thresh && Y > (-1*Y_thresh) && Y < Y_thresh){
         current_zone = right;
     }
 
-    if (X < X_left_thresh && Y > Y_front_thresh){
+    if (X < (-1*X_thresh) && Y > Y_thresh){
         current_zone = left_front;
     }
 
-    if (X > X_left_thresh && X < X_right_thresh &&  Y > Y_front_thresh){
+    if (X > (-1*X_thresh) && X < X_thresh &&  Y > Y_thresh){
         current_zone = front;
     }
 
-    if (X > X_right_thresh && Y > Y_front_thresh){
+    if (X > X_thresh && Y > Y_thresh){
         current_zone = right_front;
     }
 
@@ -381,6 +381,54 @@ void punish_cue(){
 // }
 
 /*
+ 
+ ##     ##  #######  ##     ## #### ##    ##  ######      ##     ##    ###    ########   ######  
+ ###   ### ##     ## ##     ##  ##  ###   ## ##    ##     ##     ##   ## ##   ##     ## ##    ## 
+ #### #### ##     ## ##     ##  ##  ####  ## ##           ##     ##  ##   ##  ##     ## ##       
+ ## ### ## ##     ## ##     ##  ##  ## ## ## ##   ####    ##     ## ##     ## ########   ######  
+ ##     ## ##     ##  ##   ##   ##  ##  #### ##    ##      ##   ##  ######### ##   ##         ## 
+ ##     ## ##     ##   ## ##    ##  ##   ### ##    ##       ## ##   ##     ## ##    ##  ##    ## 
+ ##     ##  #######     ###    #### ##    ##  ######         ###    ##     ## ##     ##  ######  
+ 
+*/
+
+void increment_moving_vars(){
+    if (X_thresh <= X_target_thresh){
+        X_thresh = X_thresh + X_thresh*X_increment;
+    }
+    else {
+        X_thresh = X_target_thresh;
+    }
+    log_var("X_thresh",String(X_thresh));
+
+    if (Y_thresh >= Y_target_thresh){
+        Y_thresh = Y_thresh + Y_thresh*Y_increment;
+    }
+    else {
+        Y_thresh = Y_target_thresh;
+    }
+    log_var("Y_thresh",String(Y_thresh));
+}
+
+void decrement_moving_vars(){
+if (X_thresh >= X_start_thresh){
+        X_thresh = X_thresh + X_thresh*X_decrement;
+    }
+    else {
+        X_thresh = X_start_thresh;
+    }
+    log_var("X_thresh",String(X_thresh));
+
+    if (Y_thresh <= Y_start_thresh){
+        Y_thresh = Y_thresh + Y_thresh*Y_decrement;
+    }
+    else {
+        Y_thresh = Y_start_thresh;
+    }
+    log_var("Y_thresh",String(Y_thresh));
+}
+
+/*
 ########  ######  ##     ##
 ##       ##    ## ###   ###
 ##       ##       #### ####
@@ -511,6 +559,7 @@ void finite_state_machine() {
                     log_code(CHOICE_MISSED_EVENT);
                     log_code(TRIAL_UNSUCCESSFUL_EVENT);
                     punish_cue();
+                    decrement_moving_vars();
                     current_state = ITI_STATE;
                 }
                 
@@ -522,6 +571,7 @@ void finite_state_machine() {
                     // choice buzz
                     buzz_controller.play(235,choice_buzz_duration);
                     current_state = REWARD_AVAILABLE_STATE;
+                    increment_moving_vars();
                 }
                 else {
                     log_code(CHOICE_INCORRECT_EVENT);
