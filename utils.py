@@ -59,8 +59,6 @@ def debug_trace():
     QtCore.pyqtRemoveInputHook()
     set_trace()
 
-
-
 def get_file_dialog(initial_dir="D:/TaskControl/Animals"):
     from tkinter import Tk
     from tkinter import filedialog
