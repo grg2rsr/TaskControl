@@ -99,7 +99,6 @@ void log_var(String name, String value){
 }
 
 void log_choice(){
-    log_code(CHOICE_EVENT);
     if (current_zone == right){
         log_code(CHOICE_RIGHT_EVENT);
     }
@@ -395,39 +394,15 @@ void punish_cue(){
  
 */
 
-void increment_moving_vars(){
-    if (X_thresh <= X_target_thresh){
-        X_thresh = X_thresh + X_thresh*X_increment;
-    }
-    else {
-        X_thresh = X_target_thresh;
-    }
+void move_X_thresh(float percent_change){
+    X_thresh += X_thresh * percent_change;
+    X_thresh = constrain(X_thresh, X_start_thresh, X_target_thresh);
     log_var("X_thresh",String(X_thresh));
-
-    if (Y_thresh >= Y_target_thresh){
-        Y_thresh = Y_thresh + Y_thresh*Y_increment;
-    }
-    else {
-        Y_thresh = Y_target_thresh;
-    }
-    log_var("Y_thresh",String(Y_thresh));
 }
 
-void decrement_moving_vars(){
-if (X_thresh >= X_start_thresh){
-        X_thresh = X_thresh + X_thresh*X_decrement;
-    }
-    else {
-        X_thresh = X_start_thresh;
-    }
-    log_var("X_thresh",String(X_thresh));
-
-    if (Y_thresh <= Y_start_thresh){
-        Y_thresh = Y_thresh + Y_thresh*Y_decrement;
-    }
-    else {
-        Y_thresh = Y_start_thresh;
-    }
+void move_Y_thresh(float percent_change){
+    Y_thresh += Y_thresh * percent_change;
+    Y_thresh = constrain(Y_thresh, Y_target_thresh, Y_start_thresh); // inverse bc moving down
     log_var("Y_thresh",String(Y_thresh));
 }
 
@@ -537,6 +512,7 @@ void finite_state_machine() {
             
                 // premature choice
                 if (current_zone != center) {
+                    log_code(PREMATURE_CHOICE_EVENT);
                     log_choice();
                     log_code(TRIAL_ABORTED_EVENT);
                     
@@ -591,24 +567,34 @@ void finite_state_machine() {
                 if (now() - state_entry > choice_dur){
                     log_code(CHOICE_MISSED_EVENT);
                     log_code(TRIAL_UNSUCCESSFUL_EVENT);
+
+                    // cue
                     punish_cue();
-                    decrement_moving_vars();
                     current_state = ITI_STATE;
+
+                    move_X_thresh(X_decrement);
+                    move_Y_thresh(Y_increment);
                 }
                 
                 // choice was made
                 if (current_zone == correct_zone) {
+                    log_code(CHOICE_EVENT);
                     log_code(CHOICE_CORRECT_EVENT);
                     log_code(TRIAL_SUCCESSFUL_EVENT);
                     log_choice();
-                    // choice buzz
+
+                    // cue: choice buzz
                     buzz_controller.play(235,choice_buzz_duration);
+
                     current_state = REWARD_AVAILABLE_STATE;
-                    increment_moving_vars();
                     last_correct_trial_type = this_trial_type;
+
+                    move_X_thresh(X_increment);
+                    move_Y_thresh(Y_decrement);
                 }
 
                 else {
+                    log_code(CHOICE_EVENT);
                     log_code(CHOICE_INCORRECT_EVENT);
                     log_code(TRIAL_UNSUCCESSFUL_EVENT);
                     log_choice();

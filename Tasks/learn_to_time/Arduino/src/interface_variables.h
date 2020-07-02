@@ -26,5 +26,5 @@ float X_decrement = -0.02;
 float Y_start_thresh = 2000;
 float Y_thresh = 2000;
 float Y_target_thresh = 1000;
-float Y_increment = -0.05;
-float Y_decrement = 0.02;
+float Y_increment = 0.02;
+float Y_decrement = -0.05;

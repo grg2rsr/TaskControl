@@ -43,8 +43,9 @@ const unsigned int REWARD_MISSED_EVENT = 33;
 
 // choice related
 const unsigned int CHOICE_EVENT = 40;
-const unsigned int CHOICE_LEFT_EVENT = 41;
-const unsigned int CHOICE_RIGHT_EVENT = 42;
+const unsigned int PREMATURE_CHOICE_EVENT = 41;
+const unsigned int CHOICE_LEFT_EVENT = 42;
+const unsigned int CHOICE_RIGHT_EVENT = 43;
 
 // stim and cue stuff
 const unsigned int FIRST_TIMING_CUE_EVENT = 50;
