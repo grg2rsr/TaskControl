@@ -344,13 +344,12 @@ class ArduinoController(QtWidgets.QWidget):
         # self.thread.join()
 
         # overwrite logged arduino vars file
-        # FIXME this currently crashes
-        # try:
-        #     target = self.run_folder.joinpath(self.task)
-        #     self.VariableController.write_variables(target.joinpath('Arduino','src',self.task_config['var_fname']))
-        # except AttributeError:
-        #     # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
-        #     pass
+        try:
+            target = self.run_folder.joinpath(self.task)
+            self.VariableController.write_variables(target.joinpath('Arduino','src',self.task_config['var_fname']))
+        except AttributeError:
+            # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
+            pass
 
         # if serial connection is open, close it
         if hasattr(self,'connection'):
@@ -391,7 +390,10 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         super(ArduinoVariablesWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
         self.Df = Df
+
         self.initUI()
+
+        parent.serial_data_available.connect(self.on_serial)
 
     def initUI(self):
         # contains a scroll area which contains the scroll widget
@@ -399,7 +401,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.ScrollWidget = QtWidgets.QWidget()
 
         # scroll widget has the layout etc
-        self.VariableEditWidget = Widgets.ValueEditFormLayout(self,DataFrame=self.Df)
+        self.VariableEditWidget = Widgets.ValueEditFormLayout(self, DataFrame=self.Df)
 
         # note: the order of this seems to be of utmost importance ... 
         self.ScrollWidget.setLayout(self.VariableEditWidget)
@@ -488,11 +490,11 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
         try:
             current_animal_folder = Path(ThisSettingsWidget.profile['animals_folder']).joinpath(ThisSettingsWidget.animal)
-            sessions_df = utils.get_sessions(current_animal_folder)
-            previous_sessions = sessions_df.groupby('task').get_group(ThisSettingsWidget.task)
+            SessionsDf = utils.get_sessions(current_animal_folder)
+            previous_sessions = SessionsDf.groupby('task').get_group(ThisSettingsWidget.task)
 
             prev_session_path = Path(previous_sessions.iloc[-1]['path'])
-            prev_vars_path = prev_session_path.joinpath(ThisSettingsWidget.task,self.parent().task_config['pio_project_folder'],'src',self.parent().task_config['var_fname'])
+            prev_vars_path = prev_session_path.joinpath(ThisSettingsWidget.task, self.parent().task_config['pio_project_folder'], 'src', self.parent().task_config['var_fname'])
             
             prev_vars = functions.parse_arduino_vars(prev_vars_path)
 
@@ -501,6 +503,19 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         except KeyError:
             print("trying to use last vars, but animal has not been run on this task before.")
 
+    def on_serial(self, line):
+        """ updates the display """
+        # TODO this entire thing need to be reworked 
+        # model / view architecture
+
+        if line.startswith('<VAR'):
+            _, name, value, t = line[1:-1].split(' ')
+            Df = self.VariableEditWidget.get_entries()
+            Df.index = Df.name
+            if name in Df.index:
+                Df.loc[name,'value'] = float(value) # FIXME WARNING dtype awareness?
+                Df.reset_index(drop=True,inplace=True)
+                self.VariableEditWidget.set_entries(Df)
 
 """
  
@@ -700,7 +715,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
 
     def update(self,line):
         # TODO filter out high freq events like lick and zone
-        # w checkbox
+        # w checkbox - LICK does not work bc not decoded EASY TODO
 
         if not line.startswith('<VAR current_zone') and not line.startswith('LICK'):
             if not line.startswith('<'):

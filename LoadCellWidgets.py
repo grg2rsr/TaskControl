@@ -244,7 +244,7 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.setWindowFlags(QtCore.Qt.Window)
 
         self.Controller.raw_lc_data_available.connect(self.on_udp_data)
-        # self.Controller.parent().ArduinoController.serial_data_available.connect(self.on_serial)
+        self.Controller.parent().ArduinoController.serial_data_available.connect(self.on_serial)
 
         self.lc_raw_data = sp.zeros((100,2)) # FIXME hardcode hardcode history length
 
@@ -253,7 +253,9 @@ class LoadCellMonitor(QtWidgets.QWidget):
     def initUI(self):
         self.setWindowTitle("LoadCell Monitor")
         self.Layout = QtWidgets.QHBoxLayout()
-        self.setMinimumWidth(300) # FIXME hardcoded!
+
+        self.resize(300,300) # FIXME hardcoded!
+        # self.setHeight(250) # FIXME hardcoded!
 
         # Display and aesthetics
         self.PlotWindow = pg.GraphicsWindow(title="LoadCell raw data monitor")
@@ -278,11 +280,14 @@ class LoadCellMonitor(QtWidgets.QWidget):
         # adding the threshold as lines
         pen = pg.mkPen((255,255,255,100), width=1)
         self.lim_lines = {}
-        self.lim_lines['front'] = self.PlotItem.addItem(pg.InfiniteLine(pos=1500, pen=pen))
-        self.lim_lines['back'] = self.PlotItem.addItem(pg.InfiniteLine(pos=-1500, pen=pen))
-        self.lim_lines['right'] = self.PlotItem.addItem(pg.InfiniteLine(pos=2000, pen=pen, angle=0))
-        self.lim_lines['left'] = self.PlotItem.addItem(pg.InfiniteLine(pos=-2000, pen=pen, angle=0))
+        self.lim_lines['right'] = pg.InfiniteLine(pos=1000, pen=pen)
+        self.lim_lines['left'] = pg.InfiniteLine(pos=-1000, pen=pen)
+        self.lim_lines['front'] = pg.InfiniteLine(pos=2000, pen=pen, angle=0)
+        self.lim_lines['back'] = pg.InfiniteLine(pos=-2000, pen=pen, angle=0)
 
+        for k, v in self.lim_lines.items():
+            self.PlotItem.addItem(v)
+        
         self.Layout.addWidget(self.PlotWindow)
         self.setLayout(self.Layout)
         self.show()
@@ -305,22 +310,17 @@ class LoadCellMonitor(QtWidgets.QWidget):
         # stub
         self.close()
 
-    # def on_serial(self,line):
-    #     """ listens to the arduino, updates variable line """
-    #     if line.startswith('<VAR'):
-    #         read = line[1:-1].split(' ')
-    #         if read[1] == "X_left_thresh":
-    #             lim_line = self.lim_lines['left']
-    #             lim_line.setValue(float(read[2]))
-    #         if read[1] == "X_right_thresh":
-    #             lim_line = self.lim_lines['right']
-    #             lim_line.setValue(float(read[2]))
-    #         if read[1] == "Y_front_thresh":
-    #             lim_line = self.lim_lines['front']
-    #             lim_line.setValue(float(read[2]))
-    #         if read[1] == "Y_back_thresh":
-    #             lim_line = self.lim_lines['back']
-    #             lim_line.setValue(float(read[2]))
-    #     pass
+    def on_serial(self,line):
+        """ listens to the arduino, updates variable line """
+
+        if line.startswith('<VAR'):
+            _, name, value, t = line[1:-1].split(' ')
+            if name == "X_thresh":
+                self.lim_lines['left'].setValue(-float(value))
+                self.lim_lines['right'].setValue(float(value))
+            if name == "Y_thresh":
+                self.lim_lines['back'].setValue(-float(value))
+                self.lim_lines['front'].setValue(float(value))
+        pass
 
 

@@ -713,6 +713,8 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
         """ sets all values with values according to Df """
         if not sp.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
             print("can't set entries bc they are not equal ... this indicates some major bug")
+            print(Df)
+            print(self.Df)
             sys.exit()
 
         else:
