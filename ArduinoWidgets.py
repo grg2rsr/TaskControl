@@ -67,7 +67,7 @@ class ArduinoController(QtWidgets.QWidget):
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
         # online analyzer
-        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT, bhv.has_choice, bhv.choice_RT) # HARDCODE
+        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT, bhv.has_choice, bhv.choice_RT, bhv.get_choice) # HARDCODE
         self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
         # don't add him to children bc doesn't have a UI
 
@@ -317,26 +317,6 @@ class ArduinoController(QtWidgets.QWidget):
         self.RunBtn.setStyleSheet("background-color: green")
     pass
 
-    # def parse_line(self,line):
-    #     # TODO FIXME this should be part of the VariableController
-    #     # TODO the entire VAR functionality needs to be reworked
-    #     # if report
-    #     if line.startswith('<'):
-    #         if line[1:-1].split(' ')[0] == 'VAR':
-    #             cmd,var,value = line[1:-1].split(' ')
-    #             Df = self.VariableController.VariableEditWidget.get_entries()
-    #             Df.index = Df.name
-    #             Df.loc[var,'value'] = int(value)
-    #             Df.reset_index(drop=True,inplace=True)
-    #             self.VariableController.VariableEditWidget.set_entries(Df)
-
-    #     # TODO FIXME this should be now part of the online analyzer
-    #     # normal read
-    #     if '\t' in line:
-    #         code = line.split('\t')[0]
-    #         decoded = self.code_map[code]
-    #         line = '\t'.join([decoded,line.split('\t')[1]])
-
     def closeEvent(self, event):
         # take care of ending the threads
         self.stopped = True
@@ -346,7 +326,7 @@ class ArduinoController(QtWidgets.QWidget):
         # overwrite logged arduino vars file
         try:
             target = self.run_folder.joinpath(self.task)
-            self.VariableController.write_variables(target.joinpath('Arduino','src',self.task_config['var_fname']))
+            self.VariableController.write_variables(target / 'Arduino' / 'src' / 'interface_variables.h')
         except AttributeError:
             # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
             pass
@@ -541,6 +521,7 @@ class OnlineDataAnalyser(QtCore.QObject):
         
         self.lines = []
         self.SessionDf = None
+        self.ChangingVarsDf = pd.DataFrame([], columns=['name','value','t'])
 
         self.parent = parent
     
@@ -551,6 +532,19 @@ class OnlineDataAnalyser(QtCore.QObject):
         self.parent.serial_data_available.connect(self.update)
 
     def update(self,line):
+        # if a changing var - carful as this could eat a lot of resources
+        # if line.startswith('<VAR'):
+        #     _, name, value, t = line[1:-1].split(' ')
+        #     # Df = pd.DataFrame((name,float(value),float(t)), columns=['name','value','t'])
+        #     self.ChaningVarsDf.append(dict(name=name,value=float(value),t=float(t)))
+
+        # hacked in this_interval
+        if line.startswith('<VAR'):
+            _, name, value, t = line[1:-1].split(' ')
+            if name == "this_interval":
+                print(self.SessionDf)
+                self.SessionDf.loc[self.SessionDf.shape[0]-1,'this_interval'] = float(value)
+                # self.last_recorded_interval = float(value)
 
         # if normally decodeable
         if not line.startswith('<'):
@@ -581,9 +575,11 @@ class OnlineDataAnalyser(QtCore.QObject):
                 # parse lines
                 TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map)
                 TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
+                # self.TrialMetricsDf['this_interval'] = self.last_recorded_interval
                 
                 if TrialMetricsDf is not None:
                     # update SessionDf
+                    print(self.SessionDf)
                     if self.SessionDf is None: # on first
                         self.SessionDf = TrialMetricsDf
                     else:

@@ -416,7 +416,17 @@ def choice_RT(TrialDf):
  
     return pd.Series(rt, name='choice_rt')
 
-# def get_interval(TrialDf):
+def get_choice(TrialDf):
+    """ 0 for left, 1 for right """
+    if has_choice(TrialDf).values[0]:
+        if "CHOICE_LEFT_EVENT" in TrialDf['name'].values:
+            choice = "left"
+        else:
+            choice = "right"
+    else:
+        choice = np.NaN
+    
+    return pd.Series(choice, name="choice")
 
 # Session level metrics
 
@@ -505,9 +515,6 @@ def sync_clocks(t_harp, t_arduino, log_path=None):
     if t_harp.shape != t_arduino.shape:
         print("unequal number of sync pulses in the two files! ")
 
-    # plt.figure()
-    # plt.plot(sp.diff(t_arduino))
-    # plt.plot(sp.diff(t_harp))
     from scipy import stats
 
     res = stats.linregress(t_arduino,t_harp)

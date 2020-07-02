@@ -223,6 +223,7 @@ SessionDf = bhv.parse_trials(TrialDfs, (bhv.is_successful, get_interval, get_cho
 
 # %%
 from sklearn.linear_model import LogisticRegression
+from sicpy.special import expit
 cLR = LogisticRegression()
 SessionDf = SessionDf.dropna()
 X = SessionDf['timing_interval'].values[:,sp.newaxis]
@@ -236,49 +237,3 @@ x_fit = sp.linspace(0,3000,100)
 psychometric = expit(x_fit * cLR.coef_ + cLR.intercept_).ravel()
 plt.plot(x_fit, psychometric, color='red', linewidth=3)
 
-# %%
-x_fit = sp.linspace(0,3000,100)[:,sp.newaxis]
-y_fit = LR.predict(x_fit)
-plt.plot(x_fit.flatten(), y_fit.flatten())
-    
-
-# %% diagnostic plot
-# fig, axes = plt.subplots(nrows=2,sharex=True)
-# pre = -100
-# post = 200
-# bins = sp.arange(pre,post,10)
-# for b in bins:
-#     for ax in axes:
-#         ax.axvline(b,alpha=0.5)
-# plot_raster(EventsDict['LICK'], t_ref, pre, post, axes=axes[0])
-# plot_psth(EventsDict['LICK'], t_ref, bins=bins, axes=axes[1])
-
-# %%
-import numpy as np
-from scipy.special import expit
-
-# General a toy dataset:s it's just a straight line with some Gaussian noise:
-xmin, xmax = -5, 5
-n_samples = 100
-np.random.seed(0)
-X = np.random.normal(size=n_samples)
-y = (X > 0).astype(np.float)
-X[X > 0] *= 4
-X += .3 * np.random.normal(size=n_samples)
-
-X = X[:, np.newaxis]
-
-# Fit the classifier
-clf = LogisticRegression(C=1e5)
-clf.fit(X, y)
-
-# and plot the result
-plt.figure(1, figsize=(4, 3))
-plt.clf()
-plt.scatter(X.ravel(), y, color='black', zorder=20)
-X_test = np.linspace(-5, 10, 300)
-
-loss = expit(X_test * clf.coef_ + clf.intercept_).ravel()
-plt.plot(X_test, loss, color='red', linewidth=3)
-
-# %%

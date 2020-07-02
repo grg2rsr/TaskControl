@@ -435,8 +435,8 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-                log_code(TRIAL_AVAILABLE_STATE); // for plotting purposes
                 log_code(TRIAL_ENTRY_EVENT);
+                log_code(TRIAL_AVAILABLE_STATE); // for plotting purposes
 
                 // sync at trial entry
                 send_sync_pulse();
@@ -456,7 +456,7 @@ void finite_state_machine() {
                     }
                 }
                 else {
-                    float r = random(0,100) / 100.0;
+                    float r = random(0,1000) / 1000.0;
 
                     if (r > 0.5){
                         this_trial_type = "short";
@@ -521,6 +521,7 @@ void finite_state_machine() {
 
                     lights_off();
                     current_state = ITI_STATE;
+                    break;
                 }
 
                 // interval has passed
@@ -574,7 +575,9 @@ void finite_state_machine() {
 
                     move_X_thresh(X_decrement);
                     move_Y_thresh(Y_increment);
+                    break;
                 }
+                
                 
                 // choice was made
                 if (current_zone == correct_zone) {

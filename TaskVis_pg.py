@@ -4,6 +4,9 @@ from PyQt5 import QtWidgets
 import scipy as sp
 import pyqtgraph as pg
 
+from sklearn.linear_model import LogisticRegression
+from scipy.special import expit
+
 # import visualization as vis
 import functions
 import pandas as pd
@@ -152,7 +155,6 @@ class SessionVis(QtWidgets.QWidget):
         self.OnlineDataAnalyser = OnlineDataAnalyser
 
         OnlineDataAnalyser.trial_data_available.connect(self.on_data)
-        print("constructor")
 
     def add_LinePlot(self, pens, PlotWindow, title=None, xlabel=None, ylabel=None):
         Item = PlotWindow.addPlot(title=title)
@@ -161,8 +163,14 @@ class SessionVis(QtWidgets.QWidget):
         Lines = [Item.plot(pen=pen) for pen in pens]
         return Lines
 
+    def add_ScatterPlot(self, pens, PlotWindow, title=None, xlabel=None, ylabel=None):
+        Item = PlotWindow.addPlot(title=title)
+        Item.setLabel("left", text=ylabel)
+        Item.setLabel("bottom", text=xlabel)
+        Scatters = [Item.plot(symbolBrush=(100,100,100), symbolSize=5) for pen in pens]
+        return Scatters
+
     def initUI(self):
-        print("ini start")
         self.setWindowTitle("Session performance monitor")
         self.Layout = QtWidgets.QHBoxLayout()
         # self.setMinimumWidth(300) # FIXME hardcoded!
@@ -190,19 +198,23 @@ class SessionVis(QtWidgets.QWidget):
         self.PlotWindow.nextColumn()
 
         kwargs = dict(title="choice RT", xlabel="trial #", ylabel="time (ms)")
-        self.ChoiceRTLine, = self.add_LinePlot([pen_1], self.PlotWindow, **kwargs)
+        self.ChoiceRTScatter, = self.add_ScatterPlot([pen_1], self.PlotWindow, **kwargs)
         self.PlotWindow.nextColumn()
 
-        # kwargs = dict(title="psychometric", xlabel="time (s)", ylabel="p")
+        kwargs = dict(title="psychometric", xlabel="time (s)", ylabel="p")
         # self.PsychLine, = self.add_LinePlot([pen_1], self.PlotWindow, **kwargs)
-        # self.PlotWindow.nextColumn()
+        self.PsychScatter, = self.add_ScatterPlot([pen_1], self.PlotWindow, **kwargs)
+        self.PlotWindow.nextColumn()
+
+        # Item = self.PlotWindow.addPlot()
+        # self.ChoicesScatter = Item.plot(pen=(100,100,100), symbolBrush=(100,100,100),symbolSize=2)
+
 
         # done 
         self.Layout.addWidget(self.PlotWindow)
 
         self.setLayout(self.Layout)
         self.show()
-        print("ini end")
 
     def on_data(self, TrialsDf, TrialMetricsDf):
         hist = 20 # to be exposed in the future
@@ -245,9 +257,25 @@ class SessionVis(QtWidgets.QWidget):
                 SDf = SessionDf.groupby('has_choice').get_group(True)
                 x = SDf.index.values+1
                 y = SDf['choice_rt'].values
-                self.ChoiceRTLine.setData(x=x,y=y)
+                self.ChoiceRTScatter.setData(x=x,y=y)
 
             # psychometric
-            # if True in SessionDf['has_choice'].values:
-            #     pass
+            if True in SessionDf['has_choice'].values:
+                SDf = SessionDf[['this_interval','choice']].dropna()
+                X = SDf['this_interval'].values[:,sp.newaxis]
+                y = (SDf['choice'].values == 'right').astype('float32')
+                # print(SDf)
+                self.PsychScatter.setData(X.flatten(), y)
+
+                # try:
+                #     cLR = LogisticRegression()
+                #     cLR.fit(X,y)
+
+                #     x_fit = sp.linspace(0,3000,100)
+                #     psychometric = expit(x_fit * cLR.coef_ + cLR.intercept_).ravel()
+                #     self.PsychLine.setData(x=x_fit,y=psychometric)
+                # except:
+                #     pass
+
+
 

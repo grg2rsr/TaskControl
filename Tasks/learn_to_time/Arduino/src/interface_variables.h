@@ -15,16 +15,16 @@ float valve_ul_ms = 0.07487586;
 
 unsigned long reward_available_dur = 1000;
 
-bool forced_alternating = true;
+bool forced_alternating = false;
 
 float X_start_thresh = 1000;
 float X_thresh = 1000;
 float X_target_thresh = 2500;
-float X_increment = 0.05;
-float X_decrement = -0.02;
+float X_increment = 0.03;
+float X_decrement = -0.01;
 
 float Y_start_thresh = 2000;
 float Y_thresh = 2000;
 float Y_target_thresh = 1000;
-float Y_increment = 0.02;
-float Y_decrement = -0.05;
+float Y_increment = 0.01;
+float Y_decrement = -0.03;
