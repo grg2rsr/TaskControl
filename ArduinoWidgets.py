@@ -67,7 +67,7 @@ class ArduinoController(QtWidgets.QWidget):
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
         # online analyzer
-        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT, bhv.has_choice, bhv.choice_RT, bhv.get_choice) # HARDCODE
+        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT, bhv.has_choice, bhv.choice_RT, bhv.get_choice, bhv.get_timing_interval) # HARDCODE
         self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
         # don't add him to children bc doesn't have a UI
 
@@ -521,7 +521,7 @@ class OnlineDataAnalyser(QtCore.QObject):
         
         self.lines = []
         self.SessionDf = None
-        self.ChangingVarsDf = pd.DataFrame([], columns=['name','value','t'])
+        # self.ChangingVarsDf = pd.DataFrame([], columns=['name','value','t'])
 
         self.parent = parent
     
@@ -539,12 +539,12 @@ class OnlineDataAnalyser(QtCore.QObject):
         #     self.ChaningVarsDf.append(dict(name=name,value=float(value),t=float(t)))
 
         # hacked in this_interval
-        if line.startswith('<VAR'):
-            _, name, value, t = line[1:-1].split(' ')
-            if name == "this_interval":
-                print(self.SessionDf)
-                self.SessionDf.loc[self.SessionDf.shape[0]-1,'this_interval'] = float(value)
-                # self.last_recorded_interval = float(value)
+        # if line.startswith('<VAR'):
+        #     _, name, value, t = line[1:-1].split(' ')
+        #     if name == "this_interval":
+        #         print(self.SessionDf)
+        #         self.SessionDf.loc[self.SessionDf.shape[0]-1,'this_interval'] = float(value)
+        #         # self.last_recorded_interval = float(value)
 
         # if normally decodeable
         if not line.startswith('<'):

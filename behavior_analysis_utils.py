@@ -97,7 +97,6 @@ def parse_lines_w_vars(lines, code_map=None):
     return LogDf
 
 
-
 def parse_messages(lines):
     lines = [line.strip() for line in lines]
     msgs = []
@@ -396,7 +395,8 @@ def time_slice(Df, t_min, t_max, col='t'):
  ##     ## ########    ##    ##     ## ####  ######   ######  
  
 """
-# Trial level metrics
+
+### Trial level metrics
 def has_choice(TrialDf):
     if "CHOICE_EVENT" in TrialDf['name'].values:
         choice = True
@@ -463,8 +463,15 @@ def get_choice(TrialDf):
     
     return pd.Series(choice, name="choice")
 
-# Session level metrics
+def get_timing_interval(TrialDf):
+    Df = TrialDf.groupby('var').get_group('this_interval')
+    interval = Df.iloc[0]['value']
+    return pd.Series(interval, name='timing_interval')
 
+
+
+
+### Session level metrics
 def rewards_collected(SessionDf):
     """ calculate the fraction of collected rewards across the session """
     n_rewards_collected = SessionDf['reward_collected'].sum()

@@ -261,8 +261,8 @@ class SessionVis(QtWidgets.QWidget):
 
             # psychometric
             if True in SessionDf['has_choice'].values:
-                SDf = SessionDf[['this_interval','choice']].dropna()
-                X = SDf['this_interval'].values[:,sp.newaxis]
+                SDf = SessionDf[['timting_interval','choice']].dropna()
+                X = SDf['timing_interval'].values[:,sp.newaxis]
                 y = (SDf['choice'].values == 'right').astype('float32')
                 # print(SDf)
                 self.PsychScatter.setData(X.flatten(), y)
