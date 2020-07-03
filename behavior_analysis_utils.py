@@ -63,6 +63,41 @@ def parse_lines(lines, code_map=None):
 
     return LogDf
 
+
+def parse_lines_w_vars(lines, code_map=None):
+    """ a new line parser to be tested - this one aggregates also
+    reported vars into the LogDf - a change to be required for 
+    implementation of the the online psychmetric """
+
+    all_lines = [line.strip() for line in lines]
+    LogDf = pd.DataFrame([],columns=['code', 't', 'name', 'var', 'value'])
+
+    for line in all_lines:
+        if '\t' in line:
+            # a normal line, decodeable
+            code, t = line.split('\t')
+            if code_map is not None:
+                decoded = code_map[code]
+                LogDf.append(dict(code=code, t=float(t), name=decoded, var=sp.NaN, value=sp.NaN))
+            else:
+                LogDf.append(dict(code=code, t=float(t), name=sp.NaN, var=sp.NaN, value=sp.NaN))
+
+        if line.startswith('<VAR'):
+            _, name, value, t = line[1:-1].split(' ')
+            LogDf.append(dict(code=sp.NaN, t=float(t), name=sp.NaN, var=name, value=float(value)))
+    
+    # LogDf['t'] = LogDf['t'].astype('float')
+    LogDf.reset_index(drop=True)
+
+    # test for time wraparound
+    if np.any(np.diff(LogDf['t']) < 0):
+        reversal_ind = np.where(np.diff(LogDf['t']) < 0)[0][0]
+        LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
+
+    return LogDf
+
+
+
 def parse_messages(lines):
     lines = [line.strip() for line in lines]
     msgs = []
