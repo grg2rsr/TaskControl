@@ -126,7 +126,7 @@ def filter_bad_licks(LogDf, min_time=50, max_time=200, remove=False):
 
 
 # def moving_median_removal(data, window_size):
-#     " Running median (only works with numpy matrices and it's clunky) "
+#     " Running median (only works with numpy matrices and it is clunky) "
 #      
 #     aux = np.zeros(data.shape)
 #     half_window = int(window_size/2)
@@ -288,6 +288,7 @@ def parse_sessions(SessionDfs, Metrics):
 
     return PerformanceDf
 
+# useless function in which I just wasted my time on
 def aggregate_session_logs(animal_path, task):
     """ 
     creates a list of LogDfs with all data obtained 
@@ -315,18 +316,11 @@ def aggregate_session_logs(animal_path, task):
 
             if task_name == task:
                 log_paths.append(animal_path.joinpath(fd, "arduino_log.txt"))
-                print(log_paths) 
         except:
             print("Folder/File " + fd + " has corrupted date")
-    
-    # turn each log into LogDf and unite logs into Series
-    # code_map_path = log_paths[-1].parent.joinpath(task ,"Arduino","src","event_codes.h") # choose the codemap from last version of given task
-    # CodesDf = parse_code_map(code_map_path)
-    # code_map = dict(zip(CodesDf['code'],CodesDf['name']))
 
     LogDfs = []
     for log in log_paths:
-        # LogDfs.append(parse_arduino_log(log, code_map))
         LogDfs.append(get_LogDf_from_path(log))
 
     return LogDfs
@@ -443,15 +437,16 @@ def mean_reward_collection_rt(SessionDf):
 
     return pd.Series(rt, name='mean_reward_collection_rt')
 
-
 """
-##     ##    ###    ########  ########
-##     ##   ## ##   ##     ## ##     ##
-##     ##  ##   ##  ##     ## ##     ##
-######### ##     ## ########  ########
-##     ## ######### ##   ##   ##
-##     ## ##     ## ##    ##  ##
-##     ## ##     ## ##     ## ##
+
+ ##     ##    ###    ########  ########
+ ##     ##   ## ##   ##     ## ##     ##
+ ##     ##  ##   ##  ##     ## ##     ##
+ ######### ##     ## ########  ########
+ ##     ## ######### ##   ##   ##
+ ##     ## ##     ## ##    ##  ##
+ ##     ## ##     ## ##     ## ##
+
 """
 
 def parse_harp_csv(harp_csv_path, save=True):
@@ -487,7 +482,7 @@ def parse_harp_csv(harp_csv_path, save=True):
             
         # np.save(path / "loadcell_sync.npy", np.array(t_sync,dtype='float32'))
     
-    return LoadCellDf
+    return LoadCellDf, t_sync
 
 def get_arduino_sync(log_path, sync_event_name="TRIAL_AVAILABLE_STATE", save=True):
     """ extracts arduino sync times from an arduino log """ 

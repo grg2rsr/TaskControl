@@ -3,11 +3,13 @@
 # %autoreload 2
 
 from matplotlib import pyplot as plt
+from matplotlib import cm 
 import behavior_analysis_utils as bhv
 import pandas as pd
 # this should be changed ... 
 from pathlib import Path
 import scipy as sp
+import numpy as np
 import seaborn as sns
 from tqdm import tqdm
 import os
@@ -174,7 +176,8 @@ def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
 
     return axes
 
-def plot_lc_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post, axes=None, **kwargs):
+def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post):
+    """ Plots heatmaps of LC forces in X/Y axes algined to any event (also marks choice times) """
 
     event_times = bhv.get_events_from_name(LogDf, align_reference)
 
@@ -207,9 +210,10 @@ def plot_lc_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post, axes=
     cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Down","Up"])
 
     ' Plotting black tick marks signalling whatever the input HARDCODED RIGHT NOW '
-    correct_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_CORRECT')
-    incorrect_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_INCORRECT')
+    correct_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_CORRECT_EVENT')
+    incorrect_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_INCORRECT_EVENT')
 
+    ' Need to find a way to exclude black tick marks when no choice was made'
     choice_times = correct_choiceDf.append(incorrect_choiceDf).sort_index(axis = 0)
     choice_times = choice_times.to_numpy() - event_times.to_numpy() - pre # Since Pre starts at -1s
 
@@ -224,6 +228,180 @@ def plot_lc_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post, axes=
 
     for ax in axes:
         ax.set_aspect('auto')
+
+    return axes
+
+def plot_forces_trajectories(LogDf, LoadCellDf, align_reference, pre, post, no_splits):
+    """ Plots trajectories in 2D aligned to any TWO events"""
+
+    axes = plt.subplots(ncols=2,sharex=True,sharey=True)
+    colors = cm.RdPu(np.linspace(0, 1, no_splits))
+
+    event_times = bhv.get_events_from_name(LogDf, align_reference[0])
+
+    # 1st dim is number of events, 2nd is window width, 3rd columns of Df (x an y are 3nd and 4th)
+    F = []
+
+    for t in event_times['t']:
+        trial = bhv.time_slice(LoadCellDf,t+pre,t+post)
+        F.append(trial.to_numpy())
+
+    F_split = np.array_split(F,no_splits)
+
+    for chunk, clr in zip(F_split,colors):
+
+        avg_chunk = np.average(chunk,0) # average along trials
+        axes[0].plot(avg_chunk[:,1], avg_chunk[:,2], alpha=0.5, lw=1, color = clr)
+
+    event_times = bhv.get_events_from_name(LogDf, align_reference[1])
+
+    # 1st dim is number of events, 2nd is window width, 3rd columns of Df (x an y are 3nd and 4th)
+    F = []
+
+    for t in event_times['t']:
+        trial = bhv.time_slice(LoadCellDf,t+pre,t+post)
+        F.append(trial.to_numpy())
+
+    F_split = np.array_split(F,no_splits)
+
+    for chunk, clr in zip(F_split,colors):
+
+        avg_chunk = np.average(chunk,0) # average along trials
+        axes[1].plot(avg_chunk[:,1], avg_chunk[:,2], alpha=0.5, lw=1, color = clr)
+
+    axes[0].set_ylim([-2000,2000])
+    axes[1].set_ylim([-2000,2000])
+    axes[0].set_xlim([-2000,2000])
+    axes[1].set_xlim([-2000,2000])
+
+    return axes
+
+def plot_choice_rt_histogram(LogDf, axes=None):
+
+    if axes is None:
+        axes = plt.gca()
+
+    spans = bhv.get_spans_from_names(LogDf, 'TRIAL_ENTRY_EVENT', 'ITI_STATE')
+    TrialDfs = []
+    for span in spans.iterrows():
+        TrialDfs.append(bhv.time_slice(LogDf,span['t_on'],span['t_off']))
+
+    # # Getting a list of trialDfs in which trials are both sucessfull and left choice
+    # OurTrialDfs = []
+    # for TrialDf in TrialDfs:
+    #     if "CHOICE_LEFT_EVENT" in TrialDf.name.values and "TRIAL_SUCCESSFUL_EVENT" in TrialDf.name.values:
+    #         OurTrialDfs.append(TrialDf)
+
+    # Getting choice RT's
+    left_choice_Dfs, right_choice_Dfs = [],[]
+    rt_left_choice, rt_right_choice = [],[]
+
+    for TrialDf in TrialDfs:
+        second_cue_time = TrialDf.loc[TrialDf['name'] == 'SECOND_TIMING_CUE_EVENT']['t']
+
+        if "CHOICE_LEFT_EVENT" in TrialDf.name.values:
+            left_choice_Dfs.append(TrialDf)
+            left_choice_time = TrialDf.loc[TrialDf['name'] == 'CHOICE_LEFT_EVENT']['t']
+
+            rt_left_choice.append(int(left_choice_time.values - second_cue_time.values))
+
+        if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
+            right_choice_Dfs.append(TrialDf)
+            right_choice_time = TrialDf.loc[TrialDf['name'] == 'CHOICE_RIGHT_EVENT']['t']
+
+            rt_right_choice.append(int(right_choice_time.values - second_cue_time.values))
+
+
+    plt.hist(rt_left_choice, 25, range = (0,2000), 
+            alpha=0.5, color='red', edgecolor='none', label = 'Left choice')
+    plt.hist(rt_right_choice, 25, range = (0,2000), 
+            alpha=0.5, color='green', edgecolor='none', label = 'Right choice')
+    plt.ylabel('Number of trials')
+    plt.xlabel('Reaction time (ms)')
+
+    plt.legend(loc='upper right', frameon=False)
+
+    return axes  
+
+def plot_force_magnitude(LogDf, LoadCellDf, align_reference, pre, post):
+    """ Plots the magnitude of the 2D forces vector over the trial aligned to any event """
+
+    event_times = bhv.get_events_from_name(LogDf, align_reference)
+
+    fig, axes = plt.subplots()
+    tvec = sp.arange(pre,post,1)
+
+    ys = []
+    for t in event_times['t']:
+        F = bhv.time_slice(LoadCellDf,t+pre,t+post)
+        y = sp.sqrt(F['x']**2+F['y']**2)
+        ys.append(y)
+        axes.plot(tvec,y,lw=1,alpha=0.5)
+
+    # center
+    F['x'] = F['x'] - sp.average(F['x'])
+    F['y'] = F['y'] - sp.average(F['y'])
+
+    Fmag = np.array(ys).T
+    axes.plot(tvec,sp.average(Fmag,1),'k',lw=3)
+    axes.axvline(0, linestyle=':',alpha=0.5)
+
+    return axes
+
+def plot_forces_histogram(LogDf, LoadCellDf, align_reference, pre, post):
+    """ Plots the evolution of forces in X/Y axis across the session plus fitted distros """
+
+    event_times = bhv.get_events_from_name(LogDf, align_reference)
+    fig = plt.figure()
+
+    Fx = []
+    Fy = []
+    for t in event_times['t']:
+        F = bhv.time_slice(LoadCellDf,t+pre,t+post)
+        Fx.append(F['x'])
+        Fy.append(F['y'])
+
+    Fx = np.array(Fx)
+    Fy = np.array(Fy)
+
+    Fx_split = np.array_split(Fx,10)
+    Fy_split = np.array_split(Fy,10)
+
+    colors = cm.RdPu(np.linspace(0, 1, len(Fx_split)))
+
+    # Histograms for Fx and Fy and respective normal distribution fits
+    for i, (chunk_x, chunk_y, clr) in enumerate(zip(Fx_split, Fy_split, colors),1):
+
+        ax1 = fig.add_subplot(221)
+        _, bins_x, _ = plt.hist(chunk_x.reshape(-1,1), 50, color=clr, range = (-4000,4000), density=1, alpha=0.3, zorder=i)
+        mu, sigma = sp.stats.norm.fit(chunk_x.reshape(-1,1))
+        best_fit_line = sp.stats.norm.pdf(bins_x, mu, sigma)
+        ax1.set_ylabel('X axis (Left/Right)')
+
+        ax2 = fig.add_subplot(222)
+        ax2.plot(bins_x, best_fit_line, color=clr, zorder=i)
+
+        ax3 = fig.add_subplot(223)
+        _, bins_y, _ = plt.hist(chunk_y.reshape(-1,1), 50, color=clr ,range = (-4000,4000), density=1, alpha=0.3, zorder=i)
+        mu, sigma = sp.stats.norm.fit(chunk_y.reshape(-1,1))
+        best_fit_line = sp.stats.norm.pdf(bins_y, mu, sigma)
+        ax3.set_ylabel('Y axis (Back/Front)')
+
+        ax4 = fig.add_subplot(224)
+        ax4.plot(bins_y, best_fit_line, color=clr, zorder=i)
+
+        fig.tight_layout()
+
+    return fig
+
+def x_y_threshold_across_time(LogDf, axes=None):
+
+    if axes is None:
+        axes = plt.gca()
+
+    event_times = bhv.get_events_from_name(LogDf, align_reference)
+
+    return axes
 
 """
  
@@ -261,6 +439,7 @@ def plot_sessions_overview(LogDfs, task_name, axes=None):
 
         # Weight
     
+    # Formatting
     axes.plot(trials_performed, color = 'black', label = 'Performed')
     axes.plot(trials_sucessful, color = 'green', label = 'Sucessful')
     axes.plot(trials_unsucessful, color = 'red', label = 'Unsucessful')

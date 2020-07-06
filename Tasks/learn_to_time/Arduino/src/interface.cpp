@@ -135,10 +135,6 @@ void processSerialData() {
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_available_dur)+String(">"));
             }
     
-            if (strcmp(varname,"forced_alternating")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(forced_alternating)+String(">"));
-            }
-    
             if (strcmp(varname,"X_start_thresh")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_start_thresh)+String(">"));
             }
@@ -212,15 +208,6 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
-            if (strcmp(varname,"forced_alternating")==0){
-                if (strcmp(varvalue,"false")==0) {
-                    forced_alternating = false;
-                }
-                else {
-                    forced_alternating = true;
-                }
-            }
-    
             if (strcmp(varname,"punish_tone_freq")==0){
                 punish_tone_freq = atoi(varvalue);
             }

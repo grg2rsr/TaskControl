@@ -28,7 +28,7 @@ def get_tasks(folder):
     return tasks
     
 def get_sessions(folder):
-    """ gets all sessions, sorted by datetime """
+    """ gets all sessions' logs, sorted by datetime in a Df """
     """ this should have more parsing ... """
     sessions = []
     animal_folder = pathlib.Path(folder)

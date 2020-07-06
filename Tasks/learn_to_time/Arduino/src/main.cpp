@@ -29,6 +29,8 @@ bool lick_in = false;
 bool reward_collected = false;
 int succ_trial_counter = 0;
 
+bool forced_alternating = true;
+
 // speaker
 Tone tone_controller;
 unsigned long tone_duration = 100;
@@ -446,7 +448,7 @@ void finite_state_machine() {
 
                 // determine the type of trial:
                 // alternating, but if on a streak, random
-                if (succ_trial_counter < 4 && forced_alternating == true){ // TODO expose streak
+                if (succ_trial_counter < 3 && forced_alternating == true){ // TODO expose streak
 
                     if (last_correct_trial_type == "short"){
                         this_trial_type = "long";

@@ -223,7 +223,7 @@ SessionDf = bhv.parse_trials(TrialDfs, (bhv.is_successful, get_interval, get_cho
 
 # %%
 from sklearn.linear_model import LogisticRegression
-from sicpy.special import expit
+from scipy.special import expit
 cLR = LogisticRegression()
 SessionDf = SessionDf.dropna()
 X = SessionDf['timing_interval'].values[:,sp.newaxis]
@@ -237,3 +237,6 @@ x_fit = sp.linspace(0,3000,100)
 psychometric = expit(x_fit * cLR.coef_ + cLR.intercept_).ravel()
 plt.plot(x_fit, psychometric, color='red', linewidth=3)
 
+
+
+# %%
