@@ -547,8 +547,8 @@ class OnlineDataAnalyser(QtCore.QObject):
         #         # self.last_recorded_interval = float(value)
 
         # if normally decodeable
+        self.lines.append(line)
         if not line.startswith('<'):
-            self.lines.append(line)
 
             code, t = line.split('\t')
             t = float(t)
@@ -575,11 +575,10 @@ class OnlineDataAnalyser(QtCore.QObject):
                 # parse lines
                 TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map)
                 TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
-                # self.TrialMetricsDf['this_interval'] = self.last_recorded_interval
                 
                 if TrialMetricsDf is not None:
                     # update SessionDf
-                    print(self.SessionDf)
+                    # print(self.SessionDf)
                     if self.SessionDf is None: # on first
                         self.SessionDf = TrialMetricsDf
                     else:

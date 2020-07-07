@@ -176,7 +176,7 @@ def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
 
     return axes
 
-def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post):
+def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, tick_reference, pre, post):
     """ Plots heatmaps of LC forces in X/Y axes algined to any event (also marks choice times) """
 
     event_times = bhv.get_events_from_name(LogDf, align_reference)
@@ -209,13 +209,13 @@ def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post):
     cbar = plt.colorbar(heat2, ax=axes[1], orientation='horizontal')
     cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Down","Up"])
 
-    ' Plotting black tick marks signalling whatever the input HARDCODED RIGHT NOW '
-    correct_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_CORRECT_EVENT')
-    incorrect_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_INCORRECT_EVENT')
+    ' Plotting black tick marks signalling whatever the input '
+    choice_timesDf = bhv.get_events_from_name(LogDf,tick_reference)
+    choice_times = choice_timesDf.to_numpy() - event_times.to_numpy() - pre # 'pre' used to shift and center the plot at 0s
+    choice_times[choice_times > post+995] = np.nan # deal with choice missed events which are registered as 'choices' at [post+1sec]
 
-    ' Need to find a way to exclude black tick marks when no choice was made'
-    choice_times = correct_choiceDf.append(incorrect_choiceDf).sort_index(axis = 0)
-    choice_times = choice_times.to_numpy() - event_times.to_numpy() - pre # Since Pre starts at -1s
+    #choice_times = correct_choiceDf.append(incorrect_choiceDf).sort_index(axis = 0)
+    #choice_times = choice_times.to_numpy() - event_times.to_numpy() 
 
     ymin = np.arange(-0.5,len(choice_times)) # need to shift since line starts at center of trial
     ymax = np.arange(0.5,len(choice_times)+1)

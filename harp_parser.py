@@ -79,6 +79,7 @@ LoadCellDf['x'] = LoadCellDf['x'] - LoadCellDf['x'].rolling(window_size).median(
 LoadCellDf['y'] = LoadCellDf['y'] - LoadCellDf['y'].rolling(window_size).median()
 
 align_reference = "SECOND_TIMING_CUE_EVENT"
-pre, post = -1000, 4000
+tick_reference = "CHOICE_EVENT"
+pre, post = -1000, 5000
 
-axes = bhv_plt.plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post)
+axes = bhv_plt.plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, tick_reference, pre, post)

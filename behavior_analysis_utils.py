@@ -45,11 +45,37 @@ def parse_arduino_log(log_path, code_map=None):
 
     return parse_lines(lines, code_map=code_map)
 
+# def parse_lines(lines, code_map=None):
+#     """ parses a list of lines from arduino into a pd.DataFrame """
+#     valid_lines = [line.strip() for line in lines if '\t' in line]
+#     LogDf = pd.DataFrame([line.split('\t') for line in valid_lines],columns=['code','t'])
+#     LogDf['t'] = LogDf['t'].astype('float')
+#     LogDf.reset_index(drop=True)
+
+#     # decode
+#     if code_map is not None:
+#         LogDf['name'] = [code_map[code] for code in LogDf['code']]
+
+#     # test for time wraparound
+#     if np.any(np.diff(LogDf['t']) < 0):
+#         reversal_ind = np.where(np.diff(LogDf['t']) < 0)[0][0]
+#         LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
+
+#     return LogDf
+
+def correct_wraparound(Df):
+    """ tests and corrects for time wraparound on column t """
+    if np.any(np.diff(Df['t']) < 0):
+        reversal_ind = np.where(np.diff(Df['t']) < 0)[0][0]
+        Df['t'].iloc[reversal_ind+1:] += Df['t'].iloc[reversal_ind]
+    return Df
+
 def parse_lines(lines, code_map=None):
     """ parses a list of lines from arduino into a pd.DataFrame """
-    valid_lines = [line.strip() for line in lines if '\t' in line]
-    LogDf = pd.DataFrame([line.split('\t') for line in valid_lines],columns=['code','t'])
+    lines = [line.strip() for line in lines]
+    LogDf = pd.DataFrame([line.split('\t')+[sp.NaN,sp.NaN,sp.NaN] for line in lines if '\t' in line],columns=['code','t','name','var','value'])
     LogDf['t'] = LogDf['t'].astype('float')
+    LogDf = correct_wraparound(LogDf)
     LogDf.reset_index(drop=True)
 
     # decode
@@ -61,52 +87,71 @@ def parse_lines(lines, code_map=None):
         reversal_ind = np.where(np.diff(LogDf['t']) < 0)[0][0]
         LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
 
-    return LogDf
-
-
-def parse_lines_w_vars(lines, code_map=None):
-    """ a new line parser to be tested - this one aggregates also
-    reported vars into the LogDf - a change to be required for 
-    implementation of the the online psychmetric """
-
-    all_lines = [line.strip() for line in lines]
-    LogDf = pd.DataFrame([],columns=['code', 't', 'name', 'var', 'value'])
-
-    for line in all_lines:
-        if '\t' in line:
-            # a normal line, decodeable
-            code, t = line.split('\t')
-            if code_map is not None:
-                decoded = code_map[code]
-                LogDf.append(dict(code=code, t=float(t), name=decoded, var=sp.NaN, value=sp.NaN))
-            else:
-                LogDf.append(dict(code=code, t=float(t), name=sp.NaN, var=sp.NaN, value=sp.NaN))
-
-        if line.startswith('<VAR'):
-            _, name, value, t = line[1:-1].split(' ')
-            LogDf.append(dict(code=sp.NaN, t=float(t), name=sp.NaN, var=name, value=float(value)))
+    # # VarDf
+    # utils.debug_trace()
+    # VarDf = pd.DataFrame([[sp.NaN, float(line[1:-1].split(' ')[3]), sp.NaN, line[1:-1].split(' ')[1], float(line[1:-1].split(' ')[2])] for line in lines if line.startswith('<VAR')] ,columns=['code','t','name','var','value'])
+    # VarDf = correct_wraparound(VarDf)
+    # print(VarDf)
     
-    # LogDf['t'] = LogDf['t'].astype('float')
-    LogDf.reset_index(drop=True)
-
-    # test for time wraparound
-    if np.any(np.diff(LogDf['t']) < 0):
-        reversal_ind = np.where(np.diff(LogDf['t']) < 0)[0][0]
-        LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
+    # LogDf = LogDf.append(VarDf,ignore_index=True)
+    # LogDf = LogDf.sort_values('t')
 
     return LogDf
 
 
-def parse_messages(lines):
-    lines = [line.strip() for line in lines]
-    msgs = []
-    var_msgs = []
-    for line in lines:
-        if line.startswith('<MSG'):
-            msgs.append(line)
-        if line.startswith('<VAR'):
-            var_msgs.append(line)
-    return msgs, var_msgs
+# def parse_lines(lines, code_map=None):
+#     """ a new line parser to be tested - this one aggregates also
+#     reported vars into the LogDf - a change to be required for 
+#     implementation of the the online psychmetric """
+
+#     all_lines = [line.strip() for line in lines]
+#     # LogDf = pd.DataFrame([],columns=['code', 't', 'name', 'var', 'value'])
+#     LogDf = pd.DataFrame([line.split('\t') for line in all_lines if '\t' in line],columns=['code','t'])
+
+#     # decode
+#     if code_map is not None:
+#         LogDf['name'] = [code_map[code] for code in LogDf['code']]
+
+#     VarDf = 
+
+#     # LogDf['t'] = LogDf['t'].astype('float')
+#     # LogDf.reset_index(drop=True)
+
+#     for line in all_lines:
+#         if '\t' in line:
+#             # a normal line, decodeable
+#             code, t = line.split('\t')
+#             if code_map is not None:
+#                 decoded = code_map[code]
+#                 LogDf.append(dict(code=code, t=float(t), name=decoded, var=sp.NaN, value=sp.NaN),ignore_index=True)
+#             else:
+#                 LogDf.append(dict(code=code, t=float(t), name=sp.NaN, var=sp.NaN, value=sp.NaN),ignore_index=True)
+
+#         if line.startswith('<VAR'):
+#             _, name, value, t = line[1:-1].split(' ')
+#             LogDf.append(dict(code=sp.NaN, t=float(t), name=sp.NaN, var=name, value=float(value)),ignore_index=True)
+    
+#     # LogDf['t'] = LogDf['t'].astype('float')
+#     LogDf.reset_index(drop=True)
+
+#     # test for time wraparound
+#     if np.any(np.diff(LogDf['t']) < 0):
+#         reversal_ind = np.where(np.diff(LogDf['t']) < 0)[0][0]
+#         LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
+
+#     return LogDf
+
+
+# def parse_messages(lines):
+#     lines = [line.strip() for line in lines]
+#     msgs = []
+#     var_msgs = []
+#     for line in lines:
+#         if line.startswith('<MSG'):
+#             msgs.append(line)
+#         if line.startswith('<VAR'):
+#             var_msgs.append(line)
+#     return msgs, var_msgs
 
 """
  
@@ -458,8 +503,11 @@ def get_choice(TrialDf):
     return pd.Series(choice, name="choice")
 
 def get_timing_interval(TrialDf):
-    Df = TrialDf.groupby('var').get_group('this_interval')
-    interval = Df.iloc[0]['value']
+    try:
+        Df = TrialDf.groupby('var').get_group('this_interval')
+        interval = Df.iloc[0]['value']
+    except KeyError:
+        interval = sp.NaN
     return pd.Series(interval, name='timing_interval')
 
 

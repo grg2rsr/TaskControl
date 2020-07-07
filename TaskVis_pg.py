@@ -216,7 +216,7 @@ class SessionVis(QtWidgets.QWidget):
         self.setLayout(self.Layout)
         self.show()
 
-    def on_data(self, TrialsDf, TrialMetricsDf):
+    def on_data(self, TrialDf, TrialMetricsDf):
         hist = 20 # to be exposed in the future
         if  self.OnlineDataAnalyser.SessionDf is not None:
             SessionDf = self.OnlineDataAnalyser.SessionDf
@@ -261,10 +261,10 @@ class SessionVis(QtWidgets.QWidget):
 
             # psychometric
             if True in SessionDf['has_choice'].values:
-                SDf = SessionDf[['timting_interval','choice']].dropna()
+                # print(TrialDf)
+                SDf = SessionDf[['timing_interval','choice']].dropna()
                 X = SDf['timing_interval'].values[:,sp.newaxis]
                 y = (SDf['choice'].values == 'right').astype('float32')
-                # print(SDf)
                 self.PsychScatter.setData(X.flatten(), y)
 
                 # try:
