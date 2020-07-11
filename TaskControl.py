@@ -35,9 +35,7 @@ class TaskControlApp(QtWidgets.QApplication):
 
 if __name__ == "__main__":
     import argparse
-    profiles_fpath = 'profiles_fphot.ini' # the fiber photometry computer downstairs in the viv
-    # profiles_fpath = 'profiles_ccu.ini' # my ccu desktop in the open lab
-    # profiles_fpath = 'profiles_laptop.ini'
+    profiles_fpath = 'profiles_box1.ini' # the fiber photometry computer downstairs in the viv
 
     # argparsing
     parser = argparse.ArgumentParser(description=' xXx Unified TaskControl xXx ')
