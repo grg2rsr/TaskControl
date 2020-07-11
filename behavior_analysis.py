@@ -1,11 +1,7 @@
 # %%
-<<<<<<< HEAD
-%matplotlib qt5
-=======
-#matplotlib qt5
->>>>>>> 6312c146f6d52990a8f234ccb33675472e466b7e
-%load_ext autoreload
-%autoreload 2
+# %matplotlib qt5
+# %load_ext autoreload
+# %autoreload 2
 
 from matplotlib import pyplot as plt
 import matplotlib as mpl
@@ -40,10 +36,6 @@ from behavior_plotters import *
 # %%
 log_path = utils.get_file_dialog()
 
-# %%
-log_path = Path('/home/georg/data/2020-0x-0x_JPxxx_learn_to_time/arduino_log.txt')
-
-# log_path = Path(r"D:\TaskControl\Animals\JJP-00886\2020-06-29_14-24-30_learn_to_time\arduino_log.txt")
 # %%
 
 # infer
@@ -113,86 +105,87 @@ os.makedirs(plot_dir,exist_ok=True)
 os.chdir(plot_dir)
 
 # %% Trials Overview - with Lick psth
-data = LogDf.groupby('name').get_group('CHOICE_EVENT')
-# data = LogDf.groupby('name').get_group(g) for g in ['TRIAL_COMPLETED_EVENT','TRIAL_ABORTED_EVENT']
-data = data.sort_values('t')
-data = data.reset_index()
-t_ref = data['t'].values
-pre, post = (-100,2000)
+# data = LogDf.groupby('name').get_group('CHOICE_EVENT')
+# # data = LogDf.groupby('name').get_group(g) for g in ['TRIAL_COMPLETED_EVENT','TRIAL_ABORTED_EVENT']
+# data = data.sort_values('t')
+# data = data.reset_index()
+# t_ref = data['t'].values
+# pre, post = (-100,2000)
 
-kw = dict(height_ratios=[1,0.5])
+# kw = dict(height_ratios=[1,0.5])
 
-fig, axes = plt.subplots(nrows=2,sharex=True,figsize=[4.25,5.5], gridspec_kw=kw)
+# fig, axes = plt.subplots(nrows=2,sharex=True,figsize=[4.25,5.5], gridspec_kw=kw)
+# plot_session_overview(LogDf, t_ref, pre, post, axes=axes[0], how='dots', cdict=cdict)
 
-plot_session_overview(LogDf, t_ref, pre, post, axes=axes[0], how='dots', cdict=cdict)
+# bin_width = 25
+# bins = np.arange(pre,post,bin_width)
+# plot_psth(EventsDict['LICK_EVENT'], t_ref, bins=bins, axes=axes[1])
+# fig.tight_layout()
 
-bin_width = 25
-bins = np.arange(pre,post,bin_width)
-plot_psth(EventsDict['LICK_EVENT'], t_ref, bins=bins, axes=axes[1])
-fig.tight_layout()
+#  # %% Session metrics 
+# Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
 
- # %% Session metrics 
-Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
+# # make SessionDf - slice into trials
+# TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
 
+# TrialDfs = []
+# for i, row in TrialSpans.iterrows():
+#     ind_start = LogDf.loc[LogDf['t'] == row['t_on']].index[0]
+#     ind_stop = LogDf.loc[LogDf['t'] == row['t_off']].index[0]
+#     TrialDfs.append(LogDf.iloc[ind_start:ind_stop+1])
+
+# SessionDf = bhv.parse_trials(TrialDfs, Metrics)
+
+# hist = 20
+# fig, axes = plt.subplots(ncols=3,figsize=[8,2.25])
+# plot_success_rate(SessionDf, history=hist, axes=axes[0])
+# plot_reward_collection_rate(SessionDf, history=hist, axes=axes[1])
+# # plot_reward_collection_RT(SessionDf, axes=axes[2])
+# fig.tight_layout()
+
+# %% debugging syncing problems
+folder = Path("D:\TaskControl\Animals\JJP-00885")
+task_name = "learn_to_time"
+
+bhv.create_LogDf_LCDf_csv(folder, task_name)
+
+# %%
+
+path = Path(r"D:\TaskControl\Animals\JJP-00885\2020-07-07_09-58-56_learn_to_time")
+log_path = path / "arduino_log.txt"
+
+# %% syncing
+
+LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
+arduino_sync = bhv.get_arduino_sync(log_path)
+
+# %%
+t_harp = harp_sync['t'].values
+t_arduino = arduino_sync['t'].values
+
+# %%
+plt.plot(sp.diff(t_harp),label='harp')
+plt.plot(sp.diff(t_arduino),label='arduino')
+plt.legend()
+
+
+# %%
+t_harp = pd.read_csv(log_path.parent / "harp_sync.csv")['t'].values
+t_arduino = pd.read_csv(log_path.parent / "arduino_sync.csv")['t'].values
+
+m,b = bhv.sync_clocks(t_harp, t_arduino, log_path)
+LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
+
+# %% psychometric
 # make SessionDf - slice into trials
 TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
 
 TrialDfs = []
 for i, row in TrialSpans.iterrows():
-    ind_start = LogDf.loc[LogDf['t'] == row['t_on']].index[0]
-    ind_stop = LogDf.loc[LogDf['t'] == row['t_off']].index[0]
-    TrialDfs.append(LogDf.iloc[ind_start:ind_stop+1])
+    TrialDfs.append(bhv.time_slice(LogDf,row['t_on'],row['t_off']))
 
-SessionDf = bhv.parse_trials(TrialDfs, Metrics)
 
-hist = 20
-fig, axes = plt.subplots(ncols=3,figsize=[8,2.25])
-plot_success_rate(SessionDf, history=hist, axes=axes[0])
-plot_reward_collection_rate(SessionDf, history=hist, axes=axes[1])
-# plot_reward_collection_RT(SessionDf, axes=axes[2])
-fig.tight_layout()
-
-<<<<<<< HEAD
-# %% debugging syncing problems
-folder = Path("D:\TaskControl\Animals\JJP-00885")
-task_name = "learn_to_time"
-
-bhv.create_LogDf_LCDf_csv(folder,task_name)
-=======
 # %% psychmetrics restart
-
-def has_choice(TrialDf):
-    if "CHOICE_EVENT" in TrialDf.name.values:
-        choice = True
-    else:
-        choice = False
-    return pd.Series(choice,name='has_choice')
-
-def get_choice(TrialDf):
-    choice = sp.NaN
-    if has_choice(TrialDf).values[0]:
-        if "CHOICE_LEFT_EVENT" in TrialDf.name.values:
-            choice = "left"
-        if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
-            choice = "right"
-
-    return pd.Series(choice,name="choice")
-
-def get_interval(TrialDf):
-    try:
-        Df = TrialDf.groupby('var').get_group('this_interval')
-        interval = Df.iloc[0]['value']
-    except KeyError:
-        interval = sp.NaN
-    
-    return pd.Series(interval, name='this_interval')
-
-def get_start(TrialDf):
-    return pd.Series(TrialDf.iloc[0]['t'], name='t_on')
-
-
-def get_stop(TrialDf):
-    return pd.Series(TrialDf.iloc[-1]['t'], name='t_off')
 
 # make SessionDf - slice into trials
 TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
@@ -201,7 +194,7 @@ TrialDfs = []
 for i, row in tqdm(TrialSpans.iterrows()):
     TrialDfs.append(bhv.time_slice(LogDf,row['t_on'],row['t_off']))
 
-SessionDf = bhv.parse_trials(TrialDfs, (get_start, get_stop, has_choice, get_choice, get_interval))
+SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.get_interval))
 
 # %%
 SDf = SessionDf.groupby('has_choice').get_group(True)
@@ -238,99 +231,3 @@ plt.legend()
 axes.set_xlabel('interval (ms)')
 axes.set_ylabel('density')
 
-# %%
-bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv")
->>>>>>> 6312c146f6d52990a8f234ccb33675472e466b7e
-
-# %%
-
-path = Path(r"D:\TaskControl\Animals\JJP-00885\2020-07-07_09-58-56_learn_to_time")
-log_path = path / "arduino_log.txt"
-
-# %% syncing
-
-LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
-arduino_sync = bhv.get_arduino_sync(log_path)
-
-# %%
-t_harp = harp_sync['t'].values
-t_arduino = arduino_sync['t'].values
-
-# %%
-plt.plot(sp.diff(t_harp),label='harp')
-plt.plot(sp.diff(t_arduino),label='arduino')
-plt.legend()
-
-
-# %%
-t_harp = pd.read_csv(log_path.parent / "harp_sync.csv")['t'].values
-t_arduino = pd.read_csv(log_path.parent / "arduino_sync.csv")['t'].values
-
-m,b = bhv.sync_clocks(t_harp, t_arduino, log_path)
-
-# %% reload?
-LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
-
-# %% make SessionDf - slice into trials
-TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
-
-TrialDfs = []
-for i, row in TrialSpans.iterrows():
-    TrialDfs.append(bhv.time_slice(LogDf,row['t_on'],row['t_off']))
-
-# %% read in LC data
-LCDf = pd.read_csv(log_path.parent / "loadcell_data.csv")
-
-# %% LC median removal
-LCDf['x'] = LCDf['x'] - LCDf['x'].rolling(5000).median()
-LCDf['y'] = LCDf['y'] - LCDf['y'].rolling(5000).median()
-
-# %%
-pre,post = -500,500
-Fx = []
-Fy = []
-SDf = SessionDf.groupby('choice').get_group('left')
-SDf = SessionDf.groupby('has_choice').get_group(True)
-for i, row in SDf.iterrows():
-    TrialDf = bhv.time_slice(LogDf,row['t_on'],row['t_off'])
-    t_align = TrialDf.groupby('name').get_group('GO_CUE_EVENT').iloc[0]['t']
-    lcDf = bhv.time_slice(LCDf,t_align+pre,t_align+post)
-    Fx.append(lcDf['x'].values)
-    Fy.append(lcDf['y'].values)
-
-Fx = sp.array(Fx)
-Fy = sp.array(Fy)
-
-# %%
-fig, axes = plt.subplots(ncols=2)
-kwargs = dict(cmap = 'PiYG', vmin = -1000, vmax=1000)
-
-axes[0].matshow(Fx, **kwargs)
-axes[1].matshow(Fy, **kwargs)
-
-for ax in axes:
-    ax.set_aspect('auto')
-
-# %% trajectories
-import seaborn as sns
-fig, axes = plt.subplots()
-nTrials = Fx.shape[0]
-colors = sns.color_palette('rainbow',n_colors=nTrials)
-for i in range(nTrials):
-    axes.plot(Fx[i,:],Fy[i,:],alpha=0.25,color=colors[i],lw=2)
-
-# avg
-axes.plot(sp.average(Fx,0),sp.average(Fy,0),color='k',lw=2)
-
-axes.set_xlim(-5000,5000)
-axes.set_ylim(-5000,5000)
-
-axes.axhline(0,linestyle=':',lw=1,alpha=0.5)
-axes.axvline(0,linestyle=':',lw=1,alpha=0.5)
-
-axes.set_xlabel('Fx')
-axes.set_ylabel('Fy')
-
-
-
-# %%

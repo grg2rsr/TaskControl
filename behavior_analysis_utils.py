@@ -72,7 +72,7 @@ def correct_wraparound(Df):
         Df['t'].iloc[reversal_ind+1:] += Df['t'].iloc[reversal_ind]
     return Df
 
-def parse_lines(lines, code_map=None, parse_var=True):
+def parse_lines(lines, code_map=None, parse_var=False):
     """ parses a list of lines from arduino into a pd.DataFrame """
     LogDf = pd.DataFrame([line.split('\t') for line in lines if '\t' in line],columns=['code','t'])
     LogDf['t'] = LogDf['t'].astype('float')
@@ -378,7 +378,7 @@ def create_LogDf_LCDf_csv(animal_folder_path, task_name, save=True):
         t_harp = t_harp['t'].values
         t_arduino = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_AVAILABLE_STATE", save=True)['t'].values
 
-        if t_harp != t_arduino:
+        if t_harp.shape[0] != t_arduino.shape[0]:
             t_arduino, t_harp = cut_timestamps(t_arduino, t_harp)
         
         # sync datasets
@@ -481,24 +481,32 @@ def choice_RT(TrialDf):
     return pd.Series(rt, name='choice_rt')
 
 def get_choice(TrialDf):
-    """ 0 for left, 1 for right """
+    choice = sp.NaN
     if has_choice(TrialDf).values[0]:
-        if "CHOICE_LEFT_EVENT" in TrialDf['name'].values:
+        if "CHOICE_LEFT_EVENT" in TrialDf.name.values:
             choice = "left"
-        else:
+        if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
             choice = "right"
-    else:
-        choice = np.NaN
-    
-    return pd.Series(choice, name="choice")
 
-def get_timing_interval(TrialDf):
+    return pd.Series(choice,name="choice")
+
+def get_interval(TrialDf):
     try:
         Df = TrialDf.groupby('var').get_group('this_interval')
         interval = Df.iloc[0]['value']
     except KeyError:
         interval = sp.NaN
-    return pd.Series(interval, name='timing_interval')
+
+    return pd.Series(interval, name='this_interval')
+
+def get_start(TrialDf):
+    return pd.Series(TrialDf.iloc[0]['t'], name='t_on')
+
+def get_stop(TrialDf):
+    return pd.Series(TrialDf.iloc[-1]['t'], name='t_off')
+
+
+
 
 ### Session level metrics
 def rewards_collected(SessionDf):
@@ -528,7 +536,8 @@ def mean_reward_collection_rt(SessionDf):
 
 def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     """ gets the loadcell data and the sync times from a harp csv log
-    trig_len is time in ms of sync trig high, tol is deviation in ms (100us is approx FSM time) """
+    trig_len is time in ms of sync trig high, tol is deviation in ms
+    check harp sampling time, seems to be 10 khz? """
 
     with open(harp_csv_path,'r') as fH:
         lines = fH.readlines()
