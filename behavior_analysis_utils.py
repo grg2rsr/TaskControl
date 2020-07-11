@@ -46,7 +46,9 @@ def parse_arduino_log(log_path, code_map=None):
     return parse_lines(lines, code_map=code_map)
 
 # def parse_lines(lines, code_map=None):
-#     """ parses a list of lines from arduino into a pd.DataFrame """
+#     """ parses a list of lines from arduino into a pd.DataFrame
+#     the old (more performant) function
+#     """
 #     valid_lines = [line.strip() for line in lines if '\t' in line]
 #     LogDf = pd.DataFrame([line.split('\t') for line in valid_lines],columns=['code','t'])
 #     LogDf['t'] = LogDf['t'].astype('float')
@@ -70,88 +72,36 @@ def correct_wraparound(Df):
         Df['t'].iloc[reversal_ind+1:] += Df['t'].iloc[reversal_ind]
     return Df
 
-def parse_lines(lines, code_map=None):
+def parse_lines(lines, code_map=None, parse_var=True):
     """ parses a list of lines from arduino into a pd.DataFrame """
-    lines = [line.strip() for line in lines]
-    LogDf = pd.DataFrame([line.split('\t')+[sp.NaN,sp.NaN,sp.NaN] for line in lines if '\t' in line],columns=['code','t','name','var','value'])
+    LogDf = pd.DataFrame([line.split('\t') for line in lines if '\t' in line],columns=['code','t'])
     LogDf['t'] = LogDf['t'].astype('float')
     LogDf = correct_wraparound(LogDf)
-    LogDf.reset_index(drop=True)
+    LogDf = LogDf.reset_index(drop=True)
+
+    for col in ['name','var','value']:
+        LogDf[col] = sp.NaN
 
     # decode
     if code_map is not None:
         LogDf['name'] = [code_map[code] for code in LogDf['code']]
 
-    # test for time wraparound
-    if np.any(np.diff(LogDf['t']) < 0):
-        reversal_ind = np.where(np.diff(LogDf['t']) < 0)[0][0]
-        LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
-
-    # # VarDf
-    # utils.debug_trace()
-    # VarDf = pd.DataFrame([[sp.NaN, float(line[1:-1].split(' ')[3]), sp.NaN, line[1:-1].split(' ')[1], float(line[1:-1].split(' ')[2])] for line in lines if line.startswith('<VAR')] ,columns=['code','t','name','var','value'])
-    # VarDf = correct_wraparound(VarDf)
-    # print(VarDf)
-    
-    # LogDf = LogDf.append(VarDf,ignore_index=True)
-    # LogDf = LogDf.sort_values('t')
+    if parse_var:
+        var_lines = [line.strip() for line in lines if line.startswith('<VAR')]
+        VarDf = pd.DataFrame([line[1:-1].split(' ') for line in var_lines],columns=['_','var','value','t'])
+        VarDf = VarDf.drop('_',axis=1)
+        VarDf['t'] = VarDf['t'].astype('float')
+        VarDf['value'] = VarDf['value'].astype('float')
+        
+        VarDf = correct_wraparound(VarDf)
+        
+        # join
+        LogDf = LogDf.append(VarDf,ignore_index=True)
+        LogDf = LogDf.sort_values('t')
+        LogDf = LogDf.reset_index(drop=True)
 
     return LogDf
 
-
-# def parse_lines(lines, code_map=None):
-#     """ a new line parser to be tested - this one aggregates also
-#     reported vars into the LogDf - a change to be required for 
-#     implementation of the the online psychmetric """
-
-#     all_lines = [line.strip() for line in lines]
-#     # LogDf = pd.DataFrame([],columns=['code', 't', 'name', 'var', 'value'])
-#     LogDf = pd.DataFrame([line.split('\t') for line in all_lines if '\t' in line],columns=['code','t'])
-
-#     # decode
-#     if code_map is not None:
-#         LogDf['name'] = [code_map[code] for code in LogDf['code']]
-
-#     VarDf = 
-
-#     # LogDf['t'] = LogDf['t'].astype('float')
-#     # LogDf.reset_index(drop=True)
-
-#     for line in all_lines:
-#         if '\t' in line:
-#             # a normal line, decodeable
-#             code, t = line.split('\t')
-#             if code_map is not None:
-#                 decoded = code_map[code]
-#                 LogDf.append(dict(code=code, t=float(t), name=decoded, var=sp.NaN, value=sp.NaN),ignore_index=True)
-#             else:
-#                 LogDf.append(dict(code=code, t=float(t), name=sp.NaN, var=sp.NaN, value=sp.NaN),ignore_index=True)
-
-#         if line.startswith('<VAR'):
-#             _, name, value, t = line[1:-1].split(' ')
-#             LogDf.append(dict(code=sp.NaN, t=float(t), name=sp.NaN, var=name, value=float(value)),ignore_index=True)
-    
-#     # LogDf['t'] = LogDf['t'].astype('float')
-#     LogDf.reset_index(drop=True)
-
-#     # test for time wraparound
-#     if np.any(np.diff(LogDf['t']) < 0):
-#         reversal_ind = np.where(np.diff(LogDf['t']) < 0)[0][0]
-#         LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
-
-#     return LogDf
-
-
-# def parse_messages(lines):
-#     lines = [line.strip() for line in lines]
-#     msgs = []
-#     var_msgs = []
-#     for line in lines:
-#         if line.startswith('<MSG'):
-#             msgs.append(line)
-#         if line.startswith('<VAR'):
-#             var_msgs.append(line)
-#     return msgs, var_msgs
 
 """
  
@@ -328,7 +278,7 @@ def parse_trial(TrialDf, Metrics):
 def parse_trials(TrialDfs, Metrics):
     """ helper to run parse_trial on multiple trials.
     TrialsDfs is a list of TrialDf """
-    SessionDf = pd.concat([parse_trial(Df, Metrics) for Df in TrialDfs],axis=0)
+    SessionDf = pd.concat([parse_trial(Df, Metrics) for Df in TrialDfs], axis=0)
     SessionDf = SessionDf.reset_index(drop=True)
   
     return SessionDf
@@ -367,7 +317,6 @@ def parse_sessions(SessionDfs, Metrics):
 
     return PerformanceDf
 
-# useless function in which I just wasted my time on
 def aggregate_session_logs(animal_path, task):
     """ 
     creates a list of LogDfs with all data obtained 
@@ -454,11 +403,14 @@ def create_LogDf_LCDf_csv(animal_folder_path, task_name, save=True):
  
 """
 
-def time_slice(Df, t_min, t_max, col='t'):
-    """ helper to slice a dataframe along time (defined by col)"""
+def time_slice(Df, t_min, t_max, col='t', reset_index=True):
+    """ helper to slice a dataframe along time (defined by col) """
     vals = Df[col].values
     binds = np.logical_and(vals > t_min, vals < t_max)
-  
+
+    if reset_index:
+        Df = Df.reset_index(drop=True)
+
     return Df.loc[binds]
 
 """
