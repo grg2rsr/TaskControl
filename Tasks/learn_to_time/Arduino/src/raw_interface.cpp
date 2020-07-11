@@ -26,11 +26,12 @@ void getRawData() {
     char RawStartMarker = '[';
     char RawEndMarker = ']';
     int rc;
- 
+
+    
     // loop that reads the entire command
     while (Serial1.available() > 0 && RawNewData == false) {
         rc = Serial1.read();
-
+        
         // read until end marker
         if (RawRecvInProgress == true) {
             if (rc != RawEndMarker) {
@@ -63,6 +64,7 @@ typedef union {
 } bfloat;
 
 void processRawData() {
+
     if (RawNewData == true) {
         // in here split into two floats and store them in the corresponding arduino variables
 
@@ -84,6 +86,7 @@ void processRawData() {
 
         X = (float) Xb.f;
         Y = (float) Yb.f;
+
     }
     RawNewData = false;
 }

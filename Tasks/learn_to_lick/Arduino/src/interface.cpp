@@ -13,7 +13,7 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 bool deliver_reward = false;
-// bool punish = false;
+bool punish = false;
 
 int current_state = 0; // WATCH OUT this is ini state
 
@@ -88,31 +88,31 @@ void processSerialData() {
             // INSERT_GETTERS
 
             if (strcmp(varname,"reward_tone_freq")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(reward_tone_freq)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_tone_freq)+String(">"));
             }
     
             if (strcmp(varname,"reward_cue_freq")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(reward_cue_freq)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_cue_freq)+String(">"));
             }
     
             if (strcmp(varname,"ITI_dur_min")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(ITI_dur_min)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(ITI_dur_min)+String(">"));
             }
     
             if (strcmp(varname,"ITI_dur_max")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(ITI_dur_max)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(ITI_dur_max)+String(">"));
             }
     
             if (strcmp(varname,"reward_magnitude")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(reward_magnitude)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_magnitude)+String(">"));
             }
     
             if (strcmp(varname,"valve_ul_ms")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(valve_ul_ms)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(valve_ul_ms)+String(">"));
             }
     
             if (strcmp(varname,"reward_available_dur")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(reward_available_dur)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_available_dur)+String(">"));
             }
                 if (strcmp(varname,"current_state")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
@@ -229,9 +229,9 @@ void processSerialData() {
                 deliver_reward = true;
             }
 
-            // if (strcmp(CMD,"p")==0){
-            //     punish = true;
-            // }
+            if (strcmp(CMD,"p")==0){
+                punish = true;
+            }
         }
 
         newData = false;

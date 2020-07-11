@@ -176,7 +176,7 @@ def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
 
     return axes
 
-def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, tick_reference, pre, post):
+def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post, tick_reference = None):
     """ Plots heatmaps of LC forces in X/Y axes algined to any event (also marks choice times) """
 
     event_times = bhv.get_events_from_name(LogDf, align_reference)
@@ -193,7 +193,7 @@ def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, tick_reference, pre
 
     force_tresh = 1500
 
-    fig, axes = plt.subplots(ncols=2, sharex=True, sharey=True)
+    _ , axes = plt.subplots(ncols=2, sharex=True, sharey=True)
     heat1 = axes[0].matshow(Fx,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,alpha =0.75)
     heat2 = axes[1].matshow(Fy,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,alpha =0.75)
 
@@ -209,13 +209,12 @@ def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, tick_reference, pre
     cbar = plt.colorbar(heat2, ax=axes[1], orientation='horizontal')
     cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Down","Up"])
 
-    ' Plotting black tick marks signalling whatever the input '
-    choice_timesDf = bhv.get_events_from_name(LogDf,tick_reference)
+    'TODO Plotting black tick marks signalling whatever the input'
+    correct_choice_timesDf = bhv.get_events_from_name(LogDf,"CHOICE_CORRECT_EVENT")
+    incorrect_choice_timesDf = bhv.get_events_from_name(LogDf,"CHOICE_INCORRECT_EVENT")
+    choice_timesDf = correct_choice_timesDf.append(incorrect_choice_timesDf).sort_index() 
     choice_times = choice_timesDf.to_numpy() - event_times.to_numpy() - pre # 'pre' used to shift and center the plot at 0s
     choice_times[choice_times > post+995] = np.nan # deal with choice missed events which are registered as 'choices' at [post+1sec]
-
-    #choice_times = correct_choiceDf.append(incorrect_choiceDf).sort_index(axis = 0)
-    #choice_times = choice_times.to_numpy() - event_times.to_numpy() 
 
     ymin = np.arange(-0.5,len(choice_times)) # need to shift since line starts at center of trial
     ymax = np.arange(0.5,len(choice_times)+1)
@@ -234,7 +233,7 @@ def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, tick_reference, pre
 def plot_forces_trajectories(LogDf, LoadCellDf, align_reference, pre, post, no_splits):
     """ Plots trajectories in 2D aligned to any TWO events"""
 
-    axes = plt.subplots(ncols=2,sharex=True,sharey=True)
+    _ , axes = plt.subplots(ncols=2,sharex=True,sharey=True)
     colors = cm.RdPu(np.linspace(0, 1, no_splits))
 
     event_times = bhv.get_events_from_name(LogDf, align_reference[0])
@@ -399,7 +398,11 @@ def x_y_threshold_across_time(LogDf, axes=None):
     if axes is None:
         axes = plt.gca()
 
-    event_times = bhv.get_events_from_name(LogDf, align_reference)
+    x_thresh = LogDf.values()
+
+    axes = plt.subplots(ncols=2,sharex=True,sharey=True)
+
+    axes[0].plt(x_thresh)
 
     return axes
 

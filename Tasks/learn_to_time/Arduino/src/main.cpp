@@ -142,6 +142,7 @@ unsigned long last_buzz = max_future;
 unsigned long debounce = 250;
 
 void process_loadcell() {
+
     // bin zones into 9 pad
     if (X < (-1*X_thresh) && Y < (-1*Y_thresh)){
         current_zone = left_back;
@@ -443,7 +444,7 @@ void finite_state_machine() {
                 // sync at trial entry
                 send_sync_pulse();
 
-                // cue orange light
+                // cue blue light
                 lights_on_blue();
 
                 // determine the type of trial:
@@ -563,7 +564,7 @@ void finite_state_machine() {
             // update
             if (last_state == current_state){
             }
-            
+
             // exit conditions
             if (current_zone != center || now() - state_entry > choice_dur){
                 // no report, timeout
