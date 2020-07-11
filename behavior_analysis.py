@@ -1,11 +1,12 @@
 # %%
-#matplotlib qt5
-#load_ext autoreload
-#autoreload 2
+%matplotlib qt5
+%load_ext autoreload
+%autoreload 2
 
 from matplotlib import pyplot as plt
 import matplotlib as mpl
-mpl.rcParams['figure.dpi'] = 331
+# mpl.rcParams['figure.dpi'] = 331
+mpl.rcParams['figure.dpi'] = 166 # the screens in the viv
 import behavior_analysis_utils as bhv
 import pandas as pd
 # this should be changed ... 
@@ -143,13 +144,33 @@ plot_reward_collection_rate(SessionDf, history=hist, axes=axes[1])
 # plot_reward_collection_RT(SessionDf, axes=axes[2])
 fig.tight_layout()
 
-# %% 
+# %% debugging syncing problems
+folder = Path("D:\TaskControl\Animals\JJP-00885")
+task_name = "learn_to_time"
 
-bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv")
+bhv.create_LogDf_LCDf_csv(folder,task_name)
 
 # %%
-bhv.get_arduino_sync(log_path)
 
+path = Path(r"D:\TaskControl\Animals\JJP-00885\2020-07-07_09-58-56_learn_to_time")
+log_path = path / "arduino_log.txt"
+
+# %% syncing
+
+LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
+arduino_sync = bhv.get_arduino_sync(log_path)
+
+# %%
+t_harp = harp_sync['t'].values
+t_arduino = arduino_sync['t'].values
+
+# %%
+plt.plot(sp.diff(t_harp),label='harp')
+plt.plot(sp.diff(t_arduino),label='arduino')
+plt.legend()
+
+
+# %%
 t_harp = pd.read_csv(log_path.parent / "harp_sync.csv")['t'].values
 t_arduino = pd.read_csv(log_path.parent / "arduino_sync.csv")['t'].values
 

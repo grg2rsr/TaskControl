@@ -396,13 +396,51 @@ def aggregate_session_logs(animal_path, task):
             if task_name == task:
                 log_paths.append(animal_path.joinpath(fd, "arduino_log.txt"))
         except:
-            print("Folder/File " + fd + " has corrupted date")
+            print("Folder or file " + str(fd) + " has corrupted date")
 
     LogDfs = []
     for log in log_paths:
         LogDfs.append(get_LogDf_from_path(log))
 
     return LogDfs
+
+def create_LogDf_LCDf_csv(animal_folder_path, task_name, save=True):
+    """ 
+    Creates synching logs as well as LogDf and LCDfs csv's
+    for all sessions of given task and animal
+    """
+
+    # Obtain LogDfs
+    LogDfs = aggregate_session_logs(animal_folder_path, task_name)
+
+    # Obtaining Logpaths for specific task
+    SessionsDf = utils.get_sessions(animal_folder_path)
+    paths = [Path(path) for path in SessionsDf.groupby('task').get_group(task_name).path]
+
+    # Obtain CSVs of LogDf and LCDf already synched 
+    for LogDf, path in zip(LogDfs, paths):
+
+        # infer paths
+        log_path = path / "arduino_log.txt"
+        harp_csv_path = path.joinpath("bonsai_harp_log.csv")
+
+        # get the sync
+        _ , t_harp = bhv.parse_harp_csv(harp_csv_path, save=True)
+        t_harp = t_harp['t'].values
+        t_arduino = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_AVAILABLE_STATE", save=True)['t'].values
+
+        if t_harp != t_arduino:
+            t_arduino, t_harp = cut_timestamps(t_arduino, t_harp)
+        
+        # sync datasets
+        m,b = bhv.sync_clocks(t_harp, t_arduino)
+        LogDf ['t_arduino'] = LogDf['t']
+        LogDf['t'] = (LogDf['t'])*m + b
+        
+        if save:
+            LogDf.to_csv(path / "LogDf.csv")
+
+    return True
 
 """
  
@@ -510,9 +548,6 @@ def get_timing_interval(TrialDf):
         interval = sp.NaN
     return pd.Series(interval, name='timing_interval')
 
-
-
-
 ### Session level metrics
 def rewards_collected(SessionDf):
     """ calculate the fraction of collected rewards across the session """
@@ -539,17 +574,19 @@ def mean_reward_collection_rt(SessionDf):
 
 """
 
-def parse_harp_csv(harp_csv_path, save=True):
-    """ gets the loadcell data and the sync times from a harp csv log """
+def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
+    """ gets the loadcell data and the sync times from a harp csv log
+    trig_len is time in ms of sync trig high, tol is deviation in ms (100us is approx FSM time) """
 
     with open(harp_csv_path,'r') as fH:
         lines = fH.readlines()
 
     header = lines[0].split(',')
 
-    t_sync = []
+    t_sync_high = []
+    t_sync_low = []
     LoadCellDf = []
-
+    
     for line in tqdm(lines[1:],desc="parsing harp log"):
         elements = line.split(',')
         if elements[0] == '3': # line is an event
@@ -558,8 +595,14 @@ def parse_harp_csv(harp_csv_path, save=True):
                 LoadCellDf.append(data)
             if elements[1] == '34': # line is a digital input timestamp
                 line = line.strip().split(',')
-                if line[3] == '1':
-                    t_sync.append(float(line[2])*1000) # convert to ms
+                if line[3] == '1': # high values
+                    t_sync_high.append(float(line[2])*1000) # convert to ms
+                if line[3] == '0': # low values
+                    t_sync_low.append(float(line[2])*1000) # convert to ms
+
+    dts = sp.array(t_sync_low) - sp.array(t_sync_high)
+    good_timestamps = ~(sp.absolute(dts-trig_len)>ttol)
+    t_sync = sp.array(t_sync_high)[good_timestamps]
 
     LoadCellDf = pd.DataFrame(LoadCellDf,columns=['t','x','y'],dtype='float')
     LoadCellDf['t_original'] = LoadCellDf['t'] # keeps the original
@@ -568,9 +611,8 @@ def parse_harp_csv(harp_csv_path, save=True):
     if save:
         # write to disk
         LoadCellDf.to_csv(harp_csv_path.parent / "loadcell_data.csv")
-        pd.DataFrame(t_sync,columns=['t']).to_csv(harp_csv_path.parent / "harp_sync.csv")
-            
-        # np.save(path / "loadcell_sync.npy", np.array(t_sync,dtype='float32'))
+        t_sync = pd.DataFrame(t_sync,columns=['t'])
+        t_sync.to_csv(harp_csv_path.parent / "harp_sync.csv")
     
     return LoadCellDf, t_sync
 
@@ -593,12 +635,40 @@ def get_arduino_sync(log_path, sync_event_name="TRIAL_AVAILABLE_STATE", save=Tru
 
     return SyncEvent
 
+def cut_timestamps(t_arduino, t_harp, verbose=False):
+    """ finds offset between to unequal timestamp series and cuts
+    the bigger to match the size of the smaller """
+
+    if verbose:
+        print("timestamps in arduino: "+ str(t_arduino.shape[0]))
+        print("timestamps in harp: "+ str(t_harp.shape[0]))
+
+    if t_harp.shape[0] > t_arduino.shape[0]:
+        bigger = 'harp'
+        t_bigger = t_harp
+        t_smaller = t_arduino
+    else:
+        bigger = 'arduino'
+        t_bigger = t_arduino
+        t_smaller = t_harp
+
+    offset = sp.argmax(sp.correlate(sp.diff(t_bigger),sp.diff(t_smaller),mode='valid'))
+    if verbose:
+        print("offset between the two: ", offset)
+    t_bigger = t_bigger[offset:t_smaller.shape[0]+offset]
+
+    if bigger == 'harp':
+        t_harp = t_bigger
+        t_arduino = t_smaller
+    else:
+        t_arduino = t_bigger
+        t_harp = t_smaller
+    
+    return t_arduino, t_harp
+
 def sync_clocks(t_harp, t_arduino, log_path=None):
     """ linregress between two clocks - master clock is harp
     if LogDf is given, save the corrected clock to it"""
-
-    if t_harp.shape != t_arduino.shape:
-        print("unequal number of sync pulses in the two files! ")
 
     from scipy import stats
 
