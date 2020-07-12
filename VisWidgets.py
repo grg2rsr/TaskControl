@@ -10,7 +10,6 @@ from PyQt5 import QtWidgets
 import scipy as sp
 
 import visualization as vis
-import functions
 import pandas as pd
 import seaborn as sns
 # TODO those functions are not vis but more analysis utils
@@ -79,7 +78,7 @@ class MyMplCanvas(FigureCanvas):
         code_map_path = self.parent.ArduinoController.task_folder.joinpath(pio_folder,"src",event_codes_fname)
         self.log_path = self.parent.ArduinoController.run_folder.joinpath('arduino_log.txt')
 
-        self.Code_Map = functions.parse_code_map(code_map_path)
+        self.Code_Map = utils.parse_code_map(code_map_path)
         self.code_dict = dict(zip(self.Code_Map['code'].values, self.Code_Map['name'].values))
 
 

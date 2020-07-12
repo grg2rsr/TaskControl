@@ -9,25 +9,28 @@ import struct
 class BonsaiController(QtWidgets.QWidget):
     """ a Widget without UI that launches a bonsai sketch """
     
-    def __init__(self, parent):
+    def __init__(self, parent, config, task_config):
         super(BonsaiController, self).__init__(parent=parent)
+        self.name = BonsaiController
+        self.config = config
+        self.task_config = task_config
 
-    def Run(self,folder):
+    def Run(self, folder):
         """ folder is the logging folder """
 
-        animal = self.parent().animal
-        task = self.parent().task
-        task_config = self.parent().task_config['Bonsai']
-        task_folder = Path(self.parent().profile['tasks_folder']).joinpath(task)
-        out_path = folder.joinpath('bonsai_') # this needs to be fixed in bonsai # FIXME TODO
+        animal = self.config['current']['animal']
+        task = self.config['current']['task']
+        task_folder = Path(self.config['paths']['tasks_folder']) / task
+        save_path = folder / 'bonsai_' # this needs to be fixed in bonsai # FIXME TODO
        
         # constructing the bonsai exe string
-        parameters = "-p:save_path=\""+str(out_path)+"\""
-        if 'com_port' in task_config.keys():
-            parameters = parameters+" -p:com_port="+task_config['com_port']
+        parameters = "-p:save_path=\""+str(save_path)+"\""
 
-        bonsai_exe = Path(self.parent().profiles['General']['bonsai_cmd'])
-        bonsai_workflow = task_folder.joinpath('Bonsai',task_config['workflow_fname'])
+        # if 'com_port' in task_config.keys():
+        parameters = parameters+" -p:com_port="+self.config['connections']['firmata_arduino_port']
+
+        bonsai_exe = Path(self.config['system']['bonsai_cmd'])
+        bonsai_workflow = task_folder / 'Bonsai' / self.task_config['workflow_fname']
 
         command = ' '.join([str(bonsai_exe),str(bonsai_workflow),"--start",parameters,"&"])
 

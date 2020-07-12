@@ -16,8 +16,7 @@ import pandas as pd
 import scipy as sp
 
 import Widgets
-import functions
-import utils 
+import utils
 import interface_generator
 
 import behavior_analysis_utils as bhv
@@ -42,32 +41,29 @@ class ArduinoController(QtWidgets.QWidget):
     # here: https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html
     # and here: https://stackoverflow.com/questions/2970312/pyqt4-qtcore-pyqtsignal-object-has-no-attribute-connect
 
-    def __init__(self, parent):
+    def __init__(self, parent, config, task_config):
         super(ArduinoController, self).__init__(parent=parent)
+        self.name = "ArduinoController"
         
-        # for abbreviation bc if changed, objects are reinstantiated anyways
-        self.task = self.parent().task
-        self.task_folder = Path(self.parent().profile['tasks_folder']).joinpath(self.task)
-        self.task_config = self.parent().task_config['Arduino']
+        # the original folder of the task
+        self.task_folder = Path(config['paths']['tasks_folder']) / config['current']['task']
+        self.config = config
+        self.task_config = task_config
 
         self.Children = []
-        self.stopped = False # for killing the thread that reads from serial port
-
-        # TODO here: copy these variables to the temp vars path and overwrite the path here
-        # then - all operations should be done on this
 
         # VariableController
-        self.vars_path = self.task_folder.joinpath('Arduino','src',self.task_config['var_fname'])
-        Df = functions.parse_arduino_vars(self.vars_path)
-        self.VariableController = ArduinoVariablesWidget(self,Df)
+        self.vars_path = self.task_folder / 'Arduino' / 'src' / "interface_variables.h"
+        Df = utils.parse_arduino_vars(self.vars_path) # initialize with the default variables
+        self.VariableController = ArduinoVariablesWidget(self, Df)
         self.Children.append(self.VariableController)
 
-        path = self.task_folder.joinpath('Arduino','src','event_codes.h')
-        CodesDf = functions.parse_code_map(path)
+        path = self.task_folder / 'Arduino' / 'src' / 'event_codes.h'
+        CodesDf = utils.parse_code_map(path)
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
         # online analyzer
-        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT, bhv.has_choice, bhv.choice_RT, bhv.get_choice, bhv.get_timing_interval) # HARDCODE
+        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT, bhv.has_choice, bhv.choice_RT, bhv.get_choice) # HARDCODE
         self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
         # don't add him to children bc doesn't have a UI
 
@@ -91,7 +87,6 @@ class ArduinoController(QtWidgets.QWidget):
         # reprogram
         self.reprogramCheckBox = QtWidgets.QCheckBox("reupload sketch")
         self.reprogramCheckBox.setChecked(True)
-        # self.reprogramCheckBox.stateChanged.connect(self.reprogramCheckBox_changed)
         self.FormLayout.addRow(self.reprogramCheckBox)
 
         FormWidget = QtWidgets.QWidget()
@@ -125,8 +120,6 @@ class ArduinoController(QtWidgets.QWidget):
         self.setLayout(Full_Layout)
         self.setWindowTitle("Arduino controller")
 
-        
-
         self.layout()
         self.show()
 
@@ -136,16 +129,16 @@ class ArduinoController(QtWidgets.QWidget):
 
     def layout(self):
         """ position children to myself """
-        small_gap = int(self.parent().profiles['General']['small_gap'])
-        big_gap = int(self.parent().profiles['General']['big_gap'])
+        small_gap = int(self.config['ui']['small_gap'])
+        big_gap = int(self.config['ui']['big_gap'])
 
-        functions.scale_Widgets([self] + self.Children[:-1],mode='max') # dirty hack to not scale the state machine monitor
+        utils.scale_Widgets([self] + self.Children[:-1],mode='max') # dirty hack to not scale the state machine monitor
         for i,child in enumerate(self.Children):
             if i == 0:
                 ref = self
             else:
                 ref = self.Children[i-1]
-            functions.tile_Widgets(child, ref, where='below',gap=big_gap)
+            utils.tile_Widgets(child, ref, where='below',gap=big_gap)
 
     def send(self,command):
         """ sends string command interface to arduino, interface compatible """
@@ -160,7 +153,6 @@ class ArduinoController(QtWidgets.QWidget):
         """ sends bytestring """
         if hasattr(self,'connection'):
             self.connection.write(bytestr)
-            print(bytestr)
         else:
             print("Arduino is not connected")
 
@@ -191,13 +183,16 @@ class ArduinoController(QtWidgets.QWidget):
         # uploading code onto arduino
 
         # replace whatever com port is in the platformio.ini with the one from task config
+        self.pio_config_path = self.task_folder / "Arduino" / "platformio.ini"
         pio_config = configparser.ConfigParser()
-        self.pio_config_path = self.task_folder.joinpath(self.task_config['pio_project_folder'],"platformio.ini")
         pio_config.read(self.pio_config_path)
+
+        # get upload port
+        upload_port = self.config['connections']['FSM_arduino_port']
 
         for section in pio_config.sections():
             if section.split(":")[0] == "env":
-                pio_config.set(section,"upload_port",self.task_config['com_port'].split(':')[0])
+                pio_config.set(section,"upload_port",upload_port)
 
         # write it
         with open(self.pio_config_path, 'w') as fH:
@@ -214,16 +209,13 @@ class ArduinoController(QtWidgets.QWidget):
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
 
-        # if self.parent().logging:
-        #     self.VariableController.write_variables(os.path.join('src',self.task_config['var_fname']))
-
         # upload
         print(" --- uploading code on arduino --- ")
         prev_dir = Path.cwd()
-        os.chdir(self.task_folder.joinpath(self.task_config['pio_project_folder']))
 
-        fH = open(self.run_folder.joinpath('platformio_build_log.txt'),'w')
-        platformio_cmd = self.parent().profiles['General']['platformio_cmd']
+        os.chdir(self.task_folder / 'Arduino')
+        fH = open(self.run_folder / 'platformio_build_log.txt','w')
+        platformio_cmd = self.config['system']['platformio_cmd']
         cmd = ' '.join([platformio_cmd,'run','--target','upload'])
         proc = subprocess.Popen(cmd,shell=True,stdout=fH)
         proc.communicate()
@@ -239,14 +231,14 @@ class ArduinoController(QtWidgets.QWidget):
         """ copy the entire arduino folder to the logging folder """
         print(" - logging arduino code")
         src = self.task_folder
-        target = folder.joinpath(self.task)
+        target = folder / self.config['current']['task']
         shutil.copytree(src,target)
 
     def connect(self):
         """ establish serial connection with the arduino board """
         
-        com_port = self.task_config['com_port'].split(':')[0]
-        baud_rate = self.task_config['baud_rate']
+        com_port = self.config['connections']['FSM_arduino_port']
+        baud_rate = self.config['connections']['arduino_baud_rate']
         try:
             print("initializing serial port: "+com_port)
             ser = serial.Serial(port=com_port, baudrate=baud_rate,timeout=2)
@@ -255,19 +247,19 @@ class ArduinoController(QtWidgets.QWidget):
             ser.flushInput() # 
             ser.setDTR(True)
             print(" ... done")
-            self.connected = True
             return ser
 
         except:
-            print("could not connect to the Arduino!")
+            print("failed to connect to the FSM arduino.")
             sys.exit()
 
     def Run(self,folder):
         """ folder is the logging folder """
-        self.run_folder = folder # to be kept for the close_event
+        # the folder that is used for storage
+        self.run_folder = folder # needs to be stored for access
 
         # logging the code
-        self.log_task(folder)
+        self.log_task(self.run_folder)
 
         # upload
         if self.reprogramCheckBox.checkState() == 2: # true when checked
@@ -281,17 +273,10 @@ class ArduinoController(QtWidgets.QWidget):
         # start up the online data analyzer
         self.OnlineDataAnalyser.run()
 
-        fH = open(folder.joinpath('arduino_log.txt'),'w')
-
-        # multithreading taken from
-        # https://stackoverflow.com/questions/17553543/pyserial-non-blocking-read-loop
-        # general idea:
-
-        # emit a signal that data came in, signal carries string of the data
-        # everybody that needs to do sth when new data arrives listens to that signal
+        fH = open(self.run_folder / 'arduino_log.txt','w')
 
         def read_from_port(ser):
-            while not self.stopped:
+            while ser.is_open:
                 try:
                     line = ser.readline().decode('utf-8').strip()
                     if line is not '': # filtering out empty reads
@@ -301,14 +286,12 @@ class ArduinoController(QtWidgets.QWidget):
                         self.serial_data_available.emit(line)
 
                 except:
-                    # TODO work on this: if ser.is_open() could be the single function call that fixes this
-                    # fails when port not open
-                    # FIXME CHECK if this will also fail on failed reads!
+                    print("failed read from serial!")
                     break
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()
-        print("listening on serial port has started")
+        print("beginning to listen to serial port")
     
     def stop(self):
         """ when session is finished """
@@ -318,19 +301,6 @@ class ArduinoController(QtWidgets.QWidget):
     pass
 
     def closeEvent(self, event):
-        # take care of ending the threads
-        self.stopped = True
-
-        # self.thread.join()
-
-        # overwrite logged arduino vars file
-        try:
-            target = self.run_folder.joinpath(self.task)
-            self.VariableController.write_variables(target / 'Arduino' / 'src' / 'interface_variables.h')
-        except AttributeError:
-            # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
-            pass
-
         # if serial connection is open, close it
         if hasattr(self,'connection'):
             if self.connection.is_open:
@@ -338,13 +308,16 @@ class ArduinoController(QtWidgets.QWidget):
             self.SerialMonitor.close()
         self.VariableController.close()
 
-        # read in original task config - why?
-        task_config = configparser.ConfigParser()
-        task_config_path = self.task_folder.joinpath("task_config.ini")
-        task_config.read(task_config_path)
-        
-        # remove everything that is written nontheless
-        # shutil.rmtree(self.run_folder)
+        # self.thread.join()
+
+        # overwrite logged arduino vars file
+        try:
+            target = self.run_folder / self.config['current']['task']
+            self.VariableController.write_variables(target / 'Arduino' / 'src' / 'interface_variables.h')
+        except AttributeError:
+            # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
+            pass
+
 
         # take care of the kids
         for child in self.Children:
@@ -370,9 +343,9 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         super(ArduinoVariablesWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
         self.Df = Df
-
         self.initUI()
 
+        # connect
         parent.serial_data_available.connect(self.on_serial)
 
     def initUI(self):
@@ -381,6 +354,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.ScrollWidget = QtWidgets.QWidget()
 
         # scroll widget has the layout etc
+        # utils.debug_trace()
         self.VariableEditWidget = Widgets.ValueEditFormLayout(self, DataFrame=self.Df)
 
         # note: the order of this seems to be of utmost importance ... 
@@ -408,42 +382,15 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
     def write_variables(self, path):
         """ writes current arduino variables to the path """
-        # TODO add some interesting header info
-        # day of training
-        # day / time of writing this should already be in file?
-        # animal ID
-
-        header = []
-        header.append("// ---  file automatically generated by TaskControl --- ")
-        header.append("//Animal: "+self.parent().parent().animal) # FIXME
-        header = [line+os.linesep for line in header]
-
-        # get vars from UI
+        # get the model
         Df = self.VariableEditWidget.get_entries()
 
-        # convert them into something that arduino lang understands
-        dtype_map_inv = dict(zip(functions.dtype_map.values(),functions.dtype_map.keys()))
-
-        lines = []
-        for i, row in Df.iterrows():
-            elements = []
-            elements.append(dtype_map_inv[row['dtype']]) 
-            elements.append(row['name'])
-            elements.append('=')
-            if row['dtype'] == '?':
-                if row['value'] == True:
-                    value = "true"
-                if row['value'] == False:
-                    value = "false"
-            else:
-                value = str(row['value'])
-
-            elements.append(value + ';' + os.linesep)
-            lines.append(' '.join(elements))
+        # convert it to arduino compatible
+        lines = utils.Df2arduino_vars(Df)
 
         # write it
         with open(path, 'w') as fH:
-            fH.write(''.join(header+lines))
+            fH.writelines(lines)
 
     def send_variables(self):
         """ sends all current variables to arduino """
@@ -458,7 +405,8 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
                 bytestr = str.encode(cmd)
                 # reading and writing from different threads apparently threadsafe
                 # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
-                self.parent().connection.write(bytestr)
+                # self.parent().connection.write(bytestr)
+                self.parent().send_raw(bytestr)
                 time.sleep(0.01) # to fix incomplete sends? verify if this really works ... 
         else:
             print("Arduino is not connected")
@@ -466,17 +414,16 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
     def load_last_vars(self):
         """ try to get arduino variables from last run for the task 
         only loads, does not send! """
-        ThisSettingsWidget = self.parent().parent() # FIXME
+        config = self.parent().config
 
         try:
-            current_animal_folder = Path(ThisSettingsWidget.profile['animals_folder']).joinpath(ThisSettingsWidget.animal)
-            SessionsDf = utils.get_sessions(current_animal_folder)
-            previous_sessions = SessionsDf.groupby('task').get_group(ThisSettingsWidget.task)
+            folder = Path(config['paths']['animals_folder']) / config['current']['animal']
+            SessionsDf = utils.get_sessions(folder)
+            previous_sessions = SessionsDf.groupby('task').get_group(config['current']['task'])
 
             prev_session_path = Path(previous_sessions.iloc[-1]['path'])
-            prev_vars_path = prev_session_path.joinpath(ThisSettingsWidget.task, self.parent().task_config['pio_project_folder'], 'src', self.parent().task_config['var_fname'])
-            
-            prev_vars = functions.parse_arduino_vars(prev_vars_path)
+            prev_vars_path = prev_session_path / config['current']['task'] / "Arduino" / "src" / "interface_variables.h"
+            prev_vars = utils.parse_arduino_vars(prev_vars_path)
 
             self.VariableEditWidget.set_entries(prev_vars)
            
@@ -484,18 +431,9 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             print("trying to use last vars, but animal has not been run on this task before.")
 
     def on_serial(self, line):
-        """ updates the display """
-        # TODO this entire thing need to be reworked 
-        # model / view architecture
-
         if line.startswith('<VAR'):
             _, name, value, t = line[1:-1].split(' ')
-            Df = self.VariableEditWidget.get_entries()
-            Df.index = Df.name
-            if name in Df.index:
-                Df.loc[name,'value'] = float(value) # FIXME WARNING dtype awareness?
-                Df.reset_index(drop=True,inplace=True)
-                self.VariableEditWidget.set_entries(Df)
+            self.VariableEditWidget.set_entry(name, value) # the lineedit should take care of the correct dtype
 
 """
  
@@ -521,7 +459,6 @@ class OnlineDataAnalyser(QtCore.QObject):
         
         self.lines = []
         self.SessionDf = None
-        # self.ChangingVarsDf = pd.DataFrame([], columns=['name','value','t'])
 
         self.parent = parent
     
@@ -532,22 +469,9 @@ class OnlineDataAnalyser(QtCore.QObject):
         self.parent.serial_data_available.connect(self.update)
 
     def update(self,line):
-        # if a changing var - carful as this could eat a lot of resources
-        # if line.startswith('<VAR'):
-        #     _, name, value, t = line[1:-1].split(' ')
-        #     # Df = pd.DataFrame((name,float(value),float(t)), columns=['name','value','t'])
-        #     self.ChaningVarsDf.append(dict(name=name,value=float(value),t=float(t)))
-
-        # hacked in this_interval
-        # if line.startswith('<VAR'):
-        #     _, name, value, t = line[1:-1].split(' ')
-        #     if name == "this_interval":
-        #         print(self.SessionDf)
-        #         self.SessionDf.loc[self.SessionDf.shape[0]-1,'this_interval'] = float(value)
-        #         # self.last_recorded_interval = float(value)
+        self.lines.append(line)
 
         # if normally decodeable
-        self.lines.append(line)
         if not line.startswith('<'):
 
             code, t = line.split('\t')
@@ -573,12 +497,10 @@ class OnlineDataAnalyser(QtCore.QObject):
             if decoded == "TRIAL_AVAILABLE_STATE": # HARDCODE
 
                 # parse lines
-                TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map)
+                TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map, parse_var=True)
                 TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
                 
                 if TrialMetricsDf is not None:
-                    # update SessionDf
-                    # print(self.SessionDf)
                     if self.SessionDf is None: # on first
                         self.SessionDf = TrialMetricsDf
                     else:
@@ -591,78 +513,78 @@ class OnlineDataAnalyser(QtCore.QObject):
                     # restart lines with current line
                     self.lines = [line]
 
-"""
+# """
  
- ######## ########  ####    ###    ##           ######   #######  ##    ## ######## ########   #######  ##       ##       ######## ########  
-    ##    ##     ##  ##    ## ##   ##          ##    ## ##     ## ###   ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
-    ##    ##     ##  ##   ##   ##  ##          ##       ##     ## ####  ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
-    ##    ########   ##  ##     ## ##          ##       ##     ## ## ## ##    ##    ########  ##     ## ##       ##       ######   ########  
-    ##    ##   ##    ##  ######### ##          ##       ##     ## ##  ####    ##    ##   ##   ##     ## ##       ##       ##       ##   ##   
-    ##    ##    ##   ##  ##     ## ##          ##    ## ##     ## ##   ###    ##    ##    ##  ##     ## ##       ##       ##       ##    ##  
-    ##    ##     ## #### ##     ## ########     ######   #######  ##    ##    ##    ##     ##  #######  ######## ######## ######## ##     ## 
+#  ######## ########  ####    ###    ##           ######   #######  ##    ## ######## ########   #######  ##       ##       ######## ########  
+#     ##    ##     ##  ##    ## ##   ##          ##    ## ##     ## ###   ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
+#     ##    ##     ##  ##   ##   ##  ##          ##       ##     ## ####  ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
+#     ##    ########   ##  ##     ## ##          ##       ##     ## ## ## ##    ##    ########  ##     ## ##       ##       ######   ########  
+#     ##    ##   ##    ##  ######### ##          ##       ##     ## ##  ####    ##    ##   ##   ##     ## ##       ##       ##       ##   ##   
+#     ##    ##    ##   ##  ##     ## ##          ##    ## ##     ## ##   ###    ##    ##    ##  ##     ## ##       ##       ##       ##    ##  
+#     ##    ##     ## #### ##     ## ########     ######   #######  ##    ##    ##    ##     ##  #######  ######## ######## ######## ##     ## 
  
-"""
+# """
 
-class TrialTypeController(QtWidgets.QWidget):
-    def __init__(self, parent, ArduinoController, OnlineDataAnalyser):
-        super(TrialTypeController, self).__init__(parent=parent)
+# class TrialTypeController(QtWidgets.QWidget):
+#     def __init__(self, parent, ArduinoController, OnlineDataAnalyser):
+#         super(TrialTypeController, self).__init__(parent=parent)
 
-        # needs an arduinocontroller to be instantiated
-        self.ArduinoController = ArduinoController
-        self.AduinoController.serial_data_available.connect(self.on_serial)
+#         # needs an arduinocontroller to be instantiated
+#         self.ArduinoController = ArduinoController
+#         self.AduinoController.serial_data_available.connect(self.on_serial)
 
-        self.OnlineDataAnalyzer = OnlineDataAnalyser
+#         self.OnlineDataAnalyzer = OnlineDataAnalyser
 
-        # calculate current engagement from behav data
+#         # calculate current engagement from behav data
 
-        # calculate trial hardness from behav data
+#         # calculate trial hardness from behav data
 
-        # send new p values to arduino
+#         # send new p values to arduino
 
-        # plot them
+#         # plot them
 
-    def initUI(self):
-        """ plots of the current p values """
-        pass
+#     def initUI(self):
+#         """ plots of the current p values """
+#         pass
 
-    def on_serial(self,line):
-        # if arduino requests action
-        if line == "<MSG REQUEST TRIAL_PROBS>":
-            E = calculate_task_engagement()
-            H = calculate_trial_difficulty()
-            W = calculate_trial_weights(E,H)
+#     def on_serial(self,line):
+#         # if arduino requests action
+#         if line == "<MSG REQUEST TRIAL_PROBS>":
+#             E = calculate_task_engagement()
+#             H = calculate_trial_difficulty()
+#             W = calculate_trial_weights(E,H)
 
-            self.update_plot()
+#             self.update_plot()
 
-    def calculate_task_engagement(self):
-        n_trial_types = 6 # HARDCODE
-        P_default = sp.array([0.5,0,0,0,0,0.5])
-        history = 10 # past trials to take into consideration 
+#     def calculate_task_engagement(self):
+#         n_trial_types = 6 # HARDCODE
+#         P_default = sp.array([0.5,0,0,0,0,0.5])
+#         history = 10 # past trials to take into consideration 
 
-        # get the data
+#         # get the data
 
-        # do the calc
+#         # do the calc
 
-        pass
+#         pass
 
-    def calculate_trial_difficulty(self):
-        # get the data (same data?)
+#     def calculate_trial_difficulty(self):
+#         # get the data (same data?)
 
-        # do the calc
-        # what to do if there are less than 10 past trials
-        pass
+#         # do the calc
+#         # what to do if there are less than 10 past trials
+#         pass
 
-    def send_probabilities(self):
-        # uses arduinocontroller to send
-        # for i in range(n_trial_types):
-        #     cmd = ' '.join(['UPD',str(i),str(self.P[i])])
-        #     cmd = '<'+cmd+'>'
-        #     bytestr = str.encode(cmd)
-        #     self.ArduinoController.send_raw(bytestr)
-        pass
+#     def send_probabilities(self):
+#         # uses arduinocontroller to send
+#         # for i in range(n_trial_types):
+#         #     cmd = ' '.join(['UPD',str(i),str(self.P[i])])
+#         #     cmd = '<'+cmd+'>'
+#         #     bytestr = str.encode(cmd)
+#         #     self.ArduinoController.send_raw(bytestr)
+#         pass
 
-    def update_plot(self):
-        pass
+#     def update_plot(self):
+#         pass
 
 """
  
@@ -687,6 +609,9 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.initUI()
         self.lines = []
         self.code_map = code_map
+        # TODO
+        # self.code_map_inv = dict(zip(code_map.values(), code_map.keys()))
+        # self.filter = ["<VAR current_zone", ]
 
         # connect to parent signals
         parent.serial_data_available.connect(self.update)

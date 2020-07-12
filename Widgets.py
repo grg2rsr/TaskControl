@@ -10,25 +10,19 @@ import pandas as pd
 from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 
-from functions import dtype_map
-import functions
 import utils
-
 import behavior_analysis_utils as bhv
 
-# import VisWidgets
-# import ArduinoWidgets
-# import HardwareWidgets
-
-
 """
-.___  ___.      ___       __  .__   __.    ____    __    ____  __   _______   _______  _______ .___________.    _______.
-|   \/   |     /   \     |  | |  \ |  |    \   \  /  \  /   / |  | |       \ /  _____||   ____||           |   /       |
-|  \  /  |    /  ^  \    |  | |   \|  |     \   \/    \/   /  |  | |  .--.  |  |  __  |  |__   `---|  |----`  |   (----`
-|  |\/|  |   /  /_\  \   |  | |  . `  |      \            /   |  | |  |  |  |  | |_ | |   __|      |  |        \   \
-|  |  |  |  /  _____  \  |  | |  |\   |       \    /\    /    |  | |  '--'  |  |__| | |  |____     |  |    .----)   |
-|__|  |__| /__/     \__\ |__| |__| \__|        \__/  \__/     |__| |_______/ \______| |_______|    |__|    |_______/
-
+ 
+ ##     ##    ###    #### ##    ##    ##      ## #### ##    ## ########   #######  ##      ## 
+ ###   ###   ## ##    ##  ###   ##    ##  ##  ##  ##  ###   ## ##     ## ##     ## ##  ##  ## 
+ #### ####  ##   ##   ##  ####  ##    ##  ##  ##  ##  ####  ## ##     ## ##     ## ##  ##  ## 
+ ## ### ## ##     ##  ##  ## ## ##    ##  ##  ##  ##  ## ## ## ##     ## ##     ## ##  ##  ## 
+ ##     ## #########  ##  ##  ####    ##  ##  ##  ##  ##  #### ##     ## ##     ## ##  ##  ## 
+ ##     ## ##     ##  ##  ##   ###    ##  ##  ##  ##  ##   ### ##     ## ##     ## ##  ##  ## 
+ ##     ## ##     ## #### ##    ##     ###  ###  #### ##    ## ########   #######   ###  ###  
+ 
 """
 
 class SettingsWidget(QtWidgets.QWidget):
@@ -38,15 +32,12 @@ class SettingsWidget(QtWidgets.QWidget):
     each user has a profile which points to the folder of tasks and animals
     """
     # FIXME does not have parent? - fix inheritance from TaskControl
-    def __init__(self, main, profiles):
+    def __init__(self, main, config):
         super(SettingsWidget, self).__init__()
-        self.profiles = profiles # a configparser dict
-        self.profile = None
-        self.user = None
-        self.task = None # the task that is being run
-        self.Controllers = []
-        self.Children = []
-        self.main = main
+        self.config = config # a configparser dict
+        self.Controllers = [] # a list of all controllers
+        self.Children = [] # a list of all UI windows
+        self.main = main # ref to the main
         self.running = False
         self.initUI()
 
@@ -56,49 +47,28 @@ class SettingsWidget(QtWidgets.QWidget):
         FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
         self.setLayout(FormLayout)
 
-        # get profiles
-        users = self.profiles['General']['users'].split(',')
-        users = [user.strip() for user in users]
-        self.user = self.profiles['General']['last_user']
-        self.profile = self.profiles[self.user]
-
-        self.UserChoiceWidget = StringChoiceWidget(self, choices=users)
-        self.UserChoiceWidget.currentIndexChanged.connect(self.user_changed)
-        self.UserChoiceWidget.set_value(self.user)
-        FormLayout.addRow('User', self.UserChoiceWidget)
-
-        # sep
-        line = QtWidgets.QFrame(self)
-        line.setFrameShape(QtWidgets.QFrame.HLine)
-        line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        FormLayout.addRow(line)
-
         # animal selector
-        animals = utils.get_animals(self.profile['animals_folder'])
-        self.animal = self.profile['last_animal']
+        animals = utils.get_animals(self.config['paths']['animals_folder'])
+        self.animal = self.config['last']['animal']
         self.AnimalChoiceWidget = StringChoiceWidget(self, choices=animals)
-        # self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
-        # self.AnimalChoiceWidget.set_value(self.animal)
-        # if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
-        #     self.animal_changed()
+        self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
+        try:
+            self.AnimalChoiceWidget.set_value(self.animal)
+        except:
+            # if animal is not in list
+            self.AnimalChoiceWidget.set_value(animals[0])
         FormLayout.addRow('Animal', self.AnimalChoiceWidget)
 
-        # TODO reimplement this functionality
-        # # New Animal Button
-        # NewAnimalBtn = QtWidgets.QPushButton(self)
-        # NewAnimalBtn.setText('New animal')
-        # FormLayout.addRow(NewAnimalBtn)
-        # NewAnimalBtn.clicked.connect(self.new_animal)
-        # self.animal_changed()
-
         # task selector
-        tasks = utils.get_tasks(self.profile['tasks_folder'])
-        self.task = self.profile['last_task']
+        tasks = utils.get_tasks(self.config['paths']['tasks_folder'])
+        self.task = self.config['last']['task']
         self.TaskChoiceWidget = StringChoiceWidget(self, choices=tasks)
         self.TaskChoiceWidget.currentIndexChanged.connect(self.task_changed)
-        self.TaskChoiceWidget.set_value(self.task)
-        if tasks.index(self.task) == 0:
-            self.task_changed()
+        try:
+            self.TaskChoiceWidget.set_value(self.task)
+        except:
+            # if task is not in list
+            self.TaskChoiceWidget.set_value(tasks[0])
         FormLayout.addRow('Task', self.TaskChoiceWidget)
 
         # sep
@@ -122,7 +92,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # plot button
         self.Plot_button = QtWidgets.QPushButton(self)
-        self.Plot_button.clicked.connect(self.update_plot)
+        self.Plot_button.clicked.connect(self.start_plotters)
         self.Plot_button.setText('Plot performance')
         FormLayout.addRow(self.Plot_button)
         self.Plot_button.setEnabled(False)
@@ -160,8 +130,6 @@ class SettingsWidget(QtWidgets.QWidget):
         # self terminate
         self.selfTerminateCheckBox = QtWidgets.QCheckBox()
         self.selfTerminateCheckBox.setChecked(False)
-        self.self_terminate = False
-        self.selfTerminateCheckBox.stateChanged.connect(self.selfTerminateCheckBox_changed)
         
         FormLayout.addRow("self terminate", self.selfTerminateCheckBox)
         Df = pd.DataFrame([['after (min) ',  60,   'int32'],
@@ -179,8 +147,16 @@ class SettingsWidget(QtWidgets.QWidget):
         # calling animal changed again to trigger correct layouting
         self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
         self.AnimalChoiceWidget.set_value(self.animal)
+        
+        # TODO
+        # test if they can't be called wo the check and move above lines 
+        # up to the corresponding point 
+
+        # enforce function calls if first animal
         if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
             self.animal_changed()
+        if tasks.index(self.task) == 0: # enforce function call if first task
+            self.task_changed()
 
         self.show()
         self.layout_controllers()
@@ -189,8 +165,8 @@ class SettingsWidget(QtWidgets.QWidget):
     
     def layout_controllers(self):
         """ takes care that all controllers are visually positioned nicely """
-        small_gap = int(self.profiles['General']['small_gap'])
-        big_gap = int(self.profiles['General']['big_gap'])
+        small_gap = int(self.config['ui']['small_gap'])
+        big_gap = int(self.config['ui']['big_gap'])
 
         for i,Controller in enumerate(self.Controllers):
             if i == 0:
@@ -198,7 +174,7 @@ class SettingsWidget(QtWidgets.QWidget):
             else:
                 prev_widget = self.Controllers[i-1]
 
-            functions.tile_Widgets(Controller, prev_widget, where="right", gap=small_gap)
+            utils.tile_Widgets(Controller, prev_widget, where="right", gap=small_gap)
             Controller.layout()
             # if hasattr(Controller, 'Children'):
             #    functions.scale_Widgets([Controller]+Controller.Children)
@@ -208,101 +184,76 @@ class SettingsWidget(QtWidgets.QWidget):
         for child in self.Children:
             child.layout()
 
-    def update_plot(self):
-        """ launches the plotters """
+    def start_plotters(self):
+        """ starts the online plotters """
+        # TODO FIXME this is not fully working and takes
+        # a while to process
+
         from TaskVis_pg import SessionVis, TrialsVis
         self.SessionVisWidget = SessionVis(self, self.ArduinoController.OnlineDataAnalyser)
         self.TrialsVisWidget = TrialsVis(self, self.ArduinoController.OnlineDataAnalyser)
 
     def closeEvent(self,event):
-        # TODO iterate over controllers and close all
-        # for this, a list of registered task needs list of registered controllers and visualizers
+        """ reimplementation of closeEvent """
 
-        if hasattr(self, 'AnimalInfoWidget'):
-            self.AnimalInfoWidget.close()
+        for Controller in self.Controllers:
+            Controller.close()
 
-        if hasattr(self, 'ArduinoController'):
-            self.ArduinoController.close()
-        
-        if hasattr(self, 'BonsaiController'):
-            self.BonsaiController.close()
+        for child in self.Children:
+            child.close()
 
-        if hasattr(self, 'LoadCellController'):
-            self.LoadCellController.close()
-
-        if hasattr(self, 'DisplayController'):
-            self.DisplayController.close()
+        # store current to last
+        for key, value in self.config['current'].items():
+            self.config['last'][key] = value
 
         self.main.exit()
 
-
     def Run(self):
         """
-        + read the entries in the params control widget
-        + write the arduino file to the correct place (user specific animal/task/time)
-        + upload code to arduino
-        + listen to port
+        ask for weight
+        initialize folder structure
+        runs all controllers
         """
+
+        # UI related
         self.RunBtn.setEnabled(False)
         self.DoneBtn.setEnabled(True)
+        self.Plot_button.setEnabled(True)
+        # TODO make the task changeable
 
-        if self.running == False:
-            print(" --- RUN --- ")
-            print("Task: ",self.task)
-            print("Animal: ",self.animal)
-            
-            # TODO runanimal popup here
-            self.RunInfo = RunInfoWidget(self)
+        # animal popup
+        self.RunInfo = RunInfoWidget(self)
 
-            # make folder structure
-            # folder = Path(self.profile['tmp_folder'])
-            date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
-            folder = Path(self.profile['animals_folder']).joinpath(self.animal,date_time+'_'+self.task)
-            os.makedirs(folder,exist_ok=True)
+        print(" --- RUN --- ")
+        print("Task: ",self.task)
+        print("Animal: ",self.animal)
+        
+        # make folder structure
+        date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
+        folder = Path(self.config['paths']['animals_folder']) / self.animal / '_'.join([date_time,self.task])
+        os.makedirs(folder,exist_ok=True)
 
-            # TODO generalize this section. Currently all possible hardware controllers need to be called seperately
-            for section in self.task_config.sections():
-                if section == 'Arduino':
-                    self.ArduinoController.Run(folder)
-                    print("running ArduinoController")
+        for controller in self.Controllers:
+            print("running controller: ", controller.name)
+            controller.Run(folder)
 
-                if section == 'Bonsai':
-                    self.BonsaiController.Run(folder)
-                    print("running BonsaiController")
+        self.running = True
 
-                if section == 'LoadCell':
-                    self.LoadCellController.Run(folder)
-                    print("running BonsaiController")
+        # start the timer
+        self.t_start = datetime.now()
+        self.timer.start(1000)
 
-                if section == 'Display':
-                    self.DisplayController.Run(folder)
-                    print("running DisplayController")
-
-                # place here other controllers
-
-            self.running = True
-
-            # gray out button, set to running
-            self.Plot_button.setEnabled(True)
-
-            # start the timer
-            self.time_at_run = datetime.now()
-            self.timer.start(1000)
-
-            # reset the counters and connect them
-            self.TrialCounter.setText('0/0/0\t--')
-            self.WaterCounter.setText('0')
-        else:
-            # Here - change button to stop
-            print("Task is already running! ")
+        # reset the counters
+        for counter in [self.TrialCounter,self.WaterCounter]:
+            counter.reset()
 
     def Done(self):
         """ finishing the session """
-        # TODO should be refactored
-
         # UI
         self.DoneBtn.setEnabled(False)
         self.RunBtn.setEnabled(True)
+        self.Plot_button.setEnabled(False)
+        # TODO make the task unchangeable
 
         self.timer.stop()
 
@@ -314,47 +265,24 @@ class SettingsWidget(QtWidgets.QWidget):
             controller.stop()
             controller.close()
 
-        self.task_changed() # this should then reopen all controllers
+        self.task_changed() # this reinitialized all controllers
 
-        # TODO popup with a comment on the session
-
-        # bonus TODO
-        # send me a mail / slack message
-        # https://github.com/slackapi/python-slackclient
-
-    def selfTerminateCheckBox_changed(self):
-        if self.selfTerminateCheckBox.checkState() == 2:
-            self.self_terminate = True
-        else:
-            self.self_terminate = False
-
-    def user_changed(self):
-        self.user = self.UserChoiceWidget.get_value()
-        self.AnimalChoiceWidget.set_value(self.profile['last_animal'])
-        self.profiles['General']['last_user'] = self.user
-        self.profile = self.profiles[self.user]
-        print("User: ",self.user)
-
-    # excluded functionality for now
-    # def new_animal(self):
-    #     """ open the new animal popup """
-    #     self.NewAnimal = NewAnimalWidget(self)
 
     def get_animal_meta(self):
         # TODO FUTURE make a function of Animal object
-        meta_path = Path(self.profile['animals_folder']).joinpath(self.animal,'animal_meta.csv')
+        meta_path = Path(self.config['paths']['animals_folder']) / self.animal / 'animal_meta.csv'
         return pd.read_csv(meta_path)
 
     def animal_changed(self):
-        self.animal = self.AnimalChoiceWidget.get_value()
-        self.profile['last_animal'] = self.animal
+        self.config['current']['animal'] = self.AnimalChoiceWidget.get_value()
+        self.animal = self.config['current']['animal']
         self.animal_meta = self.get_animal_meta()
 
         # displaying previous sessions info
         if hasattr(self,'AnimalInfoWidget'):
             self.AnimalInfoWidget.close()
 
-        self.AnimalInfoWidget = AnimalInfoWidget(self)
+        self.AnimalInfoWidget = AnimalInfoWidget(self, self.config)
         self.Children = []
         self.Children.append(self.AnimalInfoWidget)
 
@@ -363,58 +291,60 @@ class SettingsWidget(QtWidgets.QWidget):
         print("Animal: ", self.animal)
 
     def task_changed(self):
-        """ upon task change: look for required controllers, take all present down and instantiate the new ones """
-        # self.Done() # TODO think about this
+        # first check if task is running, if yes, don't do anything
+        if self.running == True:
+            print("Warning: trying to change a running task!")
+            return None
 
-        # first take down all currently open ones
-        for Controller in self.Controllers:
-            Controller.close()
-            self.Controllers = []
+        else:
+            # get task
+            self.config['current']['task'] = self.TaskChoiceWidget.get_value()
+            self.task = self.config['current']['task']
+            self.task_folder = Path(self.config['paths']['tasks_folder']) / self.task
+            print("Currently selected Task: ", self.task)
 
-        print("Currently selected Task: ", self.task)
-        self.task = self.TaskChoiceWidget.get_value()
-        self.task_folder = Path(self.profile['tasks_folder']).joinpath(self.task)
+            # parse task config file
+            self.task_config = configparser.ConfigParser()
+            self.task_config.read(self.task_folder / 'task_config.ini')
+            
+            # take down all currently open controllers
+            for Controller in self.Controllers:
+                Controller.close()
+                self.Controllers = []
 
-        # parse task config file
-        self.task_config = configparser.ConfigParser()
-        self.task_config.read(self.task_folder.joinpath('task_config.ini'))
+            # run each controller present in task config
+            for section in self.task_config.sections():
+                print("initializing " + section)
+                if section == 'Arduino':
+                    from ArduinoWidgets import ArduinoController
+                    self.ArduinoController = ArduinoController(self, self.config, self.task_config['Arduino'])
+                    self.Controllers.append(self.ArduinoController)
 
-        for section in self.task_config.sections():
-            # place here all possible controllers ...
-            # closes present controllers and reopens
-            print("initializing "+section)
-            if section == 'Arduino':
-                from ArduinoWidgets import ArduinoController
-                self.ArduinoController = ArduinoController(self)
-                self.Controllers.append(self.ArduinoController)
+                if section == 'Bonsai':
+                    from BonsaiWidgets import BonsaiController
+                    self.BonsaiController = BonsaiController(self, self.config, self.task_config['Bonsai'])
+                    self.Controllers.append(self.BonsaiController)
 
-            if section == 'Bonsai':
-                from BonsaiWidgets import BonsaiController
-                self.BonsaiController = BonsaiController(self)
-                self.Controllers.append(self.BonsaiController)
+                if section == 'LoadCell':
+                    from LoadCellWidgets import LoadCellController
+                    self.LoadCellController = LoadCellController(self, self.config, self.task_config['LoadCell'])
+                    self.Controllers.append(self.LoadCellController)
 
-            if section == 'LoadCell':
-                from LoadCellWidgets import LoadCellController
-                self.LoadCellController = LoadCellController(self)
-                self.Controllers.append(self.LoadCellController)
+                # if section == 'Display':
+                #     self.DisplayController = HardwareWidgets.DisplayController(self)
+                #     self.Controllers.append(self.DisplayController)
 
-            # if section == 'Display':
-            #     self.DisplayController = HardwareWidgets.DisplayController(self)
-            #     self.Controllers.append(self.DisplayController)
-
-        self.profile['last_task'] = self.task
-
-        self.layout_controllers()
+            self.layout_controllers()
 
     def time_handler(self):
         # called every second by QTimer
-        # FIXME rounding errors
+        # FIXME there are rounding errors
         # FIXME refactor
-        dt = datetime.now() - self.time_at_run
+        dt = datetime.now() - self.t_start
         self.TimeLabel.display(str(dt).split('.')[0])
 
         # test for self termination
-        if self.self_terminate:
+        if self.selfTerminateCheckBox.checkState() == 2: # 2 is true
             Df = self.selfTerminateEdit.get_entries()
             max_time, max_water, max_trials = Df['value'] # depends on order ... 
             current_time = dt.seconds/60
@@ -427,12 +357,24 @@ class SettingsWidget(QtWidgets.QWidget):
             if current_num_trials >= max_trials and max_trials > 0:
                 self.Done()
 
+"""
+ 
+ #### ##    ## ########  #######  
+  ##  ###   ## ##       ##     ## 
+  ##  ####  ## ##       ##     ## 
+  ##  ## ## ## ######   ##     ## 
+  ##  ##  #### ##       ##     ## 
+  ##  ##   ### ##       ##     ## 
+ #### ##    ## ##        #######  
+ 
+"""
 
 class AnimalInfoWidget(QtWidgets.QWidget):
     """ displays some interesing info about the animal: list of previous sessions """
-    def __init__(self, parent):
+    def __init__(self, parent, config):
         super(AnimalInfoWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
+        self.config = config
         self.initUI()
 
     def initUI(self):
@@ -448,14 +390,15 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         self.layout()
 
     def layout(self):
-        big_gap = int(self.parent().profiles['General']['big_gap'])
+        big_gap = int(self.config['ui']['big_gap'])
         # functions.scale_Widgets([self,self.parent()], mode='min')
         self.resize(self.parent().width(),self.sizeHint().height())
-        functions.tile_Widgets(self, self.parent(), where='below', gap=big_gap)
+        utils.tile_Widgets(self, self.parent(), where='below', gap=big_gap)
 
     def update(self):
         # TODO get a list of past sessions and parse them
-        current_animal_folder = Path(self.parent().profile['animals_folder']).joinpath(self.parent().animal)
+        # TODO also rename sessions_df
+        current_animal_folder = Path(self.config['paths']['animals_folder']) / self.parent().animal
         try:
             sessions_df = utils.get_sessions(current_animal_folder)
             # lines = sessions_df['task'].to_list()
@@ -467,13 +410,15 @@ class AnimalInfoWidget(QtWidgets.QWidget):
             pass
 
 """
-.______     ______   .______    __    __  .______     _______.
-|   _  \   /  __  \  |   _  \  |  |  |  | |   _  \   /       |
-|  |_)  | |  |  |  | |  |_)  | |  |  |  | |  |_)  | |   (----`
-|   ___/  |  |  |  | |   ___/  |  |  |  | |   ___/   \   \
-|  |      |  `--'  | |  |      |  `--'  | |  |   .----)   |
-| _|       \______/  | _|       \______/  | _|   |_______/
-
+ 
+ ########   #######  ########  ##     ## ########   ######  
+ ##     ## ##     ## ##     ## ##     ## ##     ## ##    ## 
+ ##     ## ##     ## ##     ## ##     ## ##     ## ##       
+ ########  ##     ## ########  ##     ## ########   ######  
+ ##        ##     ## ##        ##     ## ##              ## 
+ ##        ##     ## ##        ##     ## ##        ##    ## 
+ ##         #######  ##         #######  ##         ######  
+ 
 """
 
 class RunInfoWidget(QtWidgets.QDialog):
@@ -601,13 +546,15 @@ class RunInfoWidget(QtWidgets.QDialog):
 #         self.close()
 
 """
- __    __  .___________. __   __       __  .___________.____    ____    ____    __    ____  __   _______   _______  _______ .___________.    _______.
-|  |  |  | |           ||  | |  |     |  | |           |\   \  /   /    \   \  /  \  /   / |  | |       \ /  _____||   ____||           |   /       |
-|  |  |  | `---|  |----`|  | |  |     |  | `---|  |----` \   \/   /      \   \/    \/   /  |  | |  .--.  |  |  __  |  |__   `---|  |----`  |   (----`
-|  |  |  |     |  |     |  | |  |     |  |     |  |       \_    _/        \            /   |  | |  |  |  |  | |_ | |   __|      |  |        \   \
-|  `--'  |     |  |     |  | |  `----.|  |     |  |         |  |           \    /\    /    |  | |  '--'  |  |__| | |  |____     |  |    .----)   |
- \______/      |__|     |__| |_______||__|     |__|         |__|            \__/  \__/     |__| |_______/ \______| |_______|    |__|    |_______/
-
+ 
+ ##     ## ######## #### ##       #### ######## ##    ##    ##      ## #### ########   ######   ######## ########  ######  
+ ##     ##    ##     ##  ##        ##     ##     ##  ##     ##  ##  ##  ##  ##     ## ##    ##  ##          ##    ##    ## 
+ ##     ##    ##     ##  ##        ##     ##      ####      ##  ##  ##  ##  ##     ## ##        ##          ##    ##       
+ ##     ##    ##     ##  ##        ##     ##       ##       ##  ##  ##  ##  ##     ## ##   #### ######      ##     ######  
+ ##     ##    ##     ##  ##        ##     ##       ##       ##  ##  ##  ##  ##     ## ##    ##  ##          ##          ## 
+ ##     ##    ##     ##  ##        ##     ##       ##       ##  ##  ##  ##  ##     ## ##    ##  ##          ##    ##    ## 
+  #######     ##    #### ######## ####    ##       ##        ###  ###  #### ########   ######   ########    ##     ######  
+ 
 """
 
 class TrialCounter(QtWidgets.QLabel):
@@ -677,11 +624,11 @@ class ValueEdit(QtWidgets.QLineEdit):
         self.value = sp.array(self.text(), dtype=self.dtype)
         return self.value
 
-    def get_dtype(self):
-        return self.dtype
+    # def get_dtype(self):
+    #     return self.dtype
 
     def set_value(self, value):
-        self.value = value
+        self.value = sp.array(value, dtype=self.dtype)
         self.setText(str(self.value))
 
 
@@ -691,9 +638,11 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
 
     def __init__(self, parent, DataFrame):
         super(ValueEditFormLayout,self).__init__(parent=parent)
-        self.Df = DataFrame
+        self.Df = DataFrame # model
 
         # if DataFrame does not contain a dtype column, set it to strings
+        # TODO figure out when is this actually needed
+        # utils.debug_trace()
         if 'dtype' not in self.Df.columns:
             maxlen = max([len(el) for el in self.Df['name']])
             self.Df['dtype'] = 'U'+str(maxlen)
@@ -704,38 +653,52 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
         self.setVerticalSpacing(10)
         self.setLabelAlignment(QtCore.Qt.AlignRight)
 
+        # init the view
         for i, row in self.Df.iterrows():
-            # dont't do this here because dtype map is for arduino!
-            # self.addRow(row['name'], ValueEdit(row['value'], functions.dtype_map[row['dtype']], self.parent()))
             self.addRow(row['name'], ValueEdit(row['value'], row['dtype'], self.parent()))
 
+    def set_entry(self, name, value):
+        # controller function - update both view and model
+        try:
+            # get index
+            ix = list(self.Df['name']).index(name)
+            self.itemAt(ix,1).widget().set_value(value) # update view
+            self.Df.loc[ix,'value'] = value # update model 
+        except ValueError:
+            print("attempting to set a name,value not in Df")
+
     def set_entries(self, Df):
-        """ sets all values with values according to Df """
+        # controller function - set with an entire Df
+
+        # test compatibility first
         if not sp.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
             print("can't set entries bc they are not equal ... this indicates some major bug")
+            print("new")
             print(Df)
+            print()
+            print("old")
             print(self.Df)
             sys.exit()
 
-        else:
-            # Df sorted according to self.Df['name']
-            Df_sorted = Df.set_index('name').loc[self.Df['name'].values]
-            Df_sorted.reset_index(level=0, inplace=True)
-            
-            for i, row in Df_sorted.iterrows():
-                self.itemAt(i,1).widget().set_value(row['value'])
+        self.Df = Df # update the model
+        for i, row in Df.iterrows():
+            self.set_entry(row['name'], row['value'])
+
+    def get_entry(self, name):
+        # controller function - returns a pd.Series
+        ix = list(self.Df['name']).index(name)
+        return self.Df.loc[ix]
 
     def get_entries(self):
-        """ returns a pd.DataFrame of the current entries """
-        rows = []
+        self.update_model()
+        return self.Df
 
+    def update_model(self):
+        """ updates model based on UI entries """
         for i in range(self.rowCount()):
             label = self.itemAt(i, 0).widget()
             widget = self.itemAt(i, 1).widget()
-            rows.append([label.text(), widget.get_value(), widget.get_dtype()])
-
-        Df = pd.DataFrame(rows, columns=['name', 'value', 'dtype'])
-        return Df
+            self.set_entry(label.text(), widget.get_value())
 
 
 class ErrorWidget(QtWidgets.QMessageBox):

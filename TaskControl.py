@@ -6,19 +6,19 @@ from PyQt5 import QtWidgets
 from Widgets import *
 
 class TaskControlApp(QtWidgets.QApplication):
-    def __init__(self, *args, profiles_fpath=None):
+    def __init__(self, *args, config_path=None):
         super(TaskControlApp, self).__init__(*args)
 
-        # parse profiles.ini
-        self.profiles_fpath = Path(profiles_fpath)
-        profiles = configparser.ConfigParser()
-        profiles.read(self.profiles_fpath)
+        # read config.ini
+        self.config_path = Path(config_path)
+        self.config = configparser.ConfigParser()
+        self.config.read(self.config_path)
 
         print(" --- this is TaskControl --- ")
-        print("using profile: ", profiles_fpath)
+        print("using config: ", config_path)
 
         # launch GUI
-        self.Settings_Widget = SettingsWidget(self, profiles)
+        self.Settings_Widget = SettingsWidget(self, self.config)
 
         # on close - TODO check if obsolete with proper QT parent child structure
         self.setQuitOnLastWindowClosed(False)
@@ -26,21 +26,20 @@ class TaskControlApp(QtWidgets.QApplication):
         self.exec_()
 
     def onLastClosed(self):
-        # get the current profiles
-        # write to disk for reloading on next startup
-        profiles = self.Settings_Widget.profiles
-        with open(self.profiles_fpath, 'w') as profiles_fH:
-            profiles.write(profiles_fH)
+        # write current config to disk
+        with open(self.config_path, 'w') as fH:
+            self.config.write(fH)
         self.exit()
 
 if __name__ == "__main__":
     import argparse
-    profiles_fpath = 'profiles_box1.ini' # the fiber photometry computer downstairs in the viv
-
+    # config_path = 'profiles_box1.ini'
+    config_path = "config.ini"
+    
     # argparsing
     parser = argparse.ArgumentParser(description=' xXx Unified TaskControl xXx ')
-    parser.add_argument("-p", default=profiles_fpath, action='store', dest="profiles_fpath", help='set the path to the profiles.ini file')
+    parser.add_argument("-p", default=config_path, action='store', dest="config_path", help='set the path to the config.ini file')
     args = parser.parse_args()
 
     # run the application
-    TaskControl = TaskControlApp([], profiles_fpath=args.profiles_fpath)
+    TaskControl = TaskControlApp([], config_path=args.config_path)

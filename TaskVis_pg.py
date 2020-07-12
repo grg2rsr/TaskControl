@@ -8,7 +8,6 @@ from sklearn.linear_model import LogisticRegression
 from scipy.special import expit
 
 # import visualization as vis
-import functions
 import pandas as pd
 import seaborn as sns
 

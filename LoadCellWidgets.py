@@ -11,12 +11,23 @@ import socket
 import struct
 import threading
 import queue
-import functions
 import serial
 import scipy as sp
 import time
 
 import pyqtgraph as pg 
+
+"""
+ 
+  ######   #######  ##    ## ######## ########   #######  ##       ##       ######## ########  
+ ##    ## ##     ## ###   ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
+ ##       ##     ## ####  ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
+ ##       ##     ## ## ## ##    ##    ########  ##     ## ##       ##       ######   ########  
+ ##       ##     ## ##  ####    ##    ##   ##   ##     ## ##       ##       ##       ##   ##   
+ ##    ## ##     ## ##   ###    ##    ##    ##  ##     ## ##       ##       ##       ##    ##  
+  ######   #######  ##    ##    ##    ##     ##  #######  ######## ######## ######## ##     ## 
+ 
+"""
 
 class LoadCellController(QtWidgets.QWidget):
     """ 
@@ -27,9 +38,11 @@ class LoadCellController(QtWidgets.QWidget):
     processed_lc_data_available = QtCore.pyqtSignal(float,float)
     raw_lc_data_available = QtCore.pyqtSignal(float,float,float)
 
-    def __init__(self, parent):
-        super(LoadCellController, self).__init__(parent=parent) # parent is SettingsWidget
-        self.task_config = parent.task_config['LoadCell']
+    def __init__(self, parent, config, task_config):
+        super(LoadCellController, self).__init__(parent=parent)
+        self.name = "LoadCellController"
+        self.config = config
+        self.task_config = task_config
        
         # signals related 
         self.raw_lc_data_available.connect(self.on_data)
@@ -73,16 +86,16 @@ class LoadCellController(QtWidgets.QWidget):
 
     def layout(self):
         """ position children to myself """
-        small_gap = int(self.parent().profiles['General']['small_gap'])
-        big_gap = int(self.parent().profiles['General']['big_gap'])
+        small_gap = int(self.config['ui']['small_gap'])
+        big_gap = int(self.config['ui']['big_gap'])
 
-        functions.scale_Widgets([self] + self.Children[:-1],mode='max') # dirty hack to not scale the state machine monitor
+        utils.scale_Widgets([self] + self.Children[:-1],mode='max') # dirty hack to not scale the state machine monitor
         for i,child in enumerate(self.Children):
             if i == 0:
                 ref = self
             else:
                 ref = self.Children[i-1]
-            functions.tile_Widgets(child, ref, where='below',gap=big_gap)
+            utils.tile_Widgets(child, ref, where='below',gap=big_gap)
 
     def zero(self):
         """ remove offset from signal by subtracting the average """
@@ -90,8 +103,8 @@ class LoadCellController(QtWidgets.QWidget):
 
     def connect(self):
         """ establish connection for raw serial data sending to the arduino via com_port2 """
-        com_port = self.parent().task_config['Arduino']['com_port2']
-        baud_rate = self.parent().task_config['Arduino']['baud_rate']
+        com_port = self.config['connections']['arduino_data_port']
+        baud_rate = self.config['connections']['arduino_baud_rate']
 
         try:
             print("initializing 2nd serial port to arduino: " + com_port)
@@ -225,13 +238,15 @@ class LoadCellController(QtWidgets.QWidget):
         pass
 
 """
-.___  ___.   ______   .__   __.  __  .___________.  ______   .______
-|   \/   |  /  __  \  |  \ |  | |  | |           | /  __  \  |   _  \
-|  \  /  | |  |  |  | |   \|  | |  | `---|  |----`|  |  |  | |  |_)  |
-|  |\/|  | |  |  |  | |  . `  | |  |     |  |     |  |  |  | |      /
-|  |  |  | |  `--'  | |  |\   | |  |     |  |     |  `--'  | |  |\  \----.
-|__|  |__|  \______/  |__| \__| |__|     |__|      \______/  | _| `._____|
-
+ 
+ ##     ##  #######  ##    ## #### ########  #######  ########  
+ ###   ### ##     ## ###   ##  ##     ##    ##     ## ##     ## 
+ #### #### ##     ## ####  ##  ##     ##    ##     ## ##     ## 
+ ## ### ## ##     ## ## ## ##  ##     ##    ##     ## ########  
+ ##     ## ##     ## ##  ####  ##     ##    ##     ## ##   ##   
+ ##     ## ##     ## ##   ###  ##     ##    ##     ## ##    ##  
+ ##     ##  #######  ##    ## ####    ##     #######  ##     ## 
+ 
 """
 
 class LoadCellMonitor(QtWidgets.QWidget):

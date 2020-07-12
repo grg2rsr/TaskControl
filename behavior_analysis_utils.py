@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import os 
 from pathlib import Path
-from functions import parse_code_map
 import utils
 import datetime
 from tqdm import tqdm
@@ -28,7 +27,7 @@ def get_LogDf_from_path(log_path):
     code_map_path = log_path.parent / task_name / "Arduino" / "src" / "event_codes.h"
 
     # and read
-    CodesDf = bhv.parse_code_map(code_map_path)
+    CodesDf = utils.parse_code_map(code_map_path)
     code_map = dict(zip(CodesDf['code'],CodesDf['name']))
     LogDf = bhv.parse_arduino_log(log_path, code_map)
 
