@@ -33,8 +33,8 @@ class TaskControlApp(QtWidgets.QApplication):
 
 if __name__ == "__main__":
     import argparse
-    # config_path = 'profiles_box1.ini'
-    config_path = "config.ini"
+    config_path = 'config_box1.ini'
+    # config_path = "config.ini"
     
     # argparsing
     parser = argparse.ArgumentParser(description=' xXx Unified TaskControl xXx ')

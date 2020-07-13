@@ -658,29 +658,32 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
             self.addRow(row['name'], ValueEdit(row['value'], row['dtype'], self.parent()))
 
     def set_entry(self, name, value):
-        # controller function - update both view and model
+        """ controller function - update both view and model """
         try:
             # get index
             ix = list(self.Df['name']).index(name)
-            self.itemAt(ix,1).widget().set_value(value) # update view
-            self.Df.loc[ix,'value'] = value # update model 
+            
+            # update model 
+            dtype = self.itemAt(ix,1).widget().dtype
+            self.Df.loc[ix,'value'] = sp.array(value, dtype=dtype) 
+            
+            # update view
+            self.itemAt(ix,1).widget().set_value(value)
+
         except ValueError:
-            print("attempting to set a name,value not in Df")
+            print("attempting to set a name, value not in Df:" + str(name) + " " + str(value))
+
 
     def set_entries(self, Df):
-        # controller function - set with an entire Df
-
         # test compatibility first
         if not sp.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
             print("can't set entries bc they are not equal ... this indicates some major bug")
-            print("new")
-            print(Df)
-            print()
-            print("old")
-            print(self.Df)
-            sys.exit()
+            utils.debug_trace()
+        
+        # update the model
+        self.Df = Df
 
-        self.Df = Df # update the model
+        # update the view
         for i, row in Df.iterrows():
             self.set_entry(row['name'], row['value'])
 
@@ -699,7 +702,6 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
             label = self.itemAt(i, 0).widget()
             widget = self.itemAt(i, 1).widget()
             self.set_entry(label.text(), widget.get_value())
-
 
 class ErrorWidget(QtWidgets.QMessageBox):
     # TODO implement me

@@ -431,9 +431,12 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             print("trying to use last vars, but animal has not been run on this task before.")
 
     def on_serial(self, line):
+        """ if the var is in the interface variables, set it """
+
         if line.startswith('<VAR'):
             _, name, value, t = line[1:-1].split(' ')
-            self.VariableEditWidget.set_entry(name, value) # the lineedit should take care of the correct dtype
+            if name in self.VariableEditWidget.Df['name'].values:
+                self.VariableEditWidget.set_entry(name, value) # the lineedit should take care of the correct dtype
 
 """
  
@@ -487,11 +490,8 @@ class OnlineDataAnalyser(QtCore.QObject):
 
             # update water counter if reward was collected
             if decoded == 'REWARD_COLLECTED_EVENT':
-                VarsDf = self.parent.VariableController.VariableEditWidget.get_entries()
-                if 'reward_magnitude' in VarsDf['name'].values:
-                    VarsDf.index = VarsDf.name
-                    current_magnitude = VarsDf.loc['reward_magnitude','value']
-                    self.WaterCounter.increment(current_magnitude)
+                current_magnitude = self.parent.VariableController.VariableEditWidget.get_entry('reward_magnitude')['value']
+                self.WaterCounter.increment(current_magnitude)
 
             # the event that separates the stream of data into chunks of trials
             if decoded == "TRIAL_AVAILABLE_STATE": # HARDCODE
@@ -687,7 +687,7 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         self.Layout = QtWidgets.QVBoxLayout()
         self.States_Layout = QtWidgets.QHBoxLayout()
         self.Spans_Layout = QtWidgets.QHBoxLayout()
-        self.Events_Layout = QtWidgets.QHBoxLayout()
+        # self.Events_Layout = QtWidgets.QHBoxLayout()
         self.Btns = []
 
         for code, full_name in self.code_map.items():
@@ -703,15 +703,15 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
             if kind == 'ON':
                 Btn.setCheckable(False)
                 self.Spans_Layout.addWidget(Btn)
-            if kind == 'EVENT':
-                Btn.setCheckable(False)
-                self.Events_Layout.addWidget(Btn)
+            # if kind == 'EVENT':
+            #     Btn.setCheckable(False)
+            #     self.Events_Layout.addWidget(Btn)
 
             self.Btns.append((full_name,Btn))
 
         self.Layout.addLayout(self.States_Layout)
         self.Layout.addLayout(self.Spans_Layout)
-        self.Layout.addLayout(self.Events_Layout)
+        # self.Layout.addLayout(self.Events_Layout)
 
         self.setLayout(self.Layout)
         self.setWindowTitle("State Machine Monitor")
