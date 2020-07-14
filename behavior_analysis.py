@@ -1,7 +1,7 @@
 # %%
-# %matplotlib qt5
-# %load_ext autoreload
-# %autoreload 2
+%matplotlib qt5
+%load_ext autoreload
+%autoreload 2
 
 from matplotlib import pyplot as plt
 import matplotlib as mpl
@@ -43,7 +43,7 @@ task_name = '_'.join(log_path.parent.name.split('_')[2:])
 code_map_path = log_path.parent.joinpath(task_name,"Arduino","src","event_codes.h")
 
 ### READ 
-CodesDf = bhv.parse_code_map(code_map_path)
+CodesDf = utils.parse_code_map(code_map_path)
 code_map = dict(zip(CodesDf['code'],CodesDf['name']))
 LogDf = bhv.parse_arduino_log(log_path, code_map)
 

@@ -13,8 +13,12 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 bool deliver_reward = false;
+bool punish = false;
 
 int current_state = 0; // WATCH OUT this is ini state
+
+// HARDCODED trial type probabilites
+float p_interval[6] = {1,0.5,0,0,0.5,1}; // FIXME HARDCODE
 
 void getSerialData() {
     // check if command data is available and if yes read it
@@ -84,15 +88,15 @@ void processSerialData() {
             // INSERT_GETTERS
 
             if (strcmp(varname,"reward_valve_open_dur")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(reward_valve_open_dur)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_valve_open_dur)+String(">"));
             }
     
             if (strcmp(varname,"reward_valve_closed_dur")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(reward_valve_closed_dur)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_valve_closed_dur)+String(">"));
             }
     
             if (strcmp(varname,"reward_valve_switches")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(reward_valve_switches)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_valve_switches)+String(">"));
             }
                 if (strcmp(varname,"current_state")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
@@ -122,9 +126,9 @@ void processSerialData() {
             strlcpy(varvalue, line+split+1, len-split+1);
 
             // for the state machine "force state" buttons
-            if (strcmp(varname,"current_state")==0){
-                current_state = atoi(varvalue);
-            }
+            // if (strcmp(varname,"current_state")==0){
+            //     current_state = atoi(varvalue);
+            // }
 
             // INSERT_SETTERS
 
@@ -140,6 +144,35 @@ void processSerialData() {
                 reward_valve_switches = strtoul(varvalue,NULL,10);
             }
     
+        }
+
+        // UPD - update trial probs - HARDCODED for now, n trials
+        // format UPD 0 0.031 or similar
+        if (strcmp(mode,"UPD")==0){
+            
+            char line[len-4+1];
+            strlcpy(line, receivedChars+4, len-4+1);
+
+            // get index of space
+            len = sizeof(line)/sizeof(char);
+            unsigned int split = 0;
+            for (unsigned int i = 0; i < numChars; i++){
+                if (line[i] == ' '){
+                    split = i;
+                    break;
+                }
+            }
+
+            // split by space
+            char varname[split+1];
+            strlcpy(varname, line, split+1);
+
+            char varvalue[len-split+1];
+            strlcpy(varvalue, line+split+1, len-split+1);
+
+            int ix = atoi(varname);
+            float p = atof(varvalue);
+            p_interval[ix] = p;
         }
 
         // CMD
@@ -162,6 +195,10 @@ void processSerialData() {
 
             if (strcmp(CMD,"r")==0){
                 deliver_reward = true;
+            }
+
+            if (strcmp(CMD,"p")==0){
+                punish = true;
             }
         }
 

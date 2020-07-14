@@ -584,7 +584,7 @@ def get_arduino_sync(log_path, sync_event_name="TRIAL_AVAILABLE_STATE", save=Tru
     code_map_path = log_path.parent / task_name / "Arduino" / "src" / "event_codes.h"
 
     ### READ 
-    CodesDf = bhv.parse_code_map(code_map_path)
+    CodesDf = utils.parse_code_map(code_map_path)
     code_map = dict(zip(CodesDf['code'],CodesDf['name']))
     LogDf = bhv.parse_arduino_log(log_path, code_map)
 

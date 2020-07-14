@@ -206,6 +206,9 @@ class ArduinoController(QtWidgets.QWidget):
         # backing up original values
         shutil.copy(self.vars_path,self.vars_path.with_suffix('.default'))
 
+        # setting the valve calibration factor
+        self.VariableController.VariableEditWidget.set_entry('valve_ul_ms',self.config['box']['valve_ul_ms'])
+        
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
 
@@ -286,7 +289,7 @@ class ArduinoController(QtWidgets.QWidget):
                         self.serial_data_available.emit(line)
 
                 except:
-                    print("failed read from serial!")
+                    print("failed read from serial!", line)
                     break
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))

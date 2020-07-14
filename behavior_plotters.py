@@ -197,15 +197,19 @@ def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post, tick_ref
     heat1 = axes[0].matshow(Fx,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,alpha =0.75)
     heat2 = axes[1].matshow(Fy,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,alpha =0.75)
 
-    # Ticks in seconds
-    plt.setp(axes, xticks=np.arange(pre, post+1, 500), xticklabels=np.arange(pre//1000, (post//1000)+0.5, 0.5))
-
     # Labels, title and formatting
-    axes[0].set_title('Forces in X axis')
+    axes[0].set_title('Forces in X axis (aligned to)' + align_reference)
+    axes[0].set_xlabel('Time (s)')
+    axes[0].set_ylabel('Trials')
+
+    axes[1].set_title('Forces in Y axis')
+
+    # Ticks in seconds
+    plt.setp(axes, xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(pre//1000, (post//1000)+0.5, 0.5))
+
     cbar = plt.colorbar(heat1, ax=axes[0], orientation='horizontal')
     cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Left","Right"])
 
-    axes[1].set_title('Forces in Y axis')
     cbar = plt.colorbar(heat2, ax=axes[1], orientation='horizontal')
     cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Down","Up"])
 
@@ -216,14 +220,11 @@ def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post, tick_ref
     choice_times = choice_timesDf.to_numpy() - event_times.to_numpy() - pre # 'pre' used to shift and center the plot at 0s
     choice_times[choice_times > post+995] = np.nan # deal with choice missed events which are registered as 'choices' at [post+1sec]
 
-    ymin = np.arange(-0.5,len(choice_times)) # need to shift since line starts at center of trial
+    ymin = np.arange(-0.5,len(choice_times)) # need to shift since tick starts at center of trial
     ymax = np.arange(0.5,len(choice_times)+1)
 
     axes[0].vlines(choice_times, ymin, ymax, colors='black')
     axes[1].vlines(choice_times, ymin, ymax, colors='black')
-
-    plt.xlabel('Time (s)')
-    plt.ylabel('Trials')
 
     for ax in axes:
         ax.set_aspect('auto')
@@ -283,33 +284,28 @@ def plot_choice_rt_histogram(LogDf, axes=None):
     spans = bhv.get_spans_from_names(LogDf, 'TRIAL_ENTRY_EVENT', 'ITI_STATE')
     TrialDfs = []
     for span in spans.iterrows():
-        TrialDfs.append(bhv.time_slice(LogDf,span['t_on'],span['t_off']))
-
-    # # Getting a list of trialDfs in which trials are both sucessfull and left choice
-    # OurTrialDfs = []
-    # for TrialDf in TrialDfs:
-    #     if "CHOICE_LEFT_EVENT" in TrialDf.name.values and "TRIAL_SUCCESSFUL_EVENT" in TrialDf.name.values:
-    #         OurTrialDfs.append(TrialDf)
+        TrialDfs.append(bhv.time_slice(LogDf,span[1]['t_on'],span[1]['t_off'])) # Why the need for [1]?
 
     # Getting choice RT's
     left_choice_Dfs, right_choice_Dfs = [],[]
     rt_left_choice, rt_right_choice = [],[]
 
     for TrialDf in TrialDfs:
-        second_cue_time = TrialDf.loc[TrialDf['name'] == 'SECOND_TIMING_CUE_EVENT']['t']
-
-        if "CHOICE_LEFT_EVENT" in TrialDf.name.values:
+        if "CHOICE_LEFT_EVENT" in TrialDf.name.values and "SECOND_TIMING_CUE_EVENT" in TrialDf.name.values:
             left_choice_Dfs.append(TrialDf)
             left_choice_time = TrialDf.loc[TrialDf['name'] == 'CHOICE_LEFT_EVENT']['t']
 
+            second_cue_time = TrialDf.loc[TrialDf['name'] == 'SECOND_TIMING_CUE_EVENT']['t']
+
             rt_left_choice.append(int(left_choice_time.values - second_cue_time.values))
 
-        if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
+        if "CHOICE_RIGHT_EVENT" in TrialDf.name.values and "SECOND_TIMING_CUE_EVENT" in TrialDf.name.values:
             right_choice_Dfs.append(TrialDf)
             right_choice_time = TrialDf.loc[TrialDf['name'] == 'CHOICE_RIGHT_EVENT']['t']
 
-            rt_right_choice.append(int(right_choice_time.values - second_cue_time.values))
+            second_cue_time = TrialDf.loc[TrialDf['name'] == 'SECOND_TIMING_CUE_EVENT']['t']
 
+            rt_right_choice.append(int(right_choice_time.values - second_cue_time.values))
 
     plt.hist(rt_left_choice, 25, range = (0,2000), 
             alpha=0.5, color='red', edgecolor='none', label = 'Left choice')
