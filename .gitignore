@@ -8,4 +8,4 @@ __pycache__/*
 local
 old
 Animals
-config_box*
+config.ini
