@@ -230,12 +230,13 @@ class SettingsWidget(QtWidgets.QWidget):
         
         # make folder structure
         date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
-        folder = Path(self.config['paths']['animals_folder']) / self.animal / '_'.join([date_time,self.task])
-        os.makedirs(folder,exist_ok=True)
+        self.run_folder = Path(self.config['paths']['animals_folder']) / self.animal / '_'.join([date_time,self.task])
+        
+        os.makedirs(self.run_folder,exist_ok=True)
 
         for controller in self.Controllers:
             print("running controller: ", controller.name)
-            controller.Run(folder)
+            controller.Run(self.run_folder)
 
         self.running = True
 
@@ -255,6 +256,10 @@ class SettingsWidget(QtWidgets.QWidget):
         self.Plot_button.setEnabled(False)
         # TODO make the task unchangeable
 
+        # save the current animal metadata (includes weight)
+        out_path = self.run_folder / "animal_meta.csv"
+        self.animal_meta.to_csv(out_path)
+
         self.timer.stop()
 
         # Flags
@@ -268,15 +273,14 @@ class SettingsWidget(QtWidgets.QWidget):
         self.task_changed() # this reinitialized all controllers
 
 
-    def get_animal_meta(self):
-        # TODO FUTURE make a function of Animal object
+    def get_animal_metadata(self):
         meta_path = Path(self.config['paths']['animals_folder']) / self.animal / 'animal_meta.csv'
         return pd.read_csv(meta_path)
 
     def animal_changed(self):
         self.config['current']['animal'] = self.AnimalChoiceWidget.get_value()
         self.animal = self.config['current']['animal']
-        self.animal_meta = self.get_animal_meta()
+        self.animal_meta = self.get_animal_metadata()
 
         # displaying previous sessions info
         if hasattr(self,'AnimalInfoWidget'):
@@ -439,8 +443,8 @@ class RunInfoWidget(QtWidgets.QDialog):
         self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
 
         # Fields
-        self.EarTagWidget = ValueEdit('', 'U', self)
-        self.FormLayout.addRow("Ear tag", self.EarTagWidget)
+        # self.EarTagWidget = ValueEdit('', 'U', self)
+        # self.FormLayout.addRow("Ear tag", self.EarTagWidget)
         self.WeigthEditWidget = ValueEdit(30, 'f4', self)
         self.FormLayout.addRow("Weight (g)", self.WeigthEditWidget)
 
@@ -461,12 +465,15 @@ class RunInfoWidget(QtWidgets.QDialog):
 
     def done_btn_clicked(self):
         meta = self.parent().animal_meta
-        correct_ear_tag = meta.set_index('name').loc['Ear tag'].value
-        entered_ear_tag = str(self.EarTagWidget.get_value()).upper()
-        if  entered_ear_tag != correct_ear_tag:
-            print("wrong ear tag or wrong mouse!")
-        else:
-            self.accept()
+        weight = self.WeigthEditWidget.get_value()
+        meta.loc[meta['name'] == 'current_weight','value'] = weight
+        # correct_ear_tag = meta.set_index('name').loc['Ear tag'].value
+        # entered_ear_tag = str(self.EarTagWidget.get_value()).upper()
+        # if  entered_ear_tag != correct_ear_tag:
+        #     print("wrong ear tag or wrong mouse!")
+        # else:
+        #     self.accept()
+        self.accept()
 
 
 # class NewAnimalWidget(QtWidgets.QWidget):

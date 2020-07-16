@@ -372,15 +372,15 @@ def create_LogDf_LCDf_csv(animal_folder_path, task_name, save=True):
         log_path = path / "arduino_log.txt"
         harp_csv_path = path.joinpath("bonsai_harp_log.csv")
 
-        # get the sync
-        _ , t_harp = bhv.parse_harp_csv(harp_csv_path, save=True)
+        # get the sync and stores LCDf.csv
+        LoadCellDf , t_harp = bhv.parse_harp_csv(harp_csv_path, save=True)
         t_harp = t_harp['t'].values
         t_arduino = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_AVAILABLE_STATE", save=True)['t'].values
 
         if t_harp.shape[0] != t_arduino.shape[0]:
             t_arduino, t_harp = cut_timestamps(t_arduino, t_harp)
         
-        # sync datasets
+        # sync datasets and stores LogDf.csv
         m,b = bhv.sync_clocks(t_harp, t_arduino)
         LogDf ['t_arduino'] = LogDf['t']
         LogDf['t'] = (LogDf['t'])*m + b

@@ -30,7 +30,7 @@ float X_start_thresh = 1000.0;
 
 float X_thresh = 1000.0;
 
-float X_target_thresh = 2250.0;
+float X_target_thresh = 2500.0;
 
 float X_increment = 0.03;
 

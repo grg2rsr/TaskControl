@@ -7,6 +7,7 @@ from matplotlib import cm
 import behavior_analysis_utils as bhv
 import pandas as pd
 # this should be changed ... 
+import itertools
 from pathlib import Path
 import scipy as sp
 import numpy as np
@@ -176,68 +177,87 @@ def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
 
     return axes
 
-def plot_forces_heatmaps(LogDf, LoadCellDf, align_reference, pre, post, tick_reference = None):
+def plot_forces_heatmaps(LogDf, LoadCellDf, align_ref, pre, post, tick_ref = None):
     """ Plots heatmaps of LC forces in X/Y axes algined to any event (also marks choice times) """
 
-    event_times = bhv.get_events_from_name(LogDf, align_reference)
+    event_times = bhv.get_events_from_name(LogDf, align_ref)
 
-    Fx = []
-    Fy = []
+    Fx_correct, Fx_incorrect, Fx_missed = [], [], []
+    Fy_correct, Fy_incorrect, Fy_missed = [], [], []
+
+    # Splitting Fx and Fy by trial result type (correct/incorrect/missed)
     for t in event_times['t']:
         F = bhv.time_slice(LoadCellDf,t+pre,t+post)
-        Fx.append(F['x'])
-        Fy.append(F['y'])
+        TrialDf = bhv.time_slice(LogDf,t+pre,t+post)
 
-    Fx = np.array(Fx)
-    Fy = np.array(Fy)
+        if "CHOICE_CORRECT_EVENT" in TrialDf.name.values:
+            Fx_correct.append(F['x'])
+            Fy_correct.append(F['y'])
+        elif "CHOICE_INCORRECT_EVENT" in TrialDf.name.values:
+            Fx_incorrect.append(F['x'])
+            Fy_incorrect.append(F['y'])
+        elif "CHOICE_MISSED_EVENT" in TrialDf.name.values:
+            Fx_missed.append(F['x'])
+            Fy_missed.append(F['y'])
+
+    # Appending groups of trials into one
+    Fx = np.array(Fx_correct + Fx_incorrect + Fx_missed)
+    Fy = np.array(Fy_correct + Fy_incorrect + Fy_missed)
 
     force_tresh = 1500
-
+    
     _ , axes = plt.subplots(ncols=2, sharex=True, sharey=True)
-    heat1 = axes[0].matshow(Fx,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,alpha =0.75)
-    heat2 = axes[1].matshow(Fy,cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,alpha =0.75)
+    heat1 = axes[0].matshow(Fx, cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,alpha =0.75)
+    heat2 = axes[1].matshow(Fy, cmap='PiYG',vmin=-force_tresh,vmax=force_tresh,alpha =0.75)
 
     # Labels, title and formatting
-    axes[0].set_title('Forces in X axis (aligned to)' + align_reference)
+    axes[0].set_title('Forces in X axis (aligned to) ' + align_ref)
     axes[0].set_xlabel('Time (s)')
     axes[0].set_ylabel('Trials')
 
     axes[1].set_title('Forces in Y axis')
 
-    # Ticks in seconds
-    plt.setp(axes, xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(pre//1000, (post//1000)+0.5, 0.5))
+    # xticks in seconds
+    plt.setp(axes, xticks=np.arange(0, post-pre+1, 1000), xticklabels=np.arange(pre//1000, (post//1000)+0.5, 1))
 
+    # colorbar 
     cbar = plt.colorbar(heat1, ax=axes[0], orientation='horizontal')
     cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Left","Right"])
 
     cbar = plt.colorbar(heat2, ax=axes[1], orientation='horizontal')
     cbar.set_ticks([-force_tresh, force_tresh]); cbar.set_ticklabels(["Down","Up"])
 
-    'TODO Plotting black tick marks signalling whatever the input'
-    correct_choice_timesDf = bhv.get_events_from_name(LogDf,"CHOICE_CORRECT_EVENT")
-    incorrect_choice_timesDf = bhv.get_events_from_name(LogDf,"CHOICE_INCORRECT_EVENT")
-    choice_timesDf = correct_choice_timesDf.append(incorrect_choice_timesDf).sort_index() 
-    choice_times = choice_timesDf.to_numpy() - event_times.to_numpy() - pre # 'pre' used to shift and center the plot at 0s
-    choice_times[choice_times > post+995] = np.nan # deal with choice missed events which are registered as 'choices' at [post+1sec]
+    """ NEED TO BE FIXED """
+    # choice_correctDf = bhv.get_events_from_name(LogDf, "CHOICE_CORRECT_EVENT")
+    # choice_incorrectDf = bhv.get_events_from_name(LogDf, "CHOICE_INCORRECT_EVENT")
+    # choice_missedDf = bhv.get_events_from_name(LogDf, "CHOICE_MISSED_EVENT")
+    
+    # choice_timesDf = pd.concat([choice_correctDf, choice_incorrectDf, choice_missedDf])
 
-    ymin = np.arange(-0.5,len(choice_times)) # need to shift since tick starts at center of trial
-    ymax = np.arange(0.5,len(choice_times)+1)
+    # choice_times = choice_timesDf.to_numpy() - event_times.to_numpy() - pre # 'pre' used to shift and center the plot at 0s
+    # choice_times[choice_times > post+995] = np.nan # deal with choice missed events which are registered as 'choices' at [post+1sec]
 
-    axes[0].vlines(choice_times, ymin, ymax, colors='black')
-    axes[1].vlines(choice_times, ymin, ymax, colors='black')
+    # ymin = np.arange(-0.5,len(choice_times)) # need to shift since lines starts at center of trial
+    # ymax = np.arange(0.5,len(choice_times)+1)
+
+    # axes[0].vlines(choice_times, ymin, ymax, colors='black')
+    # axes[1].vlines(choice_times, ymin, ymax, colors='black')
+
+    axes[0].axhline(len(Fx_correct), color='red', lw=1, alpha=0.75)
+    axes[0].axhline(len(Fx_correct)+len(Fx_incorrect), color='black', lw=1, alpha=0.75)
 
     for ax in axes:
         ax.set_aspect('auto')
 
     return axes
 
-def plot_forces_trajectories(LogDf, LoadCellDf, align_reference, pre, post, no_splits):
+def plot_forces_trajectories(LogDf, LoadCellDf, align_ref, pre, post, no_splits):
     """ Plots trajectories in 2D aligned to any TWO events"""
 
     _ , axes = plt.subplots(ncols=2,sharex=True,sharey=True)
     colors = cm.RdPu(np.linspace(0, 1, no_splits))
 
-    event_times = bhv.get_events_from_name(LogDf, align_reference[0])
+    event_times = bhv.get_events_from_name(LogDf, align_ref[0])
 
     # 1st dim is number of events, 2nd is window width, 3rd columns of Df (x an y are 3nd and 4th)
     F = []
@@ -253,7 +273,7 @@ def plot_forces_trajectories(LogDf, LoadCellDf, align_reference, pre, post, no_s
         avg_chunk = np.average(chunk,0) # average along trials
         axes[0].plot(avg_chunk[:,1], avg_chunk[:,2], alpha=0.5, lw=1, color = clr)
 
-    event_times = bhv.get_events_from_name(LogDf, align_reference[1])
+    event_times = bhv.get_events_from_name(LogDf, align_ref[1])
 
     # 1st dim is number of events, 2nd is window width, 3rd columns of Df (x an y are 3nd and 4th)
     F = []
@@ -318,10 +338,10 @@ def plot_choice_rt_histogram(LogDf, axes=None):
 
     return axes  
 
-def plot_force_magnitude(LogDf, LoadCellDf, align_reference, pre, post):
+def plot_force_magnitude(LogDf, LoadCellDf, align_ref, pre, post):
     """ Plots the magnitude of the 2D forces vector over the trial aligned to any event """
 
-    event_times = bhv.get_events_from_name(LogDf, align_reference)
+    event_times = bhv.get_events_from_name(LogDf, align_ref)
 
     fig, axes = plt.subplots()
     tvec = sp.arange(pre,post,1)
@@ -343,10 +363,10 @@ def plot_force_magnitude(LogDf, LoadCellDf, align_reference, pre, post):
 
     return axes
 
-def plot_forces_histogram(LogDf, LoadCellDf, align_reference, pre, post):
+def plot_forces_histogram(LogDf, LoadCellDf, align_ref, pre, post):
     """ Plots the evolution of forces in X/Y axis across the session plus fitted distros """
 
-    event_times = bhv.get_events_from_name(LogDf, align_reference)
+    event_times = bhv.get_events_from_name(LogDf, align_ref)
     fig = plt.figure()
 
     Fx = []
