@@ -485,11 +485,21 @@ class OnlineDataAnalyser(QtCore.QObject):
             decoded = self.code_map[code]
 
             # update counters
-            if decoded == 'TRIAL_SUCCESSFUL_EVENT':
-                self.TrialCounter.increment(successful=True)
+            if decoded == 'CHOICE_CORRECT_EVENT':
+                self.TrialCounter.increment('correct')
+                self.TrialCounter.increment('total')
 
-            if decoded == 'TRIAL_UNSUCCESSFUL_EVENT':
-                self.TrialCounter.increment(successful=False)
+            if decoded == 'CHOICE_INCORRECT_EVENT':
+                self.TrialCounter.increment('incorrect')
+                self.TrialCounter.increment('total')
+
+            if decoded == 'CHOICE_MISSED_EVENT':
+                self.TrialCounter.increment('missed')
+                self.TrialCounter.increment('total')
+            
+            if decoded == 'PREMATURE_CHOICE_EVENT':
+                self.TrialCounter.increment('premature')
+                self.TrialCounter.increment('total')
 
             # update water counter if reward was collected
             if decoded == 'REWARD_COLLECTED_EVENT':

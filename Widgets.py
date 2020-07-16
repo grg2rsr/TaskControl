@@ -114,8 +114,9 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # display number of trials
         # currently the updating is done within a Monitor!
-        self.TrialCounter = TrialCounter(self)
-        FormLayout.addRow('completed/aborted/total',self.TrialCounter)
+        self.TrialCounter = TrialCounter2(self)
+        # FormLayout.addRow('completed/aborted/total',self.TrialCounter)
+        FormLayout.addRow(self.TrialCounter)
 
         # display amount of water consumed
         self.WaterCounter = WaterCounter(self)
@@ -353,13 +354,13 @@ class SettingsWidget(QtWidgets.QWidget):
             max_time, max_water, max_trials = Df['value'] # depends on order ... 
             current_time = dt.seconds/60
             current_water = int(float(self.WaterCounter.text()))
-            current_num_trials = int(self.TrialCounter.text().split('\t')[0].split('/')[-1]) # total number of trials
+            # current_num_trials = int(self.TrialCounter.text().split('\t')[0].split('/')[-1]) # total number of trials
             if current_time >= max_time and max_time > 0:
                 self.Done()
             if current_water >= max_water and max_water > 0:
                 self.Done()
-            if current_num_trials >= max_trials and max_trials > 0:
-                self.Done()
+            # if current_num_trials >= max_trials and max_trials > 0:
+            #     self.Done()
 
 """
  
@@ -584,6 +585,71 @@ class TrialCounter(QtWidgets.QLabel):
 
         new_frac = sp.around(vals[0]/vals[2],2)
         self.setText('/'.join([str(v) for v in vals]) + '\t' + str(new_frac))
+
+# class TrialCounter2(QtWidgets.QWidget):
+#     """ """
+#     def __init__(self, parent):
+#         super(TrialCounter2, self).__init__(parent=parent)
+#         # self.categories = ['correct','incorrect','missed','premature','total']
+#         self.counters = dict(correct=QtWidgets.QLabel(''),
+#                              incorrect=QtWidgets.QLabel(''),
+#                              missed=QtWidgets.QLabel(''),
+#                              premature=QtWidgets.QLabel(''),
+#                              total=QtWidgets.QLabel(''))
+
+#         self.initUI()
+#         self.reset()
+    
+#     def initUI(self):
+#         FormLayout = QtWidgets.QFormLayout(self)
+#         FormLayout.setVerticalSpacing(10)
+#         FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
+
+#         for category in ['correct','incorrect','missed','premature','total']:
+#             FormLayout.addRow(category, self.counters[category])
+
+#         self.setLayout(FormLayout)
+       
+#     def reset(self):
+#         for label, counter in self.counters.items():
+#             counter.setText('0')
+
+#     def increment(self,label):
+#         count = int(self.counters[label].text())
+#         self.counters[label].setText(str(count+1))
+
+class TrialCounter2(QtWidgets.QFormLayout):
+    """ """
+    def __init__(self, parent):
+        super(TrialCounter2, self).__init__(parent=parent)
+        # self.categories = ['correct','incorrect','missed','premature','total']
+        self.counters = dict(correct=QtWidgets.QLabel(''),
+                             incorrect=QtWidgets.QLabel(''),
+                             missed=QtWidgets.QLabel(''),
+                             premature=QtWidgets.QLabel(''),
+                             total=QtWidgets.QLabel(''))
+
+        self.initUI()
+        self.reset()
+    
+    def initUI(self):
+        # FormLayout = QtWidgets.QFormLayout(self)
+        # self.setVerticalSpacing(10)
+        self.setHorizontalSpacing(10)
+        self.setLabelAlignment(QtCore.Qt.AlignRight)
+
+        for category in ['correct','incorrect','missed','premature','total']:
+            self.addRow(category, self.counters[category])
+
+        # self.setLayout(FormLayout)
+       
+    def reset(self):
+        for label, counter in self.counters.items():
+            counter.setText('0')
+
+    def increment(self,label):
+        count = int(self.counters[label].text())
+        self.counters[label].setText(str(count+1))
 
 class WaterCounter(QtWidgets.QLabel):
     """ """
