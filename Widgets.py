@@ -13,6 +13,8 @@ from PyQt5 import QtWidgets
 import utils
 import behavior_analysis_utils as bhv
 
+from TaskVis_pg import SessionVis, TrialsVis
+
 """
  
  ##     ##    ###    #### ##    ##    ##      ## #### ##    ## ########   #######  ##      ## 
@@ -90,12 +92,18 @@ class SettingsWidget(QtWidgets.QWidget):
         self.DoneBtn.clicked.connect(self.Done)
         self.DoneBtn.setEnabled(False)
 
-        # plot button
-        self.Plot_button = QtWidgets.QPushButton(self)
-        self.Plot_button.clicked.connect(self.start_plotters)
-        self.Plot_button.setText('Plot performance')
-        FormLayout.addRow(self.Plot_button)
-        self.Plot_button.setEnabled(False)
+        # plot buttons
+        self.plot_trial_btn = QtWidgets.QPushButton(self)
+        self.plot_trial_btn.clicked.connect(self.plot_trial)
+        self.plot_trial_btn.setText('plot trial overview')
+        FormLayout.addRow(self.plot_trial_btn)
+        self.plot_trial_btn.setEnabled(False)
+
+        self.plot_session_btn = QtWidgets.QPushButton(self)
+        self.plot_session_btn.clicked.connect(self.plot_session)
+        self.plot_session_btn.setText('plot session overview')
+        FormLayout.addRow(self.plot_session_btn)
+        self.plot_session_btn.setEnabled(False)
 
         # sep
         line = QtWidgets.QFrame(self)
@@ -130,11 +138,11 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # self terminate
         self.selfTerminateCheckBox = QtWidgets.QCheckBox()
-        self.selfTerminateCheckBox.setChecked(False)
+        self.selfTerminateCheckBox.setChecked(True)
         
         FormLayout.addRow("self terminate", self.selfTerminateCheckBox)
-        Df = pd.DataFrame([['after (min) ',  60,   'int32'],
-                           ['after (ul) ',   1000, 'int32'],
+        Df = pd.DataFrame([['after (min) ',  45,   'int32'],
+                           ['after (ul) ',   500, 'int32'],
                            ['after #trials ',0,    'int32']],
                            columns=['name','value','dtype'])
 
@@ -185,14 +193,11 @@ class SettingsWidget(QtWidgets.QWidget):
         for child in self.Children:
             child.layout()
 
-    def start_plotters(self):
-        """ starts the online plotters """
-        # TODO FIXME this is not fully working and takes
-        # a while to process
-
-        from TaskVis_pg import SessionVis, TrialsVis
-        self.SessionVisWidget = SessionVis(self, self.ArduinoController.OnlineDataAnalyser)
+    def plot_trial(self):
         self.TrialsVisWidget = TrialsVis(self, self.ArduinoController.OnlineDataAnalyser)
+
+    def plot_session(self):
+        self.SessionVisWidget = SessionVis(self, self.ArduinoController.OnlineDataAnalyser)
 
     def closeEvent(self,event):
         """ reimplementation of closeEvent """
@@ -219,7 +224,8 @@ class SettingsWidget(QtWidgets.QWidget):
         # UI related
         self.RunBtn.setEnabled(False)
         self.DoneBtn.setEnabled(True)
-        self.Plot_button.setEnabled(True)
+        self.plot_trial_btn.setEnabled(True)
+        self.plot_session_btn.setEnabled(True)
         # TODO make the task changeable
 
         # animal popup
@@ -254,7 +260,8 @@ class SettingsWidget(QtWidgets.QWidget):
         # UI
         self.DoneBtn.setEnabled(False)
         self.RunBtn.setEnabled(True)
-        self.Plot_button.setEnabled(False)
+        self.plot_session_btn.setEnabled(False)
+        self.plot_trial_btn.setEnabled(False)
         # TODO make the task unchangeable
 
         # save the current animal metadata (includes weight)
@@ -349,18 +356,21 @@ class SettingsWidget(QtWidgets.QWidget):
         self.TimeLabel.display(str(dt).split('.')[0])
 
         # test for self termination
-        if self.selfTerminateCheckBox.checkState() == 2: # 2 is true
-            Df = self.selfTerminateEdit.get_entries()
-            max_time, max_water, max_trials = Df['value'] # depends on order ... 
+        if self.selfTerminateCheckBox.checkState() == 2: # if true
+            max_time = self.selfTerminateEdit.get_entry('after (min) ')['value']
+            max_water = self.selfTerminateEdit.get_entry('after (ul) ')['value']
+            max_trials = self.selfTerminateEdit.get_entry('after #trials ')['value']
+
             current_time = dt.seconds/60
-            current_water = int(float(self.WaterCounter.text()))
-            # current_num_trials = int(self.TrialCounter.text().split('\t')[0].split('/')[-1]) # total number of trials
+            current_water = self.WaterCounter.get_value()
+            current_trials = self.TrialCounter.get_value('total')
+
             if current_time >= max_time and max_time > 0:
                 self.Done()
             if current_water >= max_water and max_water > 0:
                 self.Done()
-            # if current_num_trials >= max_trials and max_trials > 0:
-            #     self.Done()
+            if current_trials >= max_trials and max_trials > 0:
+                self.Done()
 
 """
  
@@ -461,19 +471,17 @@ class RunInfoWidget(QtWidgets.QDialog):
         Full_Layout.addWidget(Btn)
         self.setLayout(Full_Layout)
 
-        self.setWindowTitle(" Run info ")
+        self.setWindowTitle("Run info")
         self.exec()
 
     def done_btn_clicked(self):
         meta = self.parent().animal_meta
         weight = self.WeigthEditWidget.get_value()
-        meta.loc[meta['name'] == 'current_weight','value'] = weight
-        # correct_ear_tag = meta.set_index('name').loc['Ear tag'].value
-        # entered_ear_tag = str(self.EarTagWidget.get_value()).upper()
-        # if  entered_ear_tag != correct_ear_tag:
-        #     print("wrong ear tag or wrong mouse!")
-        # else:
-        #     self.accept()
+        if 'current_weight' not in meta['name'].values:
+            ix = meta.shape[0]
+            meta.loc[ix] = ['current_weight', weight]
+        else:
+            meta.loc[meta['name'] == 'current_weight','value'] = weight
         self.accept()
 
 
@@ -645,11 +653,17 @@ class TrialCounter2(QtWidgets.QFormLayout):
        
     def reset(self):
         for label, counter in self.counters.items():
-            counter.setText('0')
+            counter.setText('0\t0')
 
     def increment(self,label):
-        count = int(self.counters[label].text())
-        self.counters[label].setText(str(count+1))
+        count = self.get_value(label)
+        nTrials = self.get_value('total') + 1
+        new_count = count + 1
+        new_frac = sp.around((count+1)/nTrials, 2)
+        self.counters[label].setText(str(new_count) + '\t' + str(new_frac))
+
+    def get_value(self,label):
+        return int(self.counters[label].text().split('\t')[0])
 
 class WaterCounter(QtWidgets.QLabel):
     """ """
@@ -664,6 +678,9 @@ class WaterCounter(QtWidgets.QLabel):
         current_amount = int(float(self.text()))
         new_amount = current_amount + amount
         self.setText(str(new_amount))
+
+    def get_value(self):
+        return int(float(self.text())) # FIXME check this
 
 class StringChoiceWidget(QtWidgets.QComboBox):
     """ A QComboBox with convenience setter and getter """

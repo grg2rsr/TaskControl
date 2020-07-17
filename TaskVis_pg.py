@@ -166,16 +166,15 @@ class SessionVis(QtWidgets.QWidget):
         Item = PlotWindow.addPlot(title=title)
         Item.setLabel("left", text=ylabel)
         Item.setLabel("bottom", text=xlabel)
-        Scatters = [Item.plot(symbolBrush=(100,100,100), symbolSize=5) for pen in pens]
+        Scatters = [Item.plot(symbolBrush=(100,100,100), symbolSize=5,pen=None) for pen in pens]
         return Scatters
 
     def initUI(self):
         self.setWindowTitle("Session performance monitor")
         self.Layout = QtWidgets.QHBoxLayout()
-        # self.setMinimumWidth(300) # FIXME hardcoded!
 
         # Display and aesthetics
-        self.PlotWindow = pg.GraphicsWindow()
+        self.PlotWindow = pg.GraphicsWindow() # deprecated use of graphicsWindow
 
         pen_1 = pg.mkPen(color=(200,100,100),width=2)
         pen_2 = pg.mkPen(color=(150,100,100),width=2)
@@ -201,7 +200,7 @@ class SessionVis(QtWidgets.QWidget):
         self.PlotWindow.nextColumn()
 
         kwargs = dict(title="psychometric", xlabel="time (s)", ylabel="p")
-        # self.PsychLine, = self.add_LinePlot([pen_1], self.PlotWindow, **kwargs)
+        self.PsychLine, = self.add_LinePlot([pen_1], self.PlotWindow, **kwargs)
         self.PsychScatter, = self.add_ScatterPlot([pen_1], self.PlotWindow, **kwargs)
         self.PlotWindow.nextColumn()
 
@@ -260,21 +259,20 @@ class SessionVis(QtWidgets.QWidget):
 
             # psychometric
             if True in SessionDf['has_choice'].values:
-                # print(TrialDf)
-                SDf = SessionDf[['timing_interval','choice']].dropna()
-                X = SDf['timing_interval'].values[:,sp.newaxis]
+                SDf = SessionDf[['this_interval','choice']].dropna()
+                X = SDf['this_interval'].values[:,sp.newaxis]
                 y = (SDf['choice'].values == 'right').astype('float32')
                 self.PsychScatter.setData(X.flatten(), y)
 
-                # try:
-                #     cLR = LogisticRegression()
-                #     cLR.fit(X,y)
+                try:
+                    cLR = LogisticRegression()
+                    cLR.fit(X,y)
 
-                #     x_fit = sp.linspace(0,3000,100)
-                #     psychometric = expit(x_fit * cLR.coef_ + cLR.intercept_).ravel()
-                #     self.PsychLine.setData(x=x_fit,y=psychometric)
-                # except:
-                #     pass
+                    x_fit = sp.linspace(0,3000,100)
+                    psychometric = expit(x_fit * cLR.coef_ + cLR.intercept_).ravel()
+                    self.PsychLine.setData(x=x_fit,y=psychometric)
+                except:
+                    pass
 
 
 
