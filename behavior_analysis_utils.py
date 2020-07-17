@@ -42,7 +42,7 @@ def parse_arduino_log(log_path, code_map=None):
     with open(log_path,'r') as fH:
         lines = fH.readlines()
 
-    return parse_lines(lines, code_map=code_map)
+    return parse_lines(lines, code_map=code_map, parse_var=True)
 
 # def parse_lines(lines, code_map=None):
 #     """ parses a list of lines from arduino into a pd.DataFrame

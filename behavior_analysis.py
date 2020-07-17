@@ -143,16 +143,16 @@ os.chdir(plot_dir)
 # # plot_reward_collection_RT(SessionDf, axes=axes[2])
 # fig.tight_layout()
 
-# %% debugging syncing problems
-folder = Path("D:\TaskControl\Animals\JJP-00885")
-task_name = "learn_to_time"
+# # %% debugging syncing problems
+# folder = Path("D:\TaskControl\Animals\JJP-00885")
+# task_name = "learn_to_time"
 
-bhv.create_LogDf_LCDf_csv(folder, task_name)
+# bhv.create_LogDf_LCDf_csv(folder, task_name)
 
-# %%
+# # %%
 
-path = Path(r"D:\TaskControl\Animals\JJP-00885\2020-07-07_09-58-56_learn_to_time")
-log_path = path / "arduino_log.txt"
+# path = Path(r"D:\TaskControl\Animals\JJP-00885\2020-07-07_09-58-56_learn_to_time")
+# log_path = path / "arduino_log.txt"
 
 # %% syncing
 
@@ -176,17 +176,8 @@ t_arduino = pd.read_csv(log_path.parent / "arduino_sync.csv")['t'].values
 m,b = bhv.sync_clocks(t_harp, t_arduino, log_path)
 LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
 
-# %% psychometric
-# make SessionDf - slice into trials
-TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
 
-TrialDfs = []
-for i, row in TrialSpans.iterrows():
-    TrialDfs.append(bhv.time_slice(LogDf,row['t_on'],row['t_off']))
-
-
-# %% psychmetrics restart
-
+# %% psychmetrics
 # make SessionDf - slice into trials
 TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
 
@@ -231,3 +222,6 @@ plt.legend()
 axes.set_xlabel('interval (ms)')
 axes.set_ylabel('density')
 
+
+
+# %%
