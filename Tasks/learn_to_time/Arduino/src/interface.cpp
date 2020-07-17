@@ -127,6 +127,10 @@ void processSerialData() {
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_magnitude)+String(">"));
             }
     
+            if (strcmp(varname,"trial_t_gap")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(trial_t_gap)+String(">"));
+            }
+    
             if (strcmp(varname,"valve_ul_ms")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(valve_ul_ms)+String(">"));
             }
@@ -246,6 +250,10 @@ void processSerialData() {
     
             if (strcmp(varname,"reward_magnitude")==0){
                 reward_magnitude = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"trial_t_gap")==0){
+                trial_t_gap = strtoul(varvalue,NULL,10);
             }
     
             if (strcmp(varname,"reward_available_dur")==0){

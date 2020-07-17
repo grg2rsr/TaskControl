@@ -493,10 +493,10 @@ void finite_state_machine() {
 
                 //
                 if (this_trial_type == "short") {
-                    this_interval = random(100,1500);
+                    this_interval = random(100,1500-trial_t_gap);
                 }
                 if (this_trial_type == "long"){
-                    this_interval = random(1500,2900);
+                    this_interval = random(1500+trial_t_gap,2900);
                 }
 
                 log_var("this_interval",String(this_interval));

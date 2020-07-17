@@ -204,6 +204,8 @@ class SessionVis(QtWidgets.QWidget):
         self.PsychScatter, = self.add_ScatterPlot([pen_1], self.PlotWindow, **kwargs)
         self.PlotWindow.nextColumn()
 
+        # self.PlotItem.setYRange(-8000,8000)
+
         # Item = self.PlotWindow.addPlot()
         # self.ChoicesScatter = Item.plot(pen=(100,100,100), symbolBrush=(100,100,100),symbolSize=2)
 
