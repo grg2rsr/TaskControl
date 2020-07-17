@@ -13,7 +13,9 @@ from PyQt5 import QtWidgets
 import utils
 import behavior_analysis_utils as bhv
 
-from TaskVis_pg import SessionVis, TrialsVis
+from TaskVis_pg import TrialsVis
+from TaskVis_pg import SessionVis
+# from TaskVis_mpl import SessionVis
 
 """
  

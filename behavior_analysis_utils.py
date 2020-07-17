@@ -8,6 +8,7 @@ import datetime
 from tqdm import tqdm
 import behavior_analysis_utils as bhv
 
+
 """
  
  ########     ###    ########   ######  ######## ########  
@@ -44,26 +45,6 @@ def parse_arduino_log(log_path, code_map=None):
 
     return parse_lines(lines, code_map=code_map, parse_var=True)
 
-# def parse_lines(lines, code_map=None):
-#     """ parses a list of lines from arduino into a pd.DataFrame
-#     the old (more performant) function
-#     """
-#     valid_lines = [line.strip() for line in lines if '\t' in line]
-#     LogDf = pd.DataFrame([line.split('\t') for line in valid_lines],columns=['code','t'])
-#     LogDf['t'] = LogDf['t'].astype('float')
-#     LogDf.reset_index(drop=True)
-
-#     # decode
-#     if code_map is not None:
-#         LogDf['name'] = [code_map[code] for code in LogDf['code']]
-
-#     # test for time wraparound
-#     if np.any(np.diff(LogDf['t']) < 0):
-#         reversal_ind = np.where(np.diff(LogDf['t']) < 0)[0][0]
-#         LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
-
-#     return LogDf
-
 def correct_wraparound(Df):
     """ tests and corrects for time wraparound on column t """
     if np.any(np.diff(Df['t']) < 0):
@@ -95,11 +76,31 @@ def parse_lines(lines, code_map=None, parse_var=False):
         VarDf = correct_wraparound(VarDf)
         
         # join
-        LogDf = LogDf.append(VarDf,ignore_index=True)
+        LogDf = LogDf.append(VarDf,ignore_index=True,sort=True)
         LogDf = LogDf.sort_values('t')
         LogDf = LogDf.reset_index(drop=True)
 
     return LogDf
+
+# def parse_lines_old(lines, code_map=None):
+#     """ parses a list of lines from arduino into a pd.DataFrame
+#     the old (more performant) function
+#     """
+#     valid_lines = [line.strip() for line in lines if '\t' in line]
+#     LogDf = pd.DataFrame([line.split('\t') for line in valid_lines],columns=['code','t'])
+#     LogDf['t'] = LogDf['t'].astype('float')
+#     LogDf.reset_index(drop=True)
+
+#     # decode
+#     if code_map is not None:
+#         LogDf['name'] = [code_map[code] for code in LogDf['code']]
+
+#     # test for time wraparound
+#     if np.any(np.diff(LogDf['t']) < 0):
+#         reversal_ind = np.where(np.diff(LogDf['t']) < 0)[0][0]
+#         LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
+
+#     return LogDf
 
 
 """
@@ -151,27 +152,6 @@ def filter_bad_licks(LogDf, min_time=50, max_time=200, remove=False):
         pass
 
     return LogDf
-
-
-# def moving_median_removal(data, window_size):
-#     " Running median (only works with numpy matrices and it is clunky) "
-#      
-#     aux = np.zeros(data.shape)
-#     half_window = int(window_size/2)
-
-#     for i in range(0,data.shape[1]):
-#         # Beginning of data array
-#         if i < (half_window):
-#             aux[:,i] = data[:,i] - np.median(data[:, 0:(i+half_window)], 1)
-
-#         # End of data data array
-#         elif i > (data.shape[1] - (half_window)):
-#             aux[:,i] = data[:,i] - np.median(data[:, (i-half_window):-1], 1)
-
-#         else:
-#             aux[:,i] = data[:,i] - np.median(data[:, (i-half_window):(i+half_window)], 1)
-#     return aux
-
 
 """
  
@@ -316,35 +296,50 @@ def parse_sessions(SessionDfs, Metrics):
 
     return PerformanceDf
 
-def aggregate_session_logs(animal_path, task):
+# def aggregate_session_logs(animal_path, task):
+#     """ 
+#     creates a list of LogDfs with all data obtained 
+#     using input task an path to animal's folder  
+#     """
+
+#     # search and store all folder paths (sessions) containing 
+#     # data obtained performing input task
+#     folder_paths = [fd for fd in animal_path.iterdir() if fd.is_dir()]
+
+#     log_paths = [] 
+
+#     for fd in folder_paths:
+
+#         # Parsing folder name by "_"
+#         split_fd = fd.name.split("_")
+
+#         date = split_fd[0]
+#         task_name = "_".join(split_fd[2:])
+        
+#         date_format = '%Y-%m-%d'
+#         # Checks if date format is not corrupted
+#         try:
+#             datetime.datetime.strptime(date, date_format)
+
+#             if task_name == task:
+#                 log_paths.append(animal_path.joinpath(fd, "arduino_log.txt"))
+#         except:
+#             print("Folder or file " + str(fd) + " has corrupted date")
+
+#     LogDfs = []
+#     for log in log_paths:
+#         LogDfs.append(get_LogDf_from_path(log))
+
+#     return LogDfs
+    
+def aggregate_session_logs(animal_folder_path, task):
     """ 
     creates a list of LogDfs with all data obtained 
     using input task an path to animal's folder  
     """
 
-    # search and store all folder paths (sessions) containing 
-    # data obtained performing input task
-    folder_paths = [fd for fd in animal_path.iterdir() if fd.is_dir()]
-
-    log_paths = [] 
-
-    for fd in folder_paths:
-
-        # Parsing folder name by "_"
-        split_fd = fd.name.split("_")
-
-        date = split_fd[0]
-        task_name = "_".join(split_fd[2:])
-        
-        date_format = '%Y-%m-%d'
-        # Checks if date format is not corrupted
-        try:
-            datetime.datetime.strptime(date, date_format)
-
-            if task_name == task:
-                log_paths.append(animal_path.joinpath(fd, "arduino_log.txt"))
-        except:
-            print("Folder or file " + str(fd) + " has corrupted date")
+    SessionsDf = utils.get_sessions(animal_folder_path)
+    log_paths = [Path(path) / "arduino_log.txt" for path in SessionsDf.groupby('task').get_group(task_name)['path']]
 
     LogDfs = []
     for log in log_paths:
@@ -354,41 +349,38 @@ def aggregate_session_logs(animal_path, task):
 
 def create_LogDf_LCDf_csv(animal_folder_path, task_name, save=True):
     """ 
-    Creates synching logs as well as LogDf and LCDfs csv's
-    for all sessions of given task and animal
+    Creates both arduino and loadcell .csv files for each session
+    and syncs arduino timestamps to harp timestamps
     """
 
-    # Obtain LogDfs
-    LogDfs = aggregate_session_logs(animal_folder_path, task_name)
-
-    # Obtaining Logpaths for specific task
+    # obtaining the paths to each sessions folder
     SessionsDf = utils.get_sessions(animal_folder_path)
-    paths = [Path(path) for path in SessionsDf.groupby('task').get_group(task_name).path]
+    paths = [Path(path) for path in SessionsDf.groupby('task').get_group(task_name)['path']]
 
-    # Obtain CSVs of LogDf and LCDf already synched 
-    for LogDf, path in zip(LogDfs, paths):
-
-        # infer paths
+    for path in paths:
+        # infer data paths
         log_path = path / "arduino_log.txt"
         harp_csv_path = path.joinpath("bonsai_harp_log.csv")
 
-        # get the sync and stores LCDf.csv
-        LoadCellDf , t_harp = bhv.parse_harp_csv(harp_csv_path, save=True)
-        t_harp = t_harp['t'].values
+        # get arduino daata
+        LogDf = bhv.get_LogDf_from_path(log_path)
         t_arduino = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_AVAILABLE_STATE", save=True)['t'].values
 
+        # get Loadcell data
+        LoadCellDf , t_harp = bhv.parse_harp_csv(harp_csv_path, save=True)
+        t_harp = t_harp['t'].values
+
         if t_harp.shape[0] != t_arduino.shape[0]:
+            print("unequal number of timestamps for: "+str(path))
             t_arduino, t_harp = cut_timestamps(t_arduino, t_harp)
         
-        # sync datasets and stores LogDf.csv
+        # sync datasets and store LogDf.csv
         m,b = bhv.sync_clocks(t_harp, t_arduino)
         LogDf ['t_arduino'] = LogDf['t']
         LogDf['t'] = (LogDf['t'])*m + b
         
         if save:
             LogDf.to_csv(path / "LogDf.csv")
-
-    return True
 
 """
  
@@ -504,6 +496,14 @@ def get_start(TrialDf):
 def get_stop(TrialDf):
     return pd.Series(TrialDf.iloc[-1]['t'], name='t_off')
 
+# def get_outcome(TrialDf):
+#     outcome = sp.NaN
+#     if "CHOICE_MISSED_EVENT" in TrialDf['name'].values:
+#         outcome = "missed"
+#     if "CHOICE_INCORRECT_EVENT" in TrialDf['name'].values:
+#         outcome = "incorrect"
+#     if "CHOICE_CORRECT_EVENT" in TrialDf['name'].values:
+#         outcome = "correct"
 
 
 
@@ -579,15 +579,7 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
 def get_arduino_sync(log_path, sync_event_name="TRIAL_AVAILABLE_STATE", save=True):
     """ extracts arduino sync times from an arduino log """ 
 
-    # TODO this should be an util func
-    task_name = '_'.join(log_path.parent.name.split('_')[2:])
-    code_map_path = log_path.parent / task_name / "Arduino" / "src" / "event_codes.h"
-
-    ### READ 
-    CodesDf = utils.parse_code_map(code_map_path)
-    code_map = dict(zip(CodesDf['code'],CodesDf['name']))
-    LogDf = bhv.parse_arduino_log(log_path, code_map)
-
+    LogDf = bhv.get_LogDf_from_path(log_path)
     SyncEvent = bhv.get_events_from_name(LogDf, sync_event_name)
 
     if save:
@@ -642,3 +634,27 @@ def sync_clocks(t_harp, t_arduino, log_path=None):
         LogDf.to_csv(log_path.parent / "LogDf.csv")
 
     return m, b
+
+
+"""
+ ######  ########    ###    ########  ######
+##    ##    ##      ## ##      ##    ##    ##
+##          ##     ##   ##     ##    ##
+ ######     ##    ##     ##    ##     ######
+      ##    ##    #########    ##          ##
+##    ##    ##    ##     ##    ##    ##    ##
+ ######     ##    ##     ##    ##     ######
+"""
+from sklearn.linear_model import LogisticRegression
+from scipy.special import expit
+
+def log_reg(x,y, x_fit=None):
+    """ x and y are of shape (N,) y are choices in [0,1] """
+    if x_fit is None:
+        x_fit = sp.linspace(x.min(),x.max(),100)
+
+    cLR = LogisticRegression()
+    cLR.fit(x[:,sp.newaxis],y)
+
+    y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
+    return y_fit

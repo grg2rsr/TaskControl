@@ -37,147 +37,9 @@ from behavior_plotters import *
 log_path = utils.get_file_dialog()
 
 # %%
+LogDf = bhv.get_LogDf_from_path(log_path)
+LogDf = bhv.filter_bad_licks(LogDf)
 
-# infer
-task_name = '_'.join(log_path.parent.name.split('_')[2:])
-code_map_path = log_path.parent.joinpath(task_name,"Arduino","src","event_codes.h")
-
-### READ 
-CodesDf = utils.parse_code_map(code_map_path)
-code_map = dict(zip(CodesDf['code'],CodesDf['name']))
-LogDf = bhv.parse_arduino_log(log_path, code_map)
-
-### COMMON
-# the names of the things present in the log
-span_names = [name.split('_ON')[0] for name in CodesDf['name'] if name.endswith('_ON')]
-event_names = [name for name in CodesDf['name'] if name.endswith('_EVENT')]
-
-SpansDict = bhv.get_spans(LogDf, span_names)
-EventsDict = bhv.get_events(LogDf, event_names)
-
-# %%
-"""
- 
- ########  ########  ######## ########  ########   #######   ######  ########  ######   ######  
- ##     ## ##     ## ##       ##     ## ##     ## ##     ## ##    ## ##       ##    ## ##    ## 
- ##     ## ##     ## ##       ##     ## ##     ## ##     ## ##       ##       ##       ##       
- ########  ########  ######   ########  ########  ##     ## ##       ######    ######   ######  
- ##        ##   ##   ##       ##        ##   ##   ##     ## ##       ##             ##       ## 
- ##        ##    ##  ##       ##        ##    ##  ##     ## ##    ## ##       ##    ## ##    ## 
- ##        ##     ## ######## ##        ##     ##  #######   ######  ########  ######   ######  
- 
-"""
-# filter unrealistic licks
-bad_licks = np.logical_or(SpansDict['LICK']['dt'] < 20,SpansDict['LICK']['dt'] > 100)
-SpansDict['LICK'] = SpansDict['LICK'].loc[~bad_licks]
-
-# add lick_event
-Lick_Event = pd.DataFrame(np.stack([['NA']*SpansDict['LICK'].shape[0],SpansDict['LICK']['t_on'].values,['LICK_EVENT']*SpansDict['LICK'].shape[0]]).T,columns=['code','t','name'])
-Lick_Event['t'] = Lick_Event['t'].astype('float')
-LogDf = LogDf.append(Lick_Event)
-LogDf.sort_values('t')
-
-event_names.append("LICK_EVENT")
-EventsDict['LICK_EVENT'] = bhv.get_events_from_name(LogDf,'LICK_EVENT')
-
-SpansDict.pop("LICK")
-span_names.remove("LICK")
-
-# %%
-"""
- 
- ########  ##        #######  ######## ######## #### ##    ##  ######   
- ##     ## ##       ##     ##    ##       ##     ##  ###   ## ##    ##  
- ##     ## ##       ##     ##    ##       ##     ##  ####  ## ##        
- ########  ##       ##     ##    ##       ##     ##  ## ## ## ##   #### 
- ##        ##       ##     ##    ##       ##     ##  ##  #### ##    ##  
- ##        ##       ##     ##    ##       ##     ##  ##   ### ##    ##  
- ##        ########  #######     ##       ##    #### ##    ##  ######   
- 
-"""
-
-# setup
-colors = sns.color_palette('hls',n_colors=len(event_names)+len(span_names))[::-1]
-cdict = dict(zip(event_names+span_names,colors))
-
-plot_dir = log_path.parent.joinpath('plots')
-os.makedirs(plot_dir,exist_ok=True)
-os.chdir(plot_dir)
-
-# %% Trials Overview - with Lick psth
-# data = LogDf.groupby('name').get_group('CHOICE_EVENT')
-# # data = LogDf.groupby('name').get_group(g) for g in ['TRIAL_COMPLETED_EVENT','TRIAL_ABORTED_EVENT']
-# data = data.sort_values('t')
-# data = data.reset_index()
-# t_ref = data['t'].values
-# pre, post = (-100,2000)
-
-# kw = dict(height_ratios=[1,0.5])
-
-# fig, axes = plt.subplots(nrows=2,sharex=True,figsize=[4.25,5.5], gridspec_kw=kw)
-# plot_session_overview(LogDf, t_ref, pre, post, axes=axes[0], how='dots', cdict=cdict)
-
-# bin_width = 25
-# bins = np.arange(pre,post,bin_width)
-# plot_psth(EventsDict['LICK_EVENT'], t_ref, bins=bins, axes=axes[1])
-# fig.tight_layout()
-
-#  # %% Session metrics 
-# Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT)
-
-# # make SessionDf - slice into trials
-# TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
-
-# TrialDfs = []
-# for i, row in TrialSpans.iterrows():
-#     ind_start = LogDf.loc[LogDf['t'] == row['t_on']].index[0]
-#     ind_stop = LogDf.loc[LogDf['t'] == row['t_off']].index[0]
-#     TrialDfs.append(LogDf.iloc[ind_start:ind_stop+1])
-
-# SessionDf = bhv.parse_trials(TrialDfs, Metrics)
-
-# hist = 20
-# fig, axes = plt.subplots(ncols=3,figsize=[8,2.25])
-# plot_success_rate(SessionDf, history=hist, axes=axes[0])
-# plot_reward_collection_rate(SessionDf, history=hist, axes=axes[1])
-# # plot_reward_collection_RT(SessionDf, axes=axes[2])
-# fig.tight_layout()
-
-# # %% debugging syncing problems
-# folder = Path("D:\TaskControl\Animals\JJP-00885")
-# task_name = "learn_to_time"
-
-# bhv.create_LogDf_LCDf_csv(folder, task_name)
-
-# # %%
-
-# path = Path(r"D:\TaskControl\Animals\JJP-00885\2020-07-07_09-58-56_learn_to_time")
-# log_path = path / "arduino_log.txt"
-
-# %% syncing
-
-LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
-arduino_sync = bhv.get_arduino_sync(log_path)
-
-# %%
-t_harp = harp_sync['t'].values
-t_arduino = arduino_sync['t'].values
-
-# %%
-plt.plot(sp.diff(t_harp),label='harp')
-plt.plot(sp.diff(t_arduino),label='arduino')
-plt.legend()
-
-
-# %%
-t_harp = pd.read_csv(log_path.parent / "harp_sync.csv")['t'].values
-t_arduino = pd.read_csv(log_path.parent / "arduino_sync.csv")['t'].values
-
-m,b = bhv.sync_clocks(t_harp, t_arduino, log_path)
-LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
-
-
-# %% psychmetrics
 # make SessionDf - slice into trials
 TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_AVAILABLE_STATE","ITI_STATE")
 
@@ -187,12 +49,18 @@ for i, row in tqdm(TrialSpans.iterrows()):
 
 SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.get_interval))
 
-# %%
-SDf = SessionDf.groupby('has_choice').get_group(True)
 
+# %% psychometrics
+# %% adding logistic regression fit
+from sklearn.linear_model import LogisticRegression
+from scipy.special import expit
+
+# get only the subset with choices
+SDf = SessionDf.groupby('has_choice').get_group(True)
 y = SDf['choice'].values == 'right'
 x = SDf['this_interval'].values
 
+# plot choices
 fig, axes = plt.subplots(figsize=[6,2])
 axes.plot(x,y,'.',color='k',alpha=0.5)
 axes.set_yticks([0,1])
@@ -200,16 +68,45 @@ axes.set_yticklabels(['short','long'])
 axes.set_ylabel('choice')
 axes.axvline(1500,linestyle=':',alpha=0.5,lw=1,color='k')
 
-# adding logistic regression fit
-from sklearn.linear_model import LogisticRegression
-from scipy.special import expit
-cLR = LogisticRegression()
-SessionDf = SessionDf.dropna()
-cLR.fit(x[:,sp.newaxis],y)
+def log_reg(x,y, x_fit=None):
+    """ x and y are of shape (N,) y are choices in [0,1] """
+    if x_fit is None:
+        x_fit = sp.linspace(x.min(),x.max(),100)
+
+    cLR = LogisticRegression()
+    cLR.fit(x[:,sp.newaxis],y)
+
+    y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
+    return y_fit
 
 x_fit = sp.linspace(0,3000,100)
-psychometric = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
-plt.plot(x_fit, psychometric, color='red', linewidth=2,alpha=0.75)
+line, = plt.plot([],color='red', linewidth=2,alpha=0.75)
+line.set_data(x_fit, log_reg(x, y, x_fit))
+
+# %% random margin - without bias
+t = SDf['this_interval'].values
+R = []
+for i in tqdm(range(100)):
+    rand_choices = sp.random.randint(2,size=t.shape).astype('bool')
+    R.append(log_reg(x, rand_choices,x_fit))
+R = sp.array(R)
+
+alpha = .5
+R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
+plt.fill_between(x_fit, R_pc[0],R_pc[1],color='blue',alpha=0.5)
+
+# %% random margin - without animal bias
+t = SDf['this_interval'].values
+bias = (SessionDf['choice'] == 'right').sum() / SessionDf.shape[0] # right side bias
+R = []
+for i in tqdm(range(100)):
+    rand_choices = sp.rand(t.shape[0]) < bias
+    R.append(log_reg(x, rand_choices,x_fit))
+R = sp.array(R)
+
+alpha = .5
+R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
+plt.fill_between(x_fit, R_pc[0],R_pc[1],color='orange',alpha=0.5)
 
 # %% histograms
 fig,axes = plt.subplots()
@@ -223,5 +120,32 @@ axes.set_xlabel('interval (ms)')
 axes.set_ylabel('density')
 
 
+"""
+##        #######     ###    ########   ######  ######## ##       ##
+##       ##     ##   ## ##   ##     ## ##    ## ##       ##       ##
+##       ##     ##  ##   ##  ##     ## ##       ##       ##       ##
+##       ##     ## ##     ## ##     ## ##       ######   ##       ##
+##       ##     ## ######### ##     ## ##       ##       ##       ##
+##       ##     ## ##     ## ##     ## ##    ## ##       ##       ##
+########  #######  ##     ## ########   ######  ######## ######## ########
+"""
+
+# %% syncing
+LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
+arduino_sync = bhv.get_arduino_sync(log_path)
+
+# %% - checking if the triggering worked
+t_harp = harp_sync['t'].values
+t_arduino = arduino_sync['t'].values
+
+plt.plot(sp.diff(t_harp),label='harp')
+plt.plot(sp.diff(t_arduino),label='arduino')
+plt.legend()
+
 
 # %%
+t_harp = pd.read_csv(log_path.parent / "harp_sync.csv")['t'].values
+t_arduino = pd.read_csv(log_path.parent / "arduino_sync.csv")['t'].values
+
+m,b = bhv.sync_clocks(t_harp, t_arduino, log_path)
+LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
