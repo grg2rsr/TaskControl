@@ -287,7 +287,7 @@ unsigned long cue_led_time = 100; // in
 void CueLEDController(){
     // a self terminating digital pin switch
     if (cue_led_is_on == false && switch_cue_led_on == true) {
-        log_code(CUE_LED_ON_EVENT);
+        log_code(CUE_LED_ON);
         // turn cue led on
         cue_led[0] = CRGB::White;
         FastLED.show();
@@ -299,7 +299,7 @@ void CueLEDController(){
 
     if (cue_led_is_on == true && now() - cue_led_on_time > cue_led_time) {
         // turn led off
-        log_code(CUE_LED_OFF_EVENT);
+        log_code(CUE_LED_OFF);
 
         cue_led[0] = CRGB::Black;
         FastLED.show();

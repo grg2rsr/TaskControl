@@ -50,7 +50,7 @@ const unsigned int CHOICE_RIGHT_EVENT = 43;
 // stim and cue stuff
 const unsigned int FIRST_TIMING_CUE_EVENT = 50;
 const unsigned int SECOND_TIMING_CUE_EVENT = 51;
-const unsigned int CUE_LED_ON_EVENT = 52;
-const unsigned int CUE_LED_OFF_EVENT = 53;
+const unsigned int CUE_LED_ON = 52;
+const unsigned int CUE_LED_OFF = 53;
 const unsigned int GO_CUE_EVENT = 54;
 
