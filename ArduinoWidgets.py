@@ -133,15 +133,8 @@ class ArduinoController(QtWidgets.QWidget):
     def layout(self):
         """ position children to myself """
         small_gap = int(self.config['ui']['small_gap'])
-        big_gap = int(self.config['ui']['big_gap'])
-
-        utils.scale_Widgets([self] + self.Children[:-1],mode='max') # dirty hack to not scale the state machine monitor
-        for i,child in enumerate(self.Children):
-            if i == 0:
-                ref = self
-            else:
-                ref = self.Children[i-1]
-            utils.tile_Widgets(child, ref, where='below',gap=big_gap)
+        # big_gap = int(self.config['ui']['big_gap'])
+        utils.tile_Widgets([self] + self.Children, how="vertically",gap=small_gap)
 
     def send(self,command):
         """ sends string command interface to arduino, interface compatible """
@@ -240,20 +233,32 @@ class ArduinoController(QtWidgets.QWidget):
         target = folder / self.config['current']['task']
         shutil.copytree(src,target)
 
+    def reset_arduino(self,connection):
+        """ taken from https://stackoverflow.com/questions/21073086/wait-on-arduino-auto-reset-using-pyserial """
+        connection.setDTR(False) # reset
+        time.sleep(1) # sleep timeout length to drop all data
+        connection.flushInput() # 
+        connection.setDTR(True)
+        
     def connect(self):
         """ establish serial connection with the arduino board """
-        
-        com_port = self.config['connections']['FSM_arduino_port']
-        baud_rate = self.config['connections']['arduino_baud_rate']
         try:
             print("initializing serial port: "+com_port)
-            ser = serial.Serial(port=com_port, baudrate=baud_rate,timeout=2)
-            ser.setDTR(False) # reset: https://stackoverflow.com/questions/21073086/wait-on-arduino-auto-reset-using-pyserial
-            time.sleep(1) # sleep timeout length to drop all data
-            ser.flushInput() # 
-            ser.setDTR(True)
-            print(" ... done")
-            return ser
+            # ser = serial.Serial(port=com_port, baudrate=baud_rate,timeout=2)
+            connection = serial.Serial(
+                     port=self.config['connections']['FSM_arduino_port'],
+                     baudrate=self.config['connections']['arduino_baud_rate'],
+                     bytesize=serial.EIGHTBITS,
+                     parity=serial.PARITY_NONE,
+                     stopbits=serial.STOPBITS_ONE,
+                     timeout=1,
+                     xonxoff=0,
+                     rtscts=0
+                     )
+
+            self.reset_arduino(connection)
+            return connection
+
 
         except:
             print("failed to connect to the FSM arduino.")
@@ -307,9 +312,10 @@ class ArduinoController(QtWidgets.QWidget):
     pass
 
     def closeEvent(self, event):
-        # if serial connection is open, close it
+        # if serial connection is open, reset arduino and close it
         if hasattr(self,'connection'):
             if self.connection.is_open:
+                self.reset_arduino(self.connection)
                 self.connection.close()
             self.SerialMonitor.close()
         self.VariableController.close()
@@ -317,17 +323,13 @@ class ArduinoController(QtWidgets.QWidget):
         # self.thread.join()
 
         # overwrite logged arduino vars file
-        try:
-            target = self.run_folder / self.config['current']['task']
-            self.VariableController.write_variables(target / 'Arduino' / 'src' / 'interface_variables.h')
-        except AttributeError:
-            # FIXME this is hacked in bc closeEvent is fired when task is changed -> crashes
-            pass
-
+        target = self.run_folder / self.config['current']['task']  / 'Arduino' / 'src' / 'interface_variables.h'
+        if target.exists(): # bc close event is also triggered on task_changed
+            self.VariableController.write_variables(target)
 
         # take care of the kids
-        for child in self.Children:
-            child.close()
+        for Child in self.Children:
+            Child.close()
         self.close()
 
 """

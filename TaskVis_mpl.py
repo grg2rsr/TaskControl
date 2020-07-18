@@ -51,6 +51,8 @@ class SessionVis(QtWidgets.QWidget):
         self.init()
         self.show()
 
+
+
         # connect signals
         self.OnlineDataAnalyser = OnlineDataAnalyser
         OnlineDataAnalyser.trial_data_available.connect(self.on_data)
@@ -60,6 +62,8 @@ class SessionVis(QtWidgets.QWidget):
         # success rate
         ax = self.axes[0,0]
         ax.set_title('success rate')
+        ax.set_xlabel('trial #')
+        ax.set_ylabel('fraction')
         ax.set_ylim(-0.1,1.1)
         self.success_rate, = ax.plot([],[], lw=1)
         self.success_rate_filt, = ax.plot([],[], lw=1)
@@ -67,11 +71,16 @@ class SessionVis(QtWidgets.QWidget):
         # choice RT
         ax = self.axes[0,1]
         ax.set_title('choice RT')
+        ax.set_xlabel('choice trial #')
+        ax.set_ylabel('RT (ms)')
+        
         self.choices_rt_scatter, = ax.plot([],[],'o')
 
         # reward collection rate
         ax = self.axes[1,1]
         ax.set_title('reward collection rate')
+        ax.set_xlabel('successful trial #')
+        ax.set_ylabel('fraction')
         ax.set_ylim(-0.1,1.1)
         self.reward_collection_rate, = ax.plot([], [], lw=1)
         self.reward_collection_rate_filt, = ax.plot([], [], lw=1)
@@ -79,12 +88,15 @@ class SessionVis(QtWidgets.QWidget):
         # psychometric
         ax = self.axes[1,0]
         ax.set_title('psychometric')
+        # ax.set_ylabel('p')
+        ax.set_xlabel('interval (ms)')
         ax.set_yticks([0,1])
         ax.set_yticklabels(['short','long'])
         ax.set_ylabel('choice')
         ax.axvline(1500, linestyle=':', alpha=0.5, lw=1, color='k')
         self.psych_choices, = ax.plot([],[], '.', color='k', alpha=0.5)
         self.psych_fit, = ax.plot([],[], lw=2, color='r')
+        self.poly = None # fill for error model
 
     def on_data(self, TrialDf, TrialMetricsDf):
         hist = 20 # to be exposed in the future
@@ -98,8 +110,7 @@ class SessionVis(QtWidgets.QWidget):
             
             self.success_rate.set_data(x, y)
             self.success_rate_filt.set_data(x, y_filt)
-            self.axes[0,0].set_xlim(0.5,x.shape[0])
-
+            self.success_rate.axes.set_xlim(0.5,x.shape[0]+0.5)
 
             # choice RT
             if True in SessionDf['has_choice'].values:
@@ -108,7 +119,7 @@ class SessionVis(QtWidgets.QWidget):
                 x = SDf.index.values+1
                 y = SDf['choice_rt'].values
                 self.choices_rt_scatter.set_data(x, y)
-                self.choices_rt_scatter.axes.set_xlim(0.5,x.shape[0])
+                self.choices_rt_scatter.axes.set_xlim(0.5,x.shape[0]+0.5)
 
             # reward collection rate
             if True in SessionDf['successful'].values:
@@ -119,6 +130,7 @@ class SessionVis(QtWidgets.QWidget):
                 y_filt = SDf['reward_collected'].rolling(hist).mean().values
                 self.reward_collection_rate.set_data(x,y)
                 self.reward_collection_rate_filt.set_data(x,y_filt)
+                self.reward_collection_rate.axes.set_xlim(0.5,x.shape[0]+0.5)
 
             # psychmetric
             # get only the subset with choices
@@ -126,8 +138,11 @@ class SessionVis(QtWidgets.QWidget):
                 SDf = SessionDf.groupby('has_choice').get_group(True)
                 y = SDf['choice'].values == 'right'
                 x = SDf['this_interval'].values
+
+                # choices
                 self.psych_choices.set_data(x,y)
 
+                # logistic regression
                 x_fit = sp.linspace(0,3000,100)
                 try:
                     y_fit = bhv.log_reg(x, y, x_fit)
@@ -135,52 +150,27 @@ class SessionVis(QtWidgets.QWidget):
                     # thrown when not enough samples for regression
                     y_fit = sp.zeros(x_fit.shape)
                 self.psych_fit.set_data(x_fit, y_fit)
-            self.axes[1,0].set_xlim(0,3000)
-            self.axes[1,0].set_ylim(-0.1,1.1)
+
+                # error model
+                bias = y.sum() / y.shape[0] # right side bias
+                N = 100
+                R = sp.array([bhv.log_reg(x, sp.rand(x.shape[0]) < bias, x_fit) for i in range(N)])
+                R = sp.array(R)
+
+                alpha = .05 * 100
+                R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
+
+                if self.poly is not None:
+                    self.poly.remove()
+
+                self.poly = plt.fill_between(x_fit, R_pc[0],R_pc[1],color='black',alpha=0.5)
+
+                self.psych_choices.axes.set_xlim(0,3000)
+                self.psych_choices.axes.set_ylim(-0.1,1.1)
 
         # for ax in self.axes.flatten():
             # ax.autoscale_view()
 
         self.Canvas.draw()
-
-            # # reward collection rate
-            # if True in SessionDf['successful'].values:
-            #     SDf = SessionDf.groupby('successful').get_group(True)
-            #     x = SDf.index.values+1
-            #     y = sp.cumsum(SDf['reward_collected'].values) / (SDf.index.values+1)
-            #     y_filt = SDf['reward_collected'].rolling(hist).mean().values
-            #     self.RewardCollectedLines[0].setData(x=x,y=y)
-            #     self.RewardCollectedLines[1].setData(x=x,y=y_filt)
- 
-            # # reward collection reaction time
-            # if True in SessionDf['reward_collected'].values:
-            #     SDf = SessionDf.groupby('reward_collected').get_group(True)
-            #     x = SDf.index.values+1
-            #     y = SDf['reward_collected_rt'].values
-            #     self.RewardRTLine.setData(x=x,y=y)
-
-            # # choice reaction time
-            # if True in SessionDf['has_choice'].values:
-            #     SDf = SessionDf.groupby('has_choice').get_group(True)
-            #     x = SDf.index.values+1
-            #     y = SDf['choice_rt'].values
-            #     self.ChoiceRTScatter.setData(x=x,y=y)
-
-            # # psychometric
-            # if True in SessionDf['has_choice'].values:
-            #     SDf = SessionDf[['this_interval','choice']].dropna()
-            #     X = SDf['this_interval'].values[:,sp.newaxis]
-            #     y = (SDf['choice'].values == 'right').astype('float32')
-            #     self.PsychScatter.setData(X.flatten(), y)
-
-            #     try:
-            #         cLR = LogisticRegression()
-            #         cLR.fit(X,y)
-
-            #         x_fit = sp.linspace(0,3000,100)
-            #         psychometric = expit(x_fit * cLR.coef_ + cLR.intercept_).ravel()
-            #         self.PsychLine.setData(x=x_fit,y=psychometric)
-            #     except:
-            #         pass
 
 

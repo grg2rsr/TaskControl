@@ -1,69 +1,24 @@
 # 2do
-implement learn to initiate task
+random model comparison for error
+(see if data can be set on fill_between), or replot
+poly can self.remove()
 
-implement learn to push task
+## UI layouting should really be moved
 
-implement 2d force overview
+## face all the inheritance shit
 
-probabilistic trial choice - check implementation
--> implement the calculation of p_interval in python
+## deactivate entries when self.terminate is enabled
 
+## move stuff around?
+Widgets
 
-the training variables issue
-test it! 
-[ ] think about last variables when training different animals
-
-self termination: make unaccessible when checked
-
-add a comment popup
-
-MSG var issue
+Controllers / Monitors
 
 
-## decisions:
-tmp folder or not?
-pro: cleaner
-contra: temporary arduino_vars file also needed
-this might have solved itself, think about it
+## split settingswidget into
+SessionWidget
 
-
-## known hardcodes
-raw interface sits fixed on serial1
+## some hardcodes to keep in mind
+currently event_codes.h and interface_variables.h are fixed and their paths as well (Arudino folder)
+raw interface is on fixed on serial1
 history of serial monitor is limited
-
-
-## refactoring
-Df -> Arudino_VarsDf / VarsDf
-
-
-## fix the const/newline/init_variables problem
-find a way that interface_generator.py does not need a copy of parse_arduino_vars ... 
--> move it! con: makes it less standalone
--> currently facing this problem (see the keyboard issues)
-
-## arduino variables
-write in header day of training, version of TaskControl, date of generation etc etc
-
-## interface generator
-+ template and generator is to be distributed with task control actually
-make function with settable return type!
-
-## general
-Generalize hardware widgets: com port widget
-dict for both animal and task
-animal = {ID, path, meta ... }
-
-## clean utils
-
-## new animal
-
-## new user
-settings: path selector!
-
-## argparse
-for ini files
-
-## change logging to log by default (to temp)
-and then have two modes of quitting
-
-data stored @ ... 

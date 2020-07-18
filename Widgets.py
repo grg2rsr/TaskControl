@@ -42,7 +42,10 @@ class SettingsWidget(QtWidgets.QWidget):
         self.Controllers = [] # a list of all controllers
         self.Children = [] # a list of all UI windows
         self.main = main # ref to the main
+
+        # flags
         self.running = False
+
         self.initUI()
 
     def initUI(self):
@@ -170,30 +173,13 @@ class SettingsWidget(QtWidgets.QWidget):
             self.task_changed()
 
         self.show()
-        self.layout_controllers()
-        self.layout_children()
 
-    
-    def layout_controllers(self):
-        """ takes care that all controllers are visually positioned nicely """
-        small_gap = int(self.config['ui']['small_gap'])
-        big_gap = int(self.config['ui']['big_gap'])
+        # layouting
+        big_gap = self.config['ui']['big_gap']
+        utils.tile_Widgets([self]+self.Controllers,how="horizontally",gap=big_gap)
 
-        for i,Controller in enumerate(self.Controllers):
-            if i == 0:
-                prev_widget = self
-            else:
-                prev_widget = self.Controllers[i-1]
-
-            utils.tile_Widgets(Controller, prev_widget, where="right", gap=small_gap)
-            Controller.layout()
-            # if hasattr(Controller, 'Children'):
-            #    functions.scale_Widgets([Controller]+Controller.Children)
-            # Controller.layout_children()
-
-    def layout_children(self):
-        for child in self.Children:
-            child.layout()
+        for Child in self.Children:
+            Child.layout()
 
     def plot_trial(self):
         self.TrialsVisWidget = TrialsVis(self, self.ArduinoController.OnlineDataAnalyser)
@@ -207,8 +193,8 @@ class SettingsWidget(QtWidgets.QWidget):
         for Controller in self.Controllers:
             Controller.close()
 
-        for child in self.Children:
-            child.close()
+        for Child in self.Children:
+            Child.close()
 
         # store current to last
         for key, value in self.config['current'].items():
@@ -282,15 +268,11 @@ class SettingsWidget(QtWidgets.QWidget):
 
         self.task_changed() # this reinitialized all controllers
 
-
-    def get_animal_metadata(self):
-        meta_path = Path(self.config['paths']['animals_folder']) / self.animal / 'animal_meta.csv'
-        return pd.read_csv(meta_path)
-
     def animal_changed(self):
         self.config['current']['animal'] = self.AnimalChoiceWidget.get_value()
         self.animal = self.config['current']['animal']
-        self.animal_meta = self.get_animal_metadata()
+        meta_path = Path(self.config['paths']['animals_folder']) / self.animal / 'animal_meta.csv'
+        self.animal_meta = pd.read_csv(meta_path)
 
         # displaying previous sessions info
         if hasattr(self,'AnimalInfoWidget'):
@@ -348,7 +330,11 @@ class SettingsWidget(QtWidgets.QWidget):
                 #     self.DisplayController = HardwareWidgets.DisplayController(self)
                 #     self.Controllers.append(self.DisplayController)
 
+            # to be replaced with
+            # utils.layout_controllers(self.Controllers)
+            # or similar
             self.layout_controllers()
+
 
     def time_handler(self):
         # called every second by QTimer
@@ -408,9 +394,8 @@ class AnimalInfoWidget(QtWidgets.QWidget):
 
     def layout(self):
         big_gap = int(self.config['ui']['big_gap'])
-        # functions.scale_Widgets([self,self.parent()], mode='min')
         self.resize(self.parent().width(),self.sizeHint().height())
-        utils.tile_Widgets(self, self.parent(), where='below', gap=big_gap)
+        utils.tile_Widgets([self.parent(),self], how='vertically', gap=big_gap)
 
     def update(self):
         # TODO get a list of past sessions and parse them
@@ -595,38 +580,6 @@ class TrialCounter(QtWidgets.QLabel):
 
         new_frac = sp.around(vals[0]/vals[2],2)
         self.setText('/'.join([str(v) for v in vals]) + '\t' + str(new_frac))
-
-# class TrialCounter2(QtWidgets.QWidget):
-#     """ """
-#     def __init__(self, parent):
-#         super(TrialCounter2, self).__init__(parent=parent)
-#         # self.categories = ['correct','incorrect','missed','premature','total']
-#         self.counters = dict(correct=QtWidgets.QLabel(''),
-#                              incorrect=QtWidgets.QLabel(''),
-#                              missed=QtWidgets.QLabel(''),
-#                              premature=QtWidgets.QLabel(''),
-#                              total=QtWidgets.QLabel(''))
-
-#         self.initUI()
-#         self.reset()
-    
-#     def initUI(self):
-#         FormLayout = QtWidgets.QFormLayout(self)
-#         FormLayout.setVerticalSpacing(10)
-#         FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
-
-#         for category in ['correct','incorrect','missed','premature','total']:
-#             FormLayout.addRow(category, self.counters[category])
-
-#         self.setLayout(FormLayout)
-       
-#     def reset(self):
-#         for label, counter in self.counters.items():
-#             counter.setText('0')
-
-#     def increment(self,label):
-#         count = int(self.counters[label].text())
-#         self.counters[label].setText(str(count+1))
 
 class TrialCounter2(QtWidgets.QFormLayout):
     """ """
