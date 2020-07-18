@@ -86,11 +86,10 @@ class LoadCellController(QtWidgets.QWidget):
 
     def layout(self):
         """ position children to myself """
-        small_gap = int(self.config['ui']['small_gap'])
-        big_gap = int(self.config['ui']['big_gap'])
+        gap = int(self.config['ui']['big_gap'])
 
-        utils.scale_Widgets([self] + self.Children[:-1],mode='max') # dirty hack to not scale the state machine monitor
-        utils.tile_Widgets([self]+self.Children, how="vertically", gap=big_gap)
+        utils.scale_Widgets([self] + self.Children) # dirty hack to not scale the state machine monitor
+        utils.tile_Widgets([self] + self.Children, how="vertically", gap=gap)
 
     def zero(self):
         """ remove offset from signal by subtracting the average """

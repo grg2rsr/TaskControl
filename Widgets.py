@@ -175,7 +175,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.show()
 
         # layouting
-        big_gap = self.config['ui']['big_gap']
+        big_gap = int(self.config['ui']['big_gap'])
         utils.tile_Widgets([self]+self.Controllers,how="horizontally",gap=big_gap)
 
         for Child in self.Children:
@@ -229,9 +229,9 @@ class SettingsWidget(QtWidgets.QWidget):
         
         os.makedirs(self.run_folder,exist_ok=True)
 
-        for controller in self.Controllers:
-            print("running controller: ", controller.name)
-            controller.Run(self.run_folder)
+        for Controller in self.Controllers:
+            print("running controller: ", Controller.name)
+            Controller.Run(self.run_folder)
 
         self.running = True
 
@@ -240,8 +240,8 @@ class SettingsWidget(QtWidgets.QWidget):
         self.timer.start(1000)
 
         # reset the counters
-        for counter in [self.TrialCounter,self.WaterCounter]:
-            counter.reset()
+        for Counter in [self.TrialCounter,self.WaterCounter]:
+            Counter.reset()
 
     def Done(self):
         """ finishing the session """
@@ -262,9 +262,9 @@ class SettingsWidget(QtWidgets.QWidget):
         self.running = False
 
         # stop and take down controllers
-        for controller in self.Controllers:
-            controller.stop()
-            controller.close()
+        for Controller in self.Controllers:
+            Controller.stop()
+            Controller.close()
 
         self.task_changed() # this reinitialized all controllers
 
@@ -305,6 +305,7 @@ class SettingsWidget(QtWidgets.QWidget):
             
             # take down all currently open controllers
             for Controller in self.Controllers:
+                Controller.stop()
                 Controller.close()
                 self.Controllers = []
 
@@ -330,10 +331,11 @@ class SettingsWidget(QtWidgets.QWidget):
                 #     self.DisplayController = HardwareWidgets.DisplayController(self)
                 #     self.Controllers.append(self.DisplayController)
 
-            # to be replaced with
-            # utils.layout_controllers(self.Controllers)
-            # or similar
-            self.layout_controllers()
+            # layouting
+            gap = int(self.config['ui']['small_gap'])
+            utils.tile_Widgets([self] + self.Controllers, how="horizontally", gap=gap)
+            for Controller in self.Controllers:
+                Controller.layout()
 
 
     def time_handler(self):

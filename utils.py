@@ -201,21 +201,7 @@ def Df2arduino_vars(Df):
  
 """
 
-
-
-# UI layouting functinos
-# def tile_Widgets(Widget, RefWidget, where='right', gap=50):
-#     """ where can be left right above below """
-#     # print("adjusting",Widget,RefWidget)
-#     if where == 'right':
-#         x = RefWidget.pos().x() + RefWidget.size().width() + gap
-#         y = RefWidget.pos().y()
-#     if where == 'below':
-#         x = RefWidget.pos().x()
-#         y = RefWidget.pos().y() + RefWidget.size().height() + gap
-#     Widget.move(x, y)
-
-def tile_Widgets(Widgets, how='horizontally', gap=50):
+def tile_Widgets(Widgets, how="horizontally", gap=50):
     """ how can be horizontally or vertically, reference is the 
     first widget in the list """
 
@@ -231,12 +217,16 @@ def tile_Widgets(Widgets, how='horizontally', gap=50):
             y = Widgets[i-1].pos().y() + Widgets[i-1].size().height() + gap
             Widgets[i].move(x,y)
 
-def scale_Widgets(Widgets, how='vertical',mode='max'):
-    if how == 'vertical':
+def scale_Widgets(Widgets, how="vertical", mode="max"):
+    # TODO document me!
+
+    if how == "vertical":
         widths = [widget.size().width() for widget in Widgets]
-        if mode=='max':
+
+        if mode == "max":
             max_width = max(widths)
             [widget.resize(max_width,widget.height()) for widget in Widgets]
-        if mode=='min':
+
+        if mode == "min":
             min_width = min(widths)
             [widget.resize(min_width,widget.sizeHint().height()) for widget in Widgets]

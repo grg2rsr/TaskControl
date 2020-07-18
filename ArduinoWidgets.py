@@ -132,9 +132,8 @@ class ArduinoController(QtWidgets.QWidget):
 
     def layout(self):
         """ position children to myself """
-        small_gap = int(self.config['ui']['small_gap'])
-        # big_gap = int(self.config['ui']['big_gap'])
-        utils.tile_Widgets([self] + self.Children, how="vertically",gap=small_gap)
+        gap = int(self.config['ui']['small_gap'])
+        utils.tile_Widgets([self] + self.Children, how="vertically", gap=gap)
 
     def send(self,command):
         """ sends string command interface to arduino, interface compatible """
@@ -246,19 +245,18 @@ class ArduinoController(QtWidgets.QWidget):
             print("initializing serial port: "+com_port)
             # ser = serial.Serial(port=com_port, baudrate=baud_rate,timeout=2)
             connection = serial.Serial(
-                     port=self.config['connections']['FSM_arduino_port'],
-                     baudrate=self.config['connections']['arduino_baud_rate'],
-                     bytesize=serial.EIGHTBITS,
-                     parity=serial.PARITY_NONE,
-                     stopbits=serial.STOPBITS_ONE,
-                     timeout=1,
-                     xonxoff=0,
-                     rtscts=0
-                     )
+                port=self.config['connections']['FSM_arduino_port'],
+                baudrate=self.config['connections']['arduino_baud_rate'],
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                timeout=1,
+                xonxoff=0,
+                rtscts=0
+                )
 
             self.reset_arduino(connection)
             return connection
-
 
         except:
             print("failed to connect to the FSM arduino.")
