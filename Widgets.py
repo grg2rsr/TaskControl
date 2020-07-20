@@ -14,8 +14,8 @@ import utils
 import behavior_analysis_utils as bhv
 
 from TaskVis_pg import TrialsVis
-from TaskVis_pg import SessionVis
-# from TaskVis_mpl import SessionVis
+# from TaskVis_pg import SessionVis
+from TaskVis_mpl import SessionVis
 
 """
  
@@ -175,8 +175,8 @@ class SettingsWidget(QtWidgets.QWidget):
         self.show()
 
         # layouting
-        big_gap = int(self.config['ui']['big_gap'])
-        utils.tile_Widgets([self]+self.Controllers,how="horizontally",gap=big_gap)
+        gap = int(self.config['ui']['small_gap'])
+        utils.tile_Widgets([self]+self.Controllers,how="horizontally",gap=gap)
 
         for Child in self.Children:
             Child.layout()

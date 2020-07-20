@@ -143,27 +143,33 @@ class SessionVis(QtWidgets.QWidget):
                 self.psych_choices.set_data(x,y)
 
                 # logistic regression
-                x_fit = sp.linspace(0,3000,100)
+                x_fit = sp.linspace(0,3000,50)
+
                 try:
+                    # y_fit = sp.zeros(x_fit.shape[0])
                     y_fit = bhv.log_reg(x, y, x_fit)
+                    self.psych_fit.set_data(x_fit, y_fit)
                 except ValueError:
-                    # thrown when not enough samples for regression
-                    y_fit = sp.zeros(x_fit.shape)
-                self.psych_fit.set_data(x_fit, y_fit)
+                    pass
+                
+                try:
+                    # error model
+                    # if x.shape[0] > 5:
+                    #     utils.debug_trace()
+                    bias = y.sum() / y.shape[0] # right side bias
+                    N = 50
+                    R = sp.array([bhv.log_reg(x, sp.rand(x.shape[0]) < bias, x_fit) for i in range(N)])
 
-                # error model
-                bias = y.sum() / y.shape[0] # right side bias
-                N = 100
-                R = sp.array([bhv.log_reg(x, sp.rand(x.shape[0]) < bias, x_fit) for i in range(N)])
-                R = sp.array(R)
+                    alpha = .05 * 100
+                    R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
 
-                alpha = .05 * 100
-                R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
+                    if self.poly is not None:
+                        self.poly.remove()
 
-                if self.poly is not None:
-                    self.poly.remove()
+                    self.poly = self.psych_fit.axes.fill_between(x_fit, R_pc[0],R_pc[1],color='black',alpha=0.5)
 
-                self.poly = plt.fill_between(x_fit, R_pc[0],R_pc[1],color='black',alpha=0.5)
+                except ValueError:
+                    pass
 
                 self.psych_choices.axes.set_xlim(0,3000)
                 self.psych_choices.axes.set_ylim(-0.1,1.1)

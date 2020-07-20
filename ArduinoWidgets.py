@@ -123,8 +123,8 @@ class ArduinoController(QtWidgets.QWidget):
         self.setLayout(Full_Layout)
         self.setWindowTitle("Arduino controller")
 
-        self.layout()
         self.show()
+        self.layout()
 
     def keyPressEvent(self, event):
         """ reimplementation to send single keystrokes """
@@ -132,22 +132,25 @@ class ArduinoController(QtWidgets.QWidget):
 
     def layout(self):
         """ position children to myself """
-        gap = int(self.config['ui']['small_gap'])
+        gap = int(self.config['ui']['big_gap'])
         utils.tile_Widgets([self] + self.Children, how="vertically", gap=gap)
+        utils.scale_Widgets([self] + self.Children, how="vertical", mode="min")
 
     def send(self,command):
         """ sends string command interface to arduino, interface compatible """
         if hasattr(self,'connection'):
             cmd = '<'+command+'>'
             bytestr = str.encode(cmd)
-            self.connection.write(bytestr)
+            if self.connection.is_open:
+                self.connection.write(bytestr)
         else:
             print("Arduino is not connected")
 
     def send_raw(self,bytestr):
         """ sends bytestring """
         if hasattr(self,'connection'):
-            self.connection.write(bytestr)
+            if self.connection.is_open:
+                self.connection.write(bytestr)
         else:
             print("Arduino is not connected")
 
@@ -227,7 +230,7 @@ class ArduinoController(QtWidgets.QWidget):
 
     def log_task(self,folder):
         """ copy the entire arduino folder to the logging folder """
-        print(" - logging arduino code")
+        print(" --- logging arduino code")
         src = self.task_folder
         target = folder / self.config['current']['task']
         shutil.copytree(src,target)
@@ -241,12 +244,14 @@ class ArduinoController(QtWidgets.QWidget):
         
     def connect(self):
         """ establish serial connection with the arduino board """
+        com_port = self.config['connections']['FSM_arduino_port']
+        baud_rate = self.config['connections']['arduino_baud_rate']
         try:
-            print("initializing serial port: "+com_port)
+            print("initializing serial port: " + com_port)
             # ser = serial.Serial(port=com_port, baudrate=baud_rate,timeout=2)
             connection = serial.Serial(
-                port=self.config['connections']['FSM_arduino_port'],
-                baudrate=self.config['connections']['arduino_baud_rate'],
+                port=com_port,
+                baudrate=baud_rate,
                 bytesize=serial.EIGHTBITS,
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
@@ -321,9 +326,10 @@ class ArduinoController(QtWidgets.QWidget):
         # self.thread.join()
 
         # overwrite logged arduino vars file
-        target = self.run_folder / self.config['current']['task']  / 'Arduino' / 'src' / 'interface_variables.h'
-        if target.exists(): # bc close event is also triggered on task_changed
-            self.VariableController.write_variables(target)
+        if hasattr(self,'run_folder'):
+            target = self.run_folder / self.config['current']['task']  / 'Arduino' / 'src' / 'interface_variables.h'
+            if target.exists(): # bc close event is also triggered on task_changed
+                self.VariableController.write_variables(target)
 
         # take care of the kids
         for Child in self.Children:
