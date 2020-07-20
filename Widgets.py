@@ -174,10 +174,6 @@ class SettingsWidget(QtWidgets.QWidget):
 
         self.show()
 
-        # layouting
-        # gap = int(self.config['ui']['small_gap'])
-        # utils.tile_Widgets([self]+self.Controllers,how="horizontally",gap=gap)
-
         for Child in self.Children:
             Child.layout()
 
@@ -333,7 +329,7 @@ class SettingsWidget(QtWidgets.QWidget):
                 #     self.DisplayController = HardwareWidgets.DisplayController(self)
                 #     self.Controllers.append(self.DisplayController)
 
-                self.layout()
+            self.layout()
 
     def layout(self):
         # layouting
@@ -341,8 +337,6 @@ class SettingsWidget(QtWidgets.QWidget):
         utils.tile_Widgets([self] + self.Controllers, how="horizontally", gap=gap)
         for Controller in self.Controllers:
             Controller.layout()
-
-
 
     def time_handler(self):
         # called every second by QTimer
