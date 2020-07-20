@@ -33,16 +33,16 @@ def get_sessions(folder):
         if subfolder.is_dir():
             sessions.append(subfolder)
 
-    Df = []
+    Df = pd.DataFrame(columns=['path','date','time','task'])
+
     for session in sessions:
         path = str(session)
         folder_name = os.path.basename(path)
         date = folder_name.split('_')[0]
         time = folder_name.split('_')[1]
         task = '_'.join(folder_name.split('_')[2:])
-        Df.append(pd.DataFrame([[path,date,time,task]],columns=['path','date','time','task']))
+        Df = Df.append(dict(path=path,date=date,time=time,task=task),ignore_index=True)
 
-    Df = pd.concat(Df,axis=0)
     Df = Df.sort_values(['date','time'])
     Df = Df.reset_index()
 
@@ -185,7 +185,7 @@ def Df2arduino_vars(Df):
             value = str(row['value'])
 
         line.append(value)
-        line = ' '.join(line) + ';' + os.linesep 
+        line = ' '.join(line) + ';\n'
         lines.append(line)
     return lines
 

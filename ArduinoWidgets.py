@@ -428,18 +428,18 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         only loads, does not send! """
         config = self.parent().config
 
-        try:
-            folder = Path(config['paths']['animals_folder']) / config['current']['animal']
-            SessionsDf = utils.get_sessions(folder)
-            previous_sessions = SessionsDf.groupby('task').get_group(config['current']['task'])
+        folder = Path(config['paths']['animals_folder']) / config['current']['animal']
+        SessionsDf = utils.get_sessions(folder)
 
+        try:
+            previous_sessions = SessionsDf.groupby('task').get_group(config['current']['task'])
             prev_session_path = Path(previous_sessions.iloc[-1]['path'])
             prev_vars_path = prev_session_path / config['current']['task'] / "Arduino" / "src" / "interface_variables.h"
             prev_vars = utils.parse_arduino_vars(prev_vars_path)
-
             self.VariableEditWidget.set_entries(prev_vars)
            
         except KeyError:
+            utils.debug_trace()
             print("trying to use last vars, but animal has not been run on this task before.")
 
     def on_serial(self, line):
