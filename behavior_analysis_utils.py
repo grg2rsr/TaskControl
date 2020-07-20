@@ -332,7 +332,7 @@ def parse_sessions(SessionDfs, Metrics):
 
 #     return LogDfs
     
-def aggregate_session_logs(animal_folder_path, task):
+def aggregate_session_logs(animal_folder_path, task_name):
     """ 
     creates a list of LogDfs with all data obtained 
     using input task an path to animal's folder  
@@ -374,7 +374,7 @@ def create_LogDf_LCDf_csv(animal_folder_path, task_name, save=True):
             print("unequal number of timestamps for: "+str(path))
             t_arduino, t_harp = cut_timestamps(t_arduino, t_harp)
         
-        # sync datasets and store LogDf.csv
+        # sync datasets and store LogDf.csv (could use sync clocks to store)
         m,b = bhv.sync_clocks(t_harp, t_arduino)
         LogDf ['t_arduino'] = LogDf['t']
         LogDf['t'] = (LogDf['t'])*m + b

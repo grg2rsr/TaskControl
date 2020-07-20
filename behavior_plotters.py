@@ -443,9 +443,9 @@ def plot_sessions_overview(LogDfs, task_name, axes=None):
     trials_sucessful = []
     trials_unsucessful = []
 
-    for LogDf in LogDfs:
+    for i, LogDf in enumerate(LogDfs,0):
         # Total number of trials performed
-        event_times = bhv.get_events_from_name(LogDf,"SECOND_TIMING_CUE_EVENT")
+        event_times = bhv.get_events_from_name(LogDf,"FIRST_TIMING_CUE_EVENT")
         trials_performed.append(len(event_times))
 
         # Number of sucessful trials 
@@ -457,6 +457,7 @@ def plot_sessions_overview(LogDfs, task_name, axes=None):
         trials_unsucessful.append(len(incorrect_choiceDf))
 
         # Weight
+        # open animal_meta.csv and obtain current_weight
     
     # Formatting
     axes.plot(trials_performed, color = 'black', label = 'Performed')
