@@ -229,6 +229,20 @@ class LoadCellController(QtWidgets.QWidget):
         self.close()
 
     def stop(self):
+        # automatically converts bonsai_harp_log.bin to bonsai_harp_log.csv
+        # _ = subprocess.Popen(self.config['system']['csv_converter_cmd']) # runs Harp GUI
+
+        # csv_converter_cmd = Path(self.config['system']['csv_converter_cmd'])
+        # input_path = csv_converter_cmd.parent / 'CsvConverter.Interface' / 'input_file.txt'
+
+        # cmd_lines = ["1, " + str(self.run_folder / 'bonsai_harp_log.bin'),'200, true']
+
+        # with open(input_path,'w') as fH:
+        #     fH.writelines(cmd_lines)
+
+        # TODO automatically close converter GUI
+        # _.terminate()
+
         pass
 
 """
@@ -289,10 +303,10 @@ class LoadCellMonitor(QtWidgets.QWidget):
         # adding the threshold as lines
         pen = pg.mkPen((255,255,255,100), width=1)
         self.lim_lines = {}
-        self.lim_lines['right'] = pg.InfiniteLine(pos=1000, pen=pen)
-        self.lim_lines['left'] = pg.InfiniteLine(pos=-1000, pen=pen)
-        self.lim_lines['front'] = pg.InfiniteLine(pos=2000, pen=pen, angle=0)
-        self.lim_lines['back'] = pg.InfiniteLine(pos=-2000, pen=pen, angle=0)
+        self.lim_lines['right'] = pg.InfiniteLine(pos=2500, pen=pen)
+        self.lim_lines['left'] = pg.InfiniteLine(pos=-2500, pen=pen)
+        self.lim_lines['front'] = pg.InfiniteLine(pos=1500, pen=pen, angle=0)
+        self.lim_lines['back'] = pg.InfiniteLine(pos=-1500, pen=pen, angle=0)
 
         for k, v in self.lim_lines.items():
             self.PlotItem.addItem(v)

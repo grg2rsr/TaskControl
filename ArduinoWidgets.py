@@ -516,7 +516,7 @@ class OnlineDataAnalyser(QtCore.QObject):
                 self.WaterCounter.increment(current_magnitude)
 
             # the event that separates the stream of data into chunks of trials
-            if decoded == "TRIAL_AVAILABLE_STATE": # HARDCODE
+            if decoded == "TRIAL_ENTRY_EVENT": # HARDCODE
 
                 # parse lines
                 TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map, parse_var=True)

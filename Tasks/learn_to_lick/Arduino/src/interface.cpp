@@ -13,6 +13,7 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 bool deliver_reward = false;
+bool present_reward_cue = false;
 bool punish = false;
 
 int current_state = 0; // WATCH OUT this is ini state
@@ -87,12 +88,12 @@ void processSerialData() {
 
             // INSERT_GETTERS
 
-            if (strcmp(varname,"reward_tone_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_tone_freq)+String(">"));
+            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(incorrect_choice_cue_freq)+String(">"));
             }
     
-            if (strcmp(varname,"reward_cue_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_cue_freq)+String(">"));
+            if (strcmp(varname,"correct_choice_cue_freq")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(correct_choice_cue_freq)+String(">"));
             }
     
             if (strcmp(varname,"ITI_dur_min")==0){
@@ -113,6 +114,14 @@ void processSerialData() {
     
             if (strcmp(varname,"reward_available_dur")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_available_dur)+String(">"));
+            }
+    
+            if (strcmp(varname,"p_reward")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(p_reward)+String(">"));
+            }
+    
+            if (strcmp(varname,"p_rewarded_cue")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(p_rewarded_cue)+String(">"));
             }
                 if (strcmp(varname,"current_state")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
@@ -148,12 +157,12 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
-            if (strcmp(varname,"reward_tone_freq")==0){
-                reward_tone_freq = atoi(varvalue);
+            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
+                incorrect_choice_cue_freq = atoi(varvalue);
             }
     
-            if (strcmp(varname,"reward_cue_freq")==0){
-                reward_cue_freq = atoi(varvalue);
+            if (strcmp(varname,"correct_choice_cue_freq")==0){
+                correct_choice_cue_freq = atoi(varvalue);
             }
     
             if (strcmp(varname,"ITI_dur_min")==0){
@@ -174,6 +183,14 @@ void processSerialData() {
     
             if (strcmp(varname,"valve_ul_ms")==0){
                 valve_ul_ms = atof(varvalue);
+            }
+    
+            if (strcmp(varname,"p_reward")==0){
+                p_reward = atof(varvalue);
+            }
+    
+            if (strcmp(varname,"p_rewarded_cue")==0){
+                p_rewarded_cue = atof(varvalue);
             }
     
         }
@@ -227,6 +244,7 @@ void processSerialData() {
 
             if (strcmp(CMD,"r")==0){
                 deliver_reward = true;
+                present_reward_cue = true;
             }
 
             if (strcmp(CMD,"p")==0){

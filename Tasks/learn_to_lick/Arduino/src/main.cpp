@@ -7,39 +7,36 @@
 #include "pin_map.h"
 
 /*
- _______   _______   ______  __          ___      .______          ___   .___________. __    ______   .__   __.      _______.
-|       \ |   ____| /      ||  |        /   \     |   _  \        /   \  |           ||  |  /  __  \  |  \ |  |     /       |
-|  .--.  ||  |__   |  ,----'|  |       /  ^  \    |  |_)  |      /  ^  \ `---|  |----`|  | |  |  |  | |   \|  |    |   (----`
-|  |  |  ||   __|  |  |     |  |      /  /_\  \   |      /      /  /_\  \    |  |     |  | |  |  |  | |  . `  |     \   \
-|  '--'  ||  |____ |  `----.|  `----./  _____  \  |  |\  \----./  _____  \   |  |     |  | |  `--'  | |  |\   | .----)   |
-|_______/ |_______| \______||_______/__/     \__\ | _| `._____/__/     \__\  |__|     |__|  \______/  |__| \__| |_______/
-
+########  ########  ######  ##          ###    ########     ###    ######## ####  #######  ##    ##  ######
+##     ## ##       ##    ## ##         ## ##   ##     ##   ## ##      ##     ##  ##     ## ###   ## ##    ##
+##     ## ##       ##       ##        ##   ##  ##     ##  ##   ##     ##     ##  ##     ## ####  ## ##
+##     ## ######   ##       ##       ##     ## ########  ##     ##    ##     ##  ##     ## ## ## ##  ######
+##     ## ##       ##       ##       ######### ##   ##   #########    ##     ##  ##     ## ##  ####       ##
+##     ## ##       ##    ## ##       ##     ## ##    ##  ##     ##    ##     ##  ##     ## ##   ### ##    ##
+########  ########  ######  ######## ##     ## ##     ## ##     ##    ##    ####  #######  ##    ##  ######
 */
 
 // int current_state = INI_STATE; // starting at this, aleady declared in interface.cpp
-int last_state = REWARD_AVAILABLE_STATE; // whatever other state
+int last_state = -1; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
+unsigned long this_ITI_dur;
 
 // flow control flags
 bool lick_in = false;
-bool reward_collected = false;
 
-// speakers
+// speaker
 Tone tone_controller;
-unsigned long tone_duration = 200; // FIXME CHECK THIS / expose this
-
-//
-unsigned long this_ITI_dur;
+unsigned long tone_duration = 100;
 
 /*
- __        ______     _______
-|  |      /  __  \   /  _____|
-|  |     |  |  |  | |  |  __
-|  |     |  |  |  | |  | |_ |
-|  `----.|  `--'  | |  |__| |
-|_______| \______/   \______|
-
+##        #######   ######    ######   #### ##    ##  ######
+##       ##     ## ##    ##  ##    ##   ##  ###   ## ##    ##
+##       ##     ## ##        ##         ##  ####  ## ##
+##       ##     ## ##   #### ##   ####  ##  ## ## ## ##   ####
+##       ##     ## ##    ##  ##    ##   ##  ##  #### ##    ##
+##       ##     ## ##    ##  ##    ##   ##  ##   ### ##    ##
+########  #######   ######    ######   #### ##    ##  ######
 */
 
 float now(){
@@ -51,18 +48,23 @@ void log_code(int code){
 }
 
 void log_msg(String Message){
-    Serial.println("<MSG "+Message+" >");
+    Serial.println("<MSG " + Message + " "+String(micros()/1000.0)+">");
+}
+
+void log_var(String name, String value){
+    Serial.println("<VAR " + name + " " + value + " "+String(micros()/1000.0)+">");
 }
 
 /*
-     _______. _______ .__   __.      _______.  ______   .______          _______.
-    /       ||   ____||  \ |  |     /       | /  __  \  |   _  \        /       |
-   |   (----`|  |__   |   \|  |    |   (----`|  |  |  | |  |_)  |      |   (----`
-    \   \    |   __|  |  . `  |     \   \    |  |  |  | |      /        \   \
-.----)   |   |  |____ |  |\   | .----)   |   |  `--'  | |  |\  \----.----)   |
-|_______/    |_______||__| \__| |_______/     \______/  | _| `._____|_______/
-
+ ######  ######## ##    ##  ######   #######  ########   ######
+##    ## ##       ###   ## ##    ## ##     ## ##     ## ##    ##
+##       ##       ####  ## ##       ##     ## ##     ## ##
+ ######  ######   ## ## ##  ######  ##     ## ########   ######
+      ## ##       ##  ####       ## ##     ## ##   ##         ##
+##    ## ##       ##   ### ##    ## ##     ## ##    ##  ##    ##
+ ######  ######## ##    ##  ######   #######  ##     ##  ######
 */
+
 void read_lick(){
   if (lick_in == false && digitalRead(LICK_PIN) == true){
     log_code(LICK_ON);
@@ -75,13 +77,33 @@ void read_lick(){
 }
 
 /*
-____    ____  ___       __      ____    ____  _______
-\   \  /   / /   \     |  |     \   \  /   / |   ____|
- \   \/   / /  ^  \    |  |      \   \/   /  |  |__
-  \      / /  /_\  \   |  |       \      /   |   __|
-   \    / /  _____  \  |  `----.   \    /    |  |____
-    \__/ /__/     \__\ |_______|    \__/     |_______|
+ ######  ##     ## ########  ######
+##    ## ##     ## ##       ##    ##
+##       ##     ## ##       ##
+##       ##     ## ######    ######
+##       ##     ## ##             ##
+##    ## ##     ## ##       ##    ##
+ ######   #######  ########  ######
+*/
 
+void correct_choice_cue(){
+    // beep
+    tone_controller.play(correct_choice_cue_freq, tone_duration);
+}
+
+void incorrect_choice_cue(){
+    // beep
+    tone_controller.play(incorrect_choice_cue_freq, tone_duration);
+}
+
+/*
+##     ##    ###    ##       ##     ## ########
+##     ##   ## ##   ##       ##     ## ##
+##     ##  ##   ##  ##       ##     ## ##
+##     ## ##     ## ##       ##     ## ######
+ ##   ##  ######### ##        ##   ##  ##
+  ## ##   ##     ## ##         ## ##   ##
+   ###    ##     ## ########    ###    ########
 */
 
 float ul2time(unsigned long reward_volume){
@@ -89,37 +111,44 @@ float ul2time(unsigned long reward_volume){
 }
 
 bool reward_valve_closed = true;
-// bool deliver_reward = false; // already forward declared in interface_template.cpp
+// bool deliver_reward = false; // already forward declared in interface.cpp
 unsigned long reward_valve_open_time = max_future;
-float reward_valve_dur = 0;
+float reward_valve_dur;
 
 void RewardValveController(){
-    // practically a self terminating digital pin blink
+    // a self terminating digital pin switch
+    // flipped by setting deliver_reward to true somewhere in the FSM
+
     if (reward_valve_closed == true && deliver_reward == true) {
-        tone_controller.play(reward_tone_freq, tone_duration);
-        digitalWrite(REWARD_VALVE_PIN,HIGH);
+        digitalWrite(REWARD_VALVE_PIN, HIGH);
         log_code(REWARD_VALVE_ON);
         reward_valve_closed = false;
         reward_valve_dur = ul2time(reward_magnitude);
         reward_valve_open_time = now();
         deliver_reward = false;
+            
+        // present cue? (this is necessary for keeping the keyboard reward functionality)
+        if (present_reward_cue == true){
+            correct_choice_cue();
+            present_reward_cue = false;
+        }
     }
 
     if (reward_valve_closed == false && now() - reward_valve_open_time > reward_valve_dur) {
-        digitalWrite(REWARD_VALVE_PIN,LOW);
+        digitalWrite(REWARD_VALVE_PIN, LOW);
         log_code(REWARD_VALVE_OFF);
         reward_valve_closed = true;
     }
 }
 
 /*
- _______     _______..___  ___.
-|   ____|   /       ||   \/   |
-|  |__     |   (----`|  \  /  |
-|   __|     \   \    |  |\/|  |
-|  |    .----)   |   |  |  |  |
-|__|    |_______/    |__|  |__|
-
+########  ######  ##     ##
+##       ##    ## ###   ###
+##       ##       #### ####
+######    ######  ## ### ##
+##             ## ##     ##
+##       ##    ## ##     ##
+##        ######  ##     ##
 */
 
 void state_entry_common(){
@@ -136,76 +165,116 @@ void finite_state_machine() {
         case INI_STATE:
             current_state = ITI_STATE;
             break;
-             
+        
         case REWARD_AVAILABLE_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-                reward_collected = false;
                 log_code(REWARD_AVAILABLE_EVENT);
-                // these two are just for the plotter
-                log_code(TRIAL_AVAILABLE_EVENT);
-                log_code(TRIAL_ENTRY_EVENT);
-                tone_controller.play(reward_cue_freq, tone_duration);
+                
+                // play the sound
+                correct_choice_cue();
             }
 
             // update
             if (last_state == current_state){
-                // if lick_in and reward not yet collected, deliver it
-                if (lick_in == true and reward_collected == false){
-                    log_code(REWARD_COLLECTED_EVENT);
-                    deliver_reward = true;
-                    reward_collected = true;
+                if (lick_in == true){
+                    // deliver reward?
+                    float r = random(0,1000) / 1000.0;
+                    if (p_reward > r){
+                        log_code(REWARD_COLLECTED_EVENT);
+                        deliver_reward = true;
+                        current_state = ITI_STATE;
+                        break;
+                    }
+                    else {
+                        log_code(REWARD_OMITTED_EVENT);
+                        current_state = ITI_STATE;
+                        break;
+                    }
                 }
             }
 
             // exit condition
-            if (now() - state_entry > reward_available_dur || reward_collected == true) {
-                // transit to ITI after certain time (reward not collected) or after reward collection
-                if (reward_collected == false) {
-                    log_code(REWARD_MISSED_EVENT);
-                }
+            if (now() - state_entry > reward_available_dur) {
+                // transit to ITI after certain time
+                log_code(REWARD_MISSED_EVENT);
                 current_state = ITI_STATE;
+                break; // not necessary
             }
-            break;
+            break; 
+
+        case NO_REWARD_AVAILABLE_STATE:
+            // state entry
+            if (current_state != last_state){
+                state_entry_common();
+                log_code(NO_REWARD_AVAILABLE_EVENT);
+                
+                // play the sound
+                incorrect_choice_cue();
+            }
+
+            // update
+            if (last_state == current_state){
+                
+            }
+
+            // exit condition
+            if (now() - state_entry > reward_available_dur) {
+                // transit to ITI after certain time
+                current_state = ITI_STATE;
+                break; // not necessary
+            }
+            break; 
             
         case ITI_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-                // calculate length of this ITI
                 this_ITI_dur = random(ITI_dur_min, ITI_dur_max);
-                log_msg(String("this_ITI_dur "+String(this_ITI_dur)));
             }
 
             // update
             if (last_state == current_state){
-                // nothing
+
             }
 
             // exit condition
             if (now() - state_entry > this_ITI_dur) {
-                // ITI has to be long enough to not make the mice lick themselves into a timeout
-                current_state = REWARD_AVAILABLE_STATE;
+                // determine which cue is next
+                float r = random(0,1000) / 1000.0;
+                if (p_rewarded_cue > r){
+                    current_state = REWARD_AVAILABLE_STATE;
+                    break;
+                }
+                else {
+                    current_state = NO_REWARD_AVAILABLE_STATE;
+                    break;
+                }
             }
             break;
     }
 }
 
 /*
-.___  ___.      ___       __  .__   __.
-|   \/   |     /   \     |  | |  \ |  |
-|  \  /  |    /  ^  \    |  | |   \|  |
-|  |\/|  |   /  /_\  \   |  | |  . `  |
-|  |  |  |  /  _____  \  |  | |  |\   |
-|__|  |__| /__/     \__\ |__| |__| \__|
-
+##     ##    ###    #### ##    ##
+###   ###   ## ##    ##  ###   ##
+#### ####  ##   ##   ##  ####  ##
+## ### ## ##     ##  ##  ## ## ##
+##     ## #########  ##  ##  ####
+##     ## ##     ##  ##  ##   ###
+##     ## ##     ## #### ##    ##
 */
+
 void setup() {
-    Serial.begin(115200);
+    delay(100);
+    Serial.begin(115200); // main serial communication with computer
+    Serial1.begin(115200); // serial line for receiving (processed) loadcell X,Y
+
     tone_controller.begin(SPEAKER_PIN);
+
     Serial.println("<Arduino is ready to receive commands>");
-    delay(5000);
+    delay(1000);
 }
 
 void loop() {
@@ -213,13 +282,14 @@ void loop() {
         // execute state machine(s)
         finite_state_machine();
     }
+    // Controllers
+    RewardValveController();
+
     // sample sensors
     read_lick();
 
-    // valve controllers
-    RewardValveController();
-
-    // serial communication
+    // serial communication with main PC
     getSerialData();
     processSerialData();
+
 }

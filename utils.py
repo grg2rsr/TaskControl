@@ -38,6 +38,8 @@ def get_sessions(folder):
     for session in sessions:
         path = str(session)
         folder_name = os.path.basename(path)
+        if folder_name == 'plots':
+            continue
         date = folder_name.split('_')[0]
         time = folder_name.split('_')[1]
         task = '_'.join(folder_name.split('_')[2:])
@@ -115,13 +117,14 @@ def parse_code_map(path):
     # hacky parser:
     dfs = []
     for line in lines:
-        try:
-            a, b, = line.split(' int ')
-            state, code = b.split(' = ')
+        if not line.startswith('//'):
+            try:
+                a, b, = line.split(' int ')
+                state, code = b.split(' = ')
 
-            dfs.append(pd.DataFrame([[code[:-1], state]], columns=['code', 'name']))
-        except:
-            pass
+                dfs.append(pd.DataFrame([[code[:-1], state]], columns=['code', 'name']))
+            except:
+                pass
     code_map = pd.concat(dfs, axis=0)
     code_map = code_map.reset_index(drop=True)
 

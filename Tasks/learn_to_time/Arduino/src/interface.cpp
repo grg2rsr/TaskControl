@@ -13,6 +13,7 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 bool deliver_reward = false;
+bool present_reward_cue = false;
 bool punish = false;
 
 int current_state = 0; // WATCH OUT this is ini state
@@ -87,24 +88,12 @@ void processSerialData() {
 
             // INSERT_GETTERS
 
-            if (strcmp(varname,"punish_tone_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(punish_tone_freq)+String(">"));
+            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(incorrect_choice_cue_freq)+String(">"));
             }
     
-            if (strcmp(varname,"reward_cue_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_cue_freq)+String(">"));
-            }
-    
-            if (strcmp(varname,"reward_tone_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_tone_freq)+String(">"));
-            }
-    
-            if (strcmp(varname,"trial_entry_pause_dur_min")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(trial_entry_pause_dur_min)+String(">"));
-            }
-    
-            if (strcmp(varname,"trial_entry_pause_dur_max")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(trial_entry_pause_dur_max)+String(">"));
+            if (strcmp(varname,"correct_choice_cue_freq")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(correct_choice_cue_freq)+String(">"));
             }
     
             if (strcmp(varname,"choice_dur")==0){
@@ -127,10 +116,6 @@ void processSerialData() {
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_magnitude)+String(">"));
             }
     
-            if (strcmp(varname,"trial_t_gap")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(trial_t_gap)+String(">"));
-            }
-    
             if (strcmp(varname,"valve_ul_ms")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(valve_ul_ms)+String(">"));
             }
@@ -139,44 +124,36 @@ void processSerialData() {
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_available_dur)+String(">"));
             }
     
-            if (strcmp(varname,"X_start_thresh")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_start_thresh)+String(">"));
+            if (strcmp(varname,"interval_boundary")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(interval_boundary)+String(">"));
+            }
+    
+            if (strcmp(varname,"interval_gap")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(interval_gap)+String(">"));
+            }
+    
+            if (strcmp(varname,"difficulty")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(difficulty)+String(">"));
+            }
+    
+            if (strcmp(varname,"difficulty_incr")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(difficulty_incr)+String(">"));
+            }
+    
+            if (strcmp(varname,"difficulty_decr")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(difficulty_decr)+String(">"));
             }
     
             if (strcmp(varname,"X_thresh")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_thresh)+String(">"));
             }
     
-            if (strcmp(varname,"X_target_thresh")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_target_thresh)+String(">"));
-            }
-    
-            if (strcmp(varname,"X_increment")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_increment)+String(">"));
-            }
-    
-            if (strcmp(varname,"X_decrement")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_decrement)+String(">"));
-            }
-    
-            if (strcmp(varname,"Y_start_thresh")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(Y_start_thresh)+String(">"));
-            }
-    
             if (strcmp(varname,"Y_thresh")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(Y_thresh)+String(">"));
             }
     
-            if (strcmp(varname,"Y_target_thresh")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(Y_target_thresh)+String(">"));
-            }
-    
-            if (strcmp(varname,"Y_increment")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(Y_increment)+String(">"));
-            }
-    
-            if (strcmp(varname,"Y_decrement")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(Y_decrement)+String(">"));
+            if (strcmp(varname,"bias")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(bias)+String(">"));
             }
                 if (strcmp(varname,"current_state")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
@@ -212,24 +189,12 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
-            if (strcmp(varname,"punish_tone_freq")==0){
-                punish_tone_freq = atoi(varvalue);
+            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
+                incorrect_choice_cue_freq = atoi(varvalue);
             }
     
-            if (strcmp(varname,"reward_cue_freq")==0){
-                reward_cue_freq = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"reward_tone_freq")==0){
-                reward_tone_freq = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"trial_entry_pause_dur_min")==0){
-                trial_entry_pause_dur_min = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"trial_entry_pause_dur_max")==0){
-                trial_entry_pause_dur_max = strtoul(varvalue,NULL,10);
+            if (strcmp(varname,"correct_choice_cue_freq")==0){
+                correct_choice_cue_freq = atoi(varvalue);
             }
     
             if (strcmp(varname,"choice_dur")==0){
@@ -252,56 +217,44 @@ void processSerialData() {
                 reward_magnitude = strtoul(varvalue,NULL,10);
             }
     
-            if (strcmp(varname,"trial_t_gap")==0){
-                trial_t_gap = strtoul(varvalue,NULL,10);
-            }
-    
             if (strcmp(varname,"reward_available_dur")==0){
                 reward_available_dur = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"interval_boundary")==0){
+                interval_boundary = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"interval_gap")==0){
+                interval_gap = strtoul(varvalue,NULL,10);
             }
     
             if (strcmp(varname,"valve_ul_ms")==0){
                 valve_ul_ms = atof(varvalue);
             }
     
-            if (strcmp(varname,"X_start_thresh")==0){
-                X_start_thresh = atof(varvalue);
+            if (strcmp(varname,"difficulty")==0){
+                difficulty = atof(varvalue);
+            }
+    
+            if (strcmp(varname,"difficulty_incr")==0){
+                difficulty_incr = atof(varvalue);
+            }
+    
+            if (strcmp(varname,"difficulty_decr")==0){
+                difficulty_decr = atof(varvalue);
             }
     
             if (strcmp(varname,"X_thresh")==0){
                 X_thresh = atof(varvalue);
             }
     
-            if (strcmp(varname,"X_target_thresh")==0){
-                X_target_thresh = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"X_increment")==0){
-                X_increment = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"X_decrement")==0){
-                X_decrement = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"Y_start_thresh")==0){
-                Y_start_thresh = atof(varvalue);
-            }
-    
             if (strcmp(varname,"Y_thresh")==0){
                 Y_thresh = atof(varvalue);
             }
     
-            if (strcmp(varname,"Y_target_thresh")==0){
-                Y_target_thresh = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"Y_increment")==0){
-                Y_increment = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"Y_decrement")==0){
-                Y_decrement = atof(varvalue);
+            if (strcmp(varname,"bias")==0){
+                bias = atof(varvalue);
             }
     
         }
@@ -355,6 +308,7 @@ void processSerialData() {
 
             if (strcmp(CMD,"r")==0){
                 deliver_reward = true;
+                present_reward_cue = true;
             }
 
             if (strcmp(CMD,"p")==0){

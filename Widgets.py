@@ -144,6 +144,7 @@ class SettingsWidget(QtWidgets.QWidget):
         # self terminate
         self.selfTerminateCheckBox = QtWidgets.QCheckBox()
         self.selfTerminateCheckBox.setChecked(True)
+        self.selfTerminateCheckBox.stateChanged.connect(self.TerminateCheckBoxToggle)
         
         FormLayout.addRow("self terminate", self.selfTerminateCheckBox)
         Df = pd.DataFrame([['after (min) ',  45,   'int32'],
@@ -153,6 +154,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
         self.selfTerminateEdit = ValueEditFormLayout(self, DataFrame=Df)
         FormLayout.addRow(self.selfTerminateEdit)
+        self.selfTerminateEdit.setEnabled(False)
 
         # positioning and deco
         self.setWindowTitle("Settings")
@@ -338,6 +340,14 @@ class SettingsWidget(QtWidgets.QWidget):
         for Controller in self.Controllers:
             Controller.layout()
 
+    def TerminateCheckBoxToggle(self, state):
+        if state == 0:
+            self.selfTerminateEdit.setEnabled(True)
+
+        if state == 2:
+            self.selfTerminateEdit.setEnabled(False)
+
+
     def time_handler(self):
         # called every second by QTimer
         # FIXME there are rounding errors
@@ -354,6 +364,9 @@ class SettingsWidget(QtWidgets.QWidget):
             current_time = dt.seconds/60
             current_water = self.WaterCounter.get_value()
             current_trials = self.TrialCounter.get_value('total')
+
+            # utils.debug_trace()
+            print(max_time, max_water, max_trials)
 
             if current_time >= max_time and max_time > 0:
                 self.Done()
@@ -666,18 +679,18 @@ class ValueEdit(QtWidgets.QLineEdit):
         super(ValueEdit, self).__init__(parent=parent)
         self.dtype = dtype
         self.set_value(value)
+        self.editingFinished.connect(self.edit_finished)
 
     def get_value(self):
         self.value = sp.array(self.text(), dtype=self.dtype)
         return self.value
 
-    # def get_dtype(self):
-    #     return self.dtype
-
     def set_value(self, value):
         self.value = sp.array(value, dtype=self.dtype)
         self.setText(str(self.value))
 
+    def edit_finished(self):
+        self.set_value(self.get_value())
 
 class ValueEditFormLayout(QtWidgets.QFormLayout):
     """ a QFormLayout consisting of ValueEdit rows, to be initialized with a pd.DataFrame 
@@ -720,6 +733,10 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
         except ValueError:
             print("attempting to set a name, value not in Df:" + str(name) + " " + str(value))
 
+    def setEnabled(self, value):
+         for i in range(self.rowCount()):
+            widget = self.itemAt(i, 1).widget()
+            widget.setEnabled(value)
 
     def set_entries(self, Df):
         # test compatibility first
@@ -736,6 +753,7 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
 
     def get_entry(self, name):
         # controller function - returns a pd.Series
+        self.update_model()
         ix = list(self.Df['name']).index(name)
         return self.Df.loc[ix]
 
