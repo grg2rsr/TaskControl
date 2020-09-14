@@ -365,9 +365,6 @@ class SettingsWidget(QtWidgets.QWidget):
             current_water = self.WaterCounter.get_value()
             current_trials = self.TrialCounter.get_value('total')
 
-            # utils.debug_trace()
-            print(max_time, max_water, max_trials)
-
             if current_time >= max_time and max_time > 0:
                 self.Done()
             if current_water >= max_water and max_water > 0:

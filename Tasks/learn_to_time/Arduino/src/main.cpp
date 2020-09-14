@@ -268,7 +268,7 @@ void process_loadcell() {
     if (current_zone != last_zone){
         last_zone_change = now();
 
-        // log_var("current_zone", String(current_zone));
+        log_var("current_zone", String(current_zone));
 
         // on center leave
         if (last_zone == center) {

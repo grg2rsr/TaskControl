@@ -739,7 +739,6 @@ def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None):
 
         # Store information
         interval.append(int(bhv.get_interval(TrialDf)))
-        outcome.append(bhv.get_outcome(TrialDf).values[0])
         choice_RT.append(float(bhv.choice_RT(TrialDf)))
 
         i = i + 1

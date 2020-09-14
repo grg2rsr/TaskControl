@@ -6,6 +6,8 @@
 
 float X;
 float Y;
+float x;
+float y;
 
 const byte numBytes = 8; // for two floats
 char receivedBytes[numBytes];
@@ -82,11 +84,27 @@ void processRawData() {
         Yb.b[0] = receivedBytes[4]; 
         Yb.b[1] = receivedBytes[5]; 
         Yb.b[2] = receivedBytes[6]; 
-        Yb.b[3] = receivedBytes[7]; 
+        Yb.b[3] = receivedBytes[7];
 
-        X = (float) Xb.f;
-        Y = (float) Yb.f;
+        // constrain
+        x = (float) Xb.f;
+        y = (float) Yb.f;
+
+        if (x < 5000 && x > -5000){
+            X = x;
+        }
+
+        if (y < 5000 && y > -5000){
+            Y = y;
+        }
 
     }
+    // if (X > 10000 || X < -10000){
+    //     Serial.println("<VAR X " + String(X) + " "+String(micros()/1000.0)+">");
+    // }
+    // if (Y > 10000 || Y < -10000){
+    //     Serial.println("<VAR Y " + String(Y) + " "+String(micros()/1000.0)+">");
+    // }
+    // Serial.println("<VAR Y " + String(Y) + " "+String(micros()/1000.0)+">");
     RawNewData = false;
 }

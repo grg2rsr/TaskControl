@@ -445,10 +445,10 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
     def on_serial(self, line):
         """ if the var is in the interface variables, set it """
 
-        if line.startswith('<VAR'):
-            _, name, value, t = line[1:-1].split(' ')
-            if name in self.VariableEditWidget.Df['name'].values:
-                self.VariableEditWidget.set_entry(name, value) # the lineedit should take care of the correct dtype
+        # if line.startswith('<VAR'):
+        #     _, name, value, t = line[1:-1].split(' ')
+        #     if name in self.VariableEditWidget.Df['name'].values:
+        #         self.VariableEditWidget.set_entry(name, value) # the lineedit should take care of the correct dtype
 
 """
  
@@ -660,6 +660,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         # w checkbox - LICK does not work bc not decoded EASY TODO
 
         if not line.startswith('<VAR current_zone') and not line.startswith('LICK'):
+        # if not line.startswith('LICK'):
             if not line.startswith('<'):
                 code = line.split('\t')[0]
                 decoded = self.code_map[code]
