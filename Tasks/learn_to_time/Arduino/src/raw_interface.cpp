@@ -90,21 +90,20 @@ void processRawData() {
         x = (float) Xb.f;
         y = (float) Yb.f;
 
-        if (x < 5000 && x > -5000){
+        if (x < 10000 && x > -10000){
             X = x;
         }
+        else {
+            Serial.println(String("<MSG X out of bounds") + " "+String(micros()/1000.0)+">");
+        }
 
-        if (y < 5000 && y > -5000){
+        if (y < 10000 && y > -10000){
             Y = y;
+        }
+        else {
+            Serial.println(String("<MSG Y out of bounds") + " "+String(micros()/1000.0)+">");
         }
 
     }
-    // if (X > 10000 || X < -10000){
-    //     Serial.println("<VAR X " + String(X) + " "+String(micros()/1000.0)+">");
-    // }
-    // if (Y > 10000 || Y < -10000){
-    //     Serial.println("<VAR Y " + String(Y) + " "+String(micros()/1000.0)+">");
-    // }
-    // Serial.println("<VAR Y " + String(Y) + " "+String(micros()/1000.0)+">");
     RawNewData = false;
 }

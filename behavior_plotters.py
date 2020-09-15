@@ -92,9 +92,9 @@ def plot_psth(EventsDf, t_ref, bins=None, axes=None, how='fill', **kwargs):
     # bins = np.zeros(bins.shape)
 
     values = []
-    for t in t_ref:
-        times = bhv.time_slice(EventsDf, t+pre, t+post)['t'] - t
-        values.append(times.values)
+    for t in t_ref: # for every task event time
+        times = bhv.time_slice(EventsDf, t+pre, t+post)['t'] - t 
+        values.append(times.values) # get number of licks from EventsDf
     values = np.concatenate(values)
 
     if how is 'steps':
@@ -333,7 +333,7 @@ def plot_choice_time_hist(LogDf, TrialDfs, bin_width, axes=None):
 
     return axes  
 
-def plot_success_rate(SessionDf, history=None, axes=None): 
+def plot_success_rate(SessionDf, LogDf, history=None, axes=None): 
     """ plots success rate, if history given includes a rolling smooth """
     if axes is None:
         axes = plt.gca()
@@ -364,7 +364,18 @@ def plot_success_rate(SessionDf, history=None, axes=None):
     
     axes.set_ylabel('frac. successful')
     axes.set_xlabel('trial #')
-    axes.set_title('success rate')
+    axes.set_title('Success rate and bias')
+
+    # Bias over time
+    Df = LogDf[LogDf['var'] == 'bias']
+    times = Df['t'] / 1e3 
+    times = times - times.iloc[0]
+
+    twin_ax = axes.twinx()
+    twin_ax.plot(x, Df['value'].rolling(history).mean()[1:], label='last 10', c ='k', alpha=0.5)
+    twin_ax.axhline(0.5, color='k', linestyle=':', alpha=0.5, lw=1, zorder=-1)
+    twin_ax.set_ylim(0, 1) 
+    twin_ax.set_ylabel('bias', c ='k')
 
     return axes
 

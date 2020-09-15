@@ -185,8 +185,8 @@ def get_spans_from_names(LogDf, on_name, off_name):
     ts = []
     for i,tup in enumerate(ons.itertuples()):
         t_on = tup.t
-        binds = sp.argmax(offs['t'] > t_on)
-        if sp.any(binds):
+        binds = np.argmax(offs['t'] > t_on)
+        if np.any(binds):
             t_off = offs.iloc[binds]['t']
             ts.append((t_on,t_off))
 
@@ -492,31 +492,14 @@ def get_choice(TrialDf):
     if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
         choice = "right"
 
-    return pd.Series(choice, name='choice')
-    
-    # if get_outcome(TrialDf).values[0] != 'missed':
-    #     if "CHOICE_LEFT_EVENT" in TrialDf.name.values:
-    #         choice = "left"
-    #     if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
-    #         choice = "right"
+    # # Top
+    # if get_choice_zone(TrialDf).values[0] == 8:
+    #     choice = "up"
+    # # Bottom 
+    # if get_choice_zone(TrialDf).values[0] == 2:
+    #     choice = "down"
 
-    #     # Top row
-    #     if get_choice_zone(TrialDf).values[0] == 7:
-    #         choice = "up left"
-    #     if get_choice_zone(TrialDf).values[0] == 8:
-    #         choice = "up"
-    #     if get_choice_zone(TrialDf).values[0] == 9:
-    #         choice = "up right"
-
-    #     # Bottom row
-    #     if get_choice_zone(TrialDf).values[0] == 1:
-    #         choice = "down left"
-    #     if get_choice_zone(TrialDf).values[0] == 2:
-    #         choice = "down"
-    #     if get_choice_zone(TrialDf).values[0] == 3:
-    #         choice = "down right"
-
-    # return pd.Series(choice,name="choice")
+    return pd.Series(choice,name="choice")
 
 def get_choice_zone(TrialDf):
     current_zone = np.NaN

@@ -89,7 +89,7 @@ for path_tuple in enumerate(tqdm(paths)):
 
         # Sucess rate over session
         fig_ax3 = fig.add_subplot(gs[:3,3:5])
-        bhv_plt.plot_success_rate(SessionDf, 10, fig_ax3)
+        bhv_plt.plot_success_rate(SessionDf, LogDf, 10, fig_ax3)
 
         # Psychometric adapted from Georg's code
         fig_ax4 = fig.add_subplot(gs[3:6,3:5])

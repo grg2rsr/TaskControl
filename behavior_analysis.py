@@ -68,9 +68,9 @@ fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
 events = ['REWARD_AVAILABLE_EVENT', 'OMITTED_REWARD_AVAILABLE_EVENT', 'NO_REWARD_AVAILABLE_EVENT']
 LicksDf = bhv.get_events_from_name(LogDf, 'LICK_EVENT')
 for event, ax in zip(events, axes):
-    times = bhv.get_events_from_name(LogDf, event)['t']
+    times = bhv.get_events_from_name(LogDf, event)['t'] # task event times
     try:
-        plot_psth(LicksDf, times, bins=sp.linspace(pre, post, 50), axes=ax, density=True)
+        plot_psth(LicksDf, times, bins=sp.linspace(pre, post, 50), axes=ax, density=True) # Density with time on ms screws up everything
     except:
         continue
     ax.set_title(event, fontsize='x-small')
@@ -156,9 +156,10 @@ m, b = bhv.sync_clocks(t_harp, t_arduino, log_path)
 LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
 
 
-# %%
+# %% Raw forces timecourse with L/R choice and go_cue timestamps 
+
 fig, axes = plt.subplots()
-ds = 10
+ds = 10 # downsampling factor
 axes.plot(LoadCellDf['t'].values[::ds], LoadCellDf['x'].values[::ds])
 axes.plot(LoadCellDf['t'].values[::ds], LoadCellDf['y'].values[::ds])
 
@@ -167,37 +168,10 @@ plt.vlines(group['t'].values,0,5000,color='k',lw=2)
 group = LogDf.groupby('name').get_group("CHOICE_LEFT_EVENT")
 plt.vlines(group['t'].values,0,5000,color='g',lw=2)
 
-group = LogDf.groupby('var').get_group('current_zone')
-plt.vlines(group['t'].values,0,-5000,color='r',lw=2)
-
 group = LogDf.groupby('name').get_group("GO_CUE_EVENT")
 plt.vlines(group['t'].values,1000,-1000,color='b',lw=2)
-# group = group.loc[group.value == 4]
-# plt.vlines(group['t'].values,5000,-5000,color='b',lw=2,alpha=0.5)
 
-# for t in group['t']:
-    # axes.axvline(t,color='k', alpha=0.5)
-    # print(t)
-# group = LogDf.groupby('name').get_group("CHOICE_LEFT_EVENT")
-# for t in group['t']:
-    # print(t)
-    # axes.axvline(t,color='o', alpha=0.5)
-
-# group = LogDf.groupby('var').get_group('current_zone')
-# group = group.loc[group.value == 5]
-
-# for t in group['t']:
-#     axes.axvline(t,color='c')
-
-# group = LogDf.groupby('var').get_group('current_zone')
-# group = group.loc[group.value == 6]
-
-# for t in group['t']:
-#     axes.axvline(t,color='y')
-
-
-# %%
-
+plt.title('Raw forces timecourse with L/R choice and go_cue timestamps ')
 
 # %% median correction
 samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
@@ -217,7 +191,8 @@ for i, row in tqdm(TrialSpans.iterrows()):
 metrics = (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.choice_RT, bhv.is_successful, bhv.get_outcome)
 SessionDf = bhv.parse_trials(TrialDfs, metrics)
 
-# %% choice / outcome grid
+# %% choice / outcome grid for LC forces
+
 sides = ['left', 'right']
 outcomes = ['correct', 'incorrect']
 fig, axes = plt.subplots(nrows=len(outcomes), ncols=len(sides), figsize=[5, 5], sharex=True, sharey=True)
@@ -292,7 +267,6 @@ axes[0, 1].set_title('right')
 axes[0, 0].set_ylabel('correct')
 axes[1, 0].set_ylabel('incorrect')
 fig.tight_layout()
-
 
 
 # %% bias over time

@@ -6,6 +6,8 @@
 
 float X;
 float Y;
+float x;
+float y;
 
 const byte numBytes = 8; // for two floats
 char receivedBytes[numBytes];
@@ -82,10 +84,25 @@ void processRawData() {
         Yb.b[0] = receivedBytes[4]; 
         Yb.b[1] = receivedBytes[5]; 
         Yb.b[2] = receivedBytes[6]; 
-        Yb.b[3] = receivedBytes[7]; 
+        Yb.b[3] = receivedBytes[7];
 
-        X = (float) Xb.f;
-        Y = (float) Yb.f;
+        // constrain
+        x = (float) Xb.f;
+        y = (float) Yb.f;
+
+        if (x < 10000 && x > -10000){
+            X = x;
+        }
+        else {
+            Serial.println(String("<MSG X out of bounds") + " "+String(micros()/1000.0)+">");
+        }
+
+        if (y < 10000 && y > -10000){
+            Y = y;
+        }
+        else {
+            Serial.println(String("<MSG Y out of bounds") + " "+String(micros()/1000.0)+">");
+        }
 
     }
     RawNewData = false;
