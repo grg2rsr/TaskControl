@@ -33,28 +33,41 @@ from behavior_plotters import *
  
 """
 
-# %%
+# %% path setup
 log_path = utils.get_file_dialog()
 plot_dir = log_path.parent / 'plots'
 os.makedirs(plot_dir, exist_ok=True)
 
-# %% plot weight development
-
+# %% across sessino - plot weight
 SessionsDf = utils.get_sessions(log_path.parent.parent)
 Df = pd.read_csv(log_path.parent.parent / 'animal_meta.csv')
 ini_weight = float(Df[Df['name'] == 'Weight']['value'])
 for i,row in SessionsDf.iterrows():
-    path = row['path']
-    Df = pd.read_csv(Path(path) / 'animal_meta.csv')
-    current_weight = float(Df[Df['name'] == 'current_weight']['value'])
-    SessionsDf.loc[row.name,'weight'] = current_weight
-    SessionsDf.loc[row.name,'weight_frac'] = current_weight / ini_weight
-
-fig, axes = plt.subplots()
-axes.plot(SessionsDf.weight_frac,'o')
-axes.set_ylim(0,1)
+    try:
+        path = row['path']
+        Df = pd.read_csv(Path(path) / 'animal_meta.csv')
+        current_weight = float(Df[Df['name'] == 'current_weight']['value'])
+        SessionsDf.loc[row.name,'weight'] = current_weight
+        SessionsDf.loc[row.name,'weight_frac'] = current_weight / ini_weight
+    except:
+        pass
 
 # %%
+fig, axes = plt.subplots()
+axes.plot(SessionsDf.index.values,SessionsDf.weight_frac,'o')
+axes.set_xticks(SessionsDf.index.values)
+axes.set_xticklabels(SessionsDf['date'].values,rotation=90)
+line_kwargs = dict(lw=1,linestyle=':',alpha=0.75,color='k')
+# axes.axhline(0.75,**line_kwargs)
+axes.axhline(0.85,**line_kwargs)
+axes.set_ylim(0.5,1)
+axes.set_title('weight')
+axes.set_xlabel('session date')
+axes.set_ylabel('weight %')
+sns.despine(fig)
+fig.tight_layout()
+
+# %% preprocess 
 LogDf = bhv.get_LogDf_from_path(log_path)
 LogDf = bhv.filter_bad_licks(LogDf)
 
@@ -80,7 +93,6 @@ for t in EventsDf['t'].values:
 
 # %% learn to lick inspections
 pre, post = -2000, 4000
-
 fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
 
 events = ['REWARD_AVAILABLE_EVENT', 'OMITTED_REWARD_AVAILABLE_EVENT', 'NO_REWARD_AVAILABLE_EVENT']
@@ -99,37 +111,17 @@ fig.suptitle('lick psth to cues')
 fig.tight_layout()
 plt.savefig(plot_dir / 'lick_to_cues_psth.png', dpi=300)
 
-# %% in one axes
-pre, post = -2000, 4000
-
-fig, axes = plt.subplots(figsize=[5, 3])
-
-events = ['REWARD_AVAILABLE_EVENT', 'OMITTED_REWARD_AVAILABLE_EVENT', 'NO_REWARD_AVAILABLE_EVENT']
-LicksDf = bhv.get_events_from_name(LogDf, 'LICK_EVENT')
-for event in events:
-    times = bhv.get_events_from_name(LogDf, event)['t']
-    try:
-        plot_psth(LicksDf, times, bins=sp.linspace(pre, post, 50), axes=axes, label=event, density=True, alpha=0.45)
-    except:
-        continue
-
-axes.legend(fontsize='x-small')
-axes.axvline(0, linestyle=':', lw=1, alpha=0.5, color='k')
-sns.despine(fig)
-fig.suptitle('lick psth to cues')
-fig.tight_layout()
-
 # %% Reaction times - first lick to cue
 pre, post = -2000, 4000
 
-fig, axes = plt.subplots(figsize=[5, 3])
+fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
 
 events = ['REWARD_AVAILABLE_EVENT', 'OMITTED_REWARD_AVAILABLE_EVENT', 'NO_REWARD_AVAILABLE_EVENT']
 LicksDf = bhv.get_events_from_name(LogDf, 'LICK_EVENT')
 
 bins=sp.linspace(0, 500, 25)
 
-for event in events:
+for event, ax in zip(events,axes):
     times = bhv.get_events_from_name(LogDf, event)['t']
     # find next lick after time t
     rts = []
@@ -138,14 +130,18 @@ for event in events:
         t_next_lick = LicksDf.iloc[ix]['t']
         rt = t_next_lick - t
         rts.append(rt)
-    axes.hist(rts, bins=bins, label=event, alpha=0.5, density=True)
 
-# adding inter lick interval as random model
-axes.hist(sp.diff(LicksDf['t'].values), bins=bins, alpha=0.5, color='gray', density=True, label='random')
+    # data
+    ax.hist(rts, bins=bins, label='data', alpha=0.5, density=True)
 
-axes.legend(fontsize='x-small')
-axes.set_xlabel('rt (ms)')
-axes.set_ylabel('normed count')
+    # random model
+    ax.hist(sp.diff(LicksDf['t'].values), bins=bins, alpha=0.5, color='gray', density=True, label='random', zorder=-10)
+
+    ax.set_xlabel('rt (ms)')
+    ax.set_ylabel('normed count')
+    ax.set_title(event, fontsize='small')
+
+axes[0].legend(fontsize='x-small')
 sns.despine(fig)
 fig.suptitle('reaction times to auditory cues')
 fig.tight_layout()
@@ -161,7 +157,7 @@ fig.tight_layout()
 ######## ######## ##     ## ##     ## ##    ##       ##     #######     ##         #######   ######  ##     ##
 """
 
-# %% LC syncing
+# %% preprocessing: LC syncing
 LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
 arduino_sync = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT")
 
@@ -174,23 +170,6 @@ if t_harp.shape != t_arduino.shape:
 m, b = bhv.sync_clocks(t_harp, t_arduino, log_path)
 LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
 
-
-# %% Raw forces timecourse with L/R choice and go_cue timestamps 
-
-fig, axes = plt.subplots()
-ds = 10 # downsampling factor
-axes.plot(LoadCellDf['t'].values[::ds], LoadCellDf['x'].values[::ds])
-axes.plot(LoadCellDf['t'].values[::ds], LoadCellDf['y'].values[::ds])
-
-group = LogDf.groupby('name').get_group("CHOICE_RIGHT_EVENT")
-plt.vlines(group['t'].values,0,5000,color='k',lw=2)
-group = LogDf.groupby('name').get_group("CHOICE_LEFT_EVENT")
-plt.vlines(group['t'].values,0,5000,color='g',lw=2)
-
-group = LogDf.groupby('name').get_group("GO_CUE_EVENT")
-plt.vlines(group['t'].values,1000,-1000,color='b',lw=2)
-
-plt.title('Raw forces timecourse with L/R choice and go_cue timestamps ')
 
 # %% median correction
 samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
@@ -211,7 +190,6 @@ metrics = (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.choi
 SessionDf = bhv.parse_trials(TrialDfs, metrics)
 
 # %% choice / outcome grid for LC forces
-
 sides = ['left', 'right']
 outcomes = ['correct', 'incorrect']
 fig, axes = plt.subplots(nrows=len(outcomes), ncols=len(sides), figsize=[5, 5], sharex=True, sharey=True)
@@ -244,41 +222,37 @@ for i, side in enumerate(sides):
         event_ix = Fx.shape[0] - post
 
         ## for trajectories
-        # for k in range(Fx.shape[1]):
-        #     ax.plot(Fx[:, k], Fy[:, k], lw=0.5, alpha=0.5)
-        #     ax.plot(Fx[event_ix, k], Fy[event_ix, k], 'o', markersize = 5, alpha=0.5)
-     
-        # Fx_avg = sp.average(Fx, 1) 
-        # Fy_avg = sp.average(Fy, 1)
-
-        # ax.plot(Fx_avg, Fy_avg, lw=1, color='k', alpha=0.8)
-        # ax.plot(Fx_avg[event_ix], Fy_avg[event_ix], 'o', color='k', alpha=0.8, markersize=5)
-       
-        # ax.set_xlim(-3000, 3000)
-        # ax.set_ylim(-3000, 3000)
-
-        # line_kwargs = dict(color='k', linestyle=':', alpha=0.5, zorder=-100)
-        # ax.axvline(0, **line_kwargs)
-        # ax.axhline(0, **line_kwargs)
-
-        # line_kwargs = dict(color='k', lw=0.5, linestyle='-', alpha=0.25, zorder=-100)
-        # ax.axvline(-2500, **line_kwargs)
-        # ax.axvline(+2500, **line_kwargs)
-        # ax.axhline(-1500, **line_kwargs)
-        # ax.axhline(+1500, **line_kwargs)
-
-        ## for heatmaps
-        # ax.matshow(Fy.T, origin='lower', vmin=-2000, vmax=2000, cmap='PiYG')
-        # ax.set_aspect('auto')
-
-        ## for inspecting clean choices
-        tvec = sp.linspace(pre, post, Fx.shape[0])
         for k in range(Fx.shape[1]):
-            ax.plot(tvec, Fx[:, k], lw=0.5, alpha=0.5)
-            ax.plot(tvec[event_ix], Fx[event_ix, k], 'o', markersize = 5, alpha=0.5)
-        ax.plot(tvec, sp.average(Fx, 1), lw=1, color='k', alpha=0.8)
-        ax.set_ylim(-2500, 2500)
-        ax.axvline(0, color='k', linestyle=':', alpha=0.5, lw=1, zorder=-1)
+            ax.plot(Fx[:, k], Fy[:, k], lw=0.5, alpha=0.5)
+            ax.plot(Fx[event_ix, k], Fy[event_ix, k], 'o', markersize = 5, alpha=0.5)
+     
+        Fx_avg = sp.average(Fx, 1) 
+        Fy_avg = sp.average(Fy, 1)
+
+        ax.plot(Fx_avg, Fy_avg, lw=1, color='k', alpha=0.8)
+        ax.plot(Fx_avg[event_ix], Fy_avg[event_ix], 'o', color='k', alpha=0.8, markersize=5)
+       
+        ax.set_xlim(-3000, 3000)
+        ax.set_ylim(-3000, 3000)
+
+        line_kwargs = dict(color='k', linestyle=':', alpha=0.5, zorder=-100)
+        ax.axvline(0, **line_kwargs)
+        ax.axhline(0, **line_kwargs)
+
+        line_kwargs = dict(color='k', lw=0.5, linestyle='-', alpha=0.25, zorder=-100)
+        ax.axvline(-2500, **line_kwargs)
+        ax.axvline(+2500, **line_kwargs)
+        ax.axhline(-1500, **line_kwargs)
+        ax.axhline(+1500, **line_kwargs)
+
+        # # for inspecting clean choices
+        # tvec = sp.linspace(pre, post, Fx.shape[0])
+        # for k in range(Fx.shape[1]):
+        #     ax.plot(tvec, Fx[:, k], lw=0.5, alpha=0.5)
+        #     ax.plot(tvec[event_ix], Fx[event_ix, k], 'o', markersize = 5, alpha=0.5)
+        # ax.plot(tvec, sp.average(Fx, 1), lw=1, color='k', alpha=0.8)
+        # ax.set_ylim(-2500, 2500)
+        # ax.axvline(0, color='k', linestyle=':', alpha=0.5, lw=1, zorder=-1)
 
 sns.despine(fig)
 axes[0, 0].set_title('left')
@@ -286,6 +260,60 @@ axes[0, 1].set_title('right')
 axes[0, 0].set_ylabel('correct')
 axes[1, 0].set_ylabel('incorrect')
 fig.tight_layout()
+
+# %% heatmaps
+pre, post = -1000, 1000
+align_event = "GO_CUE_EVENT"
+
+order = [['left','correct'],
+         ['left','incorrect'],
+         ['right','correct'],
+         ['right','incorrect']]
+
+height_ratios = SessionDf.groupby(['choice', 'outcome']).count()['t_on'][order].values
+
+fig, axes = plt.subplots(nrows=len(order), ncols=2, figsize=[5, 5], sharex=True, gridspec_kw=dict(height_ratios=height_ratios))
+
+for i, (side, outcome) in enumerate(order):
+    try:
+        SDf = SessionDf.groupby(['choice', 'outcome']).get_group((side, outcome))
+    except:
+        continue
+
+    Fx = []
+    Fy = []
+    for _, row in tqdm(SDf.iterrows()):
+        TrialDf = TrialDfs[row.name]
+        t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
+        # identical to:
+        # t_align = TrialDf.groupby('name').get_group(align_event)['t'].values
+        LCDf = bhv.time_slice(LoadCellDf, t_align+pre, t_align+post)
+        Fx.append(LCDf['x'].values)
+        Fy.append(LCDf['y'].values)
+
+    Fx = sp.array(Fx).T
+    Fy = sp.array(Fy).T
+
+    # event_ix = Fx.shape[0] - post
+
+    ## for heatmaps
+    axes[i,0].matshow(Fx.T, origin='lower', vmin=-2000, vmax=2000, cmap='PiYG')
+    axes[i,1].matshow(Fy.T, origin='lower', vmin=-2000, vmax=2000, cmap='PiYG')
+
+for ax in axes.flatten():
+    ax.set_aspect('auto')
+
+for ax in axes[-1,:]:
+    ax.xaxis.set_ticks_position('bottom')
+
+for ax, (side, outcome) in zip(axes[:,0],order):
+    ax.set_ylabel('\n'.join([side,outcome]))
+
+axes[0,0].set_title('Fx')
+axes[0,1].set_title('Fy')
+
+fig.tight_layout()
+fig.subplots_adjust(hspace=0.05)
 
 
 # %% bias over time
@@ -537,6 +565,22 @@ axes.set_ylabel('density')
 
 
 
+# %% Raw forces timecourse with L/R choice and go_cue timestamps 
+
+fig, axes = plt.subplots()
+ds = 10 # downsampling factor
+axes.plot(LoadCellDf['t'].values[::ds], LoadCellDf['x'].values[::ds])
+axes.plot(LoadCellDf['t'].values[::ds], LoadCellDf['y'].values[::ds])
+
+group = LogDf.groupby('name').get_group("CHOICE_RIGHT_EVENT")
+plt.vlines(group['t'].values,0,5000,color='k',lw=2)
+group = LogDf.groupby('name').get_group("CHOICE_LEFT_EVENT")
+plt.vlines(group['t'].values,0,5000,color='g',lw=2)
+
+group = LogDf.groupby('name').get_group("GO_CUE_EVENT")
+plt.vlines(group['t'].values,1000,-1000,color='b',lw=2)
+
+plt.title('Raw forces timecourse with L/R choice and go_cue timestamps ')
 
 
 
@@ -647,3 +691,4 @@ fig.tight_layout()
 # # %%
 
 # %%
+

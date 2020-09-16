@@ -29,11 +29,12 @@ def get_LogDf_from_path(log_path):
 
     # and read
     CodesDf = utils.parse_code_map(code_map_path)
-    code_map = dict(zip(CodesDf['code'],CodesDf['name']))
+    code_map = dict(zip(CodesDf['code'], CodesDf['name']))
+
     try:
         LogDf = bhv.parse_arduino_log(log_path, code_map)
-    # Dealing with the earlier LogDfs not having X_tresh/Current_zone etc.
     except ValueError:
+        # Dealing with the earlier LogDfs not having X_tresh/Current_zone etc.
         LogDf = bhv.parse_arduino_log(log_path, code_map, parse_var=False)
 
     return LogDf
@@ -44,7 +45,7 @@ def parse_arduino_log(log_path, code_map=None, parse_var=True):
 
     for offline use
     """
-    with open(log_path,'r') as fH:
+    with open(log_path, 'r') as fH:
         lines = fH.readlines()
 
     return parse_lines(lines, code_map=code_map, parse_var=parse_var)
@@ -58,12 +59,12 @@ def correct_wraparound(Df):
 
 def parse_lines(lines, code_map=None, parse_var=False):
     """ parses a list of lines from arduino into a pd.DataFrame """
-    LogDf = pd.DataFrame([line.split('\t') for line in lines if '\t' in line],columns=['code','t'])
+    LogDf = pd.DataFrame([line.split('\t') for line in lines if '\t' in line], columns=['code', 't'])
     LogDf['t'] = LogDf['t'].astype('float')
     LogDf = correct_wraparound(LogDf)
     LogDf = LogDf.reset_index(drop=True)
 
-    for col in ['name','var','value']:
+    for col in ['name', 'var', 'value']:
         LogDf[col] = sp.NaN
 
     # decode
@@ -72,15 +73,15 @@ def parse_lines(lines, code_map=None, parse_var=False):
 
     if parse_var:
         var_lines = [line.strip() for line in lines if line.startswith('<VAR')]
-        VarDf = pd.DataFrame([line[1:-1].split(' ') for line in var_lines],columns=['_','var','value','t'])
-        VarDf = VarDf.drop('_',axis=1)
+        VarDf = pd.DataFrame([line[1:-1].split(' ') for line in var_lines], columns=['_', 'var', 'value', 't'])
+        VarDf = VarDf.drop('_', axis=1)
         VarDf['t'] = VarDf['t'].astype('float')
         VarDf['value'] = VarDf['value'].astype('float')
         
         VarDf = correct_wraparound(VarDf)
         
         # join
-        LogDf = LogDf.append(VarDf,ignore_index=True,sort=True)
+        LogDf = LogDf.append(VarDf, ignore_index=True, sort=True)
         LogDf = LogDf.sort_values('t')
         LogDf = LogDf.reset_index(drop=True)
 
@@ -91,7 +92,7 @@ def parse_lines(lines, code_map=None, parse_var=False):
 #     the old (more performant) function
 #     """
 #     valid_lines = [line.strip() for line in lines if '\t' in line]
-#     LogDf = pd.DataFrame([line.split('\t') for line in valid_lines],columns=['code','t'])
+#     LogDf = pd.DataFrame([line.split('\t') for line in valid_lines], columns=['code', 't'])
 #     LogDf['t'] = LogDf['t'].astype('float')
 #     LogDf.reset_index(drop=True)
 
@@ -105,7 +106,6 @@ def parse_lines(lines, code_map=None, parse_var=False):
 #         LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
 
 #     return LogDf
-
 
 """
  
@@ -140,13 +140,13 @@ def filter_bad_licks(LogDf, min_time=50, max_time=200, remove=False):
     """ 
     Process recorded LICK_ON and LICK_OFF into realistic licks and add them as an event to the LogDf
     """
-    LickSpan = get_spans_from_names(LogDf,'LICK_ON','LICK_OFF')
+    LickSpan = get_spans_from_names(LogDf, 'LICK_ON', 'LICK_OFF')
 
     bad_licks = np.logical_or(LickSpan['dt'] < min_time , LickSpan['dt'] > max_time)
     LickSpan = LickSpan.loc[~bad_licks]
 
     # Add lick_event to LogDf
-    Lick_Event = pd.DataFrame(np.stack([['NA']*LickSpan.shape[0],LickSpan['t_on'].values,['LICK_EVENT']*LickSpan.shape[0]]).T,columns=['code','t','name'])
+    Lick_Event = pd.DataFrame(np.stack([['NA']*LickSpan.shape[0], LickSpan['t_on'].values, ['LICK_EVENT']*LickSpan.shape[0]]).T, columns=['code', 't', 'name'])
     Lick_Event['t'] = Lick_Event['t'].astype('float')
     LogDf = LogDf.append(Lick_Event)
     LogDf.sort_values('t')
@@ -179,23 +179,23 @@ def get_spans_from_names(LogDf, on_name, off_name):
         offs = LogDf.groupby('name').get_group(off_name)
     except KeyError:
         # thrown when name not in log - return empty Df
-        return pd.DataFrame(columns=['t_on','t_off','dt'])
+        return pd.DataFrame(columns=['t_on', 't_off', 'dt'])
 
     t_max = offs.iloc[-1]['t']
     ts = []
-    for i,tup in enumerate(ons.itertuples()):
+    for i, tup in enumerate(ons.itertuples()):
         t_on = tup.t
         binds = offs['t'] > t_on
         if np.any(binds.values):
             t_off = offs.iloc[np.argmax(binds.values)]['t']
-            ts.append((t_on,t_off))
+            ts.append((t_on, t_off))
 
-    SpansDf = pd.DataFrame(ts,columns=['t_on','t_off'])
+    SpansDf = pd.DataFrame(ts, columns=['t_on', 't_off'])
     SpansDf['dt'] = SpansDf['t_off'] - SpansDf['t_on']
   
     return SpansDf
 
-def get_spans(LogDf,span_names):
+def get_spans(LogDf, span_names):
     """ helper to get spans for multple names from LogDf span names
     returns a dict """
     SpansDict = {}
@@ -227,16 +227,7 @@ def parse_trial(TrialDf, Metrics):
     returns a one row DataFrame
     notes: does not know about trial number
     """
-    # FIXME this has to be checked with the online routine if necessary or can be caught otherwise
-    # print(TrialDf)
-    # try:
-    #     # entry event
-    #     t = TrialDf.groupby('name').get_group('TRIAL_AVAILABLE_STATE').iloc[0]['t']
-    #     print("time is",t)
-    # except KeyError:
-    #     print("parse trial returns none")
-    #     # if TrialDf has no entry event - this happens online before first trial
-    #     return None
+
     if TrialDf.shape[0] == 0:
         return None
     
@@ -265,28 +256,32 @@ def parse_trials(TrialDfs, Metrics):
     return SessionDf
 
 def triaL_to_choice_matrix(trial, choice_matrix):
+    """
+    TODO PACO unclear to me why this function is here
+    looks like a plotting helper
+    """
 
     # top row
     if trial.choice == "up left": 
-        choice_matrix[0,0] +=1
+        choice_matrix[0, 0] +=1
     if trial.choice == "up": 
-        choice_matrix[0,1] +=1
+        choice_matrix[0, 1] +=1
     if trial.choice == "up right": 
-        choice_matrix[0,2] +=1
+        choice_matrix[0, 2] +=1
 
     # middle row
     if trial.choice == "left": 
-        choice_matrix[1,0] +=1
+        choice_matrix[1, 0] +=1
     if trial.choice == "right": 
-        choice_matrix[1,2] +=1
+        choice_matrix[1, 2] +=1
 
     # bottom row
     if trial.choice == "down left": 
-        choice_matrix[2,0] +=1
+        choice_matrix[2, 0] +=1
     if trial.choice == "down": 
-        choice_matrix[2,1] +=1
+        choice_matrix[2, 1] +=1
     if trial.choice == "down right": 
-        choice_matrix[2,2] +=1
+        choice_matrix[2, 2] +=1
         
     return choice_matrix  
     
@@ -327,7 +322,9 @@ def parse_sessions(SessionDfs, Metrics):
 def aggregate_session_logs(animal_folder_path, task_name):
     """ 
     creates a list of LogDfs with all data obtained 
-    using input task an path to animal's folder  
+    using input task an path to animal's folder
+
+    TODO PACO I suggest renaming to get_LogDfs
     """
 
     SessionsDf = utils.get_sessions(animal_folder_path)
@@ -343,6 +340,12 @@ def create_LogDf_LCDf_csv(animal_folder_path, task_name, save=True, last_session
     """ 
     Creates both arduino and loadcell .csv files for each session
     and syncs arduino timestamps to harp timestamps
+
+    TODO PACO I suggest (remove last_sessions keyword as it is a debugging featuers)
+    rename function
+    keyword save is never used
+    sync clock functionality duplicated
+
     """
 
     # obtaining the paths to each sessions folder
@@ -378,7 +381,7 @@ def create_LogDf_LCDf_csv(animal_folder_path, task_name, save=True, last_session
             continue
         else:
             # sync datasets and store LogDf.csv (could use sync clocks to store)
-            m,b = bhv.sync_clocks(t_harp, t_arduino)
+            m, b = bhv.sync_clocks(t_harp, t_arduino)
             LogDf ['t_arduino'] = LogDf['t']
             LogDf['t'] = (LogDf['t'])*m + b
         
@@ -481,9 +484,6 @@ def choice_RT(TrialDf):
  
     return pd.Series(rt, name='choice_rt')
 
-# def get_choice(TrialDf):
-
-
 def get_choice(TrialDf):
     choice = np.NaN
 
@@ -499,16 +499,23 @@ def get_choice(TrialDf):
     # if get_choice_zone(TrialDf).values[0] == 2:
     #     choice = "down"
 
-    return pd.Series(choice,name="choice")
+    return pd.Series(choice, name="choice")
 
 def get_choice_zone(TrialDf):
+    """
+    TODO PACO
+    this function will not work - it will always return the last zone of the trial (which is not the 
+    choice zone that you are looking for)
+    -> also the name current_zone is misleading. I propose to call the variable 'choice_zone' and 
+    you need to fix the bug :p
+    """
     current_zone = np.NaN
     if "CHOICE_EVENT" in TrialDf.name.values or "PREMATURE_CHOICE_EVENT" in TrialDf.name.values:
         try:
             current_zone = TrialDf[TrialDf['var'] == 'current_zone'].iloc[-1].value
         except:
             current_zone = np.NaN
-    return pd.Series(current_zone,name="current_zone")
+    return pd.Series(current_zone, name="current_zone")
 
 def get_interval(TrialDf):
     try:
@@ -526,6 +533,7 @@ def get_stop(TrialDf):
     return pd.Series(TrialDf.iloc[-1]['t'], name='t_off')
 
 def get_licks(TrialDf, t1, t2):
+    """ TODO PACO - this is not a metric, looks more like a plotting helper for one of your plots """
     ' Get lick times aligned to t1'
 
     trial = bhv.time_slice(TrialDf, t1, t2)
@@ -545,7 +553,7 @@ def get_outcome(TrialDf):
     if "PREMATURE_CHOICE_EVENT" in TrialDf['name'].values:
         outcome = "premature"
 
-    return pd.Series(outcome,name="outcome")
+    return pd.Series(outcome, name="outcome")
 
 ### Session level metrics
 def rewards_collected(SessionDf):
@@ -572,23 +580,23 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     trig_len is time in ms of sync trig high, tol is deviation in ms
     check harp sampling time, seems to be 10 khz? """
 
-    with open(harp_csv_path,'r') as fH:
+    with open(harp_csv_path, 'r') as fH:
         lines = fH.readlines()
 
-    header = lines[0].split(',')
+    header = lines[0].split(', ')
 
     t_sync_high = []
     t_sync_low = []
     LoadCellDf = []
     
-    for line in tqdm(lines[1:],desc="parsing harp log"):
-        elements = line.split(',')
+    for line in tqdm(lines[1:], desc="parsing harp log"):
+        elements = line.split(', ')
         if elements[0] == '3': # line is an event
             if elements[1] == '33': # line is a load cell read
-                data = line.split(',')[2:5]
+                data = line.split(', ')[2:5]
                 LoadCellDf.append(data)
             if elements[1] == '34': # line is a digital input timestamp
-                line = line.strip().split(',')
+                line = line.strip().split(', ')
                 if line[3] == '1': # high values
                     t_sync_high.append(float(line[2])*1000) # convert to ms
                 if line[3] == '0': # low values
@@ -598,14 +606,14 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     good_timestamps = ~(np.absolute(dts-trig_len)>ttol)
     t_sync = np.array(t_sync_high)[good_timestamps]
 
-    LoadCellDf = pd.DataFrame(LoadCellDf,columns=['t','x','y'],dtype='float')
+    LoadCellDf = pd.DataFrame(LoadCellDf, columns=['t', 'x', 'y'], dtype='float')
     LoadCellDf['t_original'] = LoadCellDf['t'] # keeps the original
     LoadCellDf['t'] = LoadCellDf['t'] * 1000
 
     if save:
         # write to disk
         LoadCellDf.to_csv(harp_csv_path.parent / "loadcell_data.csv")
-        t_sync = pd.DataFrame(t_sync,columns=['t'])
+        t_sync = pd.DataFrame(t_sync, columns=['t'])
         t_sync.to_csv(harp_csv_path.parent / "harp_sync.csv")
     
     return LoadCellDf, t_sync
@@ -638,7 +646,7 @@ def cut_timestamps(t_arduino, t_harp, verbose=False):
         t_bigger = t_arduino
         t_smaller = t_harp
 
-    offset = np.argmax(np.correlate(np.diff(t_bigger),np.diff(t_smaller),mode='valid'))
+    offset = np.argmax(np.correlate(np.diff(t_bigger), np.diff(t_smaller), mode='valid'))
     if verbose:
         print("offset between the two: ", offset)
     t_bigger = t_bigger[offset:t_smaller.shape[0]+offset]
@@ -658,8 +666,8 @@ def sync_clocks(t_harp, t_arduino, log_path=None):
 
     from scipy import stats
 
-    res = stats.linregress(t_arduino,t_harp)
-    m,b = res.slope,res.intercept
+    res = stats.linregress(t_arduino, t_harp)
+    m, b = res.slope, res.intercept
 
     if log_path is not None:
         LogDf = get_LogDf_from_path(log_path)
@@ -682,13 +690,13 @@ def sync_clocks(t_harp, t_arduino, log_path=None):
 from sklearn.linear_model import LogisticRegression
 from scipy.special import expit
 
-def log_reg(x,y, x_fit=None):
-    """ x and y are of shape (N,) y are choices in [0,1] """
+def log_reg(x, y, x_fit=None):
+    """ x and y are of shape (N, ) y are choices in [0, 1] """
     if x_fit is None:
-        x_fit = np.linspace(x.min(),x.max(),100)
+        x_fit = np.linspace(x.min(), x.max(), 100)
 
     cLR = LogisticRegression()
-    cLR.fit(x[:,np.newaxis],y)
+    cLR.fit(x[:, np.newaxis], y)
 
     y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
     return y_fit
@@ -698,6 +706,6 @@ def tolerant_mean(arrs):
 
     max_length = np.max([arr.shape[0] for arr in arrs]) # get largest array
 
-    arrs=[np.pad(arr,(0,max_length-arr.shape[0]), mode='constant', constant_values=np.nan) for arr in arrs] # pad every array until max_length to obtain square matrix
+    arrs=[np.pad(arr, (0, max_length-arr.shape[0]), mode='constant', constant_values=np.nan) for arr in arrs] # pad every array until max_length to obtain square matrix
 
     return np.nanmean(arrs, axis = 0)
