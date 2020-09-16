@@ -179,6 +179,7 @@ void finite_state_machine() {
             // update
             if (last_state == current_state){
                 if (lick_in == true){
+                    correct_choice_cue();
                     // deliver reward?
                     float r = random(0,1000) / 1000.0;
                     if (p_reward > r){

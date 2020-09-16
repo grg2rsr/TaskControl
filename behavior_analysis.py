@@ -35,6 +35,24 @@ from behavior_plotters import *
 
 # %%
 log_path = utils.get_file_dialog()
+plot_dir = log_path.parent / 'plots'
+os.makedirs(plot_dir, exist_ok=True)
+
+# %% plot weight development
+
+SessionsDf = utils.get_sessions(log_path.parent.parent)
+Df = pd.read_csv(log_path.parent.parent / 'animal_meta.csv')
+ini_weight = float(Df[Df['name'] == 'Weight']['value'])
+for i,row in SessionsDf.iterrows():
+    path = row['path']
+    Df = pd.read_csv(Path(path) / 'animal_meta.csv')
+    current_weight = float(Df[Df['name'] == 'current_weight']['value'])
+    SessionsDf.loc[row.name,'weight'] = current_weight
+    SessionsDf.loc[row.name,'weight_frac'] = current_weight / ini_weight
+
+fig, axes = plt.subplots()
+axes.plot(SessionsDf.weight_frac,'o')
+axes.set_ylim(0,1)
 
 # %%
 LogDf = bhv.get_LogDf_from_path(log_path)
@@ -79,6 +97,7 @@ for event, ax in zip(events, axes):
 sns.despine(fig)
 fig.suptitle('lick psth to cues')
 fig.tight_layout()
+plt.savefig(plot_dir / 'lick_to_cues_psth.png', dpi=300)
 
 # %% in one axes
 pre, post = -2000, 4000
@@ -108,7 +127,7 @@ fig, axes = plt.subplots(figsize=[5, 3])
 events = ['REWARD_AVAILABLE_EVENT', 'OMITTED_REWARD_AVAILABLE_EVENT', 'NO_REWARD_AVAILABLE_EVENT']
 LicksDf = bhv.get_events_from_name(LogDf, 'LICK_EVENT')
 
-bins=sp.linspace(0, 500, 50)
+bins=sp.linspace(0, 500, 25)
 
 for event in events:
     times = bhv.get_events_from_name(LogDf, event)['t']
@@ -123,7 +142,7 @@ for event in events:
 
 # adding inter lick interval as random model
 axes.hist(sp.diff(LicksDf['t'].values), bins=bins, alpha=0.5, color='gray', density=True, label='random')
-7
+
 axes.legend(fontsize='x-small')
 axes.set_xlabel('rt (ms)')
 axes.set_ylabel('normed count')
