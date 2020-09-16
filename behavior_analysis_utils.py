@@ -185,9 +185,9 @@ def get_spans_from_names(LogDf, on_name, off_name):
     ts = []
     for i,tup in enumerate(ons.itertuples()):
         t_on = tup.t
-        binds = np.argmax(offs['t'] > t_on)
-        if np.any(binds):
-            t_off = offs.iloc[binds]['t']
+        binds = offs['t'] > t_on
+        if np.any(binds.values):
+            t_off = offs.iloc[np.argmax(binds.values)]['t']
             ts.append((t_on,t_off))
 
     SpansDf = pd.DataFrame(ts,columns=['t_on','t_off'])
