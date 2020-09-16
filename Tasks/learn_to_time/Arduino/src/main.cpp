@@ -124,24 +124,12 @@ Tone buzz_controller;
 unsigned long buzz_duration = 50;
 unsigned long choice_buzz_duration = 100;
 
-// bias related
-// float bias = 0.5; // exposed in interface_variables.h
-int n_choices_left = 1;
-int n_choices_right = 1;
-
-void update_bias(){
-    // 0 = left bias, 1 = right bias
-    bias = (float) n_choices_right / (n_choices_left + n_choices_right);
-}
-
 // probabilistic reward related
-float p_reward_left = 0.5;
-float p_reward_right = 0.5;
-float this_p_reward = p_reward_left;
+float p_reward = 1;
+float this_p_reward = p_reward;
 
 void update_p_reward(){
-    p_reward_right = 1 - bias;
-    p_reward_left = 1 - p_reward_right;
+    this_p_reward = p_reward - (1-difficulty)/2;
 }
 
 /*
@@ -554,15 +542,12 @@ void finite_state_machine() {
                 // sync at trial entry
                 send_sync_pulse();
 
-                // bias related
-                update_bias();
-                update_p_reward();
-
                 // log bias
                 log_var("bias", String(bias));
 
                 // determine the type of trial
                 get_trial_type(); // update this_interval
+                update_p_reward();
             }
 
             // update

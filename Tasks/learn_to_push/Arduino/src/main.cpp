@@ -476,7 +476,7 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
 
-                // determine correct side
+                // play cue wrt side
                 if (this_correct_side == "left"){
                     go_left_cue();
                 }
