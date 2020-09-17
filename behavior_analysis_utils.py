@@ -363,7 +363,7 @@ def create_LogDf_LCDf_csv(animal_folder_path, task_name, save=True, last_session
 
         # get arduino data
         LogDf = bhv.get_LogDf_from_path(log_path)
-        t_arduino = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_AVAILABLE_STATE", save=True)['t'].values
+        t_arduino = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT", save=True)['t'].values
 
         # get Loadcell data
         _ , t_harp = bhv.parse_harp_csv(harp_csv_path, save=True)
@@ -618,7 +618,7 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     
     return LoadCellDf, t_sync
 
-def get_arduino_sync(log_path, sync_event_name="TRIAL_AVAILABLE_STATE", save=True):
+def get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT", save=True):
     """ extracts arduino sync times from an arduino log """ 
 
     LogDf = bhv.get_LogDf_from_path(log_path)
