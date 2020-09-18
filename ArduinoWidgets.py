@@ -65,7 +65,7 @@ class ArduinoController(QtWidgets.QWidget):
         # online analyzer
         Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT,
                    bhv.has_choice, bhv.choice_RT, bhv.get_choice,
-                   bhv.get_interval, bhv.get_outcome) # HARDCODE
+                   bhv.get_interval, bhv.get_outcome, bhv.get_bias) # HARDCODE
                    
         self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
         # don't add him to children bc doesn't have a UI

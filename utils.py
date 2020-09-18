@@ -85,6 +85,22 @@ def get_file_dialog(initial_dir="D:/TaskControl/Animals"):
 
     return path
 
+def get_folder_dialog(initial_dir="D:/TaskControl/Animals"):
+    from tkinter import Tk
+    from tkinter import filedialog
+    root = Tk()         # create the Tkinter widget
+    root.withdraw()     # hide the Tkinter root window
+
+    # Windows specific; forces the window to appear in front
+    root.attributes("-topmost", True)
+
+    path = Path(filedialog.askdirectory(initialdir=initial_dir, title="Select folder"))
+
+    root.destroy()
+
+    return path
+    
+
 """
  
  ########     ###    ########   ######  ######## ########  

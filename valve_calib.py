@@ -2,6 +2,7 @@
 import scipy as sp
 import pandas
 import matplotlib.pyplot as plt
+import pandas as pd
 
 """
     Method to calibrate valve

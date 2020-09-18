@@ -127,7 +127,11 @@ for event, ax in zip(events,axes):
     rts = []
     for t in times:
         ix = sp.argmax(LicksDf['t'] > t) # index of next lick
-        t_next_lick = LicksDf.iloc[ix]['t']
+
+        if ix < len(LicksDf):
+            t_next_lick = LicksDf.iloc[ix]['t']
+        else: 
+            t_next_lick = LicksDf.loc[ix]['t']
         rt = t_next_lick - t
         rts.append(rt)
 

@@ -181,7 +181,6 @@ def get_spans_from_names(LogDf, on_name, off_name):
         # thrown when name not in log - return empty Df
         return pd.DataFrame(columns=['t_on', 't_off', 'dt'])
 
-    t_max = offs.iloc[-1]['t']
     ts = []
     for i, tup in enumerate(ons.itertuples()):
         t_on = tup.t
@@ -254,36 +253,6 @@ def parse_trials(TrialDfs, Metrics):
     SessionDf = SessionDf.reset_index(drop=True)
   
     return SessionDf
-
-def triaL_to_choice_matrix(trial, choice_matrix):
-    """
-    TODO PACO unclear to me why this function is here
-    looks like a plotting helper
-    """
-
-    # top row
-    if trial.choice == "up left": 
-        choice_matrix[0, 0] +=1
-    if trial.choice == "up": 
-        choice_matrix[0, 1] +=1
-    if trial.choice == "up right": 
-        choice_matrix[0, 2] +=1
-
-    # middle row
-    if trial.choice == "left": 
-        choice_matrix[1, 0] +=1
-    if trial.choice == "right": 
-        choice_matrix[1, 2] +=1
-
-    # bottom row
-    if trial.choice == "down left": 
-        choice_matrix[2, 0] +=1
-    if trial.choice == "down": 
-        choice_matrix[2, 1] +=1
-    if trial.choice == "down right": 
-        choice_matrix[2, 2] +=1
-        
-    return choice_matrix  
     
 """
  
@@ -319,74 +288,43 @@ def parse_sessions(SessionDfs, Metrics):
 
     return PerformanceDf
     
-def aggregate_session_logs(animal_folder_path, task_name):
+def create_LogDf_LCDf_csv(fd_path, task_name):
     """ 
-    creates a list of LogDfs with all data obtained 
-    using input task an path to animal's folder
-
-    TODO PACO I suggest renaming to get_LogDfs
-    """
-
-    SessionsDf = utils.get_sessions(animal_folder_path)
-    log_paths = [Path(path) / "arduino_log.txt" for path in SessionsDf.groupby('task').get_group(task_name)['path']]
-
-    LogDfs = []
-    for log in log_paths:
-        LogDfs.append(get_LogDf_from_path(log))
-
-    return LogDfs
-
-def create_LogDf_LCDf_csv(animal_folder_path, task_name, save=True, last_sessions = False):
-    """ 
-    Creates both arduino and loadcell .csv files for each session
-    and syncs arduino timestamps to harp timestamps
-
-    TODO PACO I suggest (remove last_sessions keyword as it is a debugging featuers)
-    rename function
-    keyword save is never used
-    sync clock functionality duplicated
-
+    Creates both LogDf and LCDf .csv files for each session and syncs arduino to harp timestamps
     """
 
     # obtaining the paths to each sessions folder
-    SessionsDf = utils.get_sessions(animal_folder_path)
-    paths = [Path(path) for path in SessionsDf.groupby('task').get_group(task_name)['path']]
+    SessionsDf = utils.get_sessions(fd_path)
+    paths = []
 
-    # create CSVs for only the last 2 sessions
-    if last_sessions == True:
-        paths = paths[-2:]
+    for iter_path in SessionsDf.groupby('task').get_group(task_name)['path']:
+        if not os.path.isfile(iter_path + "\loadcell_data.csv") or not os.path.isfile( iter_path + "\LogDf.csv"):
+            paths.append(Path(iter_path))
 
     for path in paths:
         # infer data paths
         log_path = path / "arduino_log.txt"
         harp_csv_path = path.joinpath("bonsai_harp_log.csv")
 
-        # get arduino data
-        LogDf = bhv.get_LogDf_from_path(log_path)
+        # get arduino and LC timestamps
         t_arduino = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT", save=True)['t'].values
-
-        # get Loadcell data
         _ , t_harp = bhv.parse_harp_csv(harp_csv_path, save=True)
         t_harp = t_harp['t'].values
 
-        if t_harp.shape[0] != t_arduino.shape[0]:
-            print("unequal number of timestamps in: "+str(path))
-            t_arduino, t_harp = cut_timestamps(t_arduino, t_harp)
-
+        # Check synching clock lenghts
         if len(t_harp) == 0:
             print("t_harp is empty")
             continue
         elif len(t_arduino) == 0:
             print("t_arduino is empty")
             continue
-        else:
-            # sync datasets and store LogDf.csv (could use sync clocks to store)
-            m, b = bhv.sync_clocks(t_harp, t_arduino)
-            LogDf ['t_arduino'] = LogDf['t']
-            LogDf['t'] = (LogDf['t'])*m + b
+        elif t_harp.shape[0] != t_arduino.shape[0]:
+            print("Unequal number of timestamps in: " + str(path))
+            t_arduino, t_harp = cut_timestamps(t_arduino, t_harp)
+
+        # sync datasets and store LogDf.csv
+        _,_ = bhv.sync_clocks(t_harp, t_arduino, log_path = log_path)
         
-        if save:
-            LogDf.to_csv(path / "LogDf.csv")
 
 """
  
@@ -442,7 +380,7 @@ def is_successful(TrialDf):
     if "TRIAL_SUCCESSFUL_EVENT" in TrialDf['name'].values:
         succ = True
     else:
-        succ = False    
+        succ = False
  
     return pd.Series(succ, name='successful')
 
@@ -526,20 +464,20 @@ def get_interval(TrialDf):
 
     return pd.Series(interval, name='this_interval')
 
+def get_bias(TrialDf):
+    try:
+        Df = TrialDf.groupby('var').get_group('bias')
+        bias = Df.iloc[0]['value']
+    except KeyError:
+        bias = np.NaN
+
+    return pd.Series(bias, name='bias')
+
 def get_start(TrialDf):
     return pd.Series(TrialDf.iloc[0]['t'], name='t_on')
 
 def get_stop(TrialDf):
     return pd.Series(TrialDf.iloc[-1]['t'], name='t_off')
-
-def get_licks(TrialDf, t1, t2):
-    """ TODO PACO - this is not a metric, looks more like a plotting helper for one of your plots """
-    ' Get lick times aligned to t1'
-
-    trial = bhv.time_slice(TrialDf, t1, t2)
-    raw_lick_times = np.array(trial.groupby('name').get_group('LICK_ON')['t'])
-    licks = raw_lick_times-t1
-    return licks
 
 def get_outcome(TrialDf):
     outcome = np.NaN
@@ -554,14 +492,6 @@ def get_outcome(TrialDf):
         outcome = "premature"
 
     return pd.Series(outcome, name="outcome")
-
-### Session level metrics
-def rewards_collected(SessionDf):
-    """ calculate the fraction of collected rewards across the session """
-    n_rewards_collected = SessionDf['reward_collected'].sum()
-    n_successful_trials = SessionDf['successful'].sum()
-
-    return pd.Series(n_rewards_collected/n_successful_trials, name='rewards_collected')
 
 """
 
@@ -583,20 +513,20 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     with open(harp_csv_path, 'r') as fH:
         lines = fH.readlines()
 
-    header = lines[0].split(', ')
+    header = lines[0].split(',')
 
     t_sync_high = []
     t_sync_low = []
     LoadCellDf = []
     
     for line in tqdm(lines[1:], desc="parsing harp log"):
-        elements = line.split(', ')
+        elements = line.split(',')
         if elements[0] == '3': # line is an event
             if elements[1] == '33': # line is a load cell read
-                data = line.split(', ')[2:5]
+                data = line.split(',')[2:5]
                 LoadCellDf.append(data)
             if elements[1] == '34': # line is a digital input timestamp
-                line = line.strip().split(', ')
+                line = line.strip().split(',')
                 if line[3] == '1': # high values
                     t_sync_high.append(float(line[2])*1000) # convert to ms
                 if line[3] == '0': # low values
@@ -709,3 +639,41 @@ def tolerant_mean(arrs):
     arrs=[np.pad(arr, (0, max_length-arr.shape[0]), mode='constant', constant_values=np.nan) for arr in arrs] # pad every array until max_length to obtain square matrix
 
     return np.nanmean(arrs, axis = 0)
+
+
+"""
+########  ##        #######  ########    ##     ## ######## ##       ########  ######## ########   ######
+##     ## ##       ##     ##    ##       ##     ## ##       ##       ##     ## ##       ##     ## ##    ##
+##     ## ##       ##     ##    ##       ##     ## ##       ##       ##     ## ##       ##     ## ##
+########  ##       ##     ##    ##       ######### ######   ##       ########  ######   ########   ######
+##        ##       ##     ##    ##       ##     ## ##       ##       ##        ##       ##   ##         ##
+##        ##       ##     ##    ##       ##     ## ##       ##       ##        ##       ##    ##  ##    ##
+##        ########  #######     ##       ##     ## ######## ######## ##        ######## ##     ##  ######
+"""
+
+def get_licks(TrialDf, t1, t2):
+    " Get lick times aligned to t1"
+
+    trial = bhv.time_slice(TrialDf, t1, t2)
+    raw_lick_times = np.array(trial.groupby('name').get_group('LICK_ON')['t'])
+    licks = raw_lick_times-t1
+    return licks
+
+def triaL_to_choice_matrix(trial, choice_matrix):
+
+    # top row
+    if trial.choice == "up": 
+        choice_matrix[0, 1] +=1
+
+    # middle row
+    if trial.choice == "left": 
+        choice_matrix[1, 0] +=1
+    if trial.choice == "right": 
+        choice_matrix[1, 2] +=1
+
+    # bottom row
+    if trial.choice == "down": 
+        choice_matrix[2, 1] +=1
+        
+    return choice_matrix  
+

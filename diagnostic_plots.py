@@ -25,14 +25,56 @@ import seaborn as sns
 plt.rcParams["xtick.direction"] = "in"
 plt.rcParams["ytick.direction"] = "in"
 
+# %%
 """
-########  ##        #######  ########  ######
-##     ## ##       ##     ##    ##    ##    ##
-##     ## ##       ##     ##    ##    ##
-########  ##       ##     ##    ##     ######
-##        ##       ##     ##    ##          ##
-##        ##       ##     ##    ##    ##    ##
-##        ########  #######     ##     ######
+ #######  ##     ## ######## ########  ##     ## #### ######## ##      ##
+##     ## ##     ## ##       ##     ## ##     ##  ##  ##       ##  ##  ##
+##     ## ##     ## ##       ##     ## ##     ##  ##  ##       ##  ##  ##
+##     ## ##     ## ######   ########  ##     ##  ##  ######   ##  ##  ##
+##     ##  ##   ##  ##       ##   ##    ##   ##   ##  ##       ##  ##  ##
+##     ##   ## ##   ##       ##    ##    ## ##    ##  ##       ##  ##  ##
+ #######     ###    ######## ##     ##    ###    #### ########  ###  ###
+"""
+
+animal_fd_path = utils.get_folder_dialog(initial_dir="D:/TaskControl/Animals")
+animal_tag = str(animal_fd_path).split('\\')[-1]
+task_name = 'learn_to_time'
+
+bhv.create_LogDf_LCDf_csv(animal_fd_path, task_name) # CHECK
+
+# Obtaining Logpaths for specific task
+SessionsDf = utils.get_sessions(animal_fd_path)
+paths = [Path(path) for path in SessionsDf.groupby('task').get_group(task_name).path]
+
+LogDfs = []
+working_paths = [] # some paths can have t_harp or maybe missing log problems
+
+# Obtain list of LogDf and LCDf from csv stored
+for path in tqdm(paths, desc="Obtaining LogDfs and LCDfs' CSV"):
+
+    # Open LogDf and LCDf from csv
+    try:
+        LogDfs.append(pd.read_csv(path.joinpath('LogDf.csv')))
+    except:
+        print('Session with path ' + str(path) + ' does not contain LogDf')
+        continue
+    
+    working_paths.append(path)
+
+axes = bhv_plt.plot_sessions_overview(LogDfs, working_paths, task_name, animal_tag)
+plt.show()
+
+
+# %%
+
+"""
+ ######  #### ##    ##  ######   ##       ########     ######  ########  ######   ######  ####  #######  ##    ##
+##    ##  ##  ###   ## ##    ##  ##       ##          ##    ## ##       ##    ## ##    ##  ##  ##     ## ###   ##
+##        ##  ####  ## ##        ##       ##          ##       ##       ##       ##        ##  ##     ## ####  ##
+ ######   ##  ## ## ## ##   #### ##       ######       ######  ######    ######   ######   ##  ##     ## ## ## ##
+      ##  ##  ##  #### ##    ##  ##       ##                ## ##             ##       ##  ##  ##     ## ##  ####
+##    ##  ##  ##   ### ##    ##  ##       ##          ##    ## ##       ##    ## ##    ##  ##  ##     ## ##   ###
+ ######  #### ##    ##  ######   ######## ########     ######  ########  ######   ######  ####  #######  ##    ##
 """
 
 # Parameters
@@ -40,11 +82,46 @@ window_size = 1000
 pre, post = -1000, 4000
 align_ref = "SECOND_TIMING_CUE_EVENT"
 
-# Loading datasets
-#path = utils.get_file_dialog(initial_dir="D:/TaskControl/Animals").parent
+# Get single session folder path
+session_fd_path = utils.get_folder_dialog(initial_dir="D:/TaskControl/Animals")
 
-animal_folder_path = Path("D:/TaskControl/Animals/JJP-00889"); task_name = 'learn_to_time'
-SessionsDf = utils.get_sessions(animal_folder_path)
+animal_tag = str(session_fd_path).split('\\')[-2]
+session_date = str(session_fd_path).split('\\')[-1][:10]
+
+LogDf = pd.read_csv(session_fd_path.joinpath('LogDf.csv'))
+temp_LC_csv = pd.read_csv(session_fd_path.joinpath('loadcell_data.csv'))
+temp_LC_csv['x'] = temp_LC_csv['x'] - temp_LC_csv['x'].rolling(window_size).median()
+temp_LC_csv['y'] = temp_LC_csv['y'] - temp_LC_csv['y'].rolling(window_size).median()
+LoadCellDf = temp_LC_csv
+
+TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_ENTRY_EVENT","ITI_STATE")
+
+TrialDfs = []
+for i, row in TrialSpans.iterrows():
+    TrialDfs.append(bhv.time_slice(LogDf,row['t_on'],row['t_off']))
+
+bhv_plt.plot_timing_overview(LogDf, LoadCellDf, TrialDfs)
+
+# %%
+"""
+##     ## ##     ## ##       ######## #### ########  ##       ########
+###   ### ##     ## ##          ##     ##  ##     ## ##       ##
+#### #### ##     ## ##          ##     ##  ##     ## ##       ##
+## ### ## ##     ## ##          ##     ##  ########  ##       ######
+##     ## ##     ## ##          ##     ##  ##        ##       ##
+##     ## ##     ## ##          ##     ##  ##        ##       ##
+##     ##  #######  ########    ##    #### ##        ######## ########
+"""
+
+# Parameters
+window_size = 1000
+pre, post = -1000, 4000
+align_ref = "SECOND_TIMING_CUE_EVENT"
+task_name = 'learn_to_time'
+
+# Loading datasets
+animal_fd_path = utils.get_folder_dialog(initial_dir="D:/TaskControl/Animals")
+SessionsDf = utils.get_sessions(animal_fd_path)
 paths = [Path(path) for path in SessionsDf.groupby('task').get_group(task_name).path]
 
 for path_tuple in enumerate(tqdm(paths)):
@@ -71,8 +148,6 @@ for path_tuple in enumerate(tqdm(paths)):
 
         SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.is_successful, bhv.get_interval, bhv.get_outcome))
 
-        print("- Loading and pre-processing in  %.4s seconds -" % (time.time() - start_time))
-
         " Create big gridspec containing all axes and plot in them"
         fig = plt.figure(figsize=(19.2,10.8), dpi=300,constrained_layout=True)
         gs = fig.add_gridspec(8, 7)
@@ -85,7 +160,6 @@ for path_tuple in enumerate(tqdm(paths)):
         # Heat map plots for X/Y
         fig_ax2 = fig.add_subplot(gs[1:,0:3])
         bhv_plt.plot_forces_heatmaps(LogDf, LoadCellDf, align_ref, pre, post, fig_ax2)
-        print("- Heatmaps in  %.4s seconds -" % (time.time() - start_time))
 
         # Sucess rate over session
         fig_ax3 = fig.add_subplot(gs[:3,3:5])
@@ -106,7 +180,6 @@ for path_tuple in enumerate(tqdm(paths)):
         fig_ax6a = fig.add_subplot(gs[:3,5])
         fig_ax6b = fig.add_subplot(gs[:3,6])
         bhv_plt.plot_force_magnitude(LoadCellDf, TrialDfs, bin_width, [fig_ax6a, fig_ax6b])
-        print("- Force mag. in  %.4s seconds -" % (time.time() - start_time))
 
         # CT histogram to detect/quantify biases or motor strategies
         bin_width = 100 # ms
@@ -120,11 +193,9 @@ for path_tuple in enumerate(tqdm(paths)):
         fig_ax8b = fig.add_subplot(gs[5:,6])
         bhv_plt.plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, 'correct', fig_ax8b)
 
-        print("- trajectory plots in  %.4s seconds -" % (time.time() - start_time))
-
         fig.suptitle('Session overview for ' + str(animal_tag) + ' at ' + str(session_date))
         
-        plt.savefig(str(animal_folder_path) + '/plots/session' + str(path_tuple[0]+1) + '.png')
+        plt.savefig(str(animal_fd_path) + '/plots/session' + str(path_tuple[0]+1) + '.png')
 
         print("--- Total plotting time took %.4s seconds ---" % (time.time() - start_time))
 
@@ -133,75 +204,3 @@ for path_tuple in enumerate(tqdm(paths)):
     except:
         plt.close() 
         pass
-
-# %%
-""" Single animal """
-
-# Parameters
-window_size = 1000
-pre, post = -1000, 4000
-align_ref = "SECOND_TIMING_CUE_EVENT"
-
-# Loading datasets
-path = utils.get_file_dialog(initial_dir="D:/TaskControl/Animals").parent
-
-animal_tag = str(path).split('\\')[-2]
-session_date = str(path).split('\\')[-1][:10]
-
-LogDf = pd.read_csv(path.joinpath('LogDf.csv'))
-temp_LC_csv = pd.read_csv(path.joinpath('loadcell_data.csv'))
-temp_LC_csv['x'] = temp_LC_csv['x'] - temp_LC_csv['x'].rolling(window_size).median()
-temp_LC_csv['y'] = temp_LC_csv['y'] - temp_LC_csv['y'].rolling(window_size).median()
-LoadCellDf = temp_LC_csv
-
-TrialSpans = bhv.get_spans_from_names(LogDf,"TRIAL_ENTRY_EVENT","ITI_STATE")
-
-TrialDfs = []
-for i, row in TrialSpans.iterrows():
-    TrialDfs.append(bhv.time_slice(LogDf,row['t_on'],row['t_off']))
-
-SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.is_successful, bhv.get_interval, bhv.get_outcome))
-bhv_plt.plot_timing_overview(LogDf, LoadCellDf, TrialDfs)
-
-# %%
-
-""" Overview across sessions """
-animal_folder_path = Path("D:/TaskControl/Animals/JJP-00886")
-animal_tag = str(animal_folder_path).split('\\')[-1]
-task_name = 'learn_to_time'
-
-# Uncomment to create the CSV's of the last 2 sessions if last_sessions = True
-bhv.create_LogDf_LCDf_csv(animal_folder_path, task_name, save=True, last_sessions = True)
-
-# Obtain LogDfs
-LogDfs = bhv.aggregate_session_logs(animal_folder_path, task_name)
-# LogDfs = [bhv.filter_bad_licks(LogDf) for LogDf in LogDfs]
-
-# Obtaining Logpaths for specific task
-SessionsDf = utils.get_sessions(animal_folder_path)
-paths = [Path(path) for path in SessionsDf.groupby('task').get_group(task_name).path]
-
-LoadCellDfs,LogDfs = [],[]
-working_paths = [] # some paths can have t_harp or maybe missing log problems
-
-# Obtain list of LogDf and LCDf from csv stored
-for path in tqdm(paths, desc="Obtaining LogDfs and LCDfs' CSV"):
-
-    # Open LogDf and LCDf from csv
-    try:
-        LogDfs.append(pd.read_csv(path.joinpath('LogDf.csv')))
-    except:
-        print('Session with path ' + str(path) + ' does not contain LogDf')
-        continue
-    
-    working_paths.append(path)
-    temp_LC_csv = pd.read_csv(path.joinpath('loadcell_data.csv'))
-
-    # Median removal from LCDf
-    temp_LC_csv['x'] = temp_LC_csv['x'] - temp_LC_csv['x'].rolling(window_size).median()
-    temp_LC_csv['y'] = temp_LC_csv['y'] - temp_LC_csv['y'].rolling(window_size).median()
-
-    LoadCellDfs.append(temp_LC_csv)
-
-axes = bhv_plt.plot_sessions_overview(LogDfs, working_paths, task_name, animal_tag)
-plt.show()

@@ -10,6 +10,7 @@ from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 
 import scipy as sp
+import time
 
 import pandas as pd
 import seaborn as sns
@@ -71,10 +72,10 @@ class SessionVis(QtWidgets.QWidget):
         ax.set_xlabel('trial #')
         ax.set_ylabel('fraction')
         ax.set_ylim(-0.1, 1.1)
-        self.success_rate, = ax.plot([], [], lw=1, label='success')
-        self.success_rate_filt, = ax.plot([], [], lw=1)
-        self.reward_collection_rate, = ax.plot([], [], lw=1, label='rew.coll.')
-        self.reward_collection_rate_filt, = ax.plot([], [], lw=1)
+        self.success_rate, = ax.plot([], [], '.', lw=1, label='success', color=colors['success'])
+        self.success_rate_filt, = ax.plot([], [], lw=1, color=colors['success'])
+        self.reward_collection_rate, = ax.plot([], [], '.', lw=1, label='rew.coll.', color=colors['reward'])
+        self.reward_collection_rate_filt, = ax.plot([], [], lw=1, color=colors['reward'])
         ax.legend(fontsize='x-small')
 
         # trial outcomes
@@ -97,7 +98,7 @@ class SessionVis(QtWidgets.QWidget):
         ax.set_ylabel('fraction')
         ax.set_ylim(-0.1, 1.1)
         self.bias, = ax.plot([], [], '.', lw=1, label='bias', color='k')
-        self.bias_filt, = ax.plot([], [], lw=1)
+        self.bias_filt, = ax.plot([], [], lw=1, color='k')
         cmap = mpl.cm.PiYG
         self.choices_left, = ax.plot([], [], 'o', color=cmap(1.0))
         self.choices_right, = ax.plot([], [], 'o', color=cmap(0.0))
@@ -112,7 +113,7 @@ class SessionVis(QtWidgets.QWidget):
         ax.set_xlabel('choice trial #')
         ax.set_ylabel('RT (ms)')
         self.choices_rt_scatter, = ax.plot([], [], 'o')
-        ax.set_ylim(0, 500)
+        ax.set_ylim(0, 1500)
 
         # psychometric
         ax = self.axes[1, 0]
@@ -130,7 +131,8 @@ class SessionVis(QtWidgets.QWidget):
         self.fig.tight_layout()
 
     def on_data(self, TrialDf, TrialMetricsDf):
-        hist = 20 # to be exposed in the future
+        t1 = time.time()
+        hist = 5 # to be exposed in the future
         if  self.OnlineDataAnalyser.SessionDf is not None: # FIXME
             SessionDf = self.OnlineDataAnalyser.SessionDf
             
@@ -163,9 +165,9 @@ class SessionVis(QtWidgets.QWidget):
 
                 x = SDf.index.values+1
                 y = sp.cumsum((SDf['outcome'] == outcome).values) / (SDf.index.values+1)
-                y_filt = (SDf['outcome'] == outcome).rolling(hist).mean().values
+                y_filt = (SDf['outcome'] == outcome).astype('int32').rolling(hist).mean().values
                 self.outcome_rates[outcome].set_data(x, y)
-                self.outcome_rates_filt[outcome].set_data(x, y)
+                self.outcome_rates_filt[outcome].set_data(x, y_filt)
                 self.outcome_rates[outcome].axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
 
             # choices
@@ -176,7 +178,6 @@ class SessionVis(QtWidgets.QWidget):
                     x = SDf.index.values+1
                     y = sp.zeros(x.shape[0])
                     self.choices_right.set_data(x,y)
-                    self.choices_right.axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
                 except:
                     pass
                 try:
@@ -185,9 +186,16 @@ class SessionVis(QtWidgets.QWidget):
                     x = SDf.index.values+1
                     y = sp.ones(x.shape[0])
                     self.choices_left.set_data(x,y)
-                    self.choices_left.axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
                 except:
                     pass
+
+                x = SessionDf.index
+                y = SessionDf['bias'].values
+                self.bias.set_data(x,y)
+                # y_filt = SDf['bias'].rolling(hist).mean().values
+                # self.bias_filt.set_data(x, y_filt)
+                self.bias.axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
+
 
             # choice RT
             if True in SessionDf['has_choice'].values:
@@ -201,49 +209,51 @@ class SessionVis(QtWidgets.QWidget):
 
             # psychmetric
             # get only the subset with choices
-            if True in SessionDf['has_choice'].values:
-                SDf = SessionDf.groupby('has_choice').get_group(True)
-                y = SDf['choice'].values == 'right'
-                x = SDf['this_interval'].values
+            # if True in SessionDf['has_choice'].values:
+            #     SDf = SessionDf.groupby('has_choice').get_group(True)
+            #     y = SDf['choice'].values == 'right'
+            #     x = SDf['this_interval'].values
 
-                # choices
-                self.psych_choices.set_data(x, y)
+            #     # choices
+            #     self.psych_choices.set_data(x, y)
 
-                # logistic regression
-                x_fit = sp.linspace(0, 3000, 50)
+            #     # logistic regression
+            #     x_fit = sp.linspace(0, 3000, 50)
 
-                try:
-                    # y_fit = sp.zeros(x_fit.shape[0])
-                    y_fit = bhv.log_reg(x, y, x_fit)
-                    self.psych_fit.set_data(x_fit, y_fit)
-                except ValueError:
-                    pass
+            #     try:
+            #         # y_fit = sp.zeros(x_fit.shape[0])
+            #         y_fit = bhv.log_reg(x, y, x_fit)
+            #         self.psych_fit.set_data(x_fit, y_fit)
+            #     except ValueError:
+            #         pass
                 
-                try:
-                    # error model
-                    # if x.shape[0] > 5:
-                    #     utils.debug_trace()
-                    bias = y.sum() / y.shape[0] # right side bias
-                    N = 50
-                    R = sp.array([bhv.log_reg(x, sp.rand(x.shape[0]) < bias, x_fit) for i in range(N)])
+            #     try:
+            #         # error model
+            #         # if x.shape[0] > 5:
+            #         #     utils.debug_trace()
+            #         bias = y.sum() / y.shape[0] # right side bias
+            #         N = 50
+            #         R = sp.array([bhv.log_reg(x, sp.rand(x.shape[0]) < bias, x_fit) for i in range(N)])
 
-                    alpha = .05 * 100
-                    R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
+            #         alpha = .05 * 100
+            #         R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
 
-                    if self.poly is not None:
-                        self.poly.remove()
+            #         if self.poly is not None:
+            #             self.poly.remove()
 
-                    self.poly = self.psych_fit.axes.fill_between(x_fit, R_pc[0], R_pc[1], color='black', alpha=0.5)
+            #         self.poly = self.psych_fit.axes.fill_between(x_fit, R_pc[0], R_pc[1], color='black', alpha=0.5)
 
-                except ValueError:
-                    pass
+            #     except ValueError:
+            #         pass
 
-                self.psych_choices.axes.set_xlim(0, 3000)
-                self.psych_choices.axes.set_ylim(-0.1, 1.1)
+            #     self.psych_choices.axes.set_xlim(0, 3000)
+            #     self.psych_choices.axes.set_ylim(-0.1, 1.1)
 
         # for ax in self.axes.flatten():
             # ax.autoscale_view()
 
         self.Canvas.draw()
+        t2 = time.time()
+        # print("time for update: ", t2-t1)
 
 
