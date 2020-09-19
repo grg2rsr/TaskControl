@@ -9,3 +9,5 @@ local
 old
 Animals
 config.ini
+*platformio.ini
+*.bonsai
