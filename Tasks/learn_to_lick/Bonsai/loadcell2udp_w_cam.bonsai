@@ -91,7 +91,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="dsp:MatrixWriter">
-          <dsp:Path>D:\TaskControl\Animals\123\2020-09-11_15-38-46_learn_to_lick\bonsai_harp_log.bin</dsp:Path>
+          <dsp:Path>D:\TaskControl\Animals\JJP-01151\2020-09-19_14-00-40_learn_to_lick\bonsai_harp_log.bin</dsp:Path>
           <dsp:Suffix>None</dsp:Suffix>
           <dsp:Overwrite>true</dsp:Overwrite>
           <dsp:Layout>ColumnMajor</dsp:Layout>
@@ -108,7 +108,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>D:\TaskControl\Animals\123\2020-09-11_15-38-46_learn_to_lick\bonsai_</Value>
+          <Value>D:\TaskControl\Animals\JJP-01151\2020-09-19_14-00-40_learn_to_lick\bonsai_</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">
@@ -130,10 +130,10 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="cv:Crop">
           <cv:RegionOfInterest>
-            <cv:X>350</cv:X>
-            <cv:Y>680</cv:Y>
-            <cv:Width>60</cv:Width>
-            <cv:Height>48</cv:Height>
+            <cv:X>342</cv:X>
+            <cv:Y>639</cv:Y>
+            <cv:Width>78</cv:Width>
+            <cv:Height>63</cv:Height>
           </cv:RegionOfInterest>
         </Combinator>
       </Expression>
@@ -199,7 +199,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="cv:VideoWriter">
-          <cv:FileName>D:\TaskControl\Animals\123\2020-09-11_15-38-46_learn_to_lick\bonsai_video.avi</cv:FileName>
+          <cv:FileName>D:\TaskControl\Animals\JJP-01151\2020-09-19_14-00-40_learn_to_lick\bonsai_video.avi</cv:FileName>
           <cv:Suffix>None</cv:Suffix>
           <cv:Buffered>true</cv:Buffered>
           <cv:Overwrite>true</cv:Overwrite>

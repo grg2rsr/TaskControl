@@ -65,7 +65,7 @@ def parse_lines(lines, code_map=None, parse_var=False):
     LogDf = LogDf.reset_index(drop=True)
 
     for col in ['name', 'var', 'value']:
-        LogDf[col] = sp.NaN
+        LogDf[col] = np.NaN
 
     # decode
     if code_map is not None:
@@ -447,13 +447,25 @@ def get_choice_zone(TrialDf):
     -> also the name current_zone is misleading. I propose to call the variable 'choice_zone' and 
     you need to fix the bug :p
     """
-    current_zone = np.NaN
+    choice_zone = np.NaN
     if "CHOICE_EVENT" in TrialDf.name.values or "PREMATURE_CHOICE_EVENT" in TrialDf.name.values:
         try:
-            current_zone = TrialDf[TrialDf['var'] == 'current_zone'].iloc[-1].value
+            current_zone_times = TrialDf[TrialDf['var'] == 'current_zone']['t'].values
+            choice_time = TrialDf[TrialDf['name'] == 'CHOICE_EVENT']['t'].values
+
+            choice_zone_idx = np.argmax(current_zone_times < choice_time)
+
+            if len(choice_zone_idx) == 1:
+                pass
+            else:
+                for idx in choice_zone_idx:
+                    if idx == True:
+                        choice_zone = TrialDf[TrialDf['var'] == 'current_zone']['value'].values[idx]
+                        continue
+        
         except:
-            current_zone = np.NaN
-    return pd.Series(current_zone, name="current_zone")
+            choice_zone = np.NaN
+    return pd.Series(int(choice_zone), name="choice_zone")
 
 def get_interval(TrialDf):
     try:

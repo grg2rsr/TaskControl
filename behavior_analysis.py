@@ -566,6 +566,78 @@ axes.set_ylabel('density')
 
 
 
+
+
+
+# %%
+"""
+##     ## ##     ## ##       ######## ####     ######  ########  ######   ######  ####  #######  ##    ##
+###   ### ##     ## ##          ##     ##     ##    ## ##       ##    ## ##    ##  ##  ##     ## ###   ##
+#### #### ##     ## ##          ##     ##     ##       ##       ##       ##        ##  ##     ## ####  ##
+## ### ## ##     ## ##          ##     ##      ######  ######    ######   ######   ##  ##     ## ## ## ##
+##     ## ##     ## ##          ##     ##           ## ##             ##       ##  ##  ##     ## ##  ####
+##     ## ##     ## ##          ##     ##     ##    ## ##       ##    ## ##    ##  ##  ##     ## ##   ###
+##     ##  #######  ########    ##    ####     ######  ########  ######   ######  ####  #######  ##    ##
+"""
+
+
+animal_folder = utils.get_folder_dialog()
+
+# %%
+SessionsDf = utils.get_sessions(animal_folder)
+paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_lick')['path']]
+
+LogDfs = []
+for path in tqdm(paths):
+    log_path = path / 'arduino_log.txt'
+    LogDf = bhv.get_LogDf_from_path(log_path)
+    LogDf = bhv.filter_bad_licks(LogDf)
+    LogDfs.append(LogDf)
+
+for LogDf in LogDfs:
+    # rename events of all future omitted rewards
+    EventsDf = bhv.get_events_from_name(LogDf, 'REWARD_OMITTED_EVENT')
+    for t in EventsDf['t'].values:
+        Df = bhv.time_slice(LogDf, t-1000, t)
+        ix = Df[Df['name'] == 'REWARD_AVAILABLE_EVENT'].index
+        LogDf.loc[ix, 'name'] = "OMITTED_REWARD_AVAILABLE_EVENT"
+
+# %% learn to lick inspections
+pre, post = -2000, 4000
+fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
+
+events = ['REWARD_AVAILABLE_EVENT', 'OMITTED_REWARD_AVAILABLE_EVENT', 'NO_REWARD_AVAILABLE_EVENT']
+colors = sns.color_palette(palette='turbo',n_colors=len(LogDfs))
+bins = sp.linspace(pre, post, 50)
+
+for i,LogDf in enumerate(LogDfs):
+    LicksDf = bhv.get_events_from_name(LogDf, 'LICK_EVENT')
+    for event, ax in zip(events, axes):
+        times = bhv.get_events_from_name(LogDf, event)['t'] # task event times
+        try:
+            plot_psth(LicksDf, times, zorder=-1*i, histtype='step', bins=bins, 
+                      axes=ax, density=True, color=colors[i], alpha=0.75, label='day '+str(i))
+        except:
+            continue
+        ax.set_title(event, fontsize='x-small')
+        ax.axvline(0, linestyle=':', lw=1, alpha=0.5, color='k')
+
+axes[0].legend(fontsize='x-small')
+sns.despine(fig)
+fig.suptitle('lick psth to cues')
+fig.tight_layout()
+# plt.savefig(plot_dir / 'lick_to_cues_psth.png', dpi=300)
+
+
+
+
+
+
+
+
+
+
+# %%
 """
 ########  ######## ########  ##     ##  ######    ######   #### ##    ##  ######
 ##     ## ##       ##     ## ##     ## ##    ##  ##    ##   ##  ###   ## ##    ##
