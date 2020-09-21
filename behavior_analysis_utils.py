@@ -453,16 +453,12 @@ def get_choice_zone(TrialDf):
             current_zone_times = TrialDf[TrialDf['var'] == 'current_zone']['t'].values
             choice_time = TrialDf[TrialDf['name'] == 'CHOICE_EVENT']['t'].values
 
-            choice_zone_idx = np.argmax(current_zone_times < choice_time)
-
-            if len(choice_zone_idx) == 1:
-                pass
+            # Get zone nearest to choice event (no need if there is only 1 current )
+            if len(current_zone_times)==1:
+                choice_zone = TrialDf[TrialDf['var'] == 'current_zone']['value'].values
             else:
-                for idx in choice_zone_idx:
-                    if idx == True:
-                        choice_zone = TrialDf[TrialDf['var'] == 'current_zone']['value'].values[idx]
-                        continue
-        
+                choice_zone_idx = (np.abs(current_zone_times - choice_time)).argmin()
+                choice_zone = TrialDf[TrialDf['var'] == 'current_zone']['value'].values[choice_zone_idx]
         except:
             choice_zone = np.NaN
     return pd.Series(int(choice_zone), name="choice_zone")

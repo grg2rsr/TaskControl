@@ -150,6 +150,28 @@ sns.despine(fig)
 fig.suptitle('reaction times to auditory cues')
 fig.tight_layout()
 
+# %% reward rate
+t_rewards = LogDf.groupby('name').get_group('REWARD_COLLECTED_EVENT')['t']
+rew_magnitude = 5 # ul
+rew_rate = rew_magnitude * 1/(sp.diff(t_rewards.values) / (1000 * 60))
+fig, axes = plt.subplots()
+axes.plot(t_rewards[:-1].values / (1000*60) ,rew_rate)
+
+# %% 
+t_max = LogDf.iloc[-1]['t']
+t_max / (1000*60)
+
+dt = 30000
+rwc = []
+for i,t in enumerate(sp.arange(dt,t_max,dt)):
+    Df = bhv.time_slice(LogDf,t-dt, t)
+    try:
+        rwc.append((i,Df.groupby('name').get_group('REWARD_COLLECTED_EVENT').shape[0]))
+    except:
+        pass
+
+rwc = sp.array(rwc)
+axes.plot(rwc[:,0]/2,rwc[:,1]*5)
 
 """
 ##       ########    ###    ########  ##    ##    ########  #######     ########  ##     ##  ######  ##     ##
@@ -615,7 +637,7 @@ for i,LogDf in enumerate(LogDfs):
     for event, ax in zip(events, axes):
         times = bhv.get_events_from_name(LogDf, event)['t'] # task event times
         try:
-            plot_psth(LicksDf, times, zorder=-1*i, histtype='step', bins=bins, 
+            plot_psth(LicksDf, times, zorder=1*i, histtype='step', bins=bins, 
                       axes=ax, density=True, color=colors[i], alpha=0.75, label='day '+str(i))
         except:
             continue
