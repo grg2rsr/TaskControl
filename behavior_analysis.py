@@ -604,6 +604,11 @@ axes.set_ylabel('density')
 
 
 animal_folder = utils.get_folder_dialog()
+plot_dir = animal_folder / 'plots'
+animal_meta = pd.read_csv(animal_folder / 'animal_meta.csv')
+animal_id = animal_meta[animal_meta['name'] == 'ID']['value'].values[0]
+nickname = animal_meta[animal_meta['name'] == 'Nickname']['value'].values[0]
+os.makedirs(plot_dir, exist_ok=True)
 
 # %%
 SessionsDf = utils.get_sessions(animal_folder)
@@ -645,12 +650,17 @@ for i,LogDf in enumerate(LogDfs):
         ax.axvline(0, linestyle=':', lw=1, alpha=0.5, color='k')
 
 axes[0].legend(fontsize='x-small')
+
+for ax in axes:
+    ax.set_ylabel('p')
+
 sns.despine(fig)
-fig.suptitle('lick psth to cues')
+fig.suptitle(animal_id+' '+nickname+'\nlick psth to cues',fontsize='small')
 fig.tight_layout()
-# plt.savefig(plot_dir / 'lick_to_cues_psth.png', dpi=300)
+plt.savefig(plot_dir / 'lick_to_cues_psth_across_days.png', dpi=300)
 
 
+axes[0].hist(times,bins=bins,density=True)
 
 
 
