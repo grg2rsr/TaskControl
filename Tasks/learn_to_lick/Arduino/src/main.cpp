@@ -90,43 +90,6 @@ bool error_sound_off = true;
 bool play_error_sound = false;
 unsigned long error_sound_on_time = max_future;
 
-void ErrorSoundController(){
-
-    if (error_sound_off == true && play_error_sound == true) {
-        // start playing error sound
-        error_sound_on_time = now();
-        error_sound_off = false;
-        play_error_sound = false;
-    }
-
-    if (error_sound_off == false){
-        while(now() - error_sound_on_time > tone_duration){
-           float r = random(0,100);
-            if (r > 500){
-                digitalWrite(SPEAKER_PIN, HIGH);
-            }
-            else{
-                digitalWrite(SPEAKER_PIN, LOW);
-            } 
-        }
-        error_sound_off = true;
-    }
-    // if (error_sound_off == false){
-    //     float r = random(0,100);
-    //     if (r > 500){
-    //         digitalWrite(SPEAKER_PIN, HIGH);
-    //     }
-    //     else{
-    //         digitalWrite(SPEAKER_PIN, LOW);
-    //     }
-    // }
-
-    // if (error_sound_off == false && now() - error_sound_on_time > tone_duration) {
-    //     digitalWrite(SPEAKER_PIN, LOW);
-    //     error_sound_off = true;
-    // }
-}
-
 void correct_choice_cue(){
     // beep
     tone_controller.play(correct_choice_cue_freq, tone_duration);
@@ -134,8 +97,7 @@ void correct_choice_cue(){
 
 void incorrect_choice_cue(){
     // beep
-    // tone_controller.play(incorrect_choice_cue_freq, tone_duration);
-    play_error_sound = true;
+    tone_controller.play(incorrect_choice_cue_freq, tone_duration);
 }
 
 /*
@@ -328,7 +290,6 @@ void loop() {
     }
     // Controllers
     RewardValveController();
-    ErrorSoundController();
 
     // sample sensors
     read_lick();
