@@ -94,41 +94,29 @@ void correct_choice_cue(){
 /*
 adapted from  https://arduino.stackexchange.com/questions/6715/audio-frequency-white-noise-generation-using-arduino-mini-pro
 */
-
-unsigned long lastClick = max_future;
-
-/* initialize with any 32 bit non-zero  unsigned long value. */
 #define LFSR_INIT  0xfeedfaceUL
-/* Choose bits 32, 30, 26, 24 from  http://arduino.stackexchange.com/a/6725/6628
- *  or 32, 22, 2, 1 from 
- *  http://www.xilinx.com/support/documentation/application_notes/xapp052.pdf
- *  or bits 32, 16, 3,2  or 0x80010006UL per http://users.ece.cmu.edu/~koopman/lfsr/index.html 
- *  and http://users.ece.cmu.edu/~koopman/lfsr/32.dat.gz
- */  
 #define LFSR_MASK  ((unsigned long)( 1UL<<31 | 1UL <<15 | 1UL <<2 | 1UL <<1  ))
 
 unsigned int generateNoise(){ 
   // See https://en.wikipedia.org/wiki/Linear_feedback_shift_register#Galois_LFSRs
-   static unsigned long int lfsr = LFSR_INIT;  /* 32 bit init, nonzero */
-   /* If the output bit is 1, apply toggle mask.
-                                    * The value has 1 at bits corresponding
-                                    * to taps, 0 elsewhere. */
-
+   static unsigned long int lfsr = LFSR_INIT;
    if(lfsr & 1) { lfsr =  (lfsr >>1) ^ LFSR_MASK ; return(1);}
    else         { lfsr >>= 1;                      return(0);}
 }
 
 unsigned long error_cue_start = max_future;
+unsigned long error_cue_dur = tone_duration * 1000; // to save instructions - work in micros
+unsigned long lastClick = max_future;
 
 void incorrect_choice_cue(){
     // beep
     // tone_controller.play(incorrect_choice_cue_freq, tone_duration);
 
-    // white noise
-    error_cue_start = now();
+    // white noise - blocking arduino for tone_duration
+    error_cue_start = micros();
     lastClick = micros();
-    while (now() - error_cue_start < tone_duration){
-        if ((micros() - lastClick) > 50 ) { // Changing this value changes the frequency.
+    while (micros() - error_cue_start < error_cue_dur){
+        if ((micros() - lastClick) > 2 ) { // Changing this value changes the frequency.
             lastClick = micros();
             digitalWrite (SPEAKER_PIN, generateNoise());
         }
@@ -311,7 +299,7 @@ void setup() {
     Serial.begin(115200); // main serial communication with computer
     Serial1.begin(115200); // serial line for receiving (processed) loadcell X,Y
 
-    pinMode(SPEAKER_PIN,OUTPUT);
+    pinMode(SPEAKER_PIN,OUTPUT); // for writing noise to the speaker
     tone_controller.begin(SPEAKER_PIN);
 
     Serial.println("<Arduino is ready to receive commands>");
@@ -332,5 +320,4 @@ void loop() {
     // serial communication with main PC
     getSerialData();
     processSerialData();
-
 }

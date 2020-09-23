@@ -125,6 +125,9 @@ unsigned long buzz_duration = 50;
 unsigned long choice_buzz_duration = 100;
 
 // probabilistic reward related
+int n_choices_left = 1;
+int n_choices_right = 1;
+
 float p_reward = 1;
 float this_p_reward = p_reward;
 
@@ -334,9 +337,36 @@ void correct_choice_cue(){
     tone_controller.play(correct_choice_cue_freq, tone_duration);
 }
 
+/*
+adapted from  https://arduino.stackexchange.com/questions/6715/audio-frequency-white-noise-generation-using-arduino-mini-pro
+*/
+#define LFSR_INIT  0xfeedfaceUL
+#define LFSR_MASK  ((unsigned long)( 1UL<<31 | 1UL <<15 | 1UL <<2 | 1UL <<1  ))
+
+unsigned int generateNoise(){ 
+  // See https://en.wikipedia.org/wiki/Linear_feedback_shift_register#Galois_LFSRs
+   static unsigned long int lfsr = LFSR_INIT;
+   if(lfsr & 1) { lfsr =  (lfsr >>1) ^ LFSR_MASK ; return(1);}
+   else         { lfsr >>= 1;                      return(0);}
+}
+
+unsigned long error_cue_start = max_future;
+unsigned long error_cue_dur = tone_duration * 1000; // to save instructions - work in micros
+unsigned long lastClick = max_future;
+
 void incorrect_choice_cue(){
     // beep
-    tone_controller.play(incorrect_choice_cue_freq, tone_duration);
+    // tone_controller.play(incorrect_choice_cue_freq, tone_duration);
+
+    // white noise - blocking arduino for tone_duration
+    error_cue_start = micros();
+    lastClick = micros();
+    while (micros() - error_cue_start < error_cue_dur){
+        if ((micros() - lastClick) > 2 ) { // Changing this value changes the frequency.
+            lastClick = micros();
+            digitalWrite (SPEAKER_PIN, generateNoise());
+        }
+    }
 }
 
 // void go_left_cue(){

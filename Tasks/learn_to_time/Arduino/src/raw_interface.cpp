@@ -13,6 +13,12 @@ const byte numBytes = 8; // for two floats
 char receivedBytes[numBytes];
 boolean RawNewData = false;
 
+void flush(){
+    while (Serial1.available() > 0){
+        char t = Serial1.read();
+    }
+}
+
 void getRawData() {
     // check if raw data is available and if yes read it
     // all raw data bytes are flanked by []
@@ -40,16 +46,18 @@ void getRawData() {
                 if (raw_ndx > numBytes-1) { // this should be resistent to failed [ reads
                     RawRecvInProgress = false;
                     RawNewData = true;
+                    flush();
                 }
                 else {
                     receivedBytes[raw_ndx] = rc;
                     raw_ndx++;
                 }
             }
-            else {
+            else if (rc == RawEndMarker){
                 RawRecvInProgress = false;
                 raw_ndx = 0;
                 RawNewData = true;
+                flush();
             }
         }
 
@@ -103,7 +111,6 @@ void processRawData() {
         else {
             Serial.println(String("<MSG Y out of bounds") + " "+String(micros()/1000.0)+">");
         }
-
     }
     RawNewData = false;
 }
