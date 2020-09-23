@@ -300,7 +300,10 @@ class ArduinoController(QtWidgets.QWidget):
                         self.serial_data_available.emit(line)
 
                 except:
-                    print("failed read from serial!", line)
+                    try:
+                        print("failed read from serial!", line)
+                    except:
+                        pass
                     break
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
@@ -488,10 +491,12 @@ class OnlineDataAnalyser(QtCore.QObject):
 
         # if normally decodeable
         if not line.startswith('<'):
-
-            code, t = line.split('\t')
-            t = float(t)
-            decoded = self.code_map[code]
+            try:
+                code, t = line.split('\t')
+                t = float(t)
+                decoded = self.code_map[code]
+            except:
+                decoded = None
 
             # update counters
             if decoded == 'CHOICE_CORRECT_EVENT':
@@ -662,9 +667,13 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         if not line.startswith('<VAR current_zone') and not line.startswith('LICK'):
         # if not line.startswith('LICK'):
             if not line.startswith('<'):
-                code = line.split('\t')[0]
-                decoded = self.code_map[code]
-                line = '\t'.join([decoded,line.split('\t')[1]])
+                try:
+                    code = line.split('\t')[0]
+                    decoded = self.code_map[code]
+                    line = '\t'.join([decoded,line.split('\t')[1]])
+                except:
+                    print(line)
+                    pass
 
             # TODO deal with the history functionality
             history_len = 100 # FIXME expose this property? or remove it. for now for debugging
