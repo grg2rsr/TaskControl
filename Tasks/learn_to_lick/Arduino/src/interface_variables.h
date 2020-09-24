@@ -1,4 +1,3 @@
-int incorrect_choice_cue_freq = 7500;
 int correct_choice_cue_freq = 12000;
 unsigned long ITI_dur_min = 2500;
 unsigned long ITI_dur_max = 5000;
