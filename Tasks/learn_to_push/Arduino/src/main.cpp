@@ -76,8 +76,8 @@ float p_reward_right = 0.5;
 float this_p_reward = p_reward_left;
 
 void update_p_reward(){
-    p_reward_right = 1 - bias;
-    p_reward_left = 1 - p_reward_right;
+    p_reward_right = 1 - bias + bias_corr_fac;
+    p_reward_left = 1 - p_reward_right + bias_corr_fac;
 }
 
 /*

@@ -448,10 +448,10 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
     def on_serial(self, line):
         """ if the var is in the interface variables, set it """
 
-        # if line.startswith('<VAR'):
-        #     _, name, value, t = line[1:-1].split(' ')
-        #     if name in self.VariableEditWidget.Df['name'].values:
-        #         self.VariableEditWidget.set_entry(name, value) # the lineedit should take care of the correct dtype
+        if line.startswith('<VAR'):
+            _, name, value, t = line[1:-1].split(' ')
+            if name in self.VariableEditWidget.Df['name'].values:
+                self.VariableEditWidget.set_entry(name, value) # the lineedit should take care of the correct dtype
 
 """
  
@@ -664,8 +664,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         # TODO filter out high freq events like lick and zone
         # w checkbox - LICK does not work bc not decoded EASY TODO
 
-        if not line.startswith('<VAR current_zone') and not line.startswith('LICK'):
-        # if not line.startswith('LICK'):
+        if not line.startswith('<VAR current_zone'):
             if not line.startswith('<'):
                 try:
                     code = line.split('\t')[0]
@@ -679,7 +678,8 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             history_len = 100 # FIXME expose this property? or remove it. for now for debugging
 
             if len(self.lines) < history_len:
-                self.lines.append(line)
+                if not line.startswith('LICK'):
+                    self.lines.append(line)
             else:
                 self.lines.append(line)
                 self.lines = self.lines[1:]

@@ -339,14 +339,14 @@ class LoadCellMonitor(QtWidgets.QWidget):
     def on_serial(self,line):
         """ listens to the arduino, updates variable line """
 
-        # if line.startswith('<VAR'):
-        #     _, name, value, t = line[1:-1].split(' ')
-        #     if name == "X_thresh":
-        #         self.lim_lines['left'].setValue(-float(value))
-        #         self.lim_lines['right'].setValue(float(value))
-        #     if name == "Y_thresh":
-        #         self.lim_lines['back'].setValue(-float(value))
-        #         self.lim_lines['front'].setValue(float(value))
+        if line.startswith('<VAR'):
+            _, name, value, t = line[1:-1].split(' ')
+            if name == "X_thresh":
+                self.lim_lines['left'].setValue(-float(value))
+                self.lim_lines['right'].setValue(float(value))
+            if name == "Y_thresh":
+                self.lim_lines['back'].setValue(-float(value))
+                self.lim_lines['front'].setValue(float(value))
         pass
 
 

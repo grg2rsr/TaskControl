@@ -88,10 +88,6 @@ void processSerialData() {
 
             // INSERT_GETTERS
 
-            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(incorrect_choice_cue_freq)+String(">"));
-            }
-    
             if (strcmp(varname,"correct_choice_cue_freq")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(correct_choice_cue_freq)+String(">"));
             }
@@ -167,6 +163,10 @@ void processSerialData() {
             if (strcmp(varname,"bias")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(bias)+String(">"));
             }
+    
+            if (strcmp(varname,"bias_corr_fac")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(bias_corr_fac)+String(">"));
+            }
                 if (strcmp(varname,"current_state")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
             }
@@ -201,10 +201,6 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
-            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
-                incorrect_choice_cue_freq = atoi(varvalue);
-            }
-    
             if (strcmp(varname,"correct_choice_cue_freq")==0){
                 correct_choice_cue_freq = atoi(varvalue);
             }
@@ -279,6 +275,10 @@ void processSerialData() {
     
             if (strcmp(varname,"bias")==0){
                 bias = atof(varvalue);
+            }
+    
+            if (strcmp(varname,"bias_corr_fac")==0){
+                bias_corr_fac = atof(varvalue);
             }
     
         }

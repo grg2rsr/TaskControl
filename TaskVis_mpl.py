@@ -165,9 +165,9 @@ class SessionVis(QtWidgets.QWidget):
 
                 x = SDf.index.values+1
                 y = sp.cumsum((SDf['outcome'] == outcome).values) / (SDf.index.values+1)
-                y_filt = (SDf['outcome'] == outcome).astype('int32').rolling(hist).mean().values
+                # y_filt = (SessionDf['outcome'] == outcome).rolling(hist).mean().values
                 self.outcome_rates[outcome].set_data(x, y)
-                self.outcome_rates_filt[outcome].set_data(x, y_filt)
+                # self.outcome_rates_filt[outcome].set_data(x, y_filt)
                 self.outcome_rates[outcome].axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
 
             # choices
@@ -251,9 +251,13 @@ class SessionVis(QtWidgets.QWidget):
 
         # for ax in self.axes.flatten():
             # ax.autoscale_view()
-
         self.Canvas.draw()
-        t2 = time.time()
+        # try:
+        #     self.Canvas.draw()
+        # except ValueError:
+        #     print("error while drawing")
+        #     pass
+
         # print("time for update: ", t2-t1)
 
 

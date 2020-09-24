@@ -123,10 +123,6 @@ void processSerialData() {
             if (strcmp(varname,"p_rewarded_cue")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(p_rewarded_cue)+String(">"));
             }
-    
-            if (strcmp(varname,"f_k")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(f_k)+String(">"));
-            }
                 if (strcmp(varname,"current_state")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
             }
@@ -167,10 +163,6 @@ void processSerialData() {
     
             if (strcmp(varname,"correct_choice_cue_freq")==0){
                 correct_choice_cue_freq = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"f_k")==0){
-                f_k = atoi(varvalue);
             }
     
             if (strcmp(varname,"ITI_dur_min")==0){
