@@ -678,11 +678,11 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             history_len = 100 # FIXME expose this property? or remove it. for now for debugging
 
             if len(self.lines) < history_len:
-                if not line.startswith('LICK'):
                     self.lines.append(line)
             else:
-                self.lines.append(line)
-                self.lines = self.lines[1:]
+                if not line.startswith('LICK'):
+                    self.lines.append(line)
+                    self.lines = self.lines[1:]
 
             # print lines in window
             sb = self.TextBrowser.verticalScrollBar()
