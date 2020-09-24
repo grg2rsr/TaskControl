@@ -88,10 +88,6 @@ void processSerialData() {
 
             // INSERT_GETTERS
 
-            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(incorrect_choice_cue_freq)+String(">"));
-            }
-    
             if (strcmp(varname,"correct_choice_cue_freq")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(correct_choice_cue_freq)+String(">"));
             }
@@ -157,10 +153,6 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
-            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
-                incorrect_choice_cue_freq = atoi(varvalue);
-            }
-    
             if (strcmp(varname,"correct_choice_cue_freq")==0){
                 correct_choice_cue_freq = atoi(varvalue);
             }

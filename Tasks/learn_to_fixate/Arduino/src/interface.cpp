@@ -13,6 +13,7 @@ boolean newData = false;
 bool verbose = true;
 bool run = false;
 bool deliver_reward = false;
+bool present_reward_cue = false;
 bool punish = false;
 
 int current_state = 0; // WATCH OUT this is ini state
@@ -87,10 +88,6 @@ void processSerialData() {
 
             // INSERT_GETTERS
 
-            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(incorrect_choice_cue_freq)+String(">"));
-            }
-    
             if (strcmp(varname,"correct_choice_cue_freq")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(correct_choice_cue_freq)+String(">"));
             }
@@ -192,10 +189,6 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
-            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
-                incorrect_choice_cue_freq = atoi(varvalue);
-            }
-    
             if (strcmp(varname,"correct_choice_cue_freq")==0){
                 correct_choice_cue_freq = atoi(varvalue);
             }
@@ -315,6 +308,7 @@ void processSerialData() {
 
             if (strcmp(CMD,"r")==0){
                 deliver_reward = true;
+                present_reward_cue = true;
             }
 
             if (strcmp(CMD,"p")==0){
