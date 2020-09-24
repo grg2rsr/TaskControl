@@ -159,7 +159,15 @@ def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
 
     return axes
 
-" Diagnostic UI "
+"""
+########  ####    ###     ######   ##    ##  #######   ######  ######## ####  ######     ##     ## ####
+##     ##  ##    ## ##   ##    ##  ###   ## ##     ## ##    ##    ##     ##  ##    ##    ##     ##  ##
+##     ##  ##   ##   ##  ##        ####  ## ##     ## ##          ##     ##  ##          ##     ##  ##
+##     ##  ##  ##     ## ##   #### ## ## ## ##     ##  ######     ##     ##  ##          ##     ##  ##
+##     ##  ##  ######### ##    ##  ##  #### ##     ##       ##    ##     ##  ##          ##     ##  ##
+##     ##  ##  ##     ## ##    ##  ##   ### ##     ## ##    ##    ##     ##  ##    ##    ##     ##  ##
+########  #### ##     ##  ######   ##    ##  #######   ######     ##    ####  ######      #######  ####
+"""
 
 def general_info(LogDf, path, axes=None):
     " Plots general info about a session (trial type, water consumed and weight) "
@@ -175,9 +183,9 @@ def general_info(LogDf, path, axes=None):
     animal_meta = pd.read_csv(path.joinpath('animal_meta.csv'))
     weight = round(float(animal_meta.at[6, 'value'])/float(animal_meta.at[4, 'value']),2)*100
 
-    axes[1].text(0.5, 0.2, 'water drank: '+ str(water_drank) + ' ul', horizontalalignment='center', verticalalignment='center')
-    axes[1].text(0.5, 0.5, 'session dur: '+ str(session_dur) + ' min', horizontalalignment='center', verticalalignment='center')
-    axes[1].text(0.5, 0.8,'weight: ' + str(weight) + '%', horizontalalignment='center', verticalalignment='center')
+    axes[1].text(0.5, 0, 'Water drank: '+ str(water_drank) + ' ul', horizontalalignment='center', verticalalignment='center')
+    axes[1].text(0.5, 0.5, 'Session dur.: '+ str(session_dur) + ' min', horizontalalignment='center', verticalalignment='center')
+    axes[1].text(0.5, 1,'Weight: ' + str(weight) + '%', horizontalalignment='center', verticalalignment='center')
     axes[1].axis('off')
 
     # Trial info in axis B
@@ -366,16 +374,19 @@ def plot_success_rate(SessionDf, LogDf, history=None, axes=None):
     axes.set_xlabel('trial #')
     axes.set_title('Success rate and bias')
 
-    # Bias over time
-    Df = LogDf[LogDf['var'] == 'bias']
-    times = Df['t'] / 1e3 
-    times = times - times.iloc[0]
+    try:
+        # Bias over time
+        Df = LogDf[LogDf['var'] == 'bias']
+        times = Df['t'] / 1e3 
+        times = times - times.iloc[0]
 
-    twin_ax = axes.twinx()
-    twin_ax.plot(x, Df['value'].rolling(history).mean()[1:], label='last 10', c ='k', alpha=0.5)
-    twin_ax.axhline(0.5, color='k', linestyle=':', alpha=0.5, lw=1, zorder=-1)
-    twin_ax.set_ylim(0, 1) 
-    twin_ax.set_ylabel('bias', c ='k')
+        twin_ax = axes.twinx()
+        twin_ax.plot(x, Df['value'].rolling(history).mean()[1:], label='last 10', c ='k', alpha=0.5)
+        twin_ax.axhline(0.5, color='k', linestyle=':', alpha=0.5, lw=1, zorder=-1)
+        twin_ax.set_ylim(0, 1) 
+        twin_ax.set_ylabel('bias', c ='k')
+    except:
+        print("This session does not have bias recorded")
 
     return axes
 
@@ -431,77 +442,74 @@ def plot_force_magnitude(LoadCellDf, TrialDfs, bin_width, axes=None):
     if axes is None:
         _ , axes = plt.subplots(1, 2, sharey=True, sharex=True)
 
-    licks_1st, licks_2nd = [],[]
-    ys_1st, ys_2nd, ys_missed = [],[],[]
+    licks_2nd = []
+    ys_1st, ys_2nd, ys_missed, ys_pre = [],[],[], []
 
     for TrialDf in TrialDfs:
-        if "GO_CUE_EVENT" in TrialDf['name'].values:
             
-            time_1st = float(TrialDf[TrialDf.name == 'FIRST_TIMING_CUE_EVENT']['t'])
+        time_1st = float(TrialDf[TrialDf.name == 'FIRST_TIMING_CUE_EVENT']['t'])
+
+        # Aligned to 1st cue can be premature   
+        if "PREMATURE_CHOICE_EVENT" in TrialDf['name'].values:
+            time_pre = float(TrialDf[TrialDf.name == 'PREMATURE_CHOICE_EVENT']['t'])
+            
+            F = bhv.time_slice(LoadCellDf, time_1st, time_pre)
+            y = np.sqrt(F['x']**2+F['y']**2)
+            ys_pre.append(y)
+        
+        # Or it can be a complete trial
+        elif "GO_CUE_EVENT" in TrialDf['name'].values:
+            
             time_2nd = float(TrialDf[TrialDf.name == 'GO_CUE_EVENT']['t'])
             time_last = float(TrialDf['t'].iloc[-1])
 
-            # Aligned to 1st cue is indifferent if choice or missed (as long as it is completed)
             F = bhv.time_slice(LoadCellDf, time_1st, time_2nd)
             y = np.sqrt(F['x']**2+F['y']**2)
             ys_1st.append(y)
 
-            try:
-                licks_1st.append(bhv.get_licks(TrialDf, time_1st, time_2nd))
-            except:
-                pass
-            
+            # Aligned to 2nd cue can be choice or missed
             F = bhv.time_slice(LoadCellDf, (time_2nd-500), time_last)
             y = np.sqrt(F['x']**2+F['y']**2)
 
-            # Split data into missed or choice
             if "CHOICE_MISSED_EVENT" in TrialDf['name'].values:
                 ys_missed.append(y)
             if "CHOICE_EVENT" in TrialDf['name'].values:
                 ys_2nd.append(y)
 
-                # Licks 
+                # Licks only for CHOICE_EVENT
                 try:
                     licks_2nd.append(bhv.get_licks(TrialDf, time_2nd-500, time_last))
                 except:
                     pass                
     
     " Force "
+    choice_dur, force_tresh = 2000, 2000
     Fmag_1st = bhv.tolerant_mean(np.array(ys_1st))
     Fmag_2nd = bhv.tolerant_mean(np.array(ys_2nd))
     Fmag_miss = bhv.tolerant_mean(np.array(ys_missed))
+    #Fmag_pre_trials = bhv.truncate_pad_vector(ys_pre,choice_dur)
     
+    # Left
     axes[0].plot(np.arange(len(Fmag_1st))+1, Fmag_1st,'k', label = 'Complete')
+    #axes[0].plot(np.arange(len(Fmag_pre_trials))+1, Fmag_pre_trials,'k', label = 'Premature')
     axes[0].legend(loc='upper right', frameon=False)
+    axes[0].set_xlim(0,choice_dur)
+    axes[0].set_ylim(0,force_tresh)
+    axes[0].set_ylabel('Force magnitude (a.u.)')
+    plt.setp(axes[0], xticks=np.arange(0, choice_dur+1, 500), xticklabels=np.arange(0, choice_dur//1000 + 0.1, 0.5))
+
+    # Right
     axes[1].plot(np.arange(len(Fmag_2nd+500))+1, Fmag_2nd,'k', label = 'Choice')
     axes[1].plot(np.arange(len(Fmag_miss+500))+1, Fmag_miss,'#808080', alpha = 0.5, label = 'Missed')
     axes[1].legend(loc='upper right', frameon=False)
-
-    # Formatting 
-    choice_dur, force_tresh = 2000, 2000
-    axes[0].set_xlim(0,choice_dur)
-    axes[0].set_ylim(0,force_tresh)
-
     axes[1].set_xlim(0,choice_dur+500)
     axes[1].set_ylim(0,force_tresh)
-
-    axes[0].set_ylabel('Force magnitude (a.u.)')
-    plt.setp(axes, yticks=np.arange(0, force_tresh+1, 500), yticklabels=np.arange(0, force_tresh+1, 500))
-    plt.setp(axes[0], xticks=np.arange(0, choice_dur+1, 500), xticklabels=np.arange(0, choice_dur//1000 + 0.1, 0.5))
     plt.setp(axes[1], xticks=np.arange(0, choice_dur+500 +1, 500), xticklabels=np.arange(-0.5, choice_dur//1000 + 0.1, 0.5))
     
-    " Licks "
-    twin_ax1 = axes[0].twinx()
-    twin_ax2 = axes[1].twinx()
+    plt.setp(axes, yticks=np.arange(0, force_tresh+1, 500), yticklabels=np.arange(0, force_tresh+1, 500))
 
-    if not licks_1st: # check if there is even licks beforehand
-        pass
-    else:
-        no_bins = round(choice_dur/bin_width)
-        counts_1, bins = np.histogram(np.concatenate(licks_1st),no_bins)
-        licks_1st_freq = np.divide(counts_1, ((bin_width/1000)*len(ys_1st)))
-        twin_ax1.step(bins[1:], licks_1st_freq, alpha=0.5)
-        plt.setp(twin_ax1, yticks=np.arange(0, 13), yticklabels=np.arange(0, 13))
+    " Licks "
+    twin_ax2 = axes[1].twinx()
 
     if not licks_2nd:
         pass
@@ -515,20 +523,17 @@ def plot_force_magnitude(LoadCellDf, TrialDfs, bin_width, axes=None):
     twin_ax2.tick_params(axis='y', labelcolor='C0')
     twin_ax2.set_ylabel('Lick freq. (Hz)', color='C0')
 
-    # hide the spines between axes (https://stackoverflow.com/questions/32185411/break-in-x-axis-of-matplotlib)
+    # hide the spines between axes 
     axes[0].spines['right'].set_visible(False)
     axes[0].spines['top'].set_visible(False)
     axes[1].spines['left'].set_visible(False)
     axes[1].spines['top'].set_visible(False)
 
-    twin_ax1.spines['right'].set_visible(False)
-    twin_ax1.spines['top'].set_visible(False)
     twin_ax2.spines['left'].set_visible(False)
     twin_ax2.spines['top'].set_visible(False)
 
     axes[0].yaxis.tick_left()
     axes[1].tick_params(labelleft = False, left = False)
-    twin_ax1.tick_params(labelright = False, right = False)
 
     axes[0].set_title('Align to 1st cue')
     axes[1].set_title('Align to 2nd cue')
@@ -720,7 +725,7 @@ def plot_forces_histogram(LogDf, LoadCellDf, align_ref, pre, post):
 def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None): 
     
     pre, post = -500, 5000
-    Fx, interval, choice_RT, outcome = [],[],[],[]
+    Fx, interval, choice_RT = [],[],[]
     correct_idx, incorrect_idx, pre_idx, missed_idx = [],[],[],[]
 
     if axes is None:

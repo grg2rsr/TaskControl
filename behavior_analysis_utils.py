@@ -430,38 +430,37 @@ def get_choice(TrialDf):
     if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
         choice = "right"
 
-    # # Top
-    # if get_choice_zone(TrialDf).values[0] == 8:
-    #     choice = "up"
-    # # Bottom 
-    # if get_choice_zone(TrialDf).values[0] == 2:
-    #     choice = "down"
+    # GEORG are you against this?
+    if get_choice_zone(TrialDf).values[0] == 8:
+        choice = "up"
+    if get_choice_zone(TrialDf).values[0] == 2:
+        choice = "down"
 
     return pd.Series(choice, name="choice")
 
 def get_choice_zone(TrialDf):
     """
-    TODO PACO
-    this function will not work - it will always return the last zone of the trial (which is not the 
-    choice zone that you are looking for)
-    -> also the name current_zone is misleading. I propose to call the variable 'choice_zone' and 
-    you need to fix the bug :p
+        Gets the zone of a given trial's choice
     """
     choice_zone = np.NaN
     if "CHOICE_EVENT" in TrialDf.name.values or "PREMATURE_CHOICE_EVENT" in TrialDf.name.values:
         try:
             current_zone_times = TrialDf[TrialDf['var'] == 'current_zone']['t'].values
-            choice_time = TrialDf[TrialDf['name'] == 'CHOICE_EVENT']['t'].values
 
-            # Get zone nearest to choice event (no need if there is only 1 current )
+            if "CHOICE_EVENT" in TrialDf.name.values:
+                choice_time = TrialDf[TrialDf['name'] == 'CHOICE_EVENT']['t'].values
+            if "PREMATURE_CHOICE_EVENT" in TrialDf.name.values:
+                choice_time = TrialDf[TrialDf['name'] == 'PREMATURE_CHOICE_EVENT']['t'].values    
+
+            # Get zone nearest to choice event (no need if there is only 1 current_zone)
             if len(current_zone_times)==1:
                 choice_zone = TrialDf[TrialDf['var'] == 'current_zone']['value'].values
             else:
-                choice_zone_idx = (np.abs(current_zone_times - choice_time)).argmin()
-                choice_zone = TrialDf[TrialDf['var'] == 'current_zone']['value'].values[choice_zone_idx]
+                choice_zone_idx = (np.abs(current_zone_times - choice_time)).argmin() # get idx of closest
+                choice_zone = int(TrialDf[TrialDf['var'] == 'current_zone']['value'].values[choice_zone_idx])
         except:
             choice_zone = np.NaN
-    return pd.Series(int(choice_zone), name="choice_zone")
+    return pd.Series(choice_zone, name="choice_zone")
 
 def get_interval(TrialDf):
     try:
@@ -660,7 +659,7 @@ def tolerant_mean(arrs):
 """
 
 def get_licks(TrialDf, t1, t2):
-    " Get lick times aligned to t1"
+    " Get lick times in a window between t1 and t2 aligned to t1"
 
     trial = bhv.time_slice(TrialDf, t1, t2)
     raw_lick_times = np.array(trial.groupby('name').get_group('LICK_ON')['t'])
@@ -668,6 +667,7 @@ def get_licks(TrialDf, t1, t2):
     return licks
 
 def triaL_to_choice_matrix(trial, choice_matrix):
+    " Counts the number of decisions made for up/down/left/right "
 
     # top row
     if trial.choice == "up": 
@@ -684,4 +684,16 @@ def triaL_to_choice_matrix(trial, choice_matrix):
         choice_matrix[2, 1] +=1
         
     return choice_matrix  
+
+def truncate_pad_vector(arrs, max_len):
+    " Truncate and pad an array with rows of different dimensions to max_len"
+    trunc_pad_arr = np.empty((len(arrs), max_len))   
+
+    for i, arr in enumerate(arrs):
+        if len(arr) < max_len:
+            trunc_pad_arr[i,:] = np.pad(arr, (0, max_len-arr.shape[0]))
+        elif len(arr) > max_len:
+            trunc_pad_arr[i,:] = np.array(arr[:max_len])
+
+    return trunc_pad_arr.T
 

@@ -149,7 +149,7 @@ for path_tuple in enumerate(tqdm(paths)):
         SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.is_successful, bhv.get_interval, bhv.get_outcome))
 
         " Create big gridspec containing all axes and plot in them"
-        fig = plt.figure(figsize=(19.2,10.8), dpi=300,constrained_layout=True)
+        fig = plt.figure()
         gs = fig.add_gridspec(8, 7)
 
         # General trial info
@@ -160,6 +160,8 @@ for path_tuple in enumerate(tqdm(paths)):
         # Heat map plots for X/Y
         fig_ax2 = fig.add_subplot(gs[1:,0:3])
         bhv_plt.plot_forces_heatmaps(LogDf, LoadCellDf, align_ref, pre, post, fig_ax2)
+
+        fig.set_tight_layout(True)
 
         # Sucess rate over session
         fig_ax3 = fig.add_subplot(gs[:3,3:5])
@@ -194,7 +196,7 @@ for path_tuple in enumerate(tqdm(paths)):
         bhv_plt.plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, 'correct', fig_ax8b)
 
         fig.suptitle('Session overview for ' + str(animal_tag) + ' at ' + str(session_date))
-        
+
         plt.savefig(str(animal_fd_path) + '/plots/session' + str(path_tuple[0]+1) + '.png')
 
         print("--- Total plotting time took %.4s seconds ---" % (time.time() - start_time))

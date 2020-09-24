@@ -150,14 +150,16 @@ sns.despine(fig)
 fig.suptitle('reaction times to auditory cues')
 fig.tight_layout()
 
-# %% reward rate
+# %% Reward rate
 t_rewards = LogDf.groupby('name').get_group('REWARD_COLLECTED_EVENT')['t']
 rew_magnitude = 5 # ul
-rew_rate = rew_magnitude * 1/(sp.diff(t_rewards.values) / (1000 * 60))
+rew_rate = rew_magnitude * 1/(sp.diff(t_rewards.values) / (1000 * 60)) # per minute
 fig, axes = plt.subplots()
-axes.plot(t_rewards[:-1].values / (1000*60) ,rew_rate)
+axes.plot(t_rewards[:-1].values / (1000*60), rew_rate, label = 'Instantaneous rew. rate')
+plt.xlabel('Time (min.)')
+plt.ylabel('Water consumed (uL)')
+plt.title('Reward consumption per minute')
 
-# %% 
 t_max = LogDf.iloc[-1]['t']
 t_max / (1000*60)
 
@@ -171,7 +173,10 @@ for i,t in enumerate(sp.arange(dt,t_max,dt)):
         pass
 
 rwc = sp.array(rwc)
-axes.plot(rwc[:,0]/2,rwc[:,1]*5)
+axes.plot(rwc[:,0]/2,rwc[:,1]*5, label = '30 sec. window mean rew. rate')
+plt.legend(loc='upper right', frameon=False, fontsize = 8)
+plt.setp(axes, xticks=np.arange(0, int(t_max / (1000*60)), 5), xticklabels=np.arange(0, int(t_max / (1000*60)), 5))
+plt.setp(axes, yticks=np.arange(0, np.max(rew_rate), 5), yticklabels=np.arange(0, np.max(rew_rate), 5))
 
 """
 ##       ########    ###    ########  ##    ##    ########  #######     ########  ##     ##  ######  ##     ##
@@ -602,7 +607,6 @@ axes.set_ylabel('density')
 ##     ##  #######  ########    ##    ####     ######  ########  ######   ######  ####  #######  ##    ##
 """
 
-
 animal_folder = utils.get_folder_dialog()
 plot_dir = animal_folder / 'plots'
 animal_meta = pd.read_csv(animal_folder / 'animal_meta.csv')
@@ -629,7 +633,7 @@ for LogDf in LogDfs:
         ix = Df[Df['name'] == 'REWARD_AVAILABLE_EVENT'].index
         LogDf.loc[ix, 'name'] = "OMITTED_REWARD_AVAILABLE_EVENT"
 
-# %% learn to lick inspections
+# %% Learn to lick inspections
 pre, post = -2000, 4000
 fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
 
@@ -658,7 +662,6 @@ sns.despine(fig)
 fig.suptitle(animal_id+' '+nickname+'\nlick psth to cues',fontsize='small')
 fig.tight_layout()
 plt.savefig(plot_dir / 'lick_to_cues_psth_across_days.png', dpi=300)
-
 
 axes[0].hist(times,bins=bins,density=True)
 
