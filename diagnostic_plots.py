@@ -116,6 +116,7 @@ bhv_plt.plot_timing_overview(LogDf, LoadCellDf, TrialDfs)
 # Parameters
 window_size = 1000
 pre, post = -1000, 4000
+first_cue_ref = "FIRST_TIMING_CUE_EVENT"
 align_ref = "SECOND_TIMING_CUE_EVENT"
 task_name = 'learn_to_time'
 
@@ -181,7 +182,7 @@ for path_tuple in enumerate(tqdm(paths)):
         bin_width = 75 # ms
         fig_ax6a = fig.add_subplot(gs[:3,5])
         fig_ax6b = fig.add_subplot(gs[:3,6])
-        bhv_plt.plot_force_magnitude(LoadCellDf, TrialDfs, bin_width, [fig_ax6a, fig_ax6b])
+        bhv_plt.plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, align_ref, bin_width, [fig_ax6a, fig_ax6b])
 
         # CT histogram to detect/quantify biases or motor strategies
         bin_width = 100 # ms

@@ -433,7 +433,7 @@ def simple_psychometric(SessionDf, axes=None):
 
     return axes
 
-def plot_force_magnitude(LoadCellDf, TrialDfs, bin_width, axes=None):
+def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_cue_ref, bin_width, axes=None):
     """ 
         Plots the magnitude of the 2D forces vector aligned to 1st and 2nd cue with
         lick frequency histogram on top (also includes premature trials on left)
@@ -441,87 +441,84 @@ def plot_force_magnitude(LoadCellDf, TrialDfs, bin_width, axes=None):
     
     if axes is None:
         _ , axes = plt.subplots(1, 2, sharey=True, sharex=True)
+    
+    "Licks"
+    twin_ax2 = axes[1].twinx()
 
-    licks_2nd = []
-    ys_1st, ys_2nd, ys_missed, ys_pre = [],[],[], []
+    pre, choice_dur, force_tresh = -500 , 2000, 2000
+    outcomes = ['correct', 'incorrect', 'missed']
 
-    for TrialDf in TrialDfs:
-            
-        time_1st = float(TrialDf[TrialDf.name == 'FIRST_TIMING_CUE_EVENT']['t'])
-
-        # Aligned to 1st cue can be premature   
-        if "PREMATURE_CHOICE_EVENT" in TrialDf['name'].values:
-            time_pre = float(TrialDf[TrialDf.name == 'PREMATURE_CHOICE_EVENT']['t'])
-            
-            F = bhv.time_slice(LoadCellDf, time_1st, time_pre)
-            y = np.sqrt(F['x']**2+F['y']**2)
-            ys_pre.append(y)
+    for outcome in outcomes:
         
-        # Or it can be a complete trial
-        elif "GO_CUE_EVENT" in TrialDf['name'].values:
-            
-            time_2nd = float(TrialDf[TrialDf.name == 'GO_CUE_EVENT']['t'])
+        Fmag_1st, Fmag_2nd, licks = [],[],[]
+        ys_1st, ys_2nd = [],[]
+
+        # Get Session rows containing only trials with specific outcome
+        try:
+            SDf = SessionDf.groupby('outcome').get_group(outcome)
+        except:
+            continue
+
+        # Go trough each row and get forces
+        for _, row in tqdm(SDf.iterrows()):
+            TrialDf = TrialDfs[row.name]
+                
+            time_1st = float(TrialDf[TrialDf.name == first_cue_ref]['t'])
+            time_2nd = float(TrialDf[TrialDf.name == second_cue_ref]['t'])
             time_last = float(TrialDf['t'].iloc[-1])
 
-            F = bhv.time_slice(LoadCellDf, time_1st, time_2nd)
+            F = bhv.time_slice(LoadCellDf, time_1st-500, time_2nd)
             y = np.sqrt(F['x']**2+F['y']**2)
             ys_1st.append(y)
 
             # Aligned to 2nd cue can be choice or missed
             F = bhv.time_slice(LoadCellDf, (time_2nd-500), time_last)
             y = np.sqrt(F['x']**2+F['y']**2)
+            ys_2nd.append(y)
 
-            if "CHOICE_MISSED_EVENT" in TrialDf['name'].values:
-                ys_missed.append(y)
-            if "CHOICE_EVENT" in TrialDf['name'].values:
-                ys_2nd.append(y)
+            try:
+                licks.append(bhv.get_licks(TrialDf, time_2nd-500, time_last))
+            except:
+                pass
 
-                # Licks only for CHOICE_EVENT
-                try:
-                    licks_2nd.append(bhv.get_licks(TrialDf, time_2nd-500, time_last))
-                except:
-                    pass                
+        # Compute mean force for each outcome aligned to first or second        
+        Fmag_1st = bhv.tolerant_mean(np.array(ys_1st))
+        Fmag_2nd = bhv.tolerant_mean(np.array(ys_2nd))
+
+        axes[0].plot(np.arange(len(Fmag_1st))+1, Fmag_1st, label = outcome)
+        axes[1].plot(np.arange(len(Fmag_2nd))+1, Fmag_2nd, label = outcome) 
+
+        # Get lick histogram
+        if not licks:
+            pass
+        else:
+            no_bins = round((choice_dur-pre)/bin_width)
+            counts_2, bins = np.histogram(np.concatenate(licks),no_bins)
+            licks_2nd_freq = np.divide(counts_2, ((bin_width/1000)*len(ys_2nd)))
+            twin_ax2.step(bins[1:], licks_2nd_freq, alpha=0.5, label = outcome)
+                           
     
     " Force "
-    choice_dur, force_tresh = 2000, 2000
-    Fmag_1st = bhv.tolerant_mean(np.array(ys_1st))
-    Fmag_2nd = bhv.tolerant_mean(np.array(ys_2nd))
-    Fmag_miss = bhv.tolerant_mean(np.array(ys_missed))
-    #Fmag_pre_trials = bhv.truncate_pad_vector(ys_pre,choice_dur)
-    
-    # Left
-    axes[0].plot(np.arange(len(Fmag_1st))+1, Fmag_1st,'k', label = 'Complete')
-    #axes[0].plot(np.arange(len(Fmag_pre_trials))+1, Fmag_pre_trials,'k', label = 'Premature')
+    # Left plot
     axes[0].legend(loc='upper right', frameon=False)
-    axes[0].set_xlim(0,choice_dur)
-    axes[0].set_ylim(0,force_tresh)
     axes[0].set_ylabel('Force magnitude (a.u.)')
-    plt.setp(axes[0], xticks=np.arange(0, choice_dur+1, 500), xticklabels=np.arange(0, choice_dur//1000 + 0.1, 0.5))
+    plt.setp(axes[0], xticks=np.arange(0, choice_dur-pre+1, 500), xticklabels=np.arange(-0.5, choice_dur//1000 + 0.1, 0.5))
 
-    # Right
-    axes[1].plot(np.arange(len(Fmag_2nd+500))+1, Fmag_2nd,'k', label = 'Choice')
-    axes[1].plot(np.arange(len(Fmag_miss+500))+1, Fmag_miss,'#808080', alpha = 0.5, label = 'Missed')
+    # Right plot
     axes[1].legend(loc='upper right', frameon=False)
-    axes[1].set_xlim(0,choice_dur+500)
-    axes[1].set_ylim(0,force_tresh)
-    plt.setp(axes[1], xticks=np.arange(0, choice_dur+500 +1, 500), xticklabels=np.arange(-0.5, choice_dur//1000 + 0.1, 0.5))
+    plt.setp(axes[1], xticks=np.arange(0, choice_dur-pre+1, 500), xticklabels=np.arange(-0.5, choice_dur//1000 + 0.1, 0.5))
     
+    # Shared
     plt.setp(axes, yticks=np.arange(0, force_tresh+1, 500), yticklabels=np.arange(0, force_tresh+1, 500))
+    axes[0].set_xlim(0,choice_dur-pre)
+    axes[0].set_ylim(0,force_tresh)
+    axes[1].set_xlim(0,choice_dur-pre)
+    axes[1].set_ylim(0,force_tresh)
 
     " Licks "
-    twin_ax2 = axes[1].twinx()
-
-    if not licks_2nd:
-        pass
-    else:
-        no_bins = round((choice_dur+500)/bin_width)
-        counts_2, bins = np.histogram(np.concatenate(licks_2nd),no_bins)
-        licks_2nd_freq = np.divide(counts_2, ((bin_width/1000)*len(ys_2nd)))
-        twin_ax2.step(bins[1:], licks_2nd_freq, alpha=0.5)
-        plt.setp(twin_ax2, yticks=np.arange(0, 13), yticklabels=np.arange(0, 13))
-
     twin_ax2.tick_params(axis='y', labelcolor='C0')
     twin_ax2.set_ylabel('Lick freq. (Hz)', color='C0')
+    plt.setp(twin_ax2, yticks=np.arange(0, 11), yticklabels=np.arange(0, 11))
 
     # hide the spines between axes 
     axes[0].spines['right'].set_visible(False)

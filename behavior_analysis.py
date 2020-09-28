@@ -9,6 +9,7 @@ import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 166 # the screens in the viv
 import behavior_analysis_utils as bhv
 import pandas as pd
+
 # this should be changed ... 
 from pathlib import Path
 import scipy as sp
@@ -19,6 +20,10 @@ import os
 import utils
 
 from behavior_plotters import *
+
+# Plotting Defaults
+plt.rcParams["xtick.direction"] = "in"
+plt.rcParams["ytick.direction"] = "in"
 
 # %%
 """
@@ -58,8 +63,8 @@ axes.plot(SessionsDf.index.values,SessionsDf.weight_frac,'o')
 axes.set_xticks(SessionsDf.index.values)
 axes.set_xticklabels(SessionsDf['date'].values,rotation=90)
 line_kwargs = dict(lw=1,linestyle=':',alpha=0.75,color='k')
-# axes.axhline(0.75,**line_kwargs)
 axes.axhline(0.85,**line_kwargs)
+axes.axhline(0.75,lw=1,linestyle=':',alpha=0.75,color='r')
 axes.set_ylim(0.5,1)
 axes.set_title('weight')
 axes.set_xlabel('session date')
@@ -119,7 +124,7 @@ fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
 events = ['REWARD_AVAILABLE_EVENT', 'OMITTED_REWARD_AVAILABLE_EVENT', 'NO_REWARD_AVAILABLE_EVENT']
 LicksDf = bhv.get_events_from_name(LogDf, 'LICK_EVENT')
 
-bins=sp.linspace(0, 500, 25)
+bins=sp.linspace(0, 500, 50)
 
 for event, ax in zip(events,axes):
     times = bhv.get_events_from_name(LogDf, event)['t']
@@ -188,7 +193,7 @@ plt.setp(axes, yticks=np.arange(0, np.max(rew_rate), 5), yticklabels=np.arange(0
 ######## ######## ##     ## ##     ## ##    ##       ##     #######     ##         #######   ######  ##     ##
 """
 
-# %% preprocessing: LC syncing
+# %% Preprocessing: LC syncing
 LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
 arduino_sync = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT")
 
@@ -220,7 +225,7 @@ for i, row in tqdm(TrialSpans.iterrows()):
 metrics = (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.choice_RT, bhv.is_successful, bhv.get_outcome)
 SessionDf = bhv.parse_trials(TrialDfs, metrics)
 
-# %% choice / outcome grid for LC forces
+# %% Choice / outcome grid for LC forces
 sides = ['left', 'right']
 outcomes = ['correct', 'incorrect']
 fig, axes = plt.subplots(nrows=len(outcomes), ncols=len(sides), figsize=[5, 5], sharex=True, sharey=True)
@@ -292,7 +297,7 @@ axes[0, 0].set_ylabel('correct')
 axes[1, 0].set_ylabel('incorrect')
 fig.tight_layout()
 
-# %% heatmaps
+# %% Heatmaps
 pre, post = -1000, 1000
 align_event = "GO_CUE_EVENT"
 
@@ -328,8 +333,18 @@ for i, (side, outcome) in enumerate(order):
     # event_ix = Fx.shape[0] - post
 
     ## for heatmaps
-    axes[i,0].matshow(Fx.T, origin='lower', vmin=-2000, vmax=2000, cmap='PiYG')
+    heat = axes[i,0].matshow(Fx.T, origin='lower', vmin=-2000, vmax=2000, cmap='PiYG')
     axes[i,1].matshow(Fy.T, origin='lower', vmin=-2000, vmax=2000, cmap='PiYG')
+    axes[i,0].axvline(x=1000, ymin=0, ymax=1, color = 'k', alpha = 0.5)
+    axes[i,1].axvline(x=1000, ymin=0, ymax=1, color = 'k', alpha = 0.5)
+
+plt.setp(axes, xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(pre/1000, post/1000+0.1, 0.5))
+
+cbar = plt.colorbar(heat, ax=axes[-1,0], orientation='horizontal', aspect = 30)
+cbar.set_ticks([-2000,-1000,0,1000,2000]); cbar.set_ticklabels(["Left","","","","Right"])
+
+cbar = plt.colorbar(heat, ax=axes[-1,1], orientation='horizontal', aspect = 30)
+cbar.set_ticks([-2000,-1000,0,1000,2000]); cbar.set_ticklabels(["Back","","","","Front"])
 
 for ax in axes.flatten():
     ax.set_aspect('auto')
@@ -346,8 +361,35 @@ axes[0,1].set_title('Fy')
 fig.tight_layout()
 fig.subplots_adjust(hspace=0.05)
 
+# %% Response Forces to go cue
+bin_width = 75 #ms
+first_cue_ref = "TRIAL_ENTRY_EVENT"
 
-# %% bias over time
+plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, align_event, bin_width, axes=None)
+
+# %% Choice RT's distribution
+bin_width = 250 #ms
+choice_interval = 5000
+
+fig, axes = plt.subplots()
+
+choice_rt = np.empty(0)
+for TrialDf in TrialDfs:
+    choice_rt = np.append(choice_rt, bhv.choice_RT(TrialDf).values)
+
+# includes front and back pushes, eliminates nans due to missed trials
+clean_choice_rt = [x for x in choice_rt if not pd.isnull(x)] 
+
+no_bins = round(choice_interval/bin_width)
+
+kwargs = dict(bins = no_bins, density = True, range = (0, choice_interval), facecolor='w', edgecolor='C0')
+values, bins, _ = plt.hist(clean_choice_rt, **kwargs)
+
+axes.set_ylabel('Prob (%)')
+axes.set_xlabel('Time (s)')
+axes.set_title('Choice RT distribution')
+
+# %% Bias over time
 Df = LogDf[LogDf['var'] == 'bias']
 
 fig, axes = plt.subplots()
@@ -361,8 +403,9 @@ axes.axhline(0.5, color='k', linestyle=':', alpha=0.5, lw=1, zorder=-1)
 axes.legend()
 axes.set_ylim(0, 1)
 axes.set_ylabel('bias')
-axes.set_xlabel('time (s)')
-axes.set_title('lateral bias')
+axes.set_xlabel('time (min.)')
+axes.set_title('Lateral bias')
+plt.setp(axes, xticks=np.arange(0, int(times.iloc[-1]), 5*60), xticklabels=np.arange(0, int(times.iloc[-1]/60), 5))
 sns.despine(fig)
 fig.tight_layout()
 
@@ -633,7 +676,7 @@ for LogDf in LogDfs:
         ix = Df[Df['name'] == 'REWARD_AVAILABLE_EVENT'].index
         LogDf.loc[ix, 'name'] = "OMITTED_REWARD_AVAILABLE_EVENT"
 
-# %% Learn to lick inspections
+# %% Learn to LICK inspections
 pre, post = -2000, 4000
 fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
 
@@ -665,7 +708,7 @@ plt.savefig(plot_dir / 'lick_to_cues_psth_across_days.png', dpi=300)
 
 axes[0].hist(times,bins=bins,density=True)
 
-
+# %% Learn to PUSH inspections
 
 
 
