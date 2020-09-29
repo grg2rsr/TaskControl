@@ -64,11 +64,13 @@ void log_var(String name, String value){
 ##    ## ##       ##   ### ##    ## ##     ## ##    ##  ##    ##
  ######  ######## ##    ##  ######   #######  ##     ##  ######
 */
+unsigned long t_last_lick = max_future;
 
 void read_lick(){
   if (lick_in == false && digitalRead(LICK_PIN) == true){
     log_code(LICK_ON);
     lick_in = true;
+    t_last_lick = now();
   }
   if (lick_in == true && digitalRead(LICK_PIN) == false){
     log_code(LICK_OFF);
@@ -268,7 +270,7 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (now() - state_entry > this_ITI_dur) {
+            if (now() - state_entry > this_ITI_dur && now() - t_last_lick > t_lick_block) {
                 // determine which cue is next
                 float r = random(0,1000) / 1000.0;
                 if (p_rewarded_cue > r){
