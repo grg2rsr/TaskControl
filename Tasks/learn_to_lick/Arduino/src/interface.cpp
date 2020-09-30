@@ -119,6 +119,10 @@ void processSerialData() {
             if (strcmp(varname,"p_rewarded_cue")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(p_rewarded_cue)+String(">"));
             }
+    
+            if (strcmp(varname,"t_lick_block")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(t_lick_block)+String(">"));
+            }
                 if (strcmp(varname,"current_state")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
             }
@@ -171,6 +175,10 @@ void processSerialData() {
     
             if (strcmp(varname,"reward_available_dur")==0){
                 reward_available_dur = strtoul(varvalue,NULL,10);
+            }
+    
+            if (strcmp(varname,"t_lick_block")==0){
+                t_lick_block = strtoul(varvalue,NULL,10);
             }
     
             if (strcmp(varname,"valve_ul_ms")==0){

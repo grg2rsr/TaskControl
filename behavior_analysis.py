@@ -382,8 +382,8 @@ clean_choice_rt = [x for x in choice_rt if not pd.isnull(x)]
 
 no_bins = round(choice_interval/bin_width)
 
-kwargs = dict(bins = no_bins, density = True, range = (0, choice_interval), facecolor='w', edgecolor='C0')
-values, bins, _ = plt.hist(clean_choice_rt, **kwargs)
+counts, bins = np.histogram(clean_choice_rt, bins=no_bins, density = True, range = (-250, choice_interval))
+axes.step(bins[1:], counts, color='C0')
 
 axes.set_ylabel('Prob (%)')
 axes.set_xlabel('Time (s)')
@@ -658,6 +658,8 @@ nickname = animal_meta[animal_meta['name'] == 'Nickname']['value'].values[0]
 os.makedirs(plot_dir, exist_ok=True)
 
 # %%
+"Learn to LICK inspections"
+
 SessionsDf = utils.get_sessions(animal_folder)
 paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_lick')['path']]
 
@@ -676,7 +678,7 @@ for LogDf in LogDfs:
         ix = Df[Df['name'] == 'REWARD_AVAILABLE_EVENT'].index
         LogDf.loc[ix, 'name'] = "OMITTED_REWARD_AVAILABLE_EVENT"
 
-# %% Learn to LICK inspections
+
 pre, post = -2000, 4000
 fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
 
@@ -708,7 +710,62 @@ plt.savefig(plot_dir / 'lick_to_cues_psth_across_days.png', dpi=300)
 
 axes[0].hist(times,bins=bins,density=True)
 
-# %% Learn to PUSH inspections
+# %% 
+"Learn to PUSH inspections"
+
+SessionsDf = utils.get_sessions(animal_folder)
+paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_push')['path']]
+
+LogDfs = []
+for path in tqdm(paths):
+    log_path = path / 'arduino_log.txt'
+    LogDf = bhv.get_LogDf_from_path(log_path)
+    LogDf = bhv.filter_bad_licks(LogDf)
+    LogDfs.append(LogDf)
+
+# %% X/Y thresh across time
+
+
+# %% Choice RT's distribution
+bin_width = 250 #ms
+choice_interval = 5000
+
+fig, axes = plt.subplots()
+colors = sns.color_palette(palette='turbo', n_colors=len(LogDfs))
+
+for i,LogDf in enumerate(LogDfs):
+
+    TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+
+    TrialDfs = []
+    for j, row in tqdm(TrialSpans.iterrows()):
+        TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+    choice_rt = np.empty(0)
+
+    for TrialDf in TrialDfs:
+        choice_rt = np.append(choice_rt, bhv.choice_RT(TrialDf).values)
+
+    # includes front and back pushes, eliminates nans due to missed trials
+    clean_choice_rt = [x for x in choice_rt if not pd.isnull(x)] 
+
+    no_bins = round(choice_interval/bin_width)
+
+    counts, bins = np.histogram(clean_choice_rt, bins=no_bins, density = True, range = (-250, choice_interval))
+    axes.step(bins[1:], counts, color=colors[i], zorder=1*i, alpha=0.75, label='day '+str(i+1))
+
+    #mean, var = sp.stats.expon.fit(clean_choice_rt)
+    #best_fit = sp.stats.expon.pdf(bins, mean, var)
+    #plt.plot(bins, best_fit, color = colors[i])
+
+plt.legend(frameon=False)
+axes.set_ylabel('Prob (%)')
+axes.set_xlabel('Time (s)')
+fig.suptitle(animal_id+' '+nickname+'\nChoice RT distribution',fontsize='small')
+
+
+
+
 
 
 
@@ -755,13 +812,6 @@ for i in tqdm(inds):
     TrialDf = TrialDfs[i]
     t_stop = TrialDf.loc[TrialDf['name'] == "CHOICE_EVENT",'t'].values[0]
     times.append(t_stop)
-
-
-# %%
-
-
-
-
 
 
 # %% force aligned on cues

@@ -445,7 +445,7 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
     "Licks"
     twin_ax2 = axes[1].twinx()
 
-    pre, choice_dur, force_tresh = -500 , 2000, 2000
+    pre, plot_dur, force_tresh = -500 , 2000, 2000
     outcomes = ['correct', 'incorrect', 'missed']
 
     for outcome in outcomes:
@@ -466,18 +466,19 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
             time_1st = float(TrialDf[TrialDf.name == first_cue_ref]['t'])
             time_2nd = float(TrialDf[TrialDf.name == second_cue_ref]['t'])
             time_last = float(TrialDf['t'].iloc[-1])
-
-            F = bhv.time_slice(LoadCellDf, time_1st-500, time_2nd)
+            
+            # Aligned to first cue
+            F = bhv.time_slice(LoadCellDf, time_1st+pre, time_2nd) # also get previous 0.5s
             y = np.sqrt(F['x']**2+F['y']**2)
             ys_1st.append(y)
 
-            # Aligned to 2nd cue can be choice or missed
-            F = bhv.time_slice(LoadCellDf, (time_2nd-500), time_last)
+            # Aligned to second cue
+            F = bhv.time_slice(LoadCellDf, time_2nd+pre, time_last)
             y = np.sqrt(F['x']**2+F['y']**2)
             ys_2nd.append(y)
 
             try:
-                licks.append(bhv.get_licks(TrialDf, time_2nd-500, time_last))
+                licks.append(bhv.get_licks(TrialDf, time_2nd+pre, time_last))
             except:
                 pass
 
@@ -492,27 +493,26 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
         if not licks:
             pass
         else:
-            no_bins = round((choice_dur-pre)/bin_width)
+            no_bins = round((plot_dur-pre)/bin_width)
             counts_2, bins = np.histogram(np.concatenate(licks),no_bins)
             licks_2nd_freq = np.divide(counts_2, ((bin_width/1000)*len(ys_2nd)))
             twin_ax2.step(bins[1:], licks_2nd_freq, alpha=0.5, label = outcome)
-                           
-    
+                               
     " Force "
     # Left plot
     axes[0].legend(loc='upper right', frameon=False)
     axes[0].set_ylabel('Force magnitude (a.u.)')
-    plt.setp(axes[0], xticks=np.arange(0, choice_dur-pre+1, 500), xticklabels=np.arange(-0.5, choice_dur//1000 + 0.1, 0.5))
+    plt.setp(axes[0], xticks=np.arange(0, plot_dur-pre+1, 500), xticklabels=np.arange(-0.5, plot_dur//1000 + 0.1, 0.5))
 
     # Right plot
     axes[1].legend(loc='upper right', frameon=False)
-    plt.setp(axes[1], xticks=np.arange(0, choice_dur-pre+1, 500), xticklabels=np.arange(-0.5, choice_dur//1000 + 0.1, 0.5))
+    plt.setp(axes[1], xticks=np.arange(0, plot_dur-pre+1, 500), xticklabels=np.arange(-0.5, plot_dur//1000 + 0.1, 0.5))
     
     # Shared
     plt.setp(axes, yticks=np.arange(0, force_tresh+1, 500), yticklabels=np.arange(0, force_tresh+1, 500))
-    axes[0].set_xlim(0,choice_dur-pre)
+    axes[0].set_xlim(0,plot_dur-pre)
     axes[0].set_ylim(0,force_tresh)
-    axes[1].set_xlim(0,choice_dur-pre)
+    axes[1].set_xlim(0,plot_dur-pre)
     axes[1].set_ylim(0,force_tresh)
 
     " Licks "
