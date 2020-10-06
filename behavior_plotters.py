@@ -657,6 +657,7 @@ def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, trial_outco
 " Currently not used / not implemented "
 
 def x_y_threshold_across_time(LogDf, axes=None):
+    "X/Y threshold across time for a single session"
 
     if axes is None:
         axes = plt.subplots()
@@ -890,20 +891,20 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag):
     axes[0].legend(loc='upper left', frameon=False) 
 
     fig.suptitle('Sessions overview in ' + task_name + ' for mouse ' + animal_tag)
-    plt.setp(axes[0], xticks=np.arange(0, len(date)+1, 1), xticklabels=date)
-    plt.setp(axes[0], yticks=np.arange(0, 15, 1), yticklabels=np.arange(0, 15, 1))
+    plt.setp(axes[0], xticks=np.arange(0, len(date), 1), xticklabels=date)
+    plt.setp(axes[0], yticks=np.arange(0, 10, 1), yticklabels=np.arange(0, 10, 1))
       
     # Two sided axes Subplot 2
     axes[1].plot(sucess_rate, color = 'green', label = 'Sucess rate')
     axes[1].set_ylabel('Sucess rate (%)', color = 'green')
     axes[1].tick_params(axis='y', labelcolor='green')
-    plt.setp(axes[1], yticks=np.arange(0,100,10), yticklabels=np.arange(0,100,10))
+    plt.setp(axes[1], yticks=np.arange(0,50,5), yticklabels=np.arange(0,50,5))
 
     weight = np.multiply(weight,100)
     twin_ax = axes[1].twinx()
     twin_ax.plot(weight, color = 'gray')
     twin_ax.set_ylabel('Normalized Weight to max (%)', color = 'gray')
-    plt.setp(twin_ax, yticks=np.arange(75,100+1,3), yticklabels=np.arange(75,100+1,3))
+    plt.setp(twin_ax, yticks=np.arange(75,100+1,5), yticklabels=np.arange(75,100+1,5))
 
     fig.autofmt_xdate()
     plt.show()

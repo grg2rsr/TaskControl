@@ -38,7 +38,7 @@ plt.rcParams["ytick.direction"] = "in"
 
 animal_fd_path = utils.get_folder_dialog(initial_dir="D:/TaskControl/Animals")
 animal_tag = str(animal_fd_path).split('\\')[-1]
-task_name = 'learn_to_time'
+task_name = 'learn_to_push'
 
 bhv.create_LogDf_LCDf_csv(animal_fd_path, task_name) # CHECK
 

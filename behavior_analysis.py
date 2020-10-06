@@ -230,7 +230,7 @@ sides = ['left', 'right']
 outcomes = ['correct', 'incorrect']
 fig, axes = plt.subplots(nrows=len(outcomes), ncols=len(sides), figsize=[5, 5], sharex=True, sharey=True)
 
-pre, post = -1000, 10
+pre, post = -100, 1000
 align_event = "CHOICE_EVENT"
 
 for i, side in enumerate(sides):
@@ -298,7 +298,8 @@ axes[1, 0].set_ylabel('incorrect')
 fig.tight_layout()
 
 # %% Heatmaps
-pre, post = -1000, 1000
+pre, post = -1000, 5000
+force_thresh = 2000
 align_event = "GO_CUE_EVENT"
 
 order = [['left','correct'],
@@ -318,6 +319,7 @@ for i, (side, outcome) in enumerate(order):
 
     Fx = []
     Fy = []
+    choice_rt = []
     for _, row in tqdm(SDf.iterrows()):
         TrialDf = TrialDfs[row.name]
         t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
@@ -326,6 +328,7 @@ for i, (side, outcome) in enumerate(order):
         LCDf = bhv.time_slice(LoadCellDf, t_align+pre, t_align+post)
         Fx.append(LCDf['x'].values)
         Fy.append(LCDf['y'].values)
+        choice_rt.append(bhv.choice_RT(TrialDf).values-pre)
 
     Fx = sp.array(Fx).T
     Fy = sp.array(Fy).T
@@ -333,18 +336,16 @@ for i, (side, outcome) in enumerate(order):
     # event_ix = Fx.shape[0] - post
 
     ## for heatmaps
-    heat = axes[i,0].matshow(Fx.T, origin='lower', vmin=-2000, vmax=2000, cmap='PiYG')
-    axes[i,1].matshow(Fy.T, origin='lower', vmin=-2000, vmax=2000, cmap='PiYG')
+    axes[i,0].matshow(Fx.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
+    axes[i,1].matshow(Fy.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
     axes[i,0].axvline(x=1000, ymin=0, ymax=1, color = 'k', alpha = 0.5)
     axes[i,1].axvline(x=1000, ymin=0, ymax=1, color = 'k', alpha = 0.5)
 
-plt.setp(axes, xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(pre/1000, post/1000+0.1, 0.5))
+    ymin = np.arange(-0.5,len(choice_rt)-1) # need to shift since lines starts at center of trial
+    ymax = np.arange(0.45,len(choice_rt))
+    axes[i,0].vlines(choice_rt, ymin, ymax, colors='k', linewidth=1)
 
-cbar = plt.colorbar(heat, ax=axes[-1,0], orientation='horizontal', aspect = 30)
-cbar.set_ticks([-2000,-1000,0,1000,2000]); cbar.set_ticklabels(["Left","","","","Right"])
-
-cbar = plt.colorbar(heat, ax=axes[-1,1], orientation='horizontal', aspect = 30)
-cbar.set_ticks([-2000,-1000,0,1000,2000]); cbar.set_ticklabels(["Back","","","","Front"])
+plt.setp(axes, xticks=np.arange(0, post-pre+1, 1000), xticklabels=np.arange(pre/1000, post/1000+0.1, 1))
 
 for ax in axes.flatten():
     ax.set_aspect('auto')
@@ -355,8 +356,11 @@ for ax in axes[-1,:]:
 for ax, (side, outcome) in zip(axes[:,0],order):
     ax.set_ylabel('\n'.join([side,outcome]))
 
-axes[0,0].set_title('Fx')
+axes[0,0].set_title('Fx (aligned on go cue)')
 axes[0,1].set_title('Fy')
+
+axes[-1,0].set_xlabel('Time (s)')
+axes[-1,1].set_xlabel('Time (s)')
 
 fig.tight_layout()
 fig.subplots_adjust(hspace=0.05)
@@ -712,7 +716,6 @@ axes[0].hist(times,bins=bins,density=True)
 
 # %% 
 "Learn to PUSH inspections"
-
 SessionsDf = utils.get_sessions(animal_folder)
 paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_push')['path']]
 
@@ -723,10 +726,37 @@ for path in tqdm(paths):
     LogDf = bhv.filter_bad_licks(LogDf)
     LogDfs.append(LogDf)
 
-# %% X/Y thresh across time
+colors = sns.color_palette(palette='turbo',n_colors=len(LogDfs))
 
+# %% X/Y thresh and bias across time
+fig, axes = plt.subplots(figsize=(4, 4))
 
-# %% Choice RT's distribution
+x_thresh, y_thresh, bias = [],[],[]
+for LogDf in LogDfs:
+
+    x_thresh = np.append(x_thresh, np.mean(LogDf[LogDf['var'] == 'X_thresh'].value.values))
+    y_thresh = np.append(y_thresh, np.mean(LogDf[LogDf['var'] == 'Y_thresh'].value.values))
+    bias = np.append(bias, LogDf[LogDf['var'] == 'bias'].value.values[-1]) # last bias value
+
+axes.plot(np.arange(len(LogDfs)), x_thresh, color = 'C0', label = 'X thresh')
+axes.plot(np.arange(len(LogDfs)), y_thresh, color = 'm', label = 'Y thresh')
+
+axes.set_ylim([1000,2500])
+axes.set_ylabel('Force (a.u.)')
+axes.set_title('Mean X/Y thresh forces and bias across sessions')
+axes.legend(frameon=False)
+axes.set_xticks(np.arange(len(LogDfs)))
+axes.set_xticklabels(SessionsDf[SessionsDf['task'] == 'learn_to_push']['date'].values,rotation=90) 
+
+twin_ax = axes.twinx()
+twin_ax.plot(bias, color = 'g', alpha = 0.5)
+twin_ax.set_ylabel('Bias', color = 'g')
+twin_ax.set_yticks([0,1])
+twin_ax.set_yticklabels(['left','right'])
+
+fig.tight_layout()
+
+# %% Choice RT's distribution 
 bin_width = 250 #ms
 choice_interval = 5000
 
@@ -754,17 +784,74 @@ for i,LogDf in enumerate(LogDfs):
     counts, bins = np.histogram(clean_choice_rt, bins=no_bins, density = True, range = (-250, choice_interval))
     axes.step(bins[1:], counts, color=colors[i], zorder=1*i, alpha=0.75, label='day '+str(i+1))
 
-    #mean, var = sp.stats.expon.fit(clean_choice_rt)
-    #best_fit = sp.stats.expon.pdf(bins, mean, var)
-    #plt.plot(bins, best_fit, color = colors[i])
+    axes.axvline(np.median(clean_choice_rt),color=colors[i], alpha=0.5)
 
 plt.legend(frameon=False)
 axes.set_ylabel('Prob (%)')
 axes.set_xlabel('Time (s)')
-fig.suptitle(animal_id+' '+nickname+'\nChoice RT distribution',fontsize='small')
+fig.suptitle(animal_id+' '+nickname+'\nChoice RT distribution with median',fontsize='small')
 
+# %% Missed trials increase as session goes on
+fig, axes = plt.subplots()
 
+for j, LogDf in enumerate(LogDfs):
 
+    TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+
+    TrialDfs = []
+    for i, row in TrialSpans.iterrows():
+        TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+    SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.get_outcome))
+
+    x = np.arange(len(SessionDf))  
+    MissedDf = SessionDf['outcome'] == 'missed'
+
+    # grand average rate
+    y = np.cumsum(MissedDf.values) / (SessionDf.index.values+1)
+    axes.plot(x,y, color = colors[j], label = 'day '+ str(j+1))
+
+plt.legend(frameon=False)
+axes.set_ylim([0,1])
+axes.set_title('Ratio of missed trials across sessions')
+axes.set_xlabel('Trial #')
+axes.set_ylabel('Grand average ratio')
+
+# %% Systematic bias inspection
+
+# Get Fx and Fy forces for all sessions 
+for path in paths:
+
+    log_path = path / 'arduino_log.txt'
+
+    LoadCellDf, harp_sync = bhv.parse_harp_csv(path / "bonsai_harp_log.csv", save=True)
+    arduino_sync = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT")
+
+    t_harp = pd.read_csv(path / "harp_sync.csv")['t'].values
+    t_arduino = pd.read_csv(path / "arduino_sync.csv")['t'].values
+
+    if t_harp.shape != t_arduino.shape:
+        t_arduino, t_harp = bhv.cut_timestamps(t_arduino, t_harp, verbose = True)
+
+    m, b = bhv.sync_clocks(t_harp, t_arduino, log_path)
+
+    # median correction
+    samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
+    LoadCellDf['x'] = LoadCellDf['x'] - LoadCellDf['x'].rolling(samples).median()
+    LoadCellDf['y'] = LoadCellDf['y'] - LoadCellDf['y'].rolling(samples).median()
+
+    Fx = np.array(LoadCellDf['x'].values).T
+    Fy = np.array(LoadCellDf['y'].values).T
+
+# Downsample from 1Khz to 10Hz in order to be computationally feasible
+Fx = Fx[0::1000]
+Fy = Fy[0::1000]
+
+# KDE plot
+f, ax = plt.subplots(figsize=(4, 4))
+sns.kdeplot(x=Fx, y=Fy, fill=True, cbar=True)
+ax.set(xlim=(-4000,4000),ylim=(-4000,4000))
+ax.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
 
 
 
