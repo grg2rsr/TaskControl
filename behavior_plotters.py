@@ -473,7 +473,7 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
             ys_1st.append(y)
 
             # Aligned to second cue
-            F = bhv.time_slice(LoadCellDf, time_2nd+pre, time_last)
+            F = bhv.time_slice(LoadCellDf, time_2nd+pre, time_last) # also get previous 0.5s
             y = np.sqrt(F['x']**2+F['y']**2)
             ys_2nd.append(y)
 
@@ -540,7 +540,7 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
 def plot_choice_matrix(SessionDf, LogDf, trial_type, axes=None):
     'Plots percentage of choices made in a session in a 3x3 choice matrix following a KB layout'
 
-    if axes==None:
+    if axes is None:
         _ , axes = plt.subplots()
 
     choice_matrix = np.zeros((3,3))
@@ -825,9 +825,10 @@ def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None):
  
 """
 
-def plot_sessions_overview(LogDfs, paths, task_name, animal_tag):
+def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
 
-    fig , axes = plt.subplots(ncols=2, sharex=True)
+    if axes is None:
+        fig , axes = plt.subplots(ncols=2, sharex=True)
 
     trials_performed = []
     trials_correct = []

@@ -76,7 +76,6 @@ fig.tight_layout()
 LogDf = bhv.get_LogDf_from_path(log_path)
 LogDf = bhv.filter_bad_licks(LogDf)
 
-
 """
 ##       ########    ###    ########  ##    ##    ########  #######     ##       ####  ######  ##    ##
 ##       ##         ## ##   ##     ## ###   ##       ##    ##     ##    ##        ##  ##    ## ##   ##
@@ -89,10 +88,13 @@ LogDf = bhv.filter_bad_licks(LogDf)
 
 # %% rename events of all future omitted rewards
 EventsDf = bhv.get_events_from_name(LogDf, 'REWARD_OMITTED_EVENT')
+
 for t in EventsDf['t'].values:
     Df = bhv.time_slice(LogDf, t-1000, t)
-    ix = Df[Df['name'] == 'REWARD_AVAILABLE_EVENT'].index
-    LogDf.loc[ix, 'name'] = "OMITTED_REWARD_AVAILABLE_EVENT"
+    t_rew_avail = Df[Df['name'] == 'REWARD_AVAILABLE_EVENT']['t'].values[0]
+    S = pd.Series(dict(name="OMITTED_REWARD_AVAILABLE_EVENT",t=t_rew_avail))
+    LogDf = LogDf.append(S,ignore_index=True)
+LogDf = LogDf.sort_values('t')
 
 # note for the future - mind this distinction! If response to both is wanted, use REWARD_AVAILABLE_STATE
 
@@ -194,6 +196,7 @@ plt.setp(axes, yticks=np.arange(0, np.max(rew_rate), 5), yticklabels=np.arange(0
 """
 
 # %% Preprocessing: LC syncing
+log_path = utils.get_file_dialog()
 LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
 arduino_sync = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT")
 
@@ -370,6 +373,56 @@ bin_width = 75 #ms
 first_cue_ref = "TRIAL_ENTRY_EVENT"
 
 plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, align_event, bin_width, axes=None)
+
+# %% Response Forces aligned to anything
+align_event = "CHOICE_INCORRECT_EVENT"
+
+Fmag_1st, Fmag_2nd, licks, ys = [],[],[],[]
+pre, post, plot_dur = 1000,1000,2000
+
+fig , axes = plt.subplots()
+
+twin_ax = axes.twinx()
+
+for TrialDf in TrialDfs:
+
+    if align_event in TrialDf.name.values:
+        time_2nd = float(TrialDf[TrialDf.name == align_event]['t'])
+
+        # Aligned to second cue
+        F = bhv.time_slice(LoadCellDf, time_2nd-pre, time_2nd+post)
+        y = np.sqrt(F['x']**2+F['y']**2)
+        ys.append(y)
+        
+        try:
+            licks.append(bhv.get_licks(LogDf, time_2nd-pre, time_2nd+post))
+        except:
+            pass
+
+# Compute mean force for each outcome aligned to second        
+Fmag = bhv.tolerant_mean(np.array(ys))
+axes.plot(np.arange(len(Fmag))+1, Fmag, color = "k") 
+
+# Get lick histogram
+if not licks:
+    pass
+else:
+    no_bins = round((plot_dur)/bin_width)
+    counts, bins = np.histogram(np.concatenate(licks),no_bins)
+    licks_freq = np.divide(counts, ((bin_width/1000)*len(ys)))
+    twin_ax.step(bins[1:], licks_freq, alpha=0.5)
+
+# Formatting
+axes.set_ylabel('Force magnitude (a.u.)')
+axes.set_xlim(0,plot_dur)
+axes.set_ylim(0,2000)
+axes.axvline(1000, linestyle = ':', color = "k", alpha = 0.5)
+plt.setp(axes, xticks=np.arange(0, plot_dur+1, 500), xticklabels=np.arange(-1, 1+0.1, 0.5))
+
+twin_ax.set_ylabel('Lick freq. (Hz)', color='C0')
+plt.setp(twin_ax, yticks=np.arange(0, 11), yticklabels=np.arange(0, 11))
+
+axes.set_title('Force Mag. and licking aligned to ' + align_event)
 
 # %% Choice RT's distribution
 bin_width = 250 #ms
@@ -634,15 +687,6 @@ axes.set_ylabel('density')
 
 
 
-
-
-
-
-
-
-
-
-
 # %%
 """
 ##     ## ##     ## ##       ######## ####     ######  ########  ######   ######  ####  #######  ##    ##
@@ -654,6 +698,7 @@ axes.set_ylabel('density')
 ##     ##  #######  ########    ##    ####     ######  ########  ######   ######  ####  #######  ##    ##
 """
 
+# %% Loading
 animal_folder = utils.get_folder_dialog()
 plot_dir = animal_folder / 'plots'
 animal_meta = pd.read_csv(animal_folder / 'animal_meta.csv')
@@ -673,16 +718,7 @@ for path in tqdm(paths):
     LogDf = bhv.get_LogDf_from_path(log_path)
     LogDf = bhv.filter_bad_licks(LogDf)
     LogDfs.append(LogDf)
-
-for LogDf in LogDfs:
-    # rename events of all future omitted rewards
-    EventsDf = bhv.get_events_from_name(LogDf, 'REWARD_OMITTED_EVENT')
-    for t in EventsDf['t'].values:
-        Df = bhv.time_slice(LogDf, t-1000, t)
-        ix = Df[Df['name'] == 'REWARD_AVAILABLE_EVENT'].index
-        LogDf.loc[ix, 'name'] = "OMITTED_REWARD_AVAILABLE_EVENT"
-
-
+   
 pre, post = -2000, 4000
 fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
 
@@ -692,6 +728,15 @@ bins = sp.linspace(pre, post, 50)
 
 for i,LogDf in enumerate(LogDfs):
     LicksDf = bhv.get_events_from_name(LogDf, 'LICK_EVENT')
+    EventsDf = bhv.get_events_from_name(LogDf, 'REWARD_OMITTED_EVENT')
+
+    for t in EventsDf['t'].values:
+        Df = bhv.time_slice(LogDf, t-1000, t)
+        t_rew_avail = Df[Df['name'] == 'REWARD_AVAILABLE_EVENT']['t'].values[0]
+        S = pd.Series(dict(name="OMITTED_REWARD_AVAILABLE_EVENT",t=t_rew_avail))
+        LogDf = LogDf.append(S,ignore_index=True)
+    LogDf = LogDf.sort_values('t')
+
     for event, ax in zip(events, axes):
         times = bhv.get_events_from_name(LogDf, event)['t'] # task event times
         try:
@@ -716,6 +761,7 @@ axes[0].hist(times,bins=bins,density=True)
 
 # %% 
 "Learn to PUSH inspections"
+
 SessionsDf = utils.get_sessions(animal_folder)
 paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_push')['path']]
 
@@ -728,7 +774,34 @@ for path in tqdm(paths):
 
 colors = sns.color_palette(palette='turbo',n_colors=len(LogDfs))
 
-# %% X/Y thresh and bias across time
+# %% Reward collection across sessions
+fig, axes = plt.subplots(figsize=(3, 3))
+
+reward_collect_ratio = []
+for j, LogDf in enumerate(LogDfs):
+
+    TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+
+    TrialDfs = []
+
+    for i, row in TrialSpans.iterrows():
+        TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+    rew_collected = len(LogDf[LogDf['name']=="REWARD_COLLECTED_EVENT"])
+    rew_available_non_omitted = len(LogDf[LogDf['name']=="REWARD_AVAILABLE_EVENT"])-len(LogDf[LogDf['name']=="REWARD_OMITTED_EVENT"])
+
+    reward_collect_ratio = np.append(reward_collect_ratio, rew_collected/rew_available_non_omitted)
+
+axes.plot(np.arange(len(reward_collect_ratio)), reward_collect_ratio)
+axes.set_ylabel('Ratio')
+axes.set_xlabel('Session number')
+axes.set_title('Reward collected ratio across sessions')
+axes.set_ylim([0,1])
+axes.set_xlim([0,len(reward_collect_ratio)])
+plt.setp(axes, xticks=np.arange(0,len(reward_collect_ratio)), xticklabels=np.arange(0,len(reward_collect_ratio)))
+axes.axhline(0.9, color = 'k', alpha = 0.5, linestyle=':')
+
+# %% X/Y thresh and bias across sessions
 fig, axes = plt.subplots(figsize=(4, 4))
 
 x_thresh, y_thresh, bias = [],[],[]
@@ -784,12 +857,12 @@ for i,LogDf in enumerate(LogDfs):
     counts, bins = np.histogram(clean_choice_rt, bins=no_bins, density = True, range = (-250, choice_interval))
     axes.step(bins[1:], counts, color=colors[i], zorder=1*i, alpha=0.75, label='day '+str(i+1))
 
-    axes.axvline(np.median(clean_choice_rt),color=colors[i], alpha=0.5)
+    axes.axvline(np.percentile(clean_choice_rt,75),color=colors[i], alpha=0.5)
 
 plt.legend(frameon=False)
 axes.set_ylabel('Prob (%)')
 axes.set_xlabel('Time (s)')
-fig.suptitle(animal_id+' '+nickname+'\nChoice RT distribution with median',fontsize='small')
+fig.suptitle(animal_id+' '+nickname+'\nChoice RT distribution with 75th percentile',fontsize='small')
 
 # %% Missed trials increase as session goes on
 fig, axes = plt.subplots()
@@ -817,15 +890,12 @@ axes.set_title('Ratio of missed trials across sessions')
 axes.set_xlabel('Trial #')
 axes.set_ylabel('Grand average ratio')
 
-# %% Systematic bias inspection
-
-# Get Fx and Fy forces for all sessions 
+# %% Get Fx and Fy forces for all sessions 
 for path in paths:
 
     log_path = path / 'arduino_log.txt'
 
-    LoadCellDf, harp_sync = bhv.parse_harp_csv(path / "bonsai_harp_log.csv", save=True)
-    arduino_sync = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT")
+    LoadCellDf = pd.read_csv(path / "loadcell_data.csv")
 
     t_harp = pd.read_csv(path / "harp_sync.csv")['t'].values
     t_arduino = pd.read_csv(path / "arduino_sync.csv")['t'].values
@@ -848,14 +918,95 @@ Fx = Fx[0::1000]
 Fy = Fy[0::1000]
 
 # KDE plot
-f, ax = plt.subplots(figsize=(4, 4))
-sns.kdeplot(x=Fx, y=Fy, fill=True, cbar=True)
+#f, ax = plt.subplots(figsize=(4, 4))
+#sns.kdeplot(x=Fx, y=Fy, fill=True, cbar=True)
 ax.set(xlim=(-4000,4000),ylim=(-4000,4000))
 ax.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
 
 
 
 
+
+
+"""
+ ######   ########   #######  ##     ## ########     ##       ######## ##     ## ######## ##
+##    ##  ##     ## ##     ## ##     ## ##     ##    ##       ##       ##     ## ##       ##
+##        ##     ## ##     ## ##     ## ##     ##    ##       ##       ##     ## ##       ##
+##   #### ########  ##     ## ##     ## ########     ##       ######   ##     ## ######   ##
+##    ##  ##   ##   ##     ## ##     ## ##           ##       ##        ##   ##  ##       ##
+##    ##  ##    ##  ##     ## ##     ## ##           ##       ##         ## ##   ##       ##
+ ######   ##     ##  #######   #######  ##           ######## ########    ###    ######## ########
+"""
+
+# %% OLD Learn to Push DATA
+
+old_animal_tags = ['JJP-00885', 'JJP-00886', 'JJP-00888', 'JJP-00889', 'JJP-00891']
+old_animals_fd_path = Path("D:\DoneAnimals")
+
+colors = sns.color_palette(palette='turbo', n_colors=len(old_animal_tags))
+
+bin_width = 250 #ms
+choice_interval = 5000
+fig, axes = plt.subplots()
+
+for i, old_animal_tag in enumerate(old_animal_tags):
+    animal_folder = old_animals_fd_path / old_animal_tag
+
+    SessionsDf = utils.get_sessions(animal_folder)
+    paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_push_alternating')['path']]
+
+    LogDfs = []
+    for path in paths:
+        log_path = path / 'arduino_log.txt'
+        LogDf = bhv.get_LogDf_from_path(log_path)
+        LogDf = bhv.filter_bad_licks(LogDf)
+        LogDfs.append(LogDf)
+
+    for LogDf in tqdm(LogDfs):
+        
+        TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_EVENT", "ITI_STATE")
+
+        TrialDfs = []
+        for j, row in tqdm(TrialSpans.iterrows()):
+            TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+        choice_rt = np.empty(0)
+
+        for TrialDf in TrialDfs:
+            t_go_cue = TrialDf.groupby('name').get_group("SECOND_TIMING_CUE_EVENT").iloc[-1]['t'] # this may break for final learn to time
+            
+            if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
+                t_choice = TrialDf.groupby('name').get_group("CHOICE_RIGHT_EVENT").iloc[-1]['t']
+                choice_rt = np.append(choice_rt, t_go_cue-t_choice)
+            elif "CHOICE_LEFT_EVENT " in TrialDf.name.values:
+                t_choice = TrialDf.groupby('name').get_group("CHOICE_LEFT_EVENT").iloc[-1]['t']
+                choice_rt = np.append(choice_rt, t_choice-t_go_cue)
+
+        # includes front and back pushes, eliminates nans due to missed trials
+        clean_choice_rt = [x for x in choice_rt if not pd.isnull(x)] 
+
+        axes.plot(np.percentile(clean_choice_rt,75), i, color=colors[i], alpha=0.5)
+
+
+plt.legend(frameon=False)
+axes.set_ylabel('Prob (%)')
+axes.set_xlabel('Time (s)')
+plt.suptitle(animal_id+' '+nickname+'\nChoice RT distribution with 75 percentile',fontsize='small')
+
+
+
+# %% NEW Learn to Push DATA
+SessionsDf = utils.get_sessions(animal_folder)
+paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_push')['path']]
+
+LogDfs = []
+for path in tqdm(paths):
+    log_path = path / 'arduino_log.txt'
+    LogDf = bhv.get_LogDf_from_path(log_path)
+    LogDf = bhv.filter_bad_licks(LogDf)
+    LogDfs.append(LogDf)
+
+colors = sns.color_palette(palette='turbo',n_colors=len(LogDfs))
 
 
 
@@ -986,8 +1137,3 @@ fig.tight_layout()
 
 # m, b = bhv.sync_clocks(t_harp, t_arduino, log_path)
 # LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
-
-# # %%
-
-# %%
-
