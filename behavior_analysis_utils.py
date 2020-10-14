@@ -413,7 +413,7 @@ def choice_RT(TrialDf):
         rt = np.NaN
     else:
         try:
-            t_go_cue = TrialDf.groupby('name').get_group("SECOND_TIMING_CUE_EVENT").iloc[-1]['t'] # this may break for final learn to time
+            t_go_cue = TrialDf.groupby('name').get_group("GO_CUE_EVENT").iloc[-1]['t'] # this may break for final learn to time
             t_choice = TrialDf.groupby('name').get_group("CHOICE_EVENT").iloc[-1]['t']
             rt = t_choice - t_go_cue
         except KeyError:

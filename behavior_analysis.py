@@ -301,7 +301,7 @@ axes[1, 0].set_ylabel('incorrect')
 fig.tight_layout()
 
 # %% Heatmaps
-pre, post = -1000, 5000
+pre, post = -1000, 2500
 force_thresh = 2000
 align_event = "GO_CUE_EVENT"
 
@@ -425,8 +425,8 @@ plt.setp(twin_ax, yticks=np.arange(0, 11), yticklabels=np.arange(0, 11))
 axes.set_title('Force Mag. and licking aligned to ' + align_event)
 
 # %% Choice RT's distribution
-bin_width = 250 #ms
-choice_interval = 5000
+bin_width = 100 #ms
+choice_interval = 2500
 
 fig, axes = plt.subplots()
 
@@ -962,7 +962,7 @@ for i, old_animal_tag in enumerate(old_animal_tags):
         LogDf = bhv.filter_bad_licks(LogDf)
         LogDfs.append(LogDf)
 
-    for LogDf in tqdm(LogDfs):
+    for k, LogDf in enumerate(LogDfs):
         
         TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_EVENT", "ITI_STATE")
 
@@ -977,7 +977,7 @@ for i, old_animal_tag in enumerate(old_animal_tags):
             
             if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
                 t_choice = TrialDf.groupby('name').get_group("CHOICE_RIGHT_EVENT").iloc[-1]['t']
-                choice_rt = np.append(choice_rt, t_go_cue-t_choice)
+                choice_rt = np.append(choice_rt, t_choice-t_go_cue)
             elif "CHOICE_LEFT_EVENT " in TrialDf.name.values:
                 t_choice = TrialDf.groupby('name').get_group("CHOICE_LEFT_EVENT").iloc[-1]['t']
                 choice_rt = np.append(choice_rt, t_choice-t_go_cue)
@@ -985,13 +985,13 @@ for i, old_animal_tag in enumerate(old_animal_tags):
         # includes front and back pushes, eliminates nans due to missed trials
         clean_choice_rt = [x for x in choice_rt if not pd.isnull(x)] 
 
-        axes.plot(np.percentile(clean_choice_rt,75), i, color=colors[i], alpha=0.5)
+        axes.plot(np.percentile(clean_choice_rt,75), k, color=colors[i], alpha=0.5)
 
 
 plt.legend(frameon=False)
 axes.set_ylabel('Prob (%)')
 axes.set_xlabel('Time (s)')
-plt.suptitle(animal_id+' '+nickname+'\nChoice RT distribution with 75 percentile',fontsize='small')
+plt.suptitle('\nChoice RT distribution with 75 percentile',fontsize='small')
 
 
 
