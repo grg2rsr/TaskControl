@@ -396,6 +396,19 @@ def reward_collected(TrialDf):
 
     return pd.Series(rew_col, name='reward_collected')
 
+def reward_omitted(TrialDf):
+    """ note: false if trial not successful (not nan) """
+
+    if is_successful(TrialDf).values[0]:
+        if "REWARD_OMITTED_EVENT" in TrialDf['name'].values:
+            rew_col = True
+        else:
+            rew_col = False
+    else:
+        rew_col = False
+
+    return pd.Series(rew_col, name='reward_omitted')
+
 def reward_collection_RT(TrialDf):
     """ calculate the reaction time from reward availability cue to reward collection """
     if is_successful(TrialDf).values[0] == False or reward_collected(TrialDf).values[0] == False:

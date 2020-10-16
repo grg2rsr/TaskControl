@@ -10,6 +10,7 @@ from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 
 import scipy as sp
+import numpy as np
 import time
 
 import pandas as pd
@@ -138,7 +139,7 @@ class SessionVis(QtWidgets.QWidget):
             
             # success rate
             x = SessionDf.index.values+1
-            y = sp.cumsum(SessionDf['successful'].values) / (SessionDf.index.values+1)
+            y = np.cumsum(SessionDf['successful'].values) / (SessionDf.index.values+1)
             y_filt = SessionDf['successful'].rolling(hist).mean().values
             
             self.success_rate.set_data(x, y)
@@ -147,10 +148,10 @@ class SessionVis(QtWidgets.QWidget):
 
             # reward collection rate
             if True in SessionDf['successful'].values:
-                SDf = SessionDf.groupby('successful').get_group(True)
+                SDf = SessionDf.groupby(['successful', 'reward_omitted']).get_group((True,False))
                 SDf = SDf.reset_index()
                 x = SDf.index.values+1
-                y = sp.cumsum(SDf['reward_collected'].values) / (SDf.index.values+1)
+                y = np.cumsum(SDf['reward_collected'].values) / (SDf.index.values+1)
                 y_filt = SDf['reward_collected'].rolling(hist).mean().values
                 self.reward_collection_rate.set_data(x, y)
                 self.reward_collection_rate_filt.set_data(x, y_filt)
@@ -164,7 +165,7 @@ class SessionVis(QtWidgets.QWidget):
                     continue
 
                 x = SDf.index.values+1
-                y = sp.cumsum((SDf['outcome'] == outcome).values) / (SDf.index.values+1)
+                y = np.cumsum((SDf['outcome'] == outcome).values) / (SDf.index.values+1)
                 # y_filt = (SessionDf['outcome'] == outcome).rolling(hist).mean().values
                 self.outcome_rates[outcome].set_data(x, y)
                 # self.outcome_rates_filt[outcome].set_data(x, y_filt)
@@ -176,7 +177,7 @@ class SessionVis(QtWidgets.QWidget):
                     SDf = SessionDf.groupby('choice').get_group('left')
                     SDf.reset_index()
                     x = SDf.index.values+1
-                    y = sp.zeros(x.shape[0])
+                    y = np.zeros(x.shape[0])
                     self.choices_right.set_data(x,y)
                 except:
                     pass
@@ -184,7 +185,7 @@ class SessionVis(QtWidgets.QWidget):
                     SDf = SessionDf.groupby('choice').get_group('right')
                     SDf.reset_index()
                     x = SDf.index.values+1
-                    y = sp.ones(x.shape[0])
+                    y = np.ones(x.shape[0])
                     self.choices_left.set_data(x,y)
                 except:
                     pass

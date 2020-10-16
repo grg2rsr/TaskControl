@@ -170,7 +170,7 @@ def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
 """
 
 def general_info(LogDf, path, axes=None):
-    " Plots general info about a session (trial type, water consumed and weight) "
+    " Plots general info about a session (trial outcome, water consumed and weight) "
     
     if axes is None:
         _ , axes = plt.subplots()
@@ -291,7 +291,7 @@ def plot_forces_heatmaps(LogDf, LoadCellDf, align_ref, pre, post, axes=None, tic
     return axes
 
 def plot_choice_time_hist(LogDf, TrialDfs, bin_width, axes=None):
-    " Plots the choice RT histograms for correct and incorrect trials "
+    " Plots the choice RT histograms split by trial type and outcome "
 
     if axes==None:
         _ , axes = plt.subplots(nrows=2, sharex=True)
@@ -342,7 +342,7 @@ def plot_choice_time_hist(LogDf, TrialDfs, bin_width, axes=None):
     return axes  
 
 def plot_success_rate(SessionDf, LogDf, history=None, axes=None): 
-    """ plots success rate, if history given includes a rolling smooth """
+    " Plots success rate with trial outcome tickmarks, if history given includes a rolling smooth "
     if axes is None:
         axes = plt.gca()
 
@@ -391,6 +391,7 @@ def plot_success_rate(SessionDf, LogDf, history=None, axes=None):
     return axes
 
 def simple_psychometric(SessionDf, axes=None):
+    " Timing task classic psychometric fit to data"
 
     if axes is None:
         axes = plt.gca()
@@ -674,54 +675,12 @@ def x_y_threshold_across_time(LogDf, axes=None):
 
     return axes
 
-def plot_forces_histogram(LogDf, LoadCellDf, align_ref, pre, post):
-    """ Plots the evolution of forces in X/Y axis across the session plus fitted distros """
-
-    event_times = bhv.get_events_from_name(LogDf, align_ref)
-    fig = plt.figure()
-
-    Fx = []
-    Fy = []
-    for t in event_times['t']:
-        F = bhv.time_slice(LoadCellDf,t+pre,t+post)
-        Fx.append(F['x'])
-        Fy.append(F['y'])
-
-    Fx = np.array(Fx)
-    Fy = np.array(Fy)
-
-    Fx_split = np.array_split(Fx,10)
-    Fy_split = np.array_split(Fy,10)
-
-    colors = cm.RdPu(np.linspace(0, 1, len(Fx_split)))
-
-    # Histograms for Fx and Fy and respective normal distribution fits
-    for i, (chunk_x, chunk_y, clr) in enumerate(zip(Fx_split, Fy_split, colors),1):
-
-        ax1 = fig.add_subplot(221)
-        _, bins_x, _ = plt.hist(chunk_x.reshape(-1,1), 50, color=clr, range = (-4000,4000), density=1, alpha=0.3, zorder=i)
-        mu, sigma = np.stats.norm.fit(chunk_x.reshape(-1,1))
-        best_fit_line = np.stats.norm.pdf(bins_x, mu, sigma)
-        ax1.set_ylabel('X axis (Left/Right)')
-
-        ax2 = fig.add_subplot(222)
-        ax2.plot(bins_x, best_fit_line, color=clr, zorder=i)
-
-        ax3 = fig.add_subplot(223)
-        _, bins_y, _ = plt.hist(chunk_y.reshape(-1,1), 50, color=clr ,range = (-4000,4000), density=1, alpha=0.3, zorder=i)
-        mu, sigma = np.stats.norm.fit(chunk_y.reshape(-1,1))
-        best_fit_line = np.stats.norm.pdf(bins_y, mu, sigma)
-        ax3.set_ylabel('Y axis (Back/Front)')
-
-        ax4 = fig.add_subplot(224)
-        ax4.plot(bins_y, best_fit_line, color=clr, zorder=i)
-
-        fig.tight_layout()
-
-    return fig
-
 def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None): 
-    
+    """
+        Heatmap aligned to 1st cue with 2nd cue and choice RT markers, 
+        split by trial outcome and trial type
+    """
+
     pre, post = -500, 5000
     Fx, interval, choice_RT = [],[],[]
     correct_idx, incorrect_idx, pre_idx, missed_idx = [],[],[],[]
@@ -826,6 +785,7 @@ def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None):
 """
 
 def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
+    " Plots trials performed together with every trial outcome plus sucess rate and weight across sessions"
 
     if axes is None:
         fig , axes = plt.subplots(ncols=2, sharex=True)
@@ -852,7 +812,7 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
         session_dur = round((LogDf['t'].iat[-1]-LogDf['t'].iat[0])/60000) # convert to min
 
         # Total number of trials performed
-        event_times = bhv.get_events_from_name(LogDf,"FIRST_TIMING_CUE_EVENT")
+        event_times = bhv.get_events_from_name(LogDf,"TRIAL_ENTRY_STATE")
         trials_performed.append(len(event_times)/session_dur)
 
         # Missed trials
@@ -874,10 +834,18 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
         incorrect_choiceDf = bhv.get_events_from_name(LogDf,'CHOICE_INCORRECT_EVENT')
         trials_incorrect.append(len(incorrect_choiceDf)/session_dur)
 
+        # hack workaround for learn_to_push_alternate
+        if not trials_correct and not trials_incorrect:
+            trials_correct = bhv.get_events_from_name(LogDf,'REWARD_AVAILABLE_EVENT')
+            trials_incorrect = trials_performed - trials_missed - trials_correct
+
         # Weight
-        animal_meta = pd.read_csv(path.joinpath('animal_meta.csv'))
-        weight.append(round(float(animal_meta.at[6, 'value'])/float(animal_meta.at[4, 'value']),2))
-    
+        try:
+            animal_meta = pd.read_csv(path.joinpath('animal_meta.csv'))
+            weight.append(round(float(animal_meta.at[6, 'value'])/float(animal_meta.at[4, 'value']),2))
+        except:
+            weight.append(None)
+
     sucess_rate = np.multiply(np.divide(trials_correct,trials_performed),100)
 
     # Subplot 1
@@ -893,7 +861,7 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
 
     fig.suptitle('Sessions overview in ' + task_name + ' for mouse ' + animal_tag)
     plt.setp(axes[0], xticks=np.arange(0, len(date), 1), xticklabels=date)
-    plt.setp(axes[0], yticks=np.arange(0, 10, 1), yticklabels=np.arange(0, 10, 1))
+    plt.setp(axes[0], yticks=np.arange(0, max(trials_performed), 1), yticklabels=np.arange(0,  max(trials_performed), 1))
       
     # Two sided axes Subplot 2
     axes[1].plot(sucess_rate, color = 'green', label = 'Sucess rate')
@@ -909,5 +877,70 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
 
     fig.autofmt_xdate()
     plt.show()
+
+    return axes
+
+def rew_collected_across_sessions(LogDfs, axes = None):
+
+    if axes is None:
+        fig , axes = plt.subplots(figsize=(4, 3))
+
+    reward_collect_ratio = []
+    for LogDf in LogDfs:
+
+        TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+
+        TrialDfs = []
+
+        for i, row in TrialSpans.iterrows():
+            TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+        rew_collected = len(LogDf[LogDf['name']=="REWARD_COLLECTED_EVENT"])
+        rew_available_non_omitted = len(LogDf[LogDf['name']=="REWARD_AVAILABLE_EVENT"])-len(LogDf[LogDf['name']=="REWARD_OMITTED_EVENT"])
+
+        reward_collect_ratio = np.append(reward_collect_ratio, rew_collected/rew_available_non_omitted)
+
+    axes.plot(np.arange(len(reward_collect_ratio)), reward_collect_ratio)
+    axes.set_ylabel('Ratio')
+    axes.set_xlabel('Session number')
+    axes.set_title('Reward collected ratio across sessions')
+    axes.set_ylim([0,1])
+    axes.set_xlim([0,len(reward_collect_ratio)])
+    plt.setp(axes, xticks=np.arange(0,len(reward_collect_ratio)), xticklabels=np.arange(0,len(reward_collect_ratio)))
+    axes.axhline(0.9, color = 'k', alpha = 0.5, linestyle=':')
+
+    fig.tight_layout()
+
+    return axes
+
+def x_y_tresh_bias_across_sessions(LogDfs, SessionsDf, axes = None):
+    
+    if axes is None:
+        fig, axes = plt.subplots(figsize=(5, 3))
+
+    x_thresh, y_thresh, bias = [],[],[]
+    for LogDf in LogDfs:
+
+        x_thresh = np.append(x_thresh, np.mean(LogDf[LogDf['var'] == 'X_thresh'].value.values))
+        y_thresh = np.append(y_thresh, np.mean(LogDf[LogDf['var'] == 'Y_thresh'].value.values))
+        bias = np.append(bias, LogDf[LogDf['var'] == 'bias'].value.values[-1]) # last bias value
+
+    axes.plot(np.arange(len(LogDfs)), x_thresh, color = 'C0', label = 'X thresh')
+    axes.plot(np.arange(len(LogDfs)), y_thresh, color = 'm', label = 'Y thresh')
+
+    axes.set_ylim([1000,2500])
+    axes.set_ylabel('Force (a.u.)')
+    axes.set_title('Mean X/Y thresh forces and bias across sessions')
+    axes.legend(frameon=False)
+    axes.set_xticks(np.arange(len(LogDfs)))
+    axes.set_xticklabels(np.arange(len(LogDfs))) 
+
+    twin_ax = axes.twinx()
+    twin_ax.plot(bias, color = 'g', alpha = 0.5)
+    twin_ax.set_ylabel('Bias', color = 'g')
+    twin_ax.set_yticks([0,1])
+    twin_ax.set_yticklabels(['left','right'])
+
+    fig.tight_layout()
 
     return axes

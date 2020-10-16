@@ -43,6 +43,9 @@ log_path = utils.get_file_dialog()
 plot_dir = log_path.parent / 'plots'
 os.makedirs(plot_dir, exist_ok=True)
 
+LogDf = bhv.get_LogDf_from_path(log_path)
+LogDf = bhv.filter_bad_licks(LogDf)
+
 # %% across sessino - plot weight
 SessionsDf = utils.get_sessions(log_path.parent.parent)
 Df = pd.read_csv(log_path.parent.parent / 'animal_meta.csv')
@@ -72,9 +75,6 @@ axes.set_ylabel('weight %')
 sns.despine(fig)
 fig.tight_layout()
 
-# %% preprocess 
-LogDf = bhv.get_LogDf_from_path(log_path)
-LogDf = bhv.filter_bad_licks(LogDf)
 
 """
 ##       ########    ###    ########  ##    ##    ########  #######     ##       ####  ######  ##    ##
@@ -185,6 +185,8 @@ plt.legend(loc='upper right', frameon=False, fontsize = 8)
 plt.setp(axes, xticks=np.arange(0, int(t_max / (1000*60)), 5), xticklabels=np.arange(0, int(t_max / (1000*60)), 5))
 plt.setp(axes, yticks=np.arange(0, np.max(rew_rate), 5), yticklabels=np.arange(0, np.max(rew_rate), 5))
 
+# %%
+
 """
 ##       ########    ###    ########  ##    ##    ########  #######     ########  ##     ##  ######  ##     ##
 ##       ##         ## ##   ##     ## ###   ##       ##    ##     ##    ##     ## ##     ## ##    ## ##     ##
@@ -208,7 +210,6 @@ if t_harp.shape != t_arduino.shape:
 
 m, b = bhv.sync_clocks(t_harp, t_arduino, log_path)
 LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
-
 
 # %% median correction
 samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
@@ -706,6 +707,7 @@ animal_id = animal_meta[animal_meta['name'] == 'ID']['value'].values[0]
 nickname = animal_meta[animal_meta['name'] == 'Nickname']['value'].values[0]
 os.makedirs(plot_dir, exist_ok=True)
 
+
 # %%
 "Learn to LICK inspections"
 
@@ -774,60 +776,13 @@ for path in tqdm(paths):
 
 colors = sns.color_palette(palette='turbo',n_colors=len(LogDfs))
 
+plot_sessions_overview(LogDfs, paths, 'learn_to_push', animal_id)
+
 # %% Reward collection across sessions
-fig, axes = plt.subplots(figsize=(3, 3))
-
-reward_collect_ratio = []
-for j, LogDf in enumerate(LogDfs):
-
-    TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
-
-    TrialDfs = []
-
-    for i, row in TrialSpans.iterrows():
-        TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
-
-    rew_collected = len(LogDf[LogDf['name']=="REWARD_COLLECTED_EVENT"])
-    rew_available_non_omitted = len(LogDf[LogDf['name']=="REWARD_AVAILABLE_EVENT"])-len(LogDf[LogDf['name']=="REWARD_OMITTED_EVENT"])
-
-    reward_collect_ratio = np.append(reward_collect_ratio, rew_collected/rew_available_non_omitted)
-
-axes.plot(np.arange(len(reward_collect_ratio)), reward_collect_ratio)
-axes.set_ylabel('Ratio')
-axes.set_xlabel('Session number')
-axes.set_title('Reward collected ratio across sessions')
-axes.set_ylim([0,1])
-axes.set_xlim([0,len(reward_collect_ratio)])
-plt.setp(axes, xticks=np.arange(0,len(reward_collect_ratio)), xticklabels=np.arange(0,len(reward_collect_ratio)))
-axes.axhline(0.9, color = 'k', alpha = 0.5, linestyle=':')
+rew_collected_across_sessions(LogDfs)
 
 # %% X/Y thresh and bias across sessions
-fig, axes = plt.subplots(figsize=(4, 4))
-
-x_thresh, y_thresh, bias = [],[],[]
-for LogDf in LogDfs:
-
-    x_thresh = np.append(x_thresh, np.mean(LogDf[LogDf['var'] == 'X_thresh'].value.values))
-    y_thresh = np.append(y_thresh, np.mean(LogDf[LogDf['var'] == 'Y_thresh'].value.values))
-    bias = np.append(bias, LogDf[LogDf['var'] == 'bias'].value.values[-1]) # last bias value
-
-axes.plot(np.arange(len(LogDfs)), x_thresh, color = 'C0', label = 'X thresh')
-axes.plot(np.arange(len(LogDfs)), y_thresh, color = 'm', label = 'Y thresh')
-
-axes.set_ylim([1000,2500])
-axes.set_ylabel('Force (a.u.)')
-axes.set_title('Mean X/Y thresh forces and bias across sessions')
-axes.legend(frameon=False)
-axes.set_xticks(np.arange(len(LogDfs)))
-axes.set_xticklabels(SessionsDf[SessionsDf['task'] == 'learn_to_push']['date'].values,rotation=90) 
-
-twin_ax = axes.twinx()
-twin_ax.plot(bias, color = 'g', alpha = 0.5)
-twin_ax.set_ylabel('Bias', color = 'g')
-twin_ax.set_yticks([0,1])
-twin_ax.set_yticklabels(['left','right'])
-
-fig.tight_layout()
+x_y_tresh_bias_across_sessions(LogDfs, SessionsDf, axes = None)
 
 # %% Choice RT's distribution 
 bin_width = 250 #ms
@@ -891,27 +846,23 @@ axes.set_xlabel('Trial #')
 axes.set_ylabel('Grand average ratio')
 
 # %% Get Fx and Fy forces for all sessions 
-for path in paths:
-
-    log_path = path / 'arduino_log.txt'
+Fs = []
+for path in tqdm(paths):
 
     LoadCellDf = pd.read_csv(path / "loadcell_data.csv")
-
-    t_harp = pd.read_csv(path / "harp_sync.csv")['t'].values
-    t_arduino = pd.read_csv(path / "arduino_sync.csv")['t'].values
-
-    if t_harp.shape != t_arduino.shape:
-        t_arduino, t_harp = bhv.cut_timestamps(t_arduino, t_harp, verbose = True)
-
-    m, b = bhv.sync_clocks(t_harp, t_arduino, log_path)
 
     # median correction
     samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
     LoadCellDf['x'] = LoadCellDf['x'] - LoadCellDf['x'].rolling(samples).median()
     LoadCellDf['y'] = LoadCellDf['y'] - LoadCellDf['y'].rolling(samples).median()
 
-    Fx = np.array(LoadCellDf['x'].values).T
-    Fy = np.array(LoadCellDf['y'].values).T
+    TrialDfs = []
+    for i, row in TrialSpans.iterrows():
+        TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+    for TrialDf in TrialDfs:
+        F = bhv.time_slice(LoadCellDf, TrialDf['t'].iloc[0], TrialDf['t'].iloc[-1])
+        Fs.append(F)
 
 # Downsample from 1Khz to 10Hz in order to be computationally feasible
 Fx = Fx[0::1000]
@@ -926,8 +877,6 @@ ax.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
 
 
 
-
-
 """
  ######   ########   #######  ##     ## ########     ##       ######## ##     ## ######## ##
 ##    ##  ##     ## ##     ## ##     ## ##     ##    ##       ##       ##     ## ##       ##
@@ -938,42 +887,56 @@ ax.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
  ######   ##     ##  #######   #######  ##           ######## ########    ###    ######## ########
 """
 
-# %% OLD Learn to Push DATA
+# %% Do animals learn faster to react to cue and make choice on new task?
+old_animal_tags = ['JJP-00885','JJP-00886','JJP-00888','JJP-00889','JJP-00891']
+new_animal_tags = ['JJP-01151','JJP-01152','JJP-01153']
+animal_tags = old_animal_tags + new_animal_tags
 
-old_animal_tags = ['JJP-00885', 'JJP-00886', 'JJP-00888', 'JJP-00889', 'JJP-00891']
-old_animals_fd_path = Path("D:\DoneAnimals")
+old_animal_fd_path = [Path("D:\DoneAnimals")]*len(old_animal_tags)
+new_animal_fd_path = [Path("D:\TaskControl\Animals")]*len(new_animal_tags)
+animals_fd_path = old_animal_fd_path + new_animal_fd_path
 
-colors = sns.color_palette(palette='turbo', n_colors=len(old_animal_tags))
+colors = sns.color_palette(palette='turbo', n_colors=len(animal_tags))
 
 bin_width = 250 #ms
+pre, pos = 500, 5000
 choice_interval = 5000
-fig, axes = plt.subplots()
+fig, axes = plt.subplots(ncols = 2, figsize=[2, 4])
 
-for i, old_animal_tag in enumerate(old_animal_tags):
-    animal_folder = old_animals_fd_path / old_animal_tag
+for i, (animal_tag,animal_fd_path) in enumerate(zip(animal_tags,animals_fd_path)):
+    animal_folder = animal_fd_path / animal_tag
 
     SessionsDf = utils.get_sessions(animal_folder)
-    paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_push_alternating')['path']]
 
-    LogDfs = []
+    paths,LogDfs,quantile_values = [],[],[]
+
+    for k,SessionDf in SessionsDf.iterrows():
+        if SessionDf['task'] == 'learn_to_push' or SessionDf['task'] == 'learn_to_push_alternating':
+            paths.append(Path(SessionDf['path']))
+   
     for path in paths:
         log_path = path / 'arduino_log.txt'
         LogDf = bhv.get_LogDf_from_path(log_path)
         LogDf = bhv.filter_bad_licks(LogDf)
         LogDfs.append(LogDf)
-
-    for k, LogDf in enumerate(LogDfs):
+    
+    for LogDf in tqdm(LogDfs):
         
-        TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_EVENT", "ITI_STATE")
+        TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_AVAILABLE_STATE", "ITI_STATE")
+        if TrialSpans.empty:
+            TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
 
         TrialDfs = []
-        for j, row in tqdm(TrialSpans.iterrows()):
+        for j, row in TrialSpans.iterrows():
             TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
 
         choice_rt = np.empty(0)
 
         for TrialDf in TrialDfs:
-            t_go_cue = TrialDf.groupby('name').get_group("SECOND_TIMING_CUE_EVENT").iloc[-1]['t'] # this may break for final learn to time
+            try:
+                t_go_cue = TrialDf.groupby('name').get_group("SECOND_TIMING_CUE_EVENT").iloc[-1]['t'] # this may break for final learn to time
+            except:
+                t_go_cue = TrialDf.groupby('name').get_group("GO_CUE_EVENT").iloc[-1]['t'] # this may break for final learn to time
             
             if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
                 t_choice = TrialDf.groupby('name').get_group("CHOICE_RIGHT_EVENT").iloc[-1]['t']
@@ -984,29 +947,71 @@ for i, old_animal_tag in enumerate(old_animal_tags):
 
         # includes front and back pushes, eliminates nans due to missed trials
         clean_choice_rt = [x for x in choice_rt if not pd.isnull(x)] 
+        quantile_values.append(np.percentile(clean_choice_rt,75))
 
-        axes.plot(np.percentile(clean_choice_rt,75), k, color=colors[i], alpha=0.5)
+    # OLD
+    if i < len(old_animal_tags):
+        axes[0].plot(quantile_values, color=colors[i], alpha=0.5, label = animal_tag)
+    # NEW
+    else:
+        axes[1].plot(quantile_values, color=colors[i], alpha=0.5, label = animal_tag)
+
+for ax in axes:
+    ax.set_ylim([0,7000])
+    ax.legend(frameon=False)
+    ax.set_xlabel('Session number')
+
+axes[0].set_ylabel('Time (ms)')
+plt.suptitle('3rd quartile for Choice RT',fontsize='small')
+
+# %% Weight x sucess rate
+fig, axes = plt.subplots()
+
+for i, (animal_tag,animal_fd_path) in enumerate(zip(new_animal_tags,new_animal_fd_path)):
+    animal_folder = animal_fd_path / animal_tag
+
+    SessionsDf = utils.get_sessions(animal_folder)
+
+    paths,LogDfs = [],[]
+
+    paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_push')['path']]
+   
+    for path in paths:
+        log_path = path / 'arduino_log.txt'
+        LogDf = bhv.get_LogDf_from_path(log_path)
+        LogDfs.append(LogDf)
+    
+    weight,sucess_rate = [],[]
+
+    for (path,LogDf) in zip(paths,LogDfs):
+        
+        animal_meta = pd.read_csv(path.joinpath('animal_meta.csv'))
+        weight.append(int(100*round(float(animal_meta.at[6, 'value'])/float(animal_meta.at[4, 'value']),2)))
+
+        no_trials = len(bhv.get_events_from_name(LogDf,"TRIAL_ENTRY_STATE"))
+        no_correct = len(bhv.get_events_from_name(LogDf,'CHOICE_CORRECT_EVENT'))
+
+        sucess_rate.append(no_correct/no_trials)
+
+    weight = np.array(weight)
+
+    axes.scatter(weight, sucess_rate, color=colors[i], alpha=0.75, label = animal_tag)
+
+    # Linear reg
+    slope, intercept, r_value, p_value, std_err = sp.stats.linregress(weight, sucess_rate)
+    axes.plot(weight, intercept + slope*weight, color=colors[i], alpha=0.5)
+
+axes.set_title('Weight x success_rate correlation')
+axes.legend(frameon = False)
+axes.set_xlabel('Weight (%)')
+axes.set_ylabel('Sucess rate (%)')
+plt.setp(axes, xticks=np.arange(70, 90+1, 5), xticklabels=np.arange(70, 90+1, 5))
+    
+
+# %% Do animals learn faster how to press aligned to cue on new task? 
 
 
-plt.legend(frameon=False)
-axes.set_ylabel('Prob (%)')
-axes.set_xlabel('Time (s)')
-plt.suptitle('\nChoice RT distribution with 75 percentile',fontsize='small')
 
-
-
-# %% NEW Learn to Push DATA
-SessionsDf = utils.get_sessions(animal_folder)
-paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_push')['path']]
-
-LogDfs = []
-for path in tqdm(paths):
-    log_path = path / 'arduino_log.txt'
-    LogDf = bhv.get_LogDf_from_path(log_path)
-    LogDf = bhv.filter_bad_licks(LogDf)
-    LogDfs.append(LogDf)
-
-colors = sns.color_palette(palette='turbo',n_colors=len(LogDfs))
 
 
 
@@ -1039,17 +1044,6 @@ plt.vlines(group['t'].values,1000,-1000,color='b',lw=2)
 
 plt.title('Raw forces timecourse with L/R choice and go_cue timestamps ')
 
-
-
-
-# %% get choice time 
-# %%
-inds = SessionDf[SessionDf['choice_rt'] < 10].index
-times = []
-for i in tqdm(inds):
-    TrialDf = TrialDfs[i]
-    t_stop = TrialDf.loc[TrialDf['name'] == "CHOICE_EVENT",'t'].values[0]
-    times.append(t_stop)
 
 
 # %% force aligned on cues

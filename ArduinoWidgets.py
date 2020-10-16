@@ -63,7 +63,7 @@ class ArduinoController(QtWidgets.QWidget):
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
         # online analyzer
-        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_collection_RT,
+        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_omitted, bhv.reward_collection_RT,
                    bhv.has_choice, bhv.choice_RT, bhv.get_choice,
                    bhv.get_interval, bhv.get_outcome, bhv.get_bias) # HARDCODE
                    
