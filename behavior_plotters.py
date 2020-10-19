@@ -938,8 +938,8 @@ def x_y_tresh_bias_across_sessions(LogDfs, SessionsDf, axes = None):
     twin_ax = axes.twinx()
     twin_ax.plot(bias, color = 'g', alpha = 0.5)
     twin_ax.set_ylabel('Bias', color = 'g')
-    twin_ax.set_yticks([0,1])
-    twin_ax.set_yticklabels(['left','right'])
+    twin_ax.set_yticks([0,0.5,1])
+    twin_ax.set_yticklabels(['left','center','right'])
 
     fig.tight_layout()
 

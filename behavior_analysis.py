@@ -819,7 +819,7 @@ axes.set_ylabel('Prob (%)')
 axes.set_xlabel('Time (s)')
 fig.suptitle(animal_id+' '+nickname+'\nChoice RT distribution with 75th percentile',fontsize='small')
 
-# %% Missed trials increase as session goes on
+# %% Rolling average of missed trials as session goes on (proxy of trial engagement)
 fig, axes = plt.subplots()
 
 for j, LogDf in enumerate(LogDfs):
@@ -835,42 +835,56 @@ for j, LogDf in enumerate(LogDfs):
     x = np.arange(len(SessionDf))  
     MissedDf = SessionDf['outcome'] == 'missed'
 
-    # grand average rate
-    y = np.cumsum(MissedDf.values) / (SessionDf.index.values+1)
-    axes.plot(x,y, color = colors[j], label = 'day '+ str(j+1))
+    ## grand average rate
+    #y = np.cumsum(MissedDf.values) / (SessionDf.index.values+1)
+    #axes.plot(x,y, color = colors[j], label = 'day '+ str(j+1))
+
+    # Rolling average
+    y_filt = (SessionDf['outcome'] == 'missed').rolling(20).mean()
+    axes.plot(x,y_filt, color = colors[j], alpha = 0.75, label = 'day '+ str(j+1))
 
 plt.legend(frameon=False)
 axes.set_ylim([0,1])
 axes.set_title('Ratio of missed trials across sessions')
 axes.set_xlabel('Trial #')
-axes.set_ylabel('Grand average ratio')
+axes.set_ylabel('Missed trials rolling average')
 
 # %% Get Fx and Fy forces for all sessions 
 Fs = []
 for path in tqdm(paths):
 
-    LoadCellDf = pd.read_csv(path / "loadcell_data.csv")
+    if not os.path.isfile(path / "loadcell_data.csv"):
+        LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
+        arduino_sync = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT")
+
+        t_harp = pd.read_csv(log_path.parent / "harp_sync.csv")['t'].values
+        t_arduino = pd.read_csv(log_path.parent / "arduino_sync.csv")['t'].values
+
+        if t_harp.shape != t_arduino.shape:
+            t_arduino, t_harp = bhv.cut_timestamps(t_arduino, t_harp, verbose = True)
+
+        m, b = bhv.sync_clocks(t_harp, t_arduino, log_path)
+    else:
+        LoadCellDf = pd.read_csv(path / "loadcell_data.csv")
 
     # median correction
     samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
     LoadCellDf['x'] = LoadCellDf['x'] - LoadCellDf['x'].rolling(samples).median()
     LoadCellDf['y'] = LoadCellDf['y'] - LoadCellDf['y'].rolling(samples).median()
 
-    TrialDfs = []
-    for i, row in TrialSpans.iterrows():
-        TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+    TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
 
-    for TrialDf in TrialDfs:
-        F = bhv.time_slice(LoadCellDf, TrialDf['t'].iloc[0], TrialDf['t'].iloc[-1])
+    for i, row in TrialSpans.iterrows():
+        F = bhv.time_slice(LoadCellDf, row['t_on'], row['t_off'])
         Fs.append(F)
 
 # Downsample from 1Khz to 10Hz in order to be computationally feasible
-Fx = Fx[0::1000]
-Fy = Fy[0::1000]
+Fx = Fx[0::100]
+Fy = Fy[0::100]
 
 # KDE plot
-#f, ax = plt.subplots(figsize=(4, 4))
-#sns.kdeplot(x=Fx, y=Fy, fill=True, cbar=True)
+f, ax = plt.subplots(figsize=(4, 4))
+sns.kdeplot(x=Fx, y=Fy, fill=True, cbar=True)
 ax.set(xlim=(-4000,4000),ylim=(-4000,4000))
 ax.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
 
@@ -964,10 +978,13 @@ for ax in axes:
 axes[0].set_ylabel('Time (ms)')
 plt.suptitle('3rd quartile for Choice RT',fontsize='small')
 
-# %% Weight x sucess rate
-fig, axes = plt.subplots()
+# %% Do animals learn faster how to press aligned to cue on new task? 
 
-for i, (animal_tag,animal_fd_path) in enumerate(zip(new_animal_tags,new_animal_fd_path)):
+
+# %% Weight x sucess rate and x missed_rate
+fig, axes = plt.subplots(ncols = 2)
+
+for i, (animal_tag,animal_fd_path) in enumerate(zip(new_animal_tags, new_animal_fd_path)):
     animal_folder = animal_fd_path / animal_tag
 
     SessionsDf = utils.get_sessions(animal_folder)
@@ -981,7 +998,7 @@ for i, (animal_tag,animal_fd_path) in enumerate(zip(new_animal_tags,new_animal_f
         LogDf = bhv.get_LogDf_from_path(log_path)
         LogDfs.append(LogDf)
     
-    weight,sucess_rate = [],[]
+    weight,sucess_rate,missed_rate = [],[],[]
 
     for (path,LogDf) in zip(paths,LogDfs):
         
@@ -990,27 +1007,30 @@ for i, (animal_tag,animal_fd_path) in enumerate(zip(new_animal_tags,new_animal_f
 
         no_trials = len(bhv.get_events_from_name(LogDf,"TRIAL_ENTRY_STATE"))
         no_correct = len(bhv.get_events_from_name(LogDf,'CHOICE_CORRECT_EVENT'))
+        no_missed = len(bhv.get_events_from_name(LogDf,'CHOICE_MISSED_EVENT'))
 
         sucess_rate.append(no_correct/no_trials)
+        missed_rate.append(no_missed/no_trials)
 
     weight = np.array(weight)
 
-    axes.scatter(weight, sucess_rate, color=colors[i], alpha=0.75, label = animal_tag)
-
-    # Linear reg
+    axes[0].scatter(weight, sucess_rate, color=colors[i], alpha=0.75, label = animal_tag)
     slope, intercept, r_value, p_value, std_err = sp.stats.linregress(weight, sucess_rate)
-    axes.plot(weight, intercept + slope*weight, color=colors[i], alpha=0.5)
+    axes[0].plot(weight, intercept + slope*weight, color=colors[i], alpha=0.5)
+    print("Sucess Rate -> Slope:" + str(slope) + " | p_value = " + str(p_value))
 
-axes.set_title('Weight x success_rate correlation')
-axes.legend(frameon = False)
-axes.set_xlabel('Weight (%)')
-axes.set_ylabel('Sucess rate (%)')
-plt.setp(axes, xticks=np.arange(70, 90+1, 5), xticklabels=np.arange(70, 90+1, 5))
+    axes[1].scatter(weight, missed_rate, color=colors[i], alpha=0.75, label = animal_tag)
+    slope, intercept, r_value, p_value, std_err = sp.stats.linregress(weight, missed_rate)
+    axes[1].plot(weight, intercept + slope*weight, color=colors[i], alpha=0.5)
+    print("Missed Rate -> Slope:" + str(slope) + " | p_value = " + str(p_value))
     
+for ax in axes:
+    ax.legend(frameon = False)
+    ax.set_xlabel('Weight (%)')
 
-# %% Do animals learn faster how to press aligned to cue on new task? 
-
-
+axes[0].set_ylabel('Sucess rate (%)')
+axes[1].set_ylabel('Missed rate (%)')
+plt.setp(axes, xticks=np.arange(70, 100+1, 5), xticklabels=np.arange(70, 100+1, 5))
 
 
 
