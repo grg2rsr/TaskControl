@@ -513,6 +513,24 @@ def get_outcome(TrialDf):
 
     return pd.Series(outcome, name="outcome")
 
+## Session level metrics
+
+def trial_engagement(SessionDf):
+    
+    missedDf = (SessionDf['outcome'] == 'missed').rolling(20).mean()
+    ys_diff = np.array(missedDf.diff(periods=10)) # derivative
+    ys = np.array(missedDf)
+
+    engaged = 0
+    # If there is less than 30% missed trials and not increasing or reverse
+    for (y_diff,y) in zip(ys_diff,ys):
+        if (y<0.40 and y_diff < 0.25) or (y>0.40 and y_diff < -0.25):
+            engaged = engaged + 1 
+    
+    engagement_ratio = engaged/len(SessionDf)
+
+    return round(engagement_ratio*100)
+
 """
 
  ##     ##    ###    ########  ########

@@ -655,6 +655,7 @@ def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, trial_outco
 
     return axes
 
+
 " Currently not used / not implemented "
 
 def x_y_threshold_across_time(LogDf, axes=None):
@@ -796,6 +797,7 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
     trials_missed = []
     trials_premature = []
     weight = []
+    engagement = []
     date = []
 
     # Obtaining number of trials of X
@@ -846,6 +848,19 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
         except:
             weight.append(None)
 
+        # Engagement
+        TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+
+        TrialDfs = []
+        for i, row in TrialSpans.iterrows():
+            TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+        SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.get_outcome))
+        try:
+            engagement.append(bhv.trial_engagement(SessionDf))
+        except:
+            engagement.append(None)
+
     sucess_rate = np.multiply(np.divide(trials_correct,trials_performed),100)
 
     # Subplot 1
@@ -865,11 +880,13 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
       
     # Two sided axes Subplot 2
     axes[1].plot(sucess_rate, color = 'green', label = 'Sucess rate')
-    axes[1].set_ylabel('Sucess rate (%)', color = 'green')
+    axes[1].plot(engagement, color = 'm', label = 'Session engagement')
+    axes[1].legend(loc='upper left', frameon=False) 
+    axes[1].set_ylabel('a.u. (%)', color = 'green')
     axes[1].tick_params(axis='y', labelcolor='green')
     plt.setp(axes[1], yticks=np.arange(0,50,5), yticklabels=np.arange(0,50,5))
 
-    weight = np.multiply(weight,100)
+    weight = np.multiply(weight,90)
     twin_ax = axes[1].twinx()
     twin_ax.plot(weight, color = 'gray')
     twin_ax.set_ylabel('Normalized Weight to max (%)', color = 'gray')

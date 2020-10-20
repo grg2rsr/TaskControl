@@ -822,7 +822,7 @@ fig.suptitle(animal_id+' '+nickname+'\nChoice RT distribution with 75th percenti
 # %% Rolling average of missed trials as session goes on (proxy of trial engagement)
 fig, axes = plt.subplots()
 
-for j, LogDf in enumerate(LogDfs):
+for j, LogDf in enumerate(LogDfs[12:]):
 
     TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
 
@@ -1017,12 +1017,12 @@ for i, (animal_tag,animal_fd_path) in enumerate(zip(new_animal_tags, new_animal_
     axes[0].scatter(weight, sucess_rate, color=colors[i], alpha=0.75, label = animal_tag)
     slope, intercept, r_value, p_value, std_err = sp.stats.linregress(weight, sucess_rate)
     axes[0].plot(weight, intercept + slope*weight, color=colors[i], alpha=0.5)
-    print("Sucess Rate -> Slope:" + str(slope) + " | p_value = " + str(p_value))
+    print("Sucess Rate -> r_value:" + str(r_value) + " | p_value = " + str(p_value))
 
     axes[1].scatter(weight, missed_rate, color=colors[i], alpha=0.75, label = animal_tag)
     slope, intercept, r_value, p_value, std_err = sp.stats.linregress(weight, missed_rate)
     axes[1].plot(weight, intercept + slope*weight, color=colors[i], alpha=0.5)
-    print("Missed Rate -> Slope:" + str(slope) + " | p_value = " + str(p_value))
+    print("Missed Rate -> r_value:" + str(r_value) + " | p_value = " + str(p_value))
     
 for ax in axes:
     ax.legend(frameon = False)
