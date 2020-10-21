@@ -495,6 +495,16 @@ def get_interval(TrialDf):
 
     return pd.Series(var, name=var_name)
 
+def get_in_corr_loop(TrialDf):
+    var_name = "in_corr_loop"
+    try:
+        Df = TrialDf.groupby('var').get_group(var_name)
+        var = Df.iloc[0]['value'].astype('bool')
+    except KeyError:
+        var = np.NaN
+
+    return pd.Series(var, name=var_name)
+
 def get_bias(TrialDf):
     var_name = "bias"
     try:

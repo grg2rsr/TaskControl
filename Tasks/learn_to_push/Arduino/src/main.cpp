@@ -410,6 +410,7 @@ void get_trial_type(){
         in_corr_loop = false;
         log_msg("exited correction loop");
     }
+    
 
     if (in_corr_loop == false){
         float r = random(0,1000) / 1000.0;
@@ -425,6 +426,7 @@ void get_trial_type(){
     }
     
     log_var("correct_zone", String(correct_zone));
+    log_var("in_corr_loop", String(in_corr_loop));
 }
                
 
