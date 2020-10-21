@@ -26,9 +26,9 @@ unsigned long this_ITI_dur;
 
 // flow control flags
 bool lick_in = false;
-int succ_trial_counter = 0;
-int n_streak = 3;
-bool forced_alternating = true;
+// int succ_trial_counter = 0;
+// int n_streak = 3;
+// bool forced_alternating = true;
 
 // speaker
 Tone tone_controller;
@@ -71,14 +71,20 @@ void update_bias(){
 }
 
 // probabilistic reward related
-float p_reward_left = 0.5;
-float p_reward_right = 0.5;
+float p_reward_left = 1.0;
+float p_reward_right = 1.0;
+
+// // probabilistic reward related
+// float p_reward_left = 0.5;
+// float p_reward_right = 0.5;
 float this_p_reward = p_reward_left;
 
-void update_p_reward(){
-    p_reward_right = 1 - bias + bias_corr_fac;
-    p_reward_left = 1 - p_reward_right + bias_corr_fac;
-}
+// void update_p_reward(){
+//     // p_reward_right = 1 - bias + bias_corr_fac;
+//     // p_reward_left = 1 - p_reward_right + bias_corr_fac;
+//     float p_reward_left = 1.0;
+//     float p_reward_right = 1.0;
+// }
 
 /*
 ##        #######   ######    ######   #### ##    ##  ######
@@ -250,6 +256,30 @@ void LEDController(){
     }
 }
 
+int cursor_led = 0;
+int last_cursor_led = 0;
+
+void update_led_cursor(){
+    cursor_led = (int) map(X,-X_thresh*2,X_thresh*2,0,NUM_LEDS);
+    if (cursor_led != last_cursor_led){
+        leds[cursor_led] = CRGB::Orange;
+        leds[last_cursor_led] = CRGB::Black;
+        FastLED.show();
+        last_cursor_led = cursor_led;
+    }
+}
+
+// void update_led_cursor(){
+//     // turn off all
+//     for (int i = 0; i < NUM_LEDS; i++){
+//         leds[i] = CRGB::Black;
+//     }
+
+//     // cursor
+//     int led_ix = (int) map(X,-5000,5000,0,21);
+//     leds[led_ix] = CRGB::Orange;
+//     FastLED.show();
+// }
 
 /*
  ######  ##     ## ########  ######
@@ -380,42 +410,49 @@ void RewardValveController(){
    ##    ##     ## #### ##     ## ########       ##       ##    ##        ########
 */
 
+bool in_corr_loop = false;
+unsigned long left_error_counter = 0;
+unsigned long right_error_counter = 0;
+unsigned long succ_trial_counter = 0;
+bool corr_loop_reset_mode = true;
+
+/*
+resetting mode:
+within correction loop, any mistake restarts the counter from the beginning
+no resetting: intermediate mistakes allowed, corr loop is exited after 3 correct choices
+*/
+
 void get_trial_type(){
-    // determine correct side and zone
-
-    // rule: forced alternating, but if on a streak, random
-    if (succ_trial_counter < n_streak && forced_alternating == true){
-
-        if (last_correct_side == "left"){
-            this_correct_side = "right";
-        }
-        if (last_correct_side == "right"){
-            this_correct_side = "left";
-        }
+    // determine if enter corr loop
+    if (in_corr_loop == false && (left_error_counter >= corr_loop_entry || right_error_counter >= corr_loop_entry)){
+        in_corr_loop = true;
+        log_msg("entered correction loop");
     }
-    else {
-        float r = random(0,1000) / 1000.0;
+    
+    // determine if exit corr loop
+    if (in_corr_loop == true && succ_trial_counter >= corr_loop_exit){
+        in_corr_loop = false;
+        log_msg("exited correction loop");
+    }
+    
 
-        if (r > 0.5){
-            this_correct_side = "left";
+    if (in_corr_loop == false){
+        float r = random(0,1000) / 1000.0;
+        if (r > bias){
+            // 0 = left bias, 1 = right bias
+            this_correct_side = "right";
+            correct_zone = right;
         }
         else {
-            this_correct_side = "right";
+            this_correct_side = "left";
+            correct_zone = left;
         }
     }
-
-    // set and log correct zone
-    if (this_correct_side == "left"){
-        correct_zone = left;
-    }
-
-    if (this_correct_side == "right"){
-        correct_zone = right;
-    }
+    
     log_var("correct_zone", String(correct_zone));
+    log_var("in_corr_loop", String(in_corr_loop));
 }
-
-                
+               
 
 /*
  
@@ -478,7 +515,7 @@ void finite_state_machine() {
 
                 // bias related
                 update_bias();
-                update_p_reward();
+                // update_p_reward();
 
                 // log bias
                 log_var("bias", String(bias));
@@ -540,6 +577,11 @@ void finite_state_machine() {
                     move_X_thresh(X_thresh_increment);
                     move_Y_thresh(Y_thresh_decrement);
 
+                    // update counters
+                    succ_trial_counter += 1;
+                    left_error_counter = 0;
+                    right_error_counter = 0;
+
                     last_correct_side = this_correct_side;
                     current_state = REWARD_AVAILABLE_STATE;
                     break;
@@ -549,6 +591,19 @@ void finite_state_machine() {
                 else {
                     log_code(CHOICE_INCORRECT_EVENT);
                     log_code(TRIAL_UNSUCCESSFUL_EVENT);
+
+                    // update counters
+                    if (current_zone == left){
+                        left_error_counter += 1;
+                        right_error_counter = 0;
+                    }
+                    if (current_zone == right){
+                        right_error_counter += 1;
+                        left_error_counter = 0;
+                    }
+                    if (corr_loop_reset_mode == true){
+                        succ_trial_counter = 0;
+                    }
                     
                     // report to animal
                     incorrect_choice_cue();
@@ -675,6 +730,7 @@ void loop() {
     // Controllers
     RewardValveController();
     LEDController();
+    // update_led_cursor();
 
     // sample sensors
     read_lick();
