@@ -20,7 +20,6 @@ float Y_thresh_increment = 0.01;
 float Y_thresh_decrement = -0.03;
 
 float bias = 0.5;
-float bias_corr_fac = 0.5;
 
 unsigned long corr_loop_entry = 3;
 unsigned long corr_loop_exit = 2;

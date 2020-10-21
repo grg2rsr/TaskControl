@@ -77,11 +77,13 @@ float p_reward_right = 1.0;
 // // probabilistic reward related
 // float p_reward_left = 0.5;
 // float p_reward_right = 0.5;
-// float this_p_reward = p_reward_left;
+float this_p_reward = p_reward_left;
 
 // void update_p_reward(){
-//     p_reward_right = 1 - bias + bias_corr_fac;
-//     p_reward_left = 1 - p_reward_right + bias_corr_fac;
+//     // p_reward_right = 1 - bias + bias_corr_fac;
+//     // p_reward_left = 1 - p_reward_right + bias_corr_fac;
+//     float p_reward_left = 1.0;
+//     float p_reward_right = 1.0;
 // }
 
 /*
@@ -398,14 +400,14 @@ no resetting: intermediate mistakes allowed, corr loop is exited after 3 correct
 
 void get_trial_type(){
     // determine if enter corr loop
-    if (left_error_counter == corr_loop_entry || right_error_counter == corr_loop_entry){
+    if (in_corr_loop == false && (left_error_counter >= corr_loop_entry || right_error_counter >= corr_loop_entry)){
         in_corr_loop = true;
         log_msg("entered correction loop");
     }
     
     // determine if exit corr loop
-    if (in_corr_loop == true && succ_trial_counter == corr_loop_exit){
-        in_corr_loop == false;
+    if (in_corr_loop == true && succ_trial_counter >= corr_loop_exit){
+        in_corr_loop = false;
         log_msg("exited correction loop");
     }
 
@@ -413,11 +415,11 @@ void get_trial_type(){
         float r = random(0,1000) / 1000.0;
         if (r > bias){
             // 0 = left bias, 1 = right bias
-            this_correct_side = "right"
+            this_correct_side = "right";
             correct_zone = right;
         }
         else {
-            this_correct_side = "left"
+            this_correct_side = "left";
             correct_zone = left;
         }
     }
@@ -487,7 +489,7 @@ void finite_state_machine() {
 
                 // bias related
                 update_bias();
-                update_p_reward();
+                // update_p_reward();
 
                 // log bias
                 log_var("bias", String(bias));
