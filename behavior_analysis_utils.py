@@ -475,23 +475,35 @@ def get_choice_zone(TrialDf):
             choice_zone = np.NaN
     return pd.Series(choice_zone, name="choice_zone")
 
-def get_interval(TrialDf):
+def get_correct_zone(TrialDf):
+    var_name = "correct_zone"
     try:
-        Df = TrialDf.groupby('var').get_group('this_interval')
-        interval = Df.iloc[0]['value']
+        Df = TrialDf.groupby('var').get_group(var_name)
+        var = Df.iloc[0]['value']
     except KeyError:
-        interval = np.NaN
+        var = np.NaN
 
-    return pd.Series(interval, name='this_interval')
+    return pd.Series(var, name=var_name)
+
+def get_interval(TrialDf):
+    var_name = "this_interval"
+    try:
+        Df = TrialDf.groupby('var').get_group(var_name)
+        var = Df.iloc[0]['value']
+    except KeyError:
+        var = np.NaN
+
+    return pd.Series(var, name=var_name)
 
 def get_bias(TrialDf):
+    var_name = "bias"
     try:
-        Df = TrialDf.groupby('var').get_group('bias')
-        bias = Df.iloc[0]['value']
+        Df = TrialDf.groupby('var').get_group(var_name)
+        var = Df.iloc[0]['value']
     except KeyError:
-        bias = np.NaN
+        var = np.NaN
 
-    return pd.Series(bias, name='bias')
+    return pd.Series(var, name=var_name)
 
 def get_start(TrialDf):
     return pd.Series(TrialDf.iloc[0]['t'], name='t_on')

@@ -5,6 +5,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from matplotlib.figure import Figure
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
@@ -92,20 +93,35 @@ class SessionVis(QtWidgets.QWidget):
             self.outcome_rates_filt[outcome], = ax.plot([], [], lw=1, color=colors[outcome])
         ax.legend(fontsize='x-small')
 
+        # trial outcomes
+        self.outcome_ax = self.axes[1, 0]
+        ax.set_title('outcomes')
+        ax.set_xlabel('trial #')
+        ax.set_ylim(-0.1, 1.1)
+        # self.outcome_rates = {}
+        # self.outcome_rates_filt = {}
+        # for outcome in outcomes:
+            # self.outcome_rates[outcome], = ax.plot([], [], '.', lw=1, color=colors[outcome], label=outcome)
+            # self.outcome_rates_filt[outcome], = ax.plot([], [], lw=1, color=colors[outcome])
+        # ax.legend(fontsize='x-small')
+
+
         # choices and bias
         ax = self.axes[0, 2]
         ax.set_title('choices')
         ax.set_xlabel('trial #')
         ax.set_ylabel('fraction')
-        ax.set_ylim(-0.1, 1.1)
+        ax.set_ylim(-0.2, 1.2)
         self.bias, = ax.plot([], [], '.', lw=1, label='bias', color='k')
         self.bias_filt, = ax.plot([], [], lw=1, color='k')
         cmap = mpl.cm.PiYG
+        self.trials_left, = ax.plot([], [], 'o', color='k')
+        self.trials_right, = ax.plot([], [], 'o', color='k')
         self.choices_left, = ax.plot([], [], 'o', color=cmap(1.0))
         self.choices_right, = ax.plot([], [], 'o', color=cmap(0.0))
         ax.legend(fontsize='x-small')
         ax.set_yticks([0, 1])
-        ax.set_yticklabels(['left', 'right'])
+        ax.set_yticklabels(['right', 'left'])
         ax.set_ylabel('choice')
 
         # choice RT
@@ -117,7 +133,7 @@ class SessionVis(QtWidgets.QWidget):
         ax.set_ylim(0, 1500)
 
         # psychometric
-        ax = self.axes[1, 0]
+        ax = self.axes[1, 2]
         ax.set_title('psychometric')
         # ax.set_ylabel('p')
         ax.set_xlabel('interval (ms)')
@@ -157,6 +173,7 @@ class SessionVis(QtWidgets.QWidget):
                 self.reward_collection_rate_filt.set_data(x, y_filt)
                 self.reward_collection_rate.axes.set_xlim(0.5, x.shape[0]+0.5)
 
+            # outcomes
             for outcome in outcomes:
                 try:
                     SDf = SessionDf.groupby('outcome').get_group(outcome)
@@ -171,31 +188,67 @@ class SessionVis(QtWidgets.QWidget):
                 # self.outcome_rates_filt[outcome].set_data(x, y_filt)
                 self.outcome_rates[outcome].axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
 
-            # choices
-            if True in SessionDf['has_choice'].values:
-                try:
-                    SDf = SessionDf.groupby('choice').get_group('left')
-                    SDf.reset_index()
-                    x = SDf.index.values+1
-                    y = np.zeros(x.shape[0])
-                    self.choices_right.set_data(x,y)
-                except:
-                    pass
-                try:
-                    SDf = SessionDf.groupby('choice').get_group('right')
-                    SDf.reset_index()
-                    x = SDf.index.values+1
-                    y = np.ones(x.shape[0])
-                    self.choices_left.set_data(x,y)
-                except:
-                    pass
+            # Create a Rectangle patch
+            try:
+                x = SessionDf.index[-1] + 1
+                y = 0
+                outcome = SessionDf.iloc[-1]['outcome']
+                rect = patches.Rectangle((x,y),1,1, edgecolor='none', facecolor=colors[outcome])
+                self.outcome_ax.add_patch(rect)
+                self.outcome_ax.set_xlim(0.5, SessionDf.shape[0]+0.5)
+            except:
+                pass
 
-                x = SessionDf.index
-                y = SessionDf['bias'].values
-                self.bias.set_data(x,y)
-                # y_filt = SDf['bias'].rolling(hist).mean().values
-                # self.bias_filt.set_data(x, y_filt)
-                self.bias.axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
+
+            # choices
+            x = SessionDf.loc[SessionDf['correct_zone'] == 4].index + 1
+            y = np.zeros(x.shape[0]) - 0.1
+            self.trials_left.set_data(x,y)
+            x = SessionDf.loc[SessionDf['correct_zone'] == 6].index + 1
+            y = np.zeros(x.shape[0]) + 1.1
+            self.trials_right.set_data(x,y)
+
+            try:
+                SDf = SessionDf.groupby('choice').get_group('left')
+                x = SDf.index.values+1
+                y = np.zeros(x.shape[0])
+                self.choices_left.set_data(x,y)
+            except:
+                pass
+
+            try:
+                SDf = SessionDf.groupby('choice').get_group('right')
+                x = SDf.index.values+1
+                y = np.zeros(x.shape[0]) + 1
+                self.choices_right.set_data(x,y)
+            except:
+                pass
+
+            x = SessionDf.index
+            y = SessionDf['bias'].values
+            self.bias.set_data(x,y)
+            # y_filt = SDf['bias'].rolling(hist).mean().values
+            # self.bias_filt.set_data(x, y_filt)
+            self.bias.axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
+
+            # if True in SessionDf['has_choice'].values:
+            #     try:
+            #         SDf = SessionDf.groupby('choice').get_group('left')
+            #         SDf.reset_index()
+            #         x = SDf.index.values+1
+            #         y = np.zeros(x.shape[0])
+            #         self.choices_right.set_data(x,y)
+            #     except:
+            #         pass
+            #     try:
+            #         SDf = SessionDf.groupby('choice').get_group('right')
+            #         SDf.reset_index()
+            #         x = SDf.index.values+1
+            #         y = np.ones(x.shape[0])
+            #         self.choices_left.set_data(x,y)
+            #     except:
+            #         pass
+
 
 
             # choice RT
