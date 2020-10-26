@@ -126,7 +126,7 @@ class SessionVis(QtWidgets.QWidget):
         self.choices_right, = ax.plot([], [], 'o', color=cmap(0.0))
         ax.legend(fontsize='x-small')
         ax.set_yticks([0, 1])
-        ax.set_yticklabels(['right', 'left'])
+        ax.set_yticklabels(['left', 'right'])
         ax.set_ylabel('choice')
         ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True))
 
@@ -172,7 +172,7 @@ class SessionVis(QtWidgets.QWidget):
             # reward collection rate
             if True in SessionDf['successful'].values:
                 SDf = SessionDf.groupby(['successful', 'reward_omitted']).get_group((True,False))
-                # SDf = SDf.reset_index()
+                SDf = SDf.reset_index()
                 x = SDf.index.values + 1
                 y = np.cumsum(SDf['reward_collected'].values) / (SDf.index.values+1)
                 y_filt = SDf['reward_collected'].rolling(hist).mean().values
