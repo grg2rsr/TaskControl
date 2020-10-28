@@ -28,3 +28,5 @@ unsigned long corr_loop_exit = 2;
 float vis_coupling = 2;
 float contrast = 1.0;
 float instructed_cue_speed = 0.05;
+
+int fps = 10;

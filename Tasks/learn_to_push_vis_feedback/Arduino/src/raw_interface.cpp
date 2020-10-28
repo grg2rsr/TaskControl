@@ -99,14 +99,18 @@ void processRawData() {
         y = (float) Yb.f;
 
         if (x < 10000 && x > -10000){
-            X = x;
+            if (abs(X-x) < 4000) {
+                X = x;
+            }
         }
         else {
             Serial.println(String("<MSG X out of bounds") + " "+String(micros()/1000.0)+">");
         }
 
         if (y < 10000 && y > -10000){
-            Y = y;
+            if (abs(Y-y) < 4000) {
+                Y = y;
+            }
         }
         else {
             Serial.println(String("<MSG Y out of bounds") + " "+String(micros()/1000.0)+">");

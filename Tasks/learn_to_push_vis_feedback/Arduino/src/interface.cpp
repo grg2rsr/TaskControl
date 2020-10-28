@@ -187,6 +187,10 @@ void processSerialData() {
             if (strcmp(varname,"instructed_cue_speed")==0){
                 Serial.println(String("<VAR ")+String(varname)+String("=")+String(instructed_cue_speed)+String(">"));
             }
+    
+            if (strcmp(varname,"fps")==0){
+                Serial.println(String("<VAR ")+String(varname)+String("=")+String(fps)+String(">"));
+            }
                 if (strcmp(varname,"current_state")==0){
                 Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
             }
@@ -223,6 +227,10 @@ void processSerialData() {
 
             if (strcmp(varname,"correct_choice_cue_freq")==0){
                 correct_choice_cue_freq = atoi(varvalue);
+            }
+    
+            if (strcmp(varname,"fps")==0){
+                fps = atoi(varvalue);
             }
     
             if (strcmp(varname,"choice_dur")==0){

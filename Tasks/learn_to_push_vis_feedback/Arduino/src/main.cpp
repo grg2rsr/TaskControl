@@ -291,7 +291,7 @@ bool X_controller_is_active = false; // to be set active on controlled trials
 bool switch_X_controller_on = false;
 unsigned long X_controller_switch_on_time;
 
-void X_controller(){
+void X_controller_update(){
     if (X_controller_is_active == false && switch_X_controller_on == true){
         X_controller_switch_on_time = now();
         X_controller_is_active = true;
@@ -311,10 +311,18 @@ void X_controller(){
     }
 }
 
+unsigned long last_X_controller_update = 0;
+void X_controller(){
+    if (now() - last_X_controller_update > 1000 / fps){
+        X_controller_update();
+        last_X_controller_update = now();
+    }
+}
+
 // LED feedback cursor
 int sep = (NUM_LEDS-1)/4; // 90 deg separation (if LED strip is actually 180 which it isn't currently)
 int cursor_pos = 0;
-int fps = 200;
+// int fps = 10;
 
 // to be set in get_trial_type()
 float left_cue_brightness;
