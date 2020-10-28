@@ -249,7 +249,6 @@ contrast between targets drops
 #define NUM_LEDS 21 // num of LEDs in strip
 CRGB leds[NUM_LEDS]; // Define the array of leds
 int center_led = (NUM_LEDS-1)/2;
-int fps = 200;
 
 void lights_off(){
     for (int i = 0; i < NUM_LEDS; i++){
@@ -262,13 +261,15 @@ void lights_off(){
 bool led_is_on[NUM_LEDS];
 bool switch_led_on[NUM_LEDS];
 unsigned long led_on_time[NUM_LEDS];
-unsigned long led_on_dur = 50;
+unsigned long led_on_dur = 250;
+int led_hsv;
 
 void led_blink_controller(){
     // the controller: iterate over all LEDs and set their state accordingly
     for (int i = 0; i < NUM_LEDS; i++){
         if (led_is_on[i] == false && switch_led_on[i] == true){
-            leds[i] = CRGB::Blue; // can be replaced with HSV maybe?
+            // leds[i] = CRGB::Blue; // can be replaced with HSV maybe?
+            leds[i] = CHSV(led_hsv,255,255);
             led_is_on[i] = true;
             led_on_time[i] = now();
             switch_led_on[i] = false;
@@ -310,37 +311,10 @@ void X_controller(){
     }
 }
 
-// void update_X_controller(){
-//     if (X_controller_is_active == false && switch_X_controller_on == true){
-//         X_controller_switch_on_time = now();
-//         X_controller_is_active = true;
-//         switch_X_controller_on = false;
-//     }
-
-//     if (X_controller_is_active == true){
-//         dt = now() - X_controller_switch_on_time;
-//         dX = instructed_cue_speed * dt;
-
-//         if (correct_zone == 6){
-//             X = X + dX;
-//         }
-//         if (correct_zone == 4){
-//             X = X - dX;
-//         }
-//     }
-// }
-
-// unsigned long last_X_controller_update = 0;
-// void X_controller(){
-//     if (now() - last_X_controller_update > 1000 / fps){
-//         update_X_controller();
-//         last_X_controller_update = now();
-//     }
-// }
-
 // LED feedback cursor
 int sep = (NUM_LEDS-1)/4; // 90 deg separation (if LED strip is actually 180 which it isn't currently)
 int cursor_pos = 0;
+int fps = 200;
 
 // to be set in get_trial_type()
 float left_cue_brightness;
@@ -400,6 +374,12 @@ void choice_cue(){
 void correct_choice_cue(){
     // beep
     tone_controller.play(correct_choice_cue_freq, tone_duration);
+
+    // center blink
+    led_hsv = 32;
+    switch_led_on[center_led] = true;
+    switch_led_on[center_led+1] = true;
+    switch_led_on[center_led-1] = true;
 }
 
 
