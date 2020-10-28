@@ -308,8 +308,8 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.lim_lines = {}
         self.lim_lines['right'] = pg.InfiniteLine(pos=2500, pen=pen)
         self.lim_lines['left'] = pg.InfiniteLine(pos=-2500, pen=pen)
-        self.lim_lines['front'] = pg.InfiniteLine(pos=1500, pen=pen, angle=0)
-        self.lim_lines['back'] = pg.InfiniteLine(pos=-1500, pen=pen, angle=0)
+        self.lim_lines['front'] = pg.InfiniteLine(pos=5000, pen=pen, angle=0)
+        self.lim_lines['back'] = pg.InfiniteLine(pos=-5000, pen=pen, angle=0)
 
         for k, v in self.lim_lines.items():
             self.PlotItem.addItem(v)
