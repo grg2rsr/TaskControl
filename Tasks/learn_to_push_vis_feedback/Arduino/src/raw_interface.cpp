@@ -73,6 +73,7 @@ typedef union {
     float f;
 } bfloat;
 
+int error_counter = 0;
 void processRawData() {
 
     if (RawNewData == true) {
@@ -97,24 +98,44 @@ void processRawData() {
         // constrain
         x = (float) Xb.f;
         y = (float) Yb.f;
+        
+        float dX = X-x;
+        float dY = Y-y;
 
-        if (x < 10000 && x > -10000){
-            if (abs(X-x) < 4000) {
-                X = x;
-            }
+        // if (x < -10000 || x > 10000 || y < -10000 || y > 10000){
+        if ((abs(dX) > 4000 || abs(dY) > 4000) && error_counter < 5){
+            Serial.println(String("<MSG garbage read") + " "+String(micros()/1000.0)+">");
+            Serial.println(String(x));
+            Serial.println(String(y));
+            error_counter++;
+            // X = 0;
+            // x = 0;
+            // Y = 0;
+            // y = 0;
         }
-        else {
-            Serial.println(String("<MSG X out of bounds") + " "+String(micros()/1000.0)+">");
+        else{
+            X = x;
+            Y = y;
+            error_counter = 0;
         }
 
-        if (y < 10000 && y > -10000){
-            if (abs(Y-y) < 4000) {
-                Y = y;
-            }
-        }
-        else {
-            Serial.println(String("<MSG Y out of bounds") + " "+String(micros()/1000.0)+">");
-        }
+        // if (x < 10000 && x > -10000){
+        //     if (abs(X-x) < 4000) {
+        //         X = x;
+        //     }
+        // }
+        // else {
+        //     Serial.println(String("<MSG X out of bounds") + " "+String(micros()/1000.0)+">");
+        // }
+
+        // if (y < 10000 && y > -10000){
+        //     if (abs(Y-y) < 4000) {
+        //         Y = y;
+        //     }
+        // }
+        // else {
+        //     Serial.println(String("<MSG Y out of bounds") + " "+String(micros()/1000.0)+">");
+        // }
     }
     RawNewData = false;
 }

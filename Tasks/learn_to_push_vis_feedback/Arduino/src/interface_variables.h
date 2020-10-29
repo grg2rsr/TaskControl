@@ -5,7 +5,7 @@ unsigned long ITI_dur_max = 10000;
 unsigned long min_fix_dur = 2000;
 unsigned long reward_magnitude = 10;
 // unsigned long trial_t_gap = 1000;
-float valve_ul_ms = 0.040463145539906105;
+float valve_ul_ms = 0.11240263157894737;
 unsigned long reward_available_dur = 1000;
 
 float X_thresh = 1000.0;
@@ -29,4 +29,4 @@ float vis_coupling = 2;
 float contrast = 1.0;
 float instructed_cue_speed = 0.05;
 
-int fps = 10;
+int fps = 100;

@@ -211,6 +211,11 @@ if t_harp.shape != t_arduino.shape:
 m, b = bhv.sync_clocks(t_harp, t_arduino, log_path)
 LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
 
+# %% debug inspect
+fig, axes = plt.subplots()
+ds = 100
+axes.plot(LoadCellDf['t'][::ds],LoadCellDf['x'][::ds])
+axes.plot(LoadCellDf['t'][::ds],LoadCellDf['y'][::ds])
 # %% median correction
 samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
 LoadCellDf['x'] = LoadCellDf['x'] - LoadCellDf['x'].rolling(samples).median()
@@ -369,56 +374,26 @@ axes[-1,1].set_xlabel('Time (s)')
 fig.tight_layout()
 fig.subplots_adjust(hspace=0.05)
 
-# %% Response Forces to go cue
+# %% Response Forces cues
 bin_width = 75 #ms
 first_cue_ref = "TRIAL_ENTRY_EVENT"
 
 plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, align_event, bin_width, axes=None)
 
-# %% Response Forces aligned to anything
+# %% Response Forces aligned to anything split by input aligned to anything
+
+split_by = 'type' 
 align_event = "CHOICE_INCORRECT_EVENT"
+pre, post, choice_dur = 1000,1000,2000
 
-Fmag_1st, Fmag_2nd, licks, ys = [],[],[],[]
-pre, post, plot_dur = 1000,1000,2000
-
-fig , axes = plt.subplots()
-
-twin_ax = axes.twinx()
-
-for TrialDf in TrialDfs:
-
-    if align_event in TrialDf.name.values:
-        time_2nd = float(TrialDf[TrialDf.name == align_event]['t'])
-
-        # Aligned to second cue
-        F = bhv.time_slice(LoadCellDf, time_2nd-pre, time_2nd+post)
-        y = np.sqrt(F['x']**2+F['y']**2)
-        ys.append(y)
-        
-        try:
-            licks.append(bhv.get_licks(LogDf, time_2nd-pre, time_2nd+post))
-        except:
-            pass
-
-# Compute mean force for each outcome aligned to second        
-Fmag = bhv.tolerant_mean(np.array(ys))
-axes.plot(np.arange(len(Fmag))+1, Fmag, color = "k") 
-
-# Get lick histogram
-if not licks:
-    pass
-else:
-    no_bins = round((plot_dur)/bin_width)
-    counts, bins = np.histogram(np.concatenate(licks),no_bins)
-    licks_freq = np.divide(counts, ((bin_width/1000)*len(ys)))
-    twin_ax.step(bins[1:], licks_freq, alpha=0.5)
+axes, twin_ax = split_fx_fy_forces(LogDf, LoadCellDf, TrialDfs, align_event, split_by, pre, post, choice_dur)
 
 # Formatting
 axes.set_ylabel('Force magnitude (a.u.)')
-axes.set_xlim(0,plot_dur)
+axes.set_xlim(0,choice_dur)
 axes.set_ylim(0,2000)
 axes.axvline(1000, linestyle = ':', color = "k", alpha = 0.5)
-plt.setp(axes, xticks=np.arange(0, plot_dur+1, 500), xticklabels=np.arange(-1, 1+0.1, 0.5))
+plt.setp(axes, xticks=np.arange(0, choice_dur+1, 500), xticklabels=np.arange(-1, 1+0.1, 0.5))
 
 twin_ax.set_ylabel('Lick freq. (Hz)', color='C0')
 plt.setp(twin_ax, yticks=np.arange(0, 11), yticklabels=np.arange(0, 11))
@@ -763,9 +738,14 @@ axes[0].hist(times,bins=bins,density=True)
 
 # %% 
 "Learn to PUSH inspections"
-
+task_name = ['learn_to_push', 'learn_to_push_cr', 'learn_to_push_vis_feedback']
 SessionsDf = utils.get_sessions(animal_folder)
-paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_push')['path']]
+
+PushSessionsDf = pd.concat([SessionsDf.groupby('task').get_group(name) for name in task_name])
+
+paths = [Path(path) for path in PushSessionsDf['path']]
+
+
 
 LogDfs = []
 for path in tqdm(paths):
@@ -776,48 +756,27 @@ for path in tqdm(paths):
 
 colors = sns.color_palette(palette='turbo',n_colors=len(LogDfs))
 
-plot_sessions_overview(LogDfs, paths, 'learn_to_push', animal_id)
+# %%
+" GENERAL FUNCTIONS"
 
-# %% Reward collection across sessions
+# Sessions overview
+plot_sessions_overview(LogDfs, paths, task_name, animal_id)
+plt.savefig(plot_dir / 'learn_to_push_overview.png', dpi=300)
+
+#  Reward collection across sessions
 rew_collected_across_sessions(LogDfs)
 
-# %% X/Y thresh and bias across sessions
-x_y_tresh_bias_across_sessions(LogDfs, SessionsDf, axes = None)
+# X/Y thresh and bias across sessions
+x_y_tresh_bias_across_sessions(LogDfs, axes = None)
+plt.savefig(plot_dir / 'learn_to_push_x_y_thresh_bias_across_sessions.png', dpi=300)
 
-# %% Choice RT's distribution 
+# Choice RT's distribution 
 bin_width = 250 #ms
 choice_interval = 5000
+percentile = 75 # Choice RTs compromise X% of data
+choice_rt_across_sessions(LogDfs, bin_width, choice_interval, percentile, axes = None)
 
-fig, axes = plt.subplots()
-colors = sns.color_palette(palette='turbo', n_colors=len(LogDfs))
-
-for i,LogDf in enumerate(LogDfs):
-
-    TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
-
-    TrialDfs = []
-    for j, row in tqdm(TrialSpans.iterrows()):
-        TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
-
-    choice_rt = np.empty(0)
-
-    for TrialDf in TrialDfs:
-        choice_rt = np.append(choice_rt, bhv.choice_RT(TrialDf).values)
-
-    # includes front and back pushes, eliminates nans due to missed trials
-    clean_choice_rt = [x for x in choice_rt if not pd.isnull(x)] 
-
-    no_bins = round(choice_interval/bin_width)
-
-    counts, bins = np.histogram(clean_choice_rt, bins=no_bins, density = True, range = (-250, choice_interval))
-    axes.step(bins[1:], counts, color=colors[i], zorder=1*i, alpha=0.75, label='day '+str(i+1))
-
-    axes.axvline(np.percentile(clean_choice_rt,75),color=colors[i], alpha=0.5)
-
-plt.legend(frameon=False)
-axes.set_ylabel('Prob (%)')
-axes.set_xlabel('Time (s)')
-fig.suptitle(animal_id+' '+nickname+'\nChoice RT distribution with 75th percentile',fontsize='small')
+plt.savefig(plot_dir / 'learn_to_push_choice_rt_distro.png', dpi=300)
 
 # %% Rolling average of missed trials as session goes on (proxy of trial engagement)
 fig, axes = plt.subplots()
@@ -835,13 +794,9 @@ for j, LogDf in enumerate(LogDfs[12:]):
     x = np.arange(len(SessionDf))  
     MissedDf = SessionDf['outcome'] == 'missed'
 
-    ## grand average rate
-    #y = np.cumsum(MissedDf.values) / (SessionDf.index.values+1)
-    #axes.plot(x,y, color = colors[j], label = 'day '+ str(j+1))
-
     # Rolling average
     y_filt = (SessionDf['outcome'] == 'missed').rolling(20).mean()
-    axes.plot(x,y_filt, color = colors[j], alpha = 0.75, label = 'day '+ str(j+1))
+    axes.plot(x,y_filt, color = colors[j], alpha = 0.5, label = 'day '+ str(j+1))
 
 plt.legend(frameon=False)
 axes.set_ylim([0,1])
@@ -849,8 +804,10 @@ axes.set_title('Ratio of missed trials across sessions')
 axes.set_xlabel('Trial #')
 axes.set_ylabel('Missed trials rolling average')
 
-# %% Get Fx and Fy forces for all sessions 
-Fs = []
+# %% Get Fx and Fy forces for all sessons 
+trials_only = False
+
+Fx,Fy = np.empty(0),np.empty(0)
 for path in tqdm(paths):
 
     if not os.path.isfile(path / "loadcell_data.csv"):
@@ -867,27 +824,46 @@ for path in tqdm(paths):
     else:
         LoadCellDf = pd.read_csv(path / "loadcell_data.csv")
 
+    LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
+    LogDf = LogDf.loc[LogDf['t'] < LoadCellDf.iloc[-1]['t']]
+
     # median correction
     samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
     LoadCellDf['x'] = LoadCellDf['x'] - LoadCellDf['x'].rolling(samples).median()
     LoadCellDf['y'] = LoadCellDf['y'] - LoadCellDf['y'].rolling(samples).median()
 
-    TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
 
-    for i, row in TrialSpans.iterrows():
-        F = bhv.time_slice(LoadCellDf, row['t_on'], row['t_off'])
-        Fs.append(F)
+    if trials_only == True:
+        TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+
+        for i, row in TrialSpans.iterrows():
+            F = bhv.time_slice(LoadCellDf, row['t_on'], row['t_off'])
+            Fx = np.concatenate((Fx, F['x'].values))
+            Fy = np.concatenate((Fy, F['y'].values))
+    else:
+        Fx = np.concatenate((Fx, LoadCellDf['x'].values))
+        Fy = np.concatenate((Fy, LoadCellDf['y'].values))
 
 # Downsample from 1Khz to 10Hz in order to be computationally feasible
-Fx = Fx[0::100]
-Fy = Fy[0::100]
+Fx_downsamp = Fx[1::1000] 
+Fy_downsamp = Fy[1::1000]
 
-# KDE plot
-f, ax = plt.subplots(figsize=(4, 4))
-sns.kdeplot(x=Fx, y=Fy, fill=True, cbar=True)
-ax.set(xlim=(-4000,4000),ylim=(-4000,4000))
-ax.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
+Fx_downsamp = Fx_downsamp[~np.isnan(Fx_downsamp)]
+Fy_downsamp = Fy_downsamp[~np.isnan(Fy_downsamp)]
 
+# 2D histogram
+fig, axes = plt.subplots(figsize=(5, 4))
+data,_,_,_ = plt.hist2d(x=Fx_downsamp, y=Fy_downsamp, bins = 1000, range = [[-4000,4000],[-4000,4000]])
+data_clipepd = np.percentile(data,(5,95))
+axes.set_xlim([-4000,4000])
+axes.set_ylim([-4000,4000])
+axes.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
+plt.colorbar(ax=axes, orientation='horizontal', aspect = 30)
+fig.tight_layout()
+
+
+
+plt.savefig(plot_dir / ('learn_to_push_2D_Hist_' + str(trials_only) + '.png'), dpi=300)
 
 
 
@@ -901,7 +877,8 @@ ax.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
  ######   ##     ##  #######   #######  ##           ######## ########    ###    ######## ########
 """
 
-# %% Do animals learn faster to react to cue and make choice on new task?
+# %% Loading
+group_plot_dir = Path('D:\TaskControl\Animals\group_plots')
 old_animal_tags = ['JJP-00885','JJP-00886','JJP-00888','JJP-00889','JJP-00891']
 new_animal_tags = ['JJP-01151','JJP-01152','JJP-01153']
 animal_tags = old_animal_tags + new_animal_tags
@@ -912,10 +889,11 @@ animals_fd_path = old_animal_fd_path + new_animal_fd_path
 
 colors = sns.color_palette(palette='turbo', n_colors=len(animal_tags))
 
+# %% Do animals learn faster to react to cue and make choice on new task?
 bin_width = 250 #ms
 pre, pos = 500, 5000
 choice_interval = 5000
-fig, axes = plt.subplots(ncols = 2, figsize=[2, 4])
+fig, axes = plt.subplots(ncols = 2, figsize=[6, 3])
 
 for i, (animal_tag,animal_fd_path) in enumerate(zip(animal_tags,animals_fd_path)):
     animal_folder = animal_fd_path / animal_tag
@@ -977,12 +955,14 @@ for ax in axes:
 
 axes[0].set_ylabel('Time (ms)')
 plt.suptitle('3rd quartile for Choice RT',fontsize='small')
+fig.tight_layout()
+plt.savefig(group_plot_dir / 'choice_rt_percentile_group.png', dpi=300)
 
 # %% Do animals learn faster how to press aligned to cue on new task? 
 
 
 # %% Weight x sucess rate and x missed_rate
-fig, axes = plt.subplots(ncols = 2)
+fig, axes = plt.subplots(ncols = 2, figsize=[6, 3])
 
 for i, (animal_tag,animal_fd_path) in enumerate(zip(new_animal_tags, new_animal_fd_path)):
     animal_folder = animal_fd_path / animal_tag
@@ -1009,31 +989,32 @@ for i, (animal_tag,animal_fd_path) in enumerate(zip(new_animal_tags, new_animal_
         no_correct = len(bhv.get_events_from_name(LogDf,'CHOICE_CORRECT_EVENT'))
         no_missed = len(bhv.get_events_from_name(LogDf,'CHOICE_MISSED_EVENT'))
 
-        sucess_rate.append(no_correct/no_trials)
-        missed_rate.append(no_missed/no_trials)
+        sucess_rate.append((no_correct/no_trials)*100)
+        missed_rate.append((no_missed/no_trials)*100)
 
     weight = np.array(weight)
 
-    axes[0].scatter(weight, sucess_rate, color=colors[i], alpha=0.75, label = animal_tag)
+    axes[0].scatter(weight, sucess_rate, color=colors[i], alpha=0.25, label = animal_tag)
     slope, intercept, r_value, p_value, std_err = sp.stats.linregress(weight, sucess_rate)
-    axes[0].plot(weight, intercept + slope*weight, color=colors[i], alpha=0.5)
-    print("Sucess Rate -> r_value:" + str(r_value) + " | p_value = " + str(p_value))
+    axes[0].plot(weight, intercept + slope*weight, color=colors[i], alpha=0.75)
+    print("Sucess Rate -> r_value:" + str(round(r_value,3)) + " | p_value = " + str(round(p_value,3)))
 
-    axes[1].scatter(weight, missed_rate, color=colors[i], alpha=0.75, label = animal_tag)
+    axes[1].scatter(weight, missed_rate, color=colors[i], alpha=0.25, label = animal_tag)
     slope, intercept, r_value, p_value, std_err = sp.stats.linregress(weight, missed_rate)
-    axes[1].plot(weight, intercept + slope*weight, color=colors[i], alpha=0.5)
-    print("Missed Rate -> r_value:" + str(r_value) + " | p_value = " + str(p_value))
+    axes[1].plot(weight, intercept + slope*weight, color=colors[i], alpha=0.75)
+    print("Missed Rate -> r_value:" + str(round(r_value,3)) + " | p_value = " + str(round(p_value,3)))
     
 for ax in axes:
-    ax.legend(frameon = False)
+    ax.legend(frameon = False, fontsize='x-small')
     ax.set_xlabel('Weight (%)')
 
 axes[0].set_ylabel('Sucess rate (%)')
 axes[1].set_ylabel('Missed rate (%)')
-plt.setp(axes, xticks=np.arange(70, 100+1, 5), xticklabels=np.arange(70, 100+1, 5))
+fig.suptitle('Group level correlations', fontsize='small')
+plt.setp(axes, xticks=np.arange(70, 90+1, 5), xticklabels=np.arange(70, 90+1, 5))
+fig.tight_layout()
 
-
-
+plt.savefig(group_plot_dir / 'weight_sucess_missed_corr_group.png', dpi=300)
 
 # %%
 """

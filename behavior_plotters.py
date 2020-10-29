@@ -656,7 +656,7 @@ def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, trial_outco
     return axes
 
 
-" Currently not used / not implemented "
+" Currently not used on learn to time daily GUI / not implemented "
 
 def x_y_threshold_across_time(LogDf, axes=None):
     "X/Y threshold across time for a single session"
@@ -773,6 +773,57 @@ def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None):
 
     return axes
 
+def split_forces_magnitude(SessionDf, LoadCellDf, align_event, pre, post, choice_dur, split_by = None, axes=None):
+    """ 
+        Force magnitude split by any input as long as a metric in SessionDf contemplates it
+    """
+
+    #TO DO: adapt the code Georg has for obtaining forces from SessionDf to this case in which we can
+    # obtain a super general function based on the metrics and SessionDf previously established
+    # Also learn how to parse "variable inputs" to a function such that when inputs are not given it just
+    # assumes a default 
+    if split_by != None:
+        outcomes = SessionDf[split_by].unique() # get possible outcomes of given split criteria
+
+        SDf = SessionDf.groupby([split_by]).get_group(outcomes)
+
+    licks, ys = [],[]
+
+    if axes==None:
+        fig , axes = plt.subplots()
+
+    twin_ax = axes.twinx()
+
+    for TrialDf in TrialDfs:
+
+        if align_event in TrialDf.name.values:
+            time = float(TrialDf[TrialDf.name == align_event]['t'])
+
+            # Aligned to second cue
+            F = bhv.time_slice(LoadCellDf, time-pre, time+post)
+            y = np.sqrt(F['x']**2+F['y']**2)
+            ys.append(y)
+            
+            try:
+                licks.append(bhv.get_licks(LogDf, time-pre, time+post))
+            except:
+                pass
+
+    # Compute mean force for each outcome aligned to second        
+    Fmag = bhv.tolerant_mean(np.array(ys))
+    axes.plot(np.arange(len(Fmag))+1, Fmag, color = "k") 
+
+    # Get lick histogram
+    if not licks:
+        pass
+    else:
+        no_bins = round((choice_dur)/bin_width)
+        counts, bins = np.histogram(np.concatenate(licks),no_bins)
+        licks_freq = np.divide(counts, ((bin_width/1000)*len(ys)))
+        twin_ax.step(bins[1:], licks_freq, alpha=0.5)
+
+    return axes, twin_ax
+
 """
  
   ######  ########  ######   ######  ####  #######  ##    ##  ######  
@@ -848,18 +899,18 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
         except:
             weight.append(None)
 
-        # Engagement
-        TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+        # # Engagement
+        # TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
 
-        TrialDfs = []
-        for i, row in TrialSpans.iterrows():
-            TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+        # TrialDfs = []
+        # for i, row in TrialSpans.iterrows():
+        #     TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
 
-        SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.get_outcome))
-        try:
-            engagement.append(bhv.trial_engagement(SessionDf))
-        except:
-            engagement.append(None)
+        # SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.get_outcome))
+        # try:
+        #     engagement.append(bhv.trial_engagement(SessionDf))
+        # except:
+        #     engagement.append(None)
 
     sucess_rate = np.multiply(np.divide(trials_correct,trials_performed),100)
 
@@ -880,11 +931,10 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
       
     # Two sided axes Subplot 2
     axes[1].plot(sucess_rate, color = 'green', label = 'Sucess rate')
-    axes[1].plot(engagement, color = 'm', label = 'Session engagement')
+    # axes[1].plot(engagement, color = 'm', label = 'Session engagement')
     axes[1].legend(loc='upper left', frameon=False) 
-    axes[1].set_ylabel('a.u. (%)', color = 'green')
-    axes[1].tick_params(axis='y', labelcolor='green')
-    plt.setp(axes[1], yticks=np.arange(0,50,5), yticklabels=np.arange(0,50,5))
+    axes[1].set_ylabel('a.u. (%)')
+    plt.setp(axes[1], yticks=np.arange(0,100,10), yticklabels=np.arange(0,100,10))
 
     weight = np.multiply(weight,90)
     twin_ax = axes[1].twinx()
@@ -930,7 +980,7 @@ def rew_collected_across_sessions(LogDfs, axes = None):
 
     return axes
 
-def x_y_tresh_bias_across_sessions(LogDfs, SessionsDf, axes = None):
+def x_y_tresh_bias_across_sessions(LogDfs, axes = None):
     
     if axes is None:
         fig, axes = plt.subplots(figsize=(5, 3))
@@ -940,7 +990,11 @@ def x_y_tresh_bias_across_sessions(LogDfs, SessionsDf, axes = None):
 
         x_thresh = np.append(x_thresh, np.mean(LogDf[LogDf['var'] == 'X_thresh'].value.values))
         y_thresh = np.append(y_thresh, np.mean(LogDf[LogDf['var'] == 'Y_thresh'].value.values))
-        bias = np.append(bias, LogDf[LogDf['var'] == 'bias'].value.values[-1]) # last bias value
+        
+        try:
+            bias = np.append(bias, LogDf[LogDf['var'] == 'bias'].value.values[-1]) # last bias value
+        except:
+            bias = False
 
     axes.plot(np.arange(len(LogDfs)), x_thresh, color = 'C0', label = 'X thresh')
     axes.plot(np.arange(len(LogDfs)), y_thresh, color = 'm', label = 'Y thresh')
@@ -952,12 +1006,48 @@ def x_y_tresh_bias_across_sessions(LogDfs, SessionsDf, axes = None):
     axes.set_xticks(np.arange(len(LogDfs)))
     axes.set_xticklabels(np.arange(len(LogDfs))) 
 
-    twin_ax = axes.twinx()
-    twin_ax.plot(bias, color = 'g', alpha = 0.5)
-    twin_ax.set_ylabel('Bias', color = 'g')
-    twin_ax.set_yticks([0,0.5,1])
-    twin_ax.set_yticklabels(['left','center','right'])
+    if bias:
+        twin_ax = axes.twinx()
+        twin_ax.plot(bias, color = 'g', alpha = 0.5)
+        twin_ax.set_ylabel('Bias', color = 'g')
+        twin_ax.set_yticks([0,0.5,1])
+        twin_ax.set_yticklabels(['left','center','right'])
 
     fig.tight_layout()
 
     return axes
+
+def choice_rt_across_sessions(LogDfs, bin_width, animal_tag, choice_interval, percentile, axes = None):
+
+    if axes == None:
+        fig, axes = plt.subplots()
+
+    colors = sns.color_palette(palette='turbo', n_colors=len(LogDfs))
+
+    for i,LogDf in enumerate(LogDfs):
+
+        TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+
+        TrialDfs = []
+        for j, row in tqdm(TrialSpans.iterrows()):
+            TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+        choice_rt = np.empty(0)
+
+        for TrialDf in TrialDfs:
+            choice_rt = np.append(choice_rt, bhv.choice_RT(TrialDf).values)
+
+        # includes front and back pushes, eliminates nans due to missed trials
+        clean_choice_rt = [x for x in choice_rt if not pd.isnull(x)] 
+
+        no_bins = round(choice_interval/bin_width)
+
+        counts, bins = np.histogram(clean_choice_rt, bins=no_bins, density = True, range = (-250, choice_interval))
+        axes.step(bins[1:], counts, color=colors[i], zorder=1*i, alpha=0.75, label='day '+str(i+1))
+
+        axes.axvline(np.percentile(clean_choice_rt, percentile),color=colors[i], alpha=0.5)
+
+    plt.legend(frameon=False)
+    axes.set_ylabel('Prob (%)')
+    axes.set_xlabel('Time (s)')
+    fig.suptitle(animal_tag + '\nChoice RT distribution with' + str(percentile)+ 'th percentile', fontsize='small')
