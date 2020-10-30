@@ -359,6 +359,39 @@ void led_cursor_controller(){
 }
 
 /*
+int last_cursor_pos = 0;
+void led_cursor_controller(){
+    if (cursor_is_active == true){
+        cursor_pos = (int) map(X, -X_thresh * vis_coupling, X_thresh * vis_coupling, 0.0, (float) NUM_LEDS);
+        if (last_cursor_pos != cursor_pos){
+            //
+            for (int i = 0; i < NUM_LEDS; i++){
+                leds[i] = CRGB::Black;
+            }
+
+            cursor_pos = constrain(cursor_pos,1,NUM_LEDS-2);
+
+            // right
+            leds[cursor_pos - sep]     = CHSV(160,255,255*left_cue_brightness);
+            leds[cursor_pos - sep + 1] = CHSV(160,255,125*left_cue_brightness);
+            leds[cursor_pos - sep - 1] = CHSV(160,255,125*left_cue_brightness);
+
+            //left
+            leds[cursor_pos + sep]     = CHSV(160,255,255*right_cue_brightness);
+            leds[cursor_pos + sep + 1] = CHSV(160,255,125*right_cue_brightness);
+            leds[cursor_pos + sep - 1] = CHSV(160,255,125*right_cue_brightness);
+
+            last_cursor_pos = cursor_pos;
+            FastLED.show();
+        }
+    }
+}
+
+*/
+
+
+
+/*
  ######  ##     ## ########  ######
 ##    ## ##     ## ##       ##    ##
 ##       ##     ## ##       ##
