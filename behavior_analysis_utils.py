@@ -443,7 +443,6 @@ def get_choice(TrialDf):
     if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
         choice = "right"
 
-    # GEORG are you against this?
     if get_choice_zone(TrialDf).values[0] == 8:
         choice = "up"
     if get_choice_zone(TrialDf).values[0] == 2:
@@ -563,6 +562,63 @@ def trial_engagement(SessionDf):
 
     return round(engagement_ratio*100)
 
+# def water_consumed(log_path):
+#     """
+#         Returns the total amount of rewards consumed even if reward magnitude changes across session 
+#     """
+
+#     # THIS FUNCTION IS CURRENTLY BROKEN #
+
+#     reward_mag, water_consumed = 0 , 0
+#     ts , updated_mags = [], []
+
+#     LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
+#     with open(log_path, 'r') as fH:
+#         lines = fH.readlines()
+    
+#     # Seach all lines
+#     for line in lines:
+
+#         # to find when reward mag. is updated 
+#         if line.startswith('<Arduino') and 'reward_magnitude' in line:
+#             new_reward_mag = line[-4:-2]
+
+#             # and if reward mag. differs from previous one
+#             if new_reward_mag != reward_mag:
+#                 updated_mags.append(float(new_reward_mag)) # save it and
+
+#                 # go backwards in lines to search for timepoint of change
+#                 for j in range(0,-100,-1): # -30 is arbitrary, just making sure it searches back enough
+#                     if lines[j].startswith('<VAR'):
+#                         ts.append(float(lines[j].split(' ')[-1][:-3]))
+                        
+#                         break
+#                 reward_mag = new_reward_mag
+
+#     # In case the whole session uses the default reward mag. settings
+#     if ts == []:
+#         task_name = 'str'
+#         default_rew_mag = 10
+#         water_consumed = len(LogDf[LogDf['name'] == 'REWARD_COLLECTED_EVENT'])*default_rew_mag
+
+#     # In case it only changes once
+#     elif len(ts) == 1:
+#         water_consumed = len(LogDf[LogDf['name'] == 'REWARD_COLLECTED_EVENT'])*updated_mags[-1]
+
+#     # obtain number of rewards collected between timepoints and multiply by the corresponding reward magnitude
+#     else:
+#         for i,t in enumerate(ts):
+#             print(t)
+#             if i < len(ts):
+#                 print('what')
+#                 Df = bhv.time_slice(LogDf, ts, float(ts[i]))
+#             else: # for the last timepoint
+#                 Df = bhv.time_slice(LogDf, t, LogDf['t'].iloc[-1])
+#                 aux = len(Df[Df['name'] == 'REWARD_COLLECTED_EVENT'])*updated_mags[i]
+#                 water_consumed += aux
+
+#     return water_consumed 
+
 """
 
  ##     ##    ###    ########  ########
@@ -589,7 +645,7 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     t_sync_low = []
     LoadCellDf = []
     
-    for line in tqdm(lines[1:], desc="parsing harp log"):
+    for line in tqdm(lines[1:], desc="parsing harp log", position=0, leave=True):
         elements = line.split(',')
         if elements[0] == '3': # line is an event
             if elements[1] == '33': # line is a load cell read

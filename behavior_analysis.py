@@ -199,6 +199,10 @@ plt.setp(axes, yticks=np.arange(0, np.max(rew_rate), 5), yticklabels=np.arange(0
 
 # %% Preprocessing: LC syncing
 log_path = utils.get_file_dialog()
+
+plot_dir = log_path.parent / 'plots'
+os.makedirs(plot_dir, exist_ok=True)
+
 LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
 arduino_sync = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT")
 
@@ -228,7 +232,7 @@ LogDf = LogDf.loc[LogDf['t'] < LoadCellDf.iloc[-1]['t']]
 TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
 
 TrialDfs = []
-for i, row in tqdm(TrialSpans.iterrows()):
+for i, row in tqdm(TrialSpans.iterrows(),position=0, leave=True):
     TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
 
 metrics = (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.choice_RT, bhv.is_successful, bhv.get_outcome)
@@ -252,7 +256,7 @@ for i, side in enumerate(sides):
         ax = axes[j, i]
         Fx = []
         Fy = []
-        for _, row in tqdm(SDf.iterrows()):
+        for _, row in tqdm(SDf.iterrows(),position=0, leave=True):
             TrialDf = TrialDfs[row.name]
             t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
             # identical to:
@@ -381,24 +385,20 @@ first_cue_ref = "TRIAL_ENTRY_EVENT"
 plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, align_event, bin_width, axes=None)
 
 # %% Response Forces aligned to anything split by input aligned to anything
+split_by = 'choice' 
+align_event = "CHOICE_EVENT"
+pre, post, thresh = 500,2000,4000
 
-split_by = 'type' 
-align_event = "CHOICE_INCORRECT_EVENT"
-pre, post, choice_dur = 1000,1000,2000
-
-axes, twin_ax = split_fx_fy_forces(LogDf, LoadCellDf, TrialDfs, align_event, split_by, pre, post, choice_dur)
+axes = split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, post, split_by)
 
 # Formatting
-axes.set_ylabel('Force magnitude (a.u.)')
-axes.set_xlim(0,choice_dur)
-axes.set_ylim(0,2000)
-axes.axvline(1000, linestyle = ':', color = "k", alpha = 0.5)
-plt.setp(axes, xticks=np.arange(0, choice_dur+1, 500), xticklabels=np.arange(-1, 1+0.1, 0.5))
+for ax in axes:
+    ax.set_ylim(-thresh,thresh)
+    ax.set_xlim(0,post+pre)
+    ax.axvline(pre, linestyle = ':', color = "k", alpha = 0.5)
+    ax.legend()
 
-twin_ax.set_ylabel('Lick freq. (Hz)', color='C0')
-plt.setp(twin_ax, yticks=np.arange(0, 11), yticklabels=np.arange(0, 11))
-
-axes.set_title('Force Mag. and licking aligned to ' + align_event)
+plt.savefig(plot_dir / ('forces_split_by ' + str(split_by) + '.png'), dpi=300)
 
 # %% Choice RT's distribution
 bin_width = 100 #ms
@@ -478,7 +478,6 @@ for event, ax in zip(events, axes):
     Fy = sp.array(Fy).T
 
     M = sp.sqrt(Fx**2+Fy**2)
-    # M = Fx
 
     tvec = sp.linspace(pre, post, Fx.shape[0])
     for i in range(Fx.shape[1]):
@@ -682,7 +681,6 @@ animal_id = animal_meta[animal_meta['name'] == 'ID']['value'].values[0]
 nickname = animal_meta[animal_meta['name'] == 'Nickname']['value'].values[0]
 os.makedirs(plot_dir, exist_ok=True)
 
-
 # %%
 "Learn to LICK inspections"
 
@@ -690,7 +688,7 @@ SessionsDf = utils.get_sessions(animal_folder)
 paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_lick')['path']]
 
 LogDfs = []
-for path in tqdm(paths):
+for path in tqdm(paths,position=0, leave=True):
     log_path = path / 'arduino_log.txt'
     LogDf = bhv.get_LogDf_from_path(log_path)
     LogDf = bhv.filter_bad_licks(LogDf)
@@ -746,7 +744,7 @@ PushSessionsDf = pd.concat([SessionsDf.groupby('task').get_group(name) for name 
 paths = [Path(path) for path in PushSessionsDf['path']]
 
 LogDfs = []
-for path in tqdm(paths):
+for path in tqdm(paths, position=0, leave=True):
     log_path = path / 'arduino_log.txt'
     LogDf = bhv.get_LogDf_from_path(log_path)
     LogDf = bhv.filter_bad_licks(LogDf)
@@ -755,7 +753,7 @@ for path in tqdm(paths):
 colors = sns.color_palette(palette='turbo',n_colors=len(LogDfs))
 
 # %%
-" GENERAL FUNCTIONS"
+" GENERAL FUNCTIONS THAT WORK FOR ANY TASK"
 
 # Sessions overview
 plot_sessions_overview(LogDfs, paths, task_name[0], animal_id)
@@ -772,9 +770,19 @@ plt.savefig(plot_dir / 'learn_to_push_x_y_thresh_bias_across_sessions.png', dpi=
 bin_width = 250 #ms
 choice_interval = 5000
 percentile = 75 # Choice RTs compromise X% of data
-choice_rt_across_sessions(LogDfs, bin_width, choice_interval, percentile, axes = None)
-
+choice_rt_across_sessions(LogDfs, bin_width, choice_interval, percentile, animal_id, axes = None)
 plt.savefig(plot_dir / 'learn_to_push_choice_rt_distro.png', dpi=300)
+
+# Get Fx and Fy forces for all sessons in a 2D histogram and a contour plot
+trials_only = False
+thresh = 4000
+axis1, axis2 = force_2D_hist_contour_across_sessions(paths, thresh, task_name[0], animal_id, nickname, trials_only)
+
+plt.sca(axis1)
+plt.savefig(plot_dir / ('learn_to_push_2D_Hist_' + str(trials_only) + '.png'), dpi=300)
+
+plt.sca(axis2)
+plt.savefig(plot_dir / ('learn_to_push_2D_Contour_' + str(trials_only) + '.png'), dpi=300)
 
 # %% Rolling average of missed trials as session goes on (proxy of trial engagement)
 fig, axes = plt.subplots()
@@ -802,77 +810,6 @@ axes.set_title('Ratio of missed trials across sessions')
 axes.set_xlabel('Trial #')
 axes.set_ylabel('Missed trials rolling average')
 
-# %% Get Fx and Fy forces for all sessons in a 2D histogram and a contour plot
-trials_only = True
-
-Fx,Fy = np.empty(0),np.empty(0)
-for path in tqdm(paths):
-
-    if not os.path.isfile(path / "loadcell_data.csv"):
-        LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
-        arduino_sync = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT")
-
-        t_harp = pd.read_csv(log_path.parent / "harp_sync.csv")['t'].values
-        t_arduino = pd.read_csv(log_path.parent / "arduino_sync.csv")['t'].values
-
-        if t_harp.shape != t_arduino.shape:
-            t_arduino, t_harp = bhv.cut_timestamps(t_arduino, t_harp, verbose = True)
-
-        m, b = bhv.sync_clocks(t_harp, t_arduino, log_path)
-    else:
-        LoadCellDf = pd.read_csv(path / "loadcell_data.csv")
-
-    LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
-    LogDf = LogDf.loc[LogDf['t'] < LoadCellDf.iloc[-1]['t']]
-
-    # median correction
-    samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
-    LoadCellDf['x'] = LoadCellDf['x'] - LoadCellDf['x'].rolling(samples).median()
-    LoadCellDf['y'] = LoadCellDf['y'] - LoadCellDf['y'].rolling(samples).median()
-
-
-    if trials_only == True:
-        TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
-
-        for i, row in TrialSpans.iterrows():
-            F = bhv.time_slice(LoadCellDf, row['t_on'], row['t_off'])
-            Fx = np.concatenate((Fx, F['x'].values))
-            Fy = np.concatenate((Fy, F['y'].values))
-    else:
-        Fx = np.concatenate((Fx, LoadCellDf['x'].values))
-        Fy = np.concatenate((Fy, LoadCellDf['y'].values))
-
-# Downsample from 1Khz to 10Hz in order to be computationally feasible
-Fx_downsamp = Fx[1::1000] 
-Fy_downsamp = Fy[1::1000]
-
-Fx_downsamp = Fx_downsamp[~np.isnan(Fx_downsamp)]
-Fy_downsamp = Fy_downsamp[~np.isnan(Fy_downsamp)]
-
-##  2D histogram ##
-threshold = 3000
-n_ticks = (threshold*2)/1000
-data,_,_,_ = plt.hist2d(x=Fx_downsamp, y=Fy_downsamp, bins = 1000, range = [[-threshold,threshold],[-threshold,threshold]])
-fig, axes = plt.subplots()
-data[data > np.percentile(data,99.5)] = 0
-axes.matshow(data, cmap=plt.get_cmap('Reds'))
-
-# Formatting
-axes.xaxis.set_ticks_position('bottom')
-axes.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
-plt.title('2D Histogram of forces across sessions for' + '\n' + str(animal_id)+ " - " + str(nickname))
-plt.setp(axes, xticks=np.arange(0, 1001, 1000/n_ticks), xticklabels=np.arange(-threshold, threshold+1, 1000))
-plt.setp(axes, yticks=np.arange(0, 1001, 1000/n_ticks), yticklabels=np.arange(threshold, -threshold-1, -1000))
-
-## Contour levels ##
-fig, axes = plt.subplots(figsize=(5, 4))
-sns.kdeplot(x=Fx_downsamp, y=Fy_downsamp, levels= [0.05,0.1,0.2,0.3,0.4,0.5], cmap = "plasma", fill = True)
-axes.set_xlim([-threshold, threshold])
-axes.set_ylim([-threshold, threshold])
-axes.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
-fig.tight_layout()
-
-plt.savefig(plot_dir / ('learn_to_push_2D_Hist_' + str(trials_only) + '.png'), dpi=300)
 
 
 
@@ -921,7 +858,7 @@ for i, (animal_tag,animal_fd_path) in enumerate(zip(animal_tags,animals_fd_path)
         LogDf = bhv.filter_bad_licks(LogDf)
         LogDfs.append(LogDf)
     
-    for LogDf in tqdm(LogDfs):
+    for LogDf in tqdm(LogDfs,position=0, leave=True):
         
         TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_AVAILABLE_STATE", "ITI_STATE")
         if TrialSpans.empty:

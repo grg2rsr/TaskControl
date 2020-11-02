@@ -461,7 +461,7 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
             continue
 
         # Go trough each row and get forces
-        for _, row in tqdm(SDf.iterrows()):
+        for _, row in tqdm(SDf.iterrows(),position=0, leave=True):
             TrialDf = TrialDfs[row.name]
                 
             time_1st = float(TrialDf[TrialDf.name == first_cue_ref]['t'])
@@ -773,56 +773,48 @@ def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None):
 
     return axes
 
-def split_forces_magnitude(SessionDf, LoadCellDf, align_event, pre, post, choice_dur, split_by = None, axes=None):
+def split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, post, split_by, axes=None):
     """ 
         Force magnitude split by any input as long as a metric in SessionDf contemplates it
     """
 
-    #TO DO: adapt the code Georg has for obtaining forces from SessionDf to this case in which we can
-    # obtain a super general function based on the metrics and SessionDf previously established
-    # Also learn how to parse "variable inputs" to a function such that when inputs are not given it just
-    # assumes a default 
+    if axes==None:
+        fig , axes = plt.subplots(2,1)
+
     if split_by != None:
         outcomes = SessionDf[split_by].unique() # get possible outcomes of given split criteria
+        outcomes = [x for x in outcomes if str(x) != 'nan']
 
-        SDf = SessionDf.groupby([split_by]).get_group(outcomes)
+    for outcome in tqdm(outcomes,position=0, leave=True):
+        SDf = SessionDf.groupby([split_by]).get_group(outcome)
 
-    licks, ys = [],[]
+        Fx = []
+        Fy = []
+        for _, row in SDf.iterrows():
+            TrialDf = TrialDfs[row.name]
+            t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
 
-    if axes==None:
-        fig , axes = plt.subplots()
+            LCDf = bhv.time_slice(LoadCellDf, t_align-pre, t_align+post)
+            Fx.append(LCDf['x'].values)
+            Fy.append(LCDf['y'].values)
 
-    twin_ax = axes.twinx()
+        Fx = np.array(Fx)
+        Fy = np.array(Fy)
 
-    for TrialDf in TrialDfs:
+        # Compute mean force for each outcome aligned to event       
+        Fmagx = bhv.tolerant_mean(Fx)
+        Fmagy = bhv.tolerant_mean(Fy)
+        axes[0].plot(np.arange(len(Fmagx))+1, Fmagx, label = outcome)
+        axes[1].plot(np.arange(len(Fmagy))+1, Fmagy, label = outcome)  
 
-        if align_event in TrialDf.name.values:
-            time = float(TrialDf[TrialDf.name == align_event]['t'])
+    axes[0].set_ylabel('Left/Right axis')
+    axes[1].set_ylabel('Back/Front axis')
+    plt.setp(axes, xticks=np.arange(0, post + pre+1, 500), xticklabels=np.arange(-pre/1000, post/1000+0.1, 0.5))
+    plt.suptitle("Forces split by" + str(split_by) + "for separate Fx/Fy axis")
 
-            # Aligned to second cue
-            F = bhv.time_slice(LoadCellDf, time-pre, time+post)
-            y = np.sqrt(F['x']**2+F['y']**2)
-            ys.append(y)
-            
-            try:
-                licks.append(bhv.get_licks(LogDf, time-pre, time+post))
-            except:
-                pass
+    fig.tight_layout()
 
-    # Compute mean force for each outcome aligned to second        
-    Fmag = bhv.tolerant_mean(np.array(ys))
-    axes.plot(np.arange(len(Fmag))+1, Fmag, color = "k") 
-
-    # Get lick histogram
-    if not licks:
-        pass
-    else:
-        no_bins = round((choice_dur)/bin_width)
-        counts, bins = np.histogram(np.concatenate(licks),no_bins)
-        licks_freq = np.divide(counts, ((bin_width/1000)*len(ys)))
-        twin_ax.step(bins[1:], licks_freq, alpha=0.5)
-
-    return axes, twin_ax
+    return axes
 
 """
  
@@ -836,7 +828,7 @@ def split_forces_magnitude(SessionDf, LoadCellDf, align_event, pre, post, choice
  
 """
 
-def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
+def plot_sessions_overview(LogDfs, paths, task_name, animal_id, axes = None):
     " Plots trials performed together with every trial outcome plus sucess rate and weight across sessions"
 
     if axes is None:
@@ -848,7 +840,6 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
     trials_missed = []
     trials_premature = []
     weight = []
-    engagement = []
     date = []
 
     # Obtaining number of trials of X
@@ -899,19 +890,6 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
         except:
             weight.append(None)
 
-        # # Engagement
-        # TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
-
-        # TrialDfs = []
-        # for i, row in TrialSpans.iterrows():
-        #     TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
-
-        # SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.get_outcome))
-        # try:
-        #     engagement.append(bhv.trial_engagement(SessionDf))
-        # except:
-        #     engagement.append(None)
-
     sucess_rate = np.multiply(np.divide(trials_correct,trials_performed),100)
 
     # Subplot 1
@@ -925,13 +903,13 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
     axes[0].set_xlabel('Session number')
     axes[0].legend(loc='upper left', frameon=False) 
 
-    fig.suptitle('Sessions overview in ' + task_name + ' for mouse ' + animal_tag)
-    plt.setp(axes[0], xticks=np.arange(0, len(date), 1), xticklabels=date, rotation = 45)
+    fig.suptitle('Sessions overview in ' + task_name + ' for mouse ' + animal_id)
+    plt.setp(axes[0], xticks=np.arange(0, len(date), 1), xticklabels=date)
+    plt.xticks(rotation=45)
     plt.setp(axes[0], yticks=np.arange(0, max(trials_performed), 1), yticklabels=np.arange(0,  max(trials_performed), 1))
       
     # Two sided axes Subplot 2
     axes[1].plot(sucess_rate, color = 'green', label = 'Sucess rate')
-    # axes[1].plot(engagement, color = 'm', label = 'Session engagement')
     axes[1].legend(loc='upper left', frameon=False) 
     axes[1].set_ylabel('a.u. (%)')
     plt.setp(axes[1], yticks=np.arange(0,100,10), yticklabels=np.arange(0,100,10))
@@ -1006,7 +984,7 @@ def x_y_tresh_bias_across_sessions(LogDfs, axes = None):
     axes.set_xticks(np.arange(len(LogDfs)))
     axes.set_xticklabels(np.arange(len(LogDfs))) 
 
-    if bias:
+    if bias.any():
         twin_ax = axes.twinx()
         twin_ax.plot(bias, color = 'g', alpha = 0.5)
         twin_ax.set_ylabel('Bias', color = 'g')
@@ -1017,7 +995,7 @@ def x_y_tresh_bias_across_sessions(LogDfs, axes = None):
 
     return axes
 
-def choice_rt_across_sessions(LogDfs, bin_width, animal_tag, choice_interval, percentile, axes = None):
+def choice_rt_across_sessions(LogDfs, bin_width, choice_interval, percentile, animal_id, axes = None):
 
     if axes == None:
         fig, axes = plt.subplots()
@@ -1029,7 +1007,7 @@ def choice_rt_across_sessions(LogDfs, bin_width, animal_tag, choice_interval, pe
         TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
 
         TrialDfs = []
-        for j, row in tqdm(TrialSpans.iterrows()):
+        for j, row in tqdm(TrialSpans.iterrows(),position=0, leave=True):
             TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
 
         choice_rt = np.empty(0)
@@ -1050,4 +1028,77 @@ def choice_rt_across_sessions(LogDfs, bin_width, animal_tag, choice_interval, pe
     plt.legend(frameon=False)
     axes.set_ylabel('Prob (%)')
     axes.set_xlabel('Time (s)')
-    fig.suptitle(animal_tag + '\nChoice RT distribution with' + str(percentile)+ 'th percentile', fontsize='small')
+    fig.suptitle('Choice RT distribution with' + str(percentile)+ 'th percentile' + "\n" + str(animal_id), fontsize='small')
+
+def force_2D_hist_contour_across_sessions(paths, thresh, task_name, animal_id, nickname, trials_only = False):
+
+    Fx,Fy = np.empty(0),np.empty(0)
+    for path in tqdm(paths,position=0, leave=True):
+        
+        if not os.path.isfile(path / "loadcell_data.csv"):
+            log_path = path.joinpath('arduino_log.txt')
+
+            LoadCellDf, harp_sync = bhv.parse_harp_csv(path / "bonsai_harp_log.csv", save=True)
+            arduino_sync = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT")
+
+            t_harp = pd.read_csv(path / "harp_sync.csv")['t'].values
+            t_arduino = pd.read_csv(path / "arduino_sync.csv")['t'].values
+
+            if t_harp.shape != t_arduino.shape:
+                t_arduino, t_harp = bhv.cut_timestamps(t_arduino, t_harp, verbose = True)
+
+            m, b = bhv.sync_clocks(t_harp, t_arduino, log_path)
+        else:
+            LoadCellDf = pd.read_csv(path / "loadcell_data.csv")
+
+        LogDf = pd.read_csv(path / "LogDf.csv")
+        LogDf = LogDf.loc[LogDf['t'] < LoadCellDf.iloc[-1]['t']]
+
+        # median correction
+        samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
+        LoadCellDf['x'] = LoadCellDf['x'] - LoadCellDf['x'].rolling(samples).median()
+        LoadCellDf['y'] = LoadCellDf['y'] - LoadCellDf['y'].rolling(samples).median()
+
+        if trials_only == True:
+            TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+
+            for i, row in TrialSpans.iterrows():
+                F = bhv.time_slice(LoadCellDf, row['t_on'], row['t_off'])
+                Fx = np.concatenate((Fx, F['x'].values))
+                Fy = np.concatenate((Fy, F['y'].values))
+        else:
+            Fx = np.concatenate((Fx, LoadCellDf['x'].values))
+            Fy = np.concatenate((Fy, LoadCellDf['y'].values))
+
+    # Downsample from 1Khz to 10Hz in order to be computationally feasible
+    Fx_downsamp = Fx[1::1000] 
+    Fy_downsamp = Fy[1::1000]
+    Fx_downsamp = Fx_downsamp[~np.isnan(Fx_downsamp)]
+    Fy_downsamp = Fy_downsamp[~np.isnan(Fy_downsamp)]
+
+    ##  2D histogram ##
+    n_ticks = (thresh*2)/1000
+    data,_,_ = np.histogram2d(x=Fx_downsamp, y=Fy_downsamp, bins = 1000, range = [[-thresh,thresh],[-thresh,thresh]])
+    fig, axis1 = plt.subplots()
+    data[data > np.percentile(data,99.5)] = 0
+    axis1.matshow(data, cmap=plt.get_cmap('Reds'))
+
+    # Formatting
+    axis1.xaxis.set_ticks_position('bottom')
+    axis1.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
+    plt.title('2D Histogram of forces across sessions for' + '\n' + str(animal_id)+ " - " + str(nickname))
+    plt.setp(axis1, xticks=np.arange(0, 1001, 1000/n_ticks), xticklabels=np.arange(-thresh, thresh+1, 1000))
+    plt.setp(axis1, yticks=np.arange(0, 1001, 1000/n_ticks), yticklabels=np.arange(thresh, -thresh-1, -1000))
+    
+    
+    ## Contour levels ##
+    fig, axis2 = plt.subplots(figsize=(5, 4))
+    sns.kdeplot(x=Fx_downsamp, y=Fy_downsamp, levels= [0.05,0.1,0.2,0.3,0.4,0.5], cmap = "plasma")
+    plt.title('Contor levels representing 5%-50% prob mass of forces across sessions' + '\n' + str(animal_id)+ " - " + str(nickname))
+    axis2.set_xlim([-thresh, thresh])
+    axis2.set_ylim([-thresh, thresh])
+    axis2.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
+    fig.tight_layout()
+    
+
+    return axis1, axis2
