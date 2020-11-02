@@ -926,7 +926,7 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_tag, axes = None):
     axes[0].legend(loc='upper left', frameon=False) 
 
     fig.suptitle('Sessions overview in ' + task_name + ' for mouse ' + animal_tag)
-    plt.setp(axes[0], xticks=np.arange(0, len(date), 1), xticklabels=date)
+    plt.setp(axes[0], xticks=np.arange(0, len(date), 1), xticklabels=date, rotation = 45)
     plt.setp(axes[0], yticks=np.arange(0, max(trials_performed), 1), yticklabels=np.arange(0,  max(trials_performed), 1))
       
     # Two sided axes Subplot 2
@@ -999,7 +999,7 @@ def x_y_tresh_bias_across_sessions(LogDfs, axes = None):
     axes.plot(np.arange(len(LogDfs)), x_thresh, color = 'C0', label = 'X thresh')
     axes.plot(np.arange(len(LogDfs)), y_thresh, color = 'm', label = 'Y thresh')
 
-    axes.set_ylim([1000,2500])
+    axes.set_ylim([1000,3000])
     axes.set_ylabel('Force (a.u.)')
     axes.set_title('Mean X/Y thresh forces and bias across sessions')
     axes.legend(frameon=False)

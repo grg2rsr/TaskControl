@@ -745,8 +745,6 @@ PushSessionsDf = pd.concat([SessionsDf.groupby('task').get_group(name) for name 
 
 paths = [Path(path) for path in PushSessionsDf['path']]
 
-
-
 LogDfs = []
 for path in tqdm(paths):
     log_path = path / 'arduino_log.txt'
@@ -760,7 +758,7 @@ colors = sns.color_palette(palette='turbo',n_colors=len(LogDfs))
 " GENERAL FUNCTIONS"
 
 # Sessions overview
-plot_sessions_overview(LogDfs, paths, task_name, animal_id)
+plot_sessions_overview(LogDfs, paths, task_name[0], animal_id)
 plt.savefig(plot_dir / 'learn_to_push_overview.png', dpi=300)
 
 #  Reward collection across sessions
@@ -804,8 +802,8 @@ axes.set_title('Ratio of missed trials across sessions')
 axes.set_xlabel('Trial #')
 axes.set_ylabel('Missed trials rolling average')
 
-# %% Get Fx and Fy forces for all sessons 
-trials_only = False
+# %% Get Fx and Fy forces for all sessons in a 2D histogram and a contour plot
+trials_only = True
 
 Fx,Fy = np.empty(0),np.empty(0)
 for path in tqdm(paths):
@@ -851,17 +849,28 @@ Fy_downsamp = Fy[1::1000]
 Fx_downsamp = Fx_downsamp[~np.isnan(Fx_downsamp)]
 Fy_downsamp = Fy_downsamp[~np.isnan(Fy_downsamp)]
 
-# 2D histogram
-fig, axes = plt.subplots(figsize=(5, 4))
-data,_,_,_ = plt.hist2d(x=Fx_downsamp, y=Fy_downsamp, bins = 1000, range = [[-4000,4000],[-4000,4000]])
-data_clipepd = np.percentile(data,(5,95))
-axes.set_xlim([-4000,4000])
-axes.set_ylim([-4000,4000])
+##  2D histogram ##
+threshold = 3000
+n_ticks = (threshold*2)/1000
+data,_,_,_ = plt.hist2d(x=Fx_downsamp, y=Fy_downsamp, bins = 1000, range = [[-threshold,threshold],[-threshold,threshold]])
+fig, axes = plt.subplots()
+data[data > np.percentile(data,99.5)] = 0
+axes.matshow(data, cmap=plt.get_cmap('Reds'))
+
+# Formatting
+axes.xaxis.set_ticks_position('bottom')
 axes.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
-plt.colorbar(ax=axes, orientation='horizontal', aspect = 30)
+plt.title('2D Histogram of forces across sessions for' + '\n' + str(animal_id)+ " - " + str(nickname))
+plt.setp(axes, xticks=np.arange(0, 1001, 1000/n_ticks), xticklabels=np.arange(-threshold, threshold+1, 1000))
+plt.setp(axes, yticks=np.arange(0, 1001, 1000/n_ticks), yticklabels=np.arange(threshold, -threshold-1, -1000))
+
+## Contour levels ##
+fig, axes = plt.subplots(figsize=(5, 4))
+sns.kdeplot(x=Fx_downsamp, y=Fy_downsamp, levels= [0.05,0.1,0.2,0.3,0.4,0.5], cmap = "plasma", fill = True)
+axes.set_xlim([-threshold, threshold])
+axes.set_ylim([-threshold, threshold])
+axes.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
 fig.tight_layout()
-
-
 
 plt.savefig(plot_dir / ('learn_to_push_2D_Hist_' + str(trials_only) + '.png'), dpi=300)
 
