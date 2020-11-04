@@ -252,7 +252,7 @@ void finite_state_machine() {
             // exit condition
             if (now() - state_entry > reward_available_dur) {
                 // transit to ITI after certain time
-                current_state = ITI_STATE;
+                current_state = TIMEOUT_STATE;
                 break; // not necessary
             }
             break; 
@@ -281,6 +281,24 @@ void finite_state_machine() {
                     current_state = NO_REWARD_AVAILABLE_STATE;
                     break;
                 }
+            }
+            break;
+
+        case TIMEOUT_STATE:
+            // state entry
+            if (current_state != last_state){
+                state_entry_common();
+            }
+
+            // update
+            if (last_state == current_state){
+
+            }
+
+            // exit condition
+            if (now() - state_entry > timeout_dur) {
+                current_state = ITI_STATE;
+                break;
             }
             break;
     }

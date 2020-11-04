@@ -12,6 +12,7 @@ const unsigned int INI_STATE = 0;
 const unsigned int REWARD_AVAILABLE_STATE = 1;
 const unsigned int NO_REWARD_AVAILABLE_STATE = 2;
 const unsigned int ITI_STATE = 3;
+const unsigned int TIMEOUT_STATE = 4;
 
 // SPANS
 const unsigned int LICK_ON = 10;
