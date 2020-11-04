@@ -7,3 +7,4 @@ unsigned long reward_available_dur = 1000;
 float p_reward = 0.9;
 float p_rewarded_cue = 0.75;
 unsigned long t_lick_block = 4000;
+unsigned long timeout_dur = 5000;
