@@ -65,9 +65,9 @@ fig, axes = plt.subplots()
 axes.plot(SessionsDf.index.values,SessionsDf.weight_frac,'o')
 axes.set_xticks(SessionsDf.index.values)
 axes.set_xticklabels(SessionsDf['date'].values,rotation=90)
-line_kwargs = dict(lw=1,linestyle=':',alpha=0.75,color='k')
-axes.axhline(0.85,**line_kwargs)
-axes.axhline(0.75,lw=1,linestyle=':',alpha=0.75,color='r')
+line_kwargs = dict(lw=1,linestyle=':',alpha=0.75)
+axes.axhline(0.85, color='g', **line_kwargs)
+axes.axhline(0.80, color='r', **line_kwargs)
 axes.set_ylim(0.5,1)
 axes.set_title('weight')
 axes.set_xlabel('session date')
@@ -199,6 +199,9 @@ plt.setp(axes, yticks=np.arange(0, np.max(rew_rate), 5), yticklabels=np.arange(0
 
 # %% Preprocessing: LC syncing
 log_path = utils.get_file_dialog()
+
+animal_meta = pd.read_csv(log_path.parent.parent / 'animal_meta.csv')
+animal_id = animal_meta[animal_meta['name'] == 'ID']['value'].values[0]
 
 plot_dir = log_path.parent / 'plots'
 os.makedirs(plot_dir, exist_ok=True)
@@ -384,7 +387,7 @@ first_cue_ref = "TRIAL_ENTRY_EVENT"
 
 plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, align_event, bin_width, axes=None)
 
-# %% Response Forces aligned to anything split by input aligned to anything
+# %% Response Forces aligned to anything split by any input 
 split_by = 'choice' 
 align_event = "CHOICE_EVENT"
 pre, post, thresh = 500,2000,4000
@@ -776,7 +779,7 @@ plt.savefig(plot_dir / 'learn_to_push_choice_rt_distro.png', dpi=300)
 # Get Fx and Fy forces for all sessons in a 2D histogram and a contour plot
 trials_only = False
 thresh = 4000
-axis1, axis2 = force_2D_hist_contour_across_sessions(paths, thresh, task_name[0], animal_id, nickname, trials_only)
+axis1, axis2 = force_2D_hist_contour_across_sessions(paths, thresh, task_name[0], animal_id, trials_only)
 
 plt.sca(axis1)
 plt.savefig(plot_dir / ('learn_to_push_2D_Hist_' + str(trials_only) + '.png'), dpi=300)
@@ -876,6 +879,7 @@ for i, (animal_tag,animal_fd_path) in enumerate(zip(animal_tags,animals_fd_path)
             except:
                 t_go_cue = TrialDf.groupby('name').get_group("GO_CUE_EVENT").iloc[-1]['t'] # this may break for final learn to time
             
+            # Workaround for LogDf on old learn_to_push not logging choices correctly
             if "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
                 t_choice = TrialDf.groupby('name').get_group("CHOICE_RIGHT_EVENT").iloc[-1]['t']
                 choice_rt = np.append(choice_rt, t_choice-t_go_cue)

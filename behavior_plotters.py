@@ -7,7 +7,6 @@ from matplotlib import cm
 from matplotlib import patches
 
 from sklearn.linear_model import LogisticRegression
-from scipy.special import expit
 
 import behavior_analysis_utils as bhv
 import pandas as pd
@@ -578,13 +577,13 @@ def plot_choice_matrix(SessionDf, LogDf, trial_type, axes=None):
 
     return axes
 
-def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, trial_outcome, axes=None):
-    """ Plots trajectories in 2D aligned to any TWO events"""
+def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, trial_outcome, animal_id, axes=None):
+    """ Plots trajectories in 2D aligned to an event for specific trial outcome"""
 
     if axes==None:
-        _ , axes = plt.subplots()
+        fig , axes = plt.subplots()
 
-    pre,post = 0, 1000
+    pre,post = -500, 500
 
     F = []; idx_left, idx_right = [],[]; i = 0
 
@@ -592,7 +591,7 @@ def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, trial_outco
     for TrialDf in TrialDfs:
 
         if bhv.get_outcome(TrialDf).values[0] == trial_outcome:
-            t = float(TrialDf[TrialDf.name == 'SECOND_TIMING_CUE_EVENT']['t'])
+            t = float(TrialDf[TrialDf.name == align_ref]['t'])
             f = bhv.time_slice(LoadCellDf,t+pre,t+post)
             F.append([f['x'], f['y']])
 
@@ -622,21 +621,22 @@ def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, trial_outco
     if trial_outcome == 'correct':
         F_left_mean = np.mean(F[idx_left],0).T
         F_right_mean = np.mean(F[idx_right],0).T
-        scatter = plt.scatter(F_left_mean[:, 0], F_left_mean[:, 1], c=z, cmap= cm0, s = 4, label = 'left correct')
-        scatter = plt.scatter(F_right_mean[:, 0], F_right_mean[:, 1], c=z, cmap= cm1, s = 4, label = 'right correct')
+        scatter = plt.scatter(F_left_mean[:, 0], F_left_mean[:, 1], c=z, cmap= cm0, s = 4, label = 'left')
+        scatter = plt.scatter(F_right_mean[:, 0], F_right_mean[:, 1], c=z, cmap= cm1, s = 4, label = 'right')
     else:
         F_mean = np.mean(F,0).T
         scatter = plt.scatter(F_mean[:, 0], F_mean[:, 1], c=z, cmap= cm, s = 4, label = trial_outcome)
 
     plt.clim(-0.3, 1)
-    #cbar = plt.colorbar(scatter, orientation='vertical', aspect=60)
-    #cbar.set_ticks([-0.3, 1]); cbar.set_ticklabels(['0s', str(post//1000) + 's'])
+    cbar = plt.colorbar(scatter, orientation='vertical', aspect=60)
+    cbar.set_ticks([-0.3, 1]); cbar.set_ticklabels([str(pre/1000) + 's', str(post/1000) + 's'])
 
     # Formatting
     axes.axvline(0 ,linestyle=':',alpha=0.5,lw=1,color='k')
     axes.axhline(0 ,linestyle=':',alpha=0.5,lw=1,color='k')
-    axes.set_xlabel('L/R axis')
-    axes.set_title(' Mean 2D traj. align. to 2nd cue')
+    axes.set_xlabel('Left/Right axis')
+    axes.set_ylabel('Front/Back axis')
+    axes.set_title(' Mean 2D trajectories aligned to ' + str(align_ref) + '\n on ' + str(trial_outcome) + ' trials for ' + str(animal_id))
     axes.legend(frameon=False, markerscale = 3)
 
     leg = axes.get_legend()
@@ -644,19 +644,30 @@ def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, trial_outco
     if trial_outcome == 'correct': # also plot the right side 
         leg.legendHandles[1].set_color('green')
 
-    axes.set_xlim([-2500,2500])
-    axes.set_ylim([-2500,2500])
+    axes.set_xlim([-3500,3500])
+    axes.set_ylim([-3500,3500])
     [s.set_visible(False) for s in axes.spines.values()]
 
     # Bounding box
-    Y_thresh = LogDf[LogDf['var'] == 'Y_thresh'].value.values[-1]
-    X_thresh = LogDf[LogDf['var'] == 'X_thresh'].value.values[-1]
-    axes.add_patch(patches.Rectangle((-X_thresh,-Y_thresh), 2*X_thresh, 2*Y_thresh,fill=False)) 
+    Y_thresh = np.mean(LogDf[LogDf['var'] == 'Y_thresh'].value.values)
+    X_thresh = np.mean(LogDf[LogDf['var'] == 'X_thresh'].value.values)
+
+    if np.isnan(X_thresh):
+        X_thresh = 2500
+        print('No Y_tresh update on LogDf, using default for analysis')
+    if np.isnan(Y_thresh):   
+        Y_thresh = 2500
+        print('No Y_tresh update on LogDf, using default for analysis')
+        
+    axes.add_patch(patches.Rectangle((-X_thresh,-Y_thresh), 2*X_thresh, 2*Y_thresh,fill=False))
+
+    if fig:
+        fig.tight_layout() 
 
     return axes
 
 
-" Currently not used on learn to time daily GUI / not implemented "
+" Currently not used on learn to time daily GUI"
 
 def x_y_threshold_across_time(LogDf, axes=None):
     "X/Y threshold across time for a single session"
@@ -1030,7 +1041,7 @@ def choice_rt_across_sessions(LogDfs, bin_width, choice_interval, percentile, an
     axes.set_xlabel('Time (s)')
     fig.suptitle('Choice RT distribution with' + str(percentile)+ 'th percentile' + "\n" + str(animal_id), fontsize='small')
 
-def force_2D_hist_contour_across_sessions(paths, thresh, task_name, animal_id, nickname, trials_only = False):
+def force_2D_hist_contour_across_sessions(paths, thresh, task_name, animal_id, trials_only = False):
 
     Fx,Fy = np.empty(0),np.empty(0)
     for path in tqdm(paths,position=0, leave=True):
@@ -1071,33 +1082,40 @@ def force_2D_hist_contour_across_sessions(paths, thresh, task_name, animal_id, n
             Fy = np.concatenate((Fy, LoadCellDf['y'].values))
 
     # Downsample from 1Khz to 10Hz in order to be computationally feasible
-    Fx_downsamp = Fx[1::1000] 
-    Fy_downsamp = Fy[1::1000]
+    Fx_downsamp = Fx
+    Fy_downsamp = Fy
     Fx_downsamp = Fx_downsamp[~np.isnan(Fx_downsamp)]
     Fy_downsamp = Fy_downsamp[~np.isnan(Fy_downsamp)]
 
     ##  2D histogram ##
-    n_ticks = (thresh*2)/1000
-    data,_,_ = np.histogram2d(x=Fx_downsamp, y=Fy_downsamp, bins = 1000, range = [[-thresh,thresh],[-thresh,thresh]])
+    no_bins = 100
+    data,_,_ = np.histogram2d(x=Fx_downsamp, y=Fy_downsamp, density = True, bins = 100, range = [[-thresh,thresh],[-thresh,thresh]])
     fig, axis1 = plt.subplots()
-    data[data > np.percentile(data,99.5)] = 0
-    axis1.matshow(data, cmap=plt.get_cmap('Reds'))
+    axis1.matshow(np.log10(data), cmap=plt.get_cmap('Wistia'))
 
     # Formatting
     axis1.xaxis.set_ticks_position('bottom')
     axis1.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
-    plt.title('2D Histogram of forces across sessions for' + '\n' + str(animal_id)+ " - " + str(nickname))
-    plt.setp(axis1, xticks=np.arange(0, 1001, 1000/n_ticks), xticklabels=np.arange(-thresh, thresh+1, 1000))
-    plt.setp(axis1, yticks=np.arange(0, 1001, 1000/n_ticks), yticklabels=np.arange(thresh, -thresh-1, -1000))
-    
+    plt.title('PDF of forces across sessions for' + '\n' + str(animal_id))
+
     
     ## Contour levels ##
+    perc = [50,70,90,95]
+    perc_values= [np.percentile(data,p) for p in perc]
     fig, axis2 = plt.subplots(figsize=(5, 4))
-    sns.kdeplot(x=Fx_downsamp, y=Fy_downsamp, levels= [0.05,0.1,0.2,0.3,0.4,0.5], cmap = "plasma")
-    plt.title('Contor levels representing 5%-50% prob mass of forces across sessions' + '\n' + str(animal_id)+ " - " + str(nickname))
-    axis2.set_xlim([-thresh, thresh])
-    axis2.set_ylim([-thresh, thresh])
+    CS = axis2.contour(data, levels = perc_values)
+    
+    fmt = {}
+    strs = [str(p) + '%' for p in perc]
+    for l, s in zip(CS.levels, strs):
+        fmt[l] = s
+
+    # Label every other level using strings
+    axis2.clabel(CS, CS.levels, inline=True, fmt=fmt, fontsize=8)
     axis2.set(xlabel = 'Left/Right axis', ylabel ='Front/Back axis')
+    plt.setp(axis2, xticks=np.arange(0, no_bins + 1, no_bins//8), xticklabels=np.arange(-thresh, thresh+1, thresh*2//8))
+    plt.setp(axis2, yticks=np.arange(0, no_bins + 1, no_bins//8), yticklabels=np.arange(thresh, -thresh-1, -thresh*2//8))
+    plt.title('Contour levels of PDF of forces across sessions for' + '\n' + str(animal_id))
     fig.tight_layout()
     
 
