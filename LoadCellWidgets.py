@@ -308,8 +308,12 @@ class LoadCellMonitor(QtWidgets.QWidget):
         self.lim_lines = {}
         self.lim_lines['right'] = pg.InfiniteLine(pos=2500, pen=pen)
         self.lim_lines['left'] = pg.InfiniteLine(pos=-2500, pen=pen)
-        self.lim_lines['front'] = pg.InfiniteLine(pos=5000, pen=pen, angle=0)
-        self.lim_lines['back'] = pg.InfiniteLine(pos=-5000, pen=pen, angle=0)
+
+        # fix box
+        self.fix_box_line = self.PlotItem.plot(x=[1000,-1000,-1000,1000,1000], y=[1000,1000,-1000,-1000,1000],pen=pen)
+
+        # self.lim_lines['front'] = pg.InfiniteLine(pos=5000, pen=pen, angle=0)
+        # self.lim_lines['back'] = pg.InfiniteLine(pos=-5000, pen=pen, angle=0)
 
         for k, v in self.lim_lines.items():
             self.PlotItem.addItem(v)
@@ -340,13 +344,19 @@ class LoadCellMonitor(QtWidgets.QWidget):
         """ listens to the arduino, updates variable line """
 
         if line.startswith('<VAR'):
-            _, name, value, t = line[1:-1].split(' ')
+            name = line[1:-1].split(' ')[1]
+            value = line[1:-1].split(' ')[2]
             if name == "X_thresh":
                 self.lim_lines['left'].setValue(-float(value))
                 self.lim_lines['right'].setValue(float(value))
-            if name == "Y_thresh":
-                self.lim_lines['back'].setValue(-float(value))
-                self.lim_lines['front'].setValue(float(value))
+            if name == "XY_fix_box":
+                v = float(value)
+                x = [v,-v,-v,v,v]
+                y = [v,v,-v,-v,v]
+                self.fix_box_line.setData(x,y)
+            # if name == "Y_thresh":
+            #     self.lim_lines['back'].setValue(-float(value))
+            #     self.lim_lines['front'].setValue(float(value))
         pass
 
 

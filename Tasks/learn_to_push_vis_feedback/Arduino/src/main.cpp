@@ -23,42 +23,23 @@ int last_state = -1; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long state_entry = max_future;
 unsigned long this_ITI_dur;
-
-// flow control flags
-bool lick_in = false;
-// int succ_trial_counter = 0;
-// int n_streak = 3;
-// bool forced_alternating = true;
-
-// speaker
-Tone tone_controller;
-unsigned long tone_duration = 100;
+float r; // for random
 
 // loadcell binning
 int current_zone;
 int last_zone;
 
-int left_back = 1;
-int back = 2;
-int right_back = 3;
 int left = 4;
 int center = 5;
 int right = 6;
-int left_front = 7;
-int front = 8;
-int right_front = 9;
 
+Tone buzz_controller;
 int choice;
 int correct_zone;
 
 // laterality related
 String last_correct_side = "left";
 String this_correct_side = "right";
-
-// buzzer related
-Tone buzz_controller;
-unsigned long buzz_duration = 10;
-unsigned long choice_buzz_duration = 50;
 
 // bias related
 // float bias = 0.5; // exposed in interface_variables.h
@@ -71,20 +52,17 @@ void update_bias(){
 }
 
 // probabilistic reward related
+// int omit_rewards = 1; // controls reward omission or magnitude manipulation
 float p_reward_left = 1.0;
 float p_reward_right = 1.0;
-
-// // probabilistic reward related
-// float p_reward_left = 0.5;
-// float p_reward_right = 0.5;
 float this_p_reward = p_reward_left;
+unsigned long reward_magnitude_full = reward_magnitude;
 
-// void update_p_reward(){
-//     // p_reward_right = 1 - bias + bias_corr_fac;
-//     // p_reward_left = 1 - p_reward_right + bias_corr_fac;
-//     float p_reward_left = 1.0;
-//     float p_reward_right = 1.0;
-// }
+void update_p_reward(){
+    float b = (bias*2)-1; // rescale to [-1,1]
+    p_reward_left = constrain(1.0 + b, 0, 1);
+    p_reward_right = constrain(1.0 - b, 0, 1);
+}
 
 /*
 ##        #######   ######    ######   #### ##    ##  ######
@@ -145,6 +123,7 @@ void send_sync_pulse(){
 ##    ## ##       ##   ### ##    ## ##     ## ##    ##  ##    ##
  ######  ######## ##    ##  ######   #######  ##     ##  ######
 */
+bool lick_in = false;
 
 void read_lick(){
   if (lick_in == false && digitalRead(LICK_PIN) == true){
@@ -158,51 +137,37 @@ void read_lick(){
 }
 
 unsigned long last_center_leave = 0;
-unsigned long last_zone_change = 0;
 unsigned long last_buzz = max_future;
 unsigned long debounce = 250;
 
+bool in_fix_box = false;
+unsigned long last_fix_box_entry = 0;
+
 void process_loadcell() {
 
-    // bin zones into 9 pad
-    if (X < (-1*X_thresh) && Y < (-1*Y_thresh)){
-        current_zone = left_back;
-    }
-
-    if (X > (-1*X_thresh) && X < X_thresh && Y < (-1*Y_thresh)){
-        current_zone = back;
-    }
-
-    if (X > X_thresh && Y < (-1*Y_thresh)){
-        current_zone = right_back;
-    }
-    
-    if (X < (-1*X_thresh) && Y > (-1*Y_thresh) && Y < Y_thresh){
+    // only regard left, center, right and fix box
+    if (X < -1*X_thresh){
         current_zone = left;
     }
-
-    if (X > (-1*X_thresh) && X < X_thresh && Y > (-1*Y_thresh) && Y < Y_thresh){
+    if (X > -1*X_thresh && X < X_thresh){
         current_zone = center;
     }
-
-    if (X > X_thresh && Y > (-1*Y_thresh) && Y < Y_thresh){
+    if (X > X_thresh){
         current_zone = right;
     }
 
-    if (X < (-1*X_thresh) && Y > Y_thresh){
-        current_zone = left_front;
+    // fix box
+    if (X > -1*XY_fix_box && X < XY_fix_box && Y > -1*XY_fix_box && Y < XY_fix_box){
+        if (in_fix_box == false){
+            in_fix_box = true;
+            last_fix_box_entry = now();
+        }
     }
-
-    if (X > (-1*X_thresh) && X < X_thresh &&  Y > Y_thresh){
-        current_zone = front;
-    }
-
-    if (X > X_thresh && Y > Y_thresh){
-        current_zone = right_front;
+    else{
+        in_fix_box = false;
     }
 
     if (current_zone != last_zone){
-        last_zone_change = now();
 
         log_var("current_zone", String(current_zone));
 
@@ -226,23 +191,6 @@ void process_loadcell() {
 ##       ##       ##     ##
 ##       ##       ##     ##
 ######## ######## ########
-*/
-/*
-current plan: 
-
-final
-center blink
-both targets come up
-
-training
-left or right target comes up
-
-center blink
-left or right comes up
-
-center blink
-contrast between targets drops
-
 */
 
 // LED strip related
@@ -336,6 +284,7 @@ float gaussian(float x, float mu, float sig){
 }
 
 float sigma = 1;
+float vis_coupling = 2;
 
 void update_led_cursor(){
     if (cursor_is_active == true){
@@ -358,7 +307,8 @@ void led_cursor_controller(){
     }
 }
 
-/*
+/* 
+// the computationally cheaper variant
 int last_cursor_pos = 0;
 void led_cursor_controller(){
     if (cursor_is_active == true){
@@ -400,6 +350,14 @@ void led_cursor_controller(){
 ##    ## ##     ## ##       ##    ##
  ######   #######  ########  ######
 */
+
+// speaker
+Tone tone_controller;
+unsigned long tone_duration = 100;
+
+// buzzer related
+unsigned long buzz_duration = 10;
+unsigned long choice_buzz_duration = 50;
 
 void go_cue(){ // future timing cue 2
     log_code(GO_CUE_EVENT);
@@ -511,13 +469,14 @@ void reward_valve_controller(){
    ##    ##     ## #### ##     ## ########       ##       ##    ##        ########
 */
 
+// bool correction_loops = true;
+// int correction_loops = 1;
 bool in_corr_loop = false;
-bool instructed_trial = false;
 unsigned long left_error_counter = 0;
 unsigned long right_error_counter = 0;
 unsigned long succ_trial_counter = 0;
+bool instructed_trial = false;
 bool corr_loop_reset_mode = true;
-
 /*
 resetting mode:
 within correction loop, any mistake restarts the counter from the beginning
@@ -526,23 +485,25 @@ no resetting: intermediate mistakes allowed, corr loop is exited after 3 correct
 
 void get_trial_type(){
     // determine if instructed trial
-    float r = random(0,1000) / 1000.0;
+    r = random(0,1000) / 1000.0;
     if (r < p_instructed_trial){
         instructed_trial = true;
     }
 
     // determine if enter corr loop
-    if (in_corr_loop == false && (left_error_counter >= corr_loop_entry || right_error_counter >= corr_loop_entry)){
-        in_corr_loop = true;
-    }
-    
-    // determine if exit corr loop
-    if (in_corr_loop == true && succ_trial_counter >= corr_loop_exit){
-        in_corr_loop = false;
+    if (correction_loops == 1){
+        if (in_corr_loop == false && (left_error_counter >= corr_loop_entry || right_error_counter >= corr_loop_entry)){
+            in_corr_loop = true;
+        }
+        
+        // determine if exit corr loop
+        if (in_corr_loop == true && succ_trial_counter >= corr_loop_exit){
+            in_corr_loop = false;
+        }
     }
     
     if (in_corr_loop == false){
-        float r = random(0,1000) / 1000.0;
+        r = random(0,1000) / 1000.0;
         if (r > bias){
             // 0 = left bias, 1 = right bias
             this_correct_side = "right";
@@ -565,7 +526,6 @@ void get_trial_type(){
     log_var("instructed_trial", String(instructed_trial));
 }
                
-
 /*
  
  ##     ##  #######  ##     ## #### ##    ##  ######      ##     ##    ###    ########   ######  
@@ -583,12 +543,6 @@ void move_X_thresh(float percent_change){
     X_thresh = constrain(X_thresh, X_thresh_start, X_thresh_target);
     log_var("X_thresh",String(X_thresh));
 }
-
-// void move_Y_thresh(float percent_change){
-//     Y_thresh += Y_thresh * percent_change;
-//     Y_thresh = constrain(Y_thresh, Y_thresh_target, Y_thresh_start); // inverse bc moving down
-//     log_var("Y_thresh",String(Y_thresh));
-// }
 
 /*
 ########  ######  ##     ##
@@ -627,12 +581,10 @@ void finite_state_machine() {
 
                 // bias related
                 update_bias();
-                // update_p_reward();
-
-                // testing first timing cue - works
-                // switch_led_on[center_led] = true;
-                // switch_led_on[center_led-1] = true;
-                // switch_led_on[center_led+1] = true;
+                
+                if (correction_loops == 0){
+                    update_p_reward();
+                }
 
                 // log bias
                 log_var("bias", String(bias));
@@ -648,7 +600,7 @@ void finite_state_machine() {
             }
             
             // exit condition 
-            if (now() - state_entry > min_fix_dur && now() - last_zone_change > min_fix_dur && current_zone == center) {
+            if (now() - state_entry > min_fix_dur && now() - last_fix_box_entry > min_fix_dur && in_fix_box == true) {
                 current_state = CHOICE_STATE;
             }
             break;
@@ -693,7 +645,6 @@ void finite_state_machine() {
 
                     // move vars
                     move_X_thresh(X_thresh_increment);
-                    // move_Y_thresh(Y_thresh_decrement);
 
                     // update counters
                     succ_trial_counter += 1;
@@ -749,7 +700,6 @@ void finite_state_machine() {
 
                 // TODO this is highly debateable
                 move_X_thresh(X_thresh_decrement);
-                // move_Y_thresh(Y_thresh_increment);
                 break;
             }
 
@@ -775,15 +725,26 @@ void finite_state_machine() {
                         this_p_reward = p_reward_right;
                     }
 
-                    float r = random(0,1000) / 1000.0;
-                    if (this_p_reward > r){
-                        log_code(REWARD_COLLECTED_EVENT);
-                        deliver_reward = true;
-                        current_state = ITI_STATE;
-                        break;
+                    if (omit_rewards == 1){
+                        // reward probability manipulation
+                        r = random(0,1000) / 1000.0;
+                        if (this_p_reward > r){
+                            log_code(REWARD_COLLECTED_EVENT);
+                            deliver_reward = true;
+                            current_state = ITI_STATE;
+                            break;
+                        }
+                        else {
+                            log_code(REWARD_OMITTED_EVENT);
+                            current_state = ITI_STATE;
+                            break;
+                        }
                     }
-                    else {
-                        log_code(REWARD_OMITTED_EVENT);
+                    else{
+                        // reward magnitude manipulation
+                        log_code(REWARD_COLLECTED_EVENT);
+                        reward_magnitude = reward_magnitude_full * this_p_reward;
+                        deliver_reward = true;
                         current_state = ITI_STATE;
                         break;
                     }

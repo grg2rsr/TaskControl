@@ -89,110 +89,98 @@ void processSerialData() {
             // INSERT_GETTERS
 
             if (strcmp(varname,"correct_choice_cue_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(correct_choice_cue_freq)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(correct_choice_cue_freq)+String(">"));
             }
     
             if (strcmp(varname,"choice_dur")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(choice_dur)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(choice_dur)+String(">"));
             }
     
             if (strcmp(varname,"ITI_dur_min")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(ITI_dur_min)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(ITI_dur_min)+String(">"));
             }
     
             if (strcmp(varname,"ITI_dur_max")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(ITI_dur_max)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(ITI_dur_max)+String(">"));
             }
     
             if (strcmp(varname,"min_fix_dur")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(min_fix_dur)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(min_fix_dur)+String(">"));
             }
     
             if (strcmp(varname,"reward_magnitude")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_magnitude)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(reward_magnitude)+String(">"));
             }
     
             if (strcmp(varname,"valve_ul_ms")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(valve_ul_ms)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(valve_ul_ms)+String(">"));
             }
     
             if (strcmp(varname,"reward_available_dur")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_available_dur)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(reward_available_dur)+String(">"));
             }
     
             if (strcmp(varname,"X_thresh")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_thresh)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(X_thresh)+String(">"));
             }
     
             if (strcmp(varname,"X_thresh_start")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_thresh_start)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(X_thresh_start)+String(">"));
             }
     
             if (strcmp(varname,"X_thresh_target")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_thresh_target)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(X_thresh_target)+String(">"));
             }
     
             if (strcmp(varname,"X_thresh_increment")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_thresh_increment)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(X_thresh_increment)+String(">"));
             }
     
             if (strcmp(varname,"X_thresh_decrement")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_thresh_decrement)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(X_thresh_decrement)+String(">"));
             }
     
-            if (strcmp(varname,"Y_thresh")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(Y_thresh)+String(">"));
+            if (strcmp(varname,"XY_fix_box")==0){
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(XY_fix_box)+String(">"));
             }
     
-            if (strcmp(varname,"Y_thresh_start")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(Y_thresh_start)+String(">"));
-            }
-    
-            if (strcmp(varname,"Y_thresh_target")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(Y_thresh_target)+String(">"));
-            }
-    
-            if (strcmp(varname,"Y_thresh_increment")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(Y_thresh_increment)+String(">"));
-            }
-    
-            if (strcmp(varname,"Y_thresh_decrement")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(Y_thresh_decrement)+String(">"));
-            }
-    
-            if (strcmp(varname,"p_instructed_trial")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(p_instructed_trial)+String(">"));
-            }
-    
-            if (strcmp(varname,"bias")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(bias)+String(">"));
+            if (strcmp(varname,"correction_loops")==0){
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(correction_loops)+String(">"));
             }
     
             if (strcmp(varname,"corr_loop_entry")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(corr_loop_entry)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(corr_loop_entry)+String(">"));
             }
     
             if (strcmp(varname,"corr_loop_exit")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(corr_loop_exit)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(corr_loop_exit)+String(">"));
             }
     
-            if (strcmp(varname,"vis_coupling")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(vis_coupling)+String(">"));
+            if (strcmp(varname,"omit_rewards")==0){
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(omit_rewards)+String(">"));
             }
     
-            if (strcmp(varname,"contrast")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(contrast)+String(">"));
+            if (strcmp(varname,"p_instructed_trial")==0){
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(p_instructed_trial)+String(">"));
             }
     
             if (strcmp(varname,"instructed_cue_speed")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(instructed_cue_speed)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(instructed_cue_speed)+String(">"));
             }
     
             if (strcmp(varname,"fps")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(fps)+String(">"));
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(fps)+String(">"));
+            }
+    
+            if (strcmp(varname,"bias")==0){
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(bias)+String(">"));
+            }
+    
+            if (strcmp(varname,"contrast")==0){
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(contrast)+String(">"));
             }
                 if (strcmp(varname,"current_state")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
+                Serial.println(String("<")+String(varname)+String(" ")+String(current_state)+String(">"));
             }
         }
 
@@ -227,6 +215,14 @@ void processSerialData() {
 
             if (strcmp(varname,"correct_choice_cue_freq")==0){
                 correct_choice_cue_freq = atoi(varvalue);
+            }
+    
+            if (strcmp(varname,"correction_loops")==0){
+                correction_loops = atoi(varvalue);
+            }
+    
+            if (strcmp(varname,"omit_rewards")==0){
+                omit_rewards = atoi(varvalue);
             }
     
             if (strcmp(varname,"fps")==0){
@@ -289,44 +285,24 @@ void processSerialData() {
                 X_thresh_decrement = atof(varvalue);
             }
     
-            if (strcmp(varname,"Y_thresh")==0){
-                Y_thresh = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"Y_thresh_start")==0){
-                Y_thresh_start = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"Y_thresh_target")==0){
-                Y_thresh_target = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"Y_thresh_increment")==0){
-                Y_thresh_increment = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"Y_thresh_decrement")==0){
-                Y_thresh_decrement = atof(varvalue);
+            if (strcmp(varname,"XY_fix_box")==0){
+                XY_fix_box = atof(varvalue);
             }
     
             if (strcmp(varname,"p_instructed_trial")==0){
                 p_instructed_trial = atof(varvalue);
             }
     
+            if (strcmp(varname,"instructed_cue_speed")==0){
+                instructed_cue_speed = atof(varvalue);
+            }
+    
             if (strcmp(varname,"bias")==0){
                 bias = atof(varvalue);
             }
     
-            if (strcmp(varname,"vis_coupling")==0){
-                vis_coupling = atof(varvalue);
-            }
-    
             if (strcmp(varname,"contrast")==0){
                 contrast = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"instructed_cue_speed")==0){
-                instructed_cue_speed = atof(varvalue);
             }
     
         }

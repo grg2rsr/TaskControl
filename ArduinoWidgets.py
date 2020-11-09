@@ -161,6 +161,10 @@ class ArduinoController(QtWidgets.QWidget):
             self.send('CMD RUN')
             self.RunBtn.setText('HALT')
             self.RunBtn.setStyleSheet("background-color: red")
+
+            # on startup, poll all vars
+            self.VariableController.query()
+
         else: 
             self.send('CMD HALT')
             self.RunBtn.setText('RUN')
@@ -446,11 +450,19 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             utils.debug_trace()
             print("trying to use last vars, but animal has not been run on this task before.")
 
+    def query(self):
+        """ report back all variable values """
+        for name in self.Df['name'].values:
+            self.parent().send("GET "+name)
+            time.sleep(0.01)
+
     def on_serial(self, line):
         """ if the var is in the interface variables, set it """
 
         if line.startswith('<VAR'):
-            _, name, value, t = line[1:-1].split(' ')
+            line_split = line[1:-1].split(' ')
+            name = line_split[1]
+            value = line_split[2]
             if name in self.VariableEditWidget.Df['name'].values:
                 self.VariableEditWidget.set_entry(name, value) # the lineedit should take care of the correct dtype
 
@@ -637,9 +649,8 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.initUI()
         self.lines = []
         self.code_map = code_map
-        # TODO
-        # self.code_map_inv = dict(zip(code_map.values(), code_map.keys()))
-        # self.filter = ["<VAR current_zone", ]
+        self.code_map_inv = dict(zip(code_map.values(), code_map.keys()))
+        self.filter = ["<VAR current_zone", self.code_map_inv['LICK_ON']+'\t', self.code_map_inv['LICK_OFF']+'\t']
 
         # connect to parent signals
         parent.serial_data_available.connect(self.update)
@@ -665,7 +676,8 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         # TODO filter out high freq events like lick and zone
         # w checkbox - LICK does not work bc not decoded EASY TODO
 
-        if not line.startswith('<VAR current_zone'):
+        # if not line.startswith('<VAR current_zone') or not line.startswith():
+        if not True in [line.startswith(f) for f in self.filter]:
             if not line.startswith('<'):
                 try:
                     code = line.split('\t')[0]

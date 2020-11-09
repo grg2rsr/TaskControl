@@ -231,13 +231,13 @@ def general_info(LogDf, path, axes=None):
 
     return axes
 
-def plot_forces_heatmaps(LogDf, LoadCellDf, align_ref, pre, post, axes=None, tick_ref = None):
+def plot_forces_heatmaps(LogDf, LoadCellDf, align_event, pre, post, axes=None, tick_ref = None):
     """ Plots heatmaps of LC forces in X axes algined to any event (also marks choice times) """
 
     if axes==None:
         _ , axes = plt.subplots()
 
-    event_times = bhv.get_events_from_name(LogDf, align_ref)
+    event_times = bhv.get_events_from_name(LogDf, align_event)
     Fx, correct_idx, incorrect_idx = [],[],[]
     
     i = 0
@@ -270,7 +270,7 @@ def plot_forces_heatmaps(LogDf, LoadCellDf, align_ref, pre, post, axes=None, tic
     heat = axes.matshow(Fx, cmap='PiYG',vmin=-force_x_tresh,vmax=force_x_tresh) # X axis
 
     # Labels, title and formatting
-    axes.set_title('Forces in L/R axis aligned to ' + align_ref)
+    axes.set_title('Forces in L/R axis aligned to ' + align_event)
     axes.set_xlabel('Time')
     axes.set_ylabel('Trials')
 
@@ -577,7 +577,7 @@ def plot_choice_matrix(SessionDf, LogDf, trial_type, axes=None):
 
     return axes
 
-def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, trial_outcome, animal_id, axes=None):
+def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_event, trial_outcome, animal_id, axes=None):
     """ Plots trajectories in 2D aligned to an event for specific trial outcome"""
 
     if axes==None:
@@ -591,7 +591,7 @@ def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, trial_outco
     for TrialDf in TrialDfs:
 
         if bhv.get_outcome(TrialDf).values[0] == trial_outcome:
-            t = float(TrialDf[TrialDf.name == align_ref]['t'])
+            t = float(TrialDf[TrialDf.name == align_event]['t'])
             f = bhv.time_slice(LoadCellDf,t+pre,t+post)
             F.append([f['x'], f['y']])
 
@@ -636,7 +636,7 @@ def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, trial_outco
     axes.axhline(0 ,linestyle=':',alpha=0.5,lw=1,color='k')
     axes.set_xlabel('Left/Right axis')
     axes.set_ylabel('Front/Back axis')
-    axes.set_title(' Mean 2D trajectories aligned to ' + str(align_ref) + '\n on ' + str(trial_outcome) + ' trials for ' + str(animal_id))
+    axes.set_title(' Mean 2D trajectories aligned to ' + str(align_event) + '\n on ' + str(trial_outcome) + ' trials for ' + str(animal_id))
     axes.legend(frameon=False, markerscale = 3)
 
     leg = axes.get_legend()
@@ -786,7 +786,7 @@ def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None):
 
 def split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, post, split_by, axes=None):
     """ 
-        Force magnitude split by any input as long as a metric in SessionDf contemplates it
+        Force magnitude for Fx and Fy split by any input as long as a metric in SessionDf contemplates it
     """
 
     if axes==None:
@@ -824,6 +824,23 @@ def split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, po
     plt.suptitle("Forces split by" + str(split_by) + "for separate Fx/Fy axis")
 
     fig.tight_layout()
+
+    return axes
+
+def force_to_go_cue(LoadCellDf, TrialDfs, align_event, pre, post, axes=None):
+    F = []
+
+    if axes == None:
+        _ , axes = plt.subplots()
+
+    for TrialDf in TrialDfs:
+
+        t = float(TrialDf[TrialDf.name == align_event]['t'])
+        f = bhv.time_slice(LoadCellDf,t+pre,t+post)
+        F.append([f['x'], f['y']])
+ 
+    F_mean = np.mean(F)
+    plt.plot(F_mean)
 
     return axes
 

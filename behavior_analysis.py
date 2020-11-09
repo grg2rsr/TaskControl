@@ -813,7 +813,20 @@ axes.set_title('Ratio of missed trials across sessions')
 axes.set_xlabel('Trial #')
 axes.set_ylabel('Missed trials rolling average')
 
+# %% Force mag to go cue across sessions
+fig, axes = plt.subplots()
 
+for path in paths:
+
+    TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_AVAILABLE_STATE", "ITI_STATE")
+    if TrialSpans.empty:
+        TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+
+    TrialDfs = []
+    for j, row in TrialSpans.iterrows():
+        TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+    force_to_go_cue(LoadCellDf, TrialDfs, align_event, pre, post, axes=axes)
 
 
 """
