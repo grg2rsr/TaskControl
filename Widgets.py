@@ -390,6 +390,7 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         super(AnimalInfoWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
         self.config = config
+
         self.initUI()
 
     def initUI(self):
@@ -399,7 +400,15 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         # self.Layout.addWidget(self.TextBrowser)
         self.Layout.addWidget(self.Table)
         self.setLayout(self.Layout)
-        self.setWindowTitle("Animal info")
+
+        Df = self.parent().animal_meta
+        animal_meta = dict(zip(Df['name'], Df['value']))
+        try:
+            nickname = animal_meta['Nickname']
+        except:
+            nickname = ''
+            
+        self.setWindowTitle(animal_meta['ID'] + ' - ' + nickname)
         self.update()
         self.show()
         self.layout()
