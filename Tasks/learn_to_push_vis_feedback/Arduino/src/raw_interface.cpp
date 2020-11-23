@@ -8,9 +8,6 @@ float x;
 float y;
 
 bool RawNewData = false;
-
-// const byte buffer_size = 64; // to hold the entire arduino buffer
-// char buffer[buffer_size];
 char start_marker = '[';
 char end_marker = ']';
 
@@ -23,9 +20,10 @@ int ix;
 int rc;
 bool is_receiving = false;
 
+char t;
 void flush(){
     while (Serial1.available() > 0){
-        char t = Serial1.read();
+        t = Serial1.read();
     }
 }
 
@@ -88,11 +86,8 @@ void processRawData() {
         x = (float) Xb.f;
         y = (float) Yb.f;
         
-        // float dX = X-x;
-        // float dY = Y-y;
-
         if (x < -10000 || x > 10000 || y < -10000 || y > 10000){
-            Serial.println(String("<MSG garbage read") + " "+String(micros()/1000.0)+">");
+            Serial.println(String("<MSG LC read out of bounds ") + " "+String(micros()/1000.0)+">");
             Serial.println(String(x));
             Serial.println(String(y));
         }
@@ -100,42 +95,6 @@ void processRawData() {
             X = x;
             Y = y;
         }
-        // if (error_counter > 4){
-        //     flush();
-        // }
-
-        // if ((abs(dX) > 4000 || abs(dY) > 4000) && error_counter < 5){
-        //     Serial.println(String(x));
-        //     Serial.println(String(y));
-        //     error_counter++;
-        //     // X = 0;
-        //     // x = 0;
-        //     // Y = 0;
-        //     // y = 0;
-        // }
-        // else{
-        //     X = x;
-        //     Y = y;
-        //     error_counter = 0;
-        // }
-
-        // if (x < 10000 && x > -10000){
-        //     if (abs(X-x) < 4000) {
-        //         X = x;
-        //     }
-        // }
-        // else {
-        //     Serial.println(String("<MSG X out of bounds") + " "+String(micros()/1000.0)+">");
-        // }
-
-        // if (y < 10000 && y > -10000){
-        //     if (abs(Y-y) < 4000) {
-        //         Y = y;
-        //     }
-        // }
-        // else {
-        //     Serial.println(String("<MSG Y out of bounds") + " "+String(micros()/1000.0)+">");
-        // }
     }
     RawNewData = false;
 }

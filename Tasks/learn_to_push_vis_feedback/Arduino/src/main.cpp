@@ -8,6 +8,18 @@
 #include "raw_interface.cpp"
 #include "pin_map.h"
 
+
+// DEBUG
+#include <util/atomic.h>
+
+void setMillis(unsigned long ms)
+{
+    extern unsigned long timer0_millis;
+    ATOMIC_BLOCK (ATOMIC_RESTORESTATE) {
+        timer0_millis = ms;
+    }
+}
+
 /*
 ########  ########  ######  ##          ###    ########     ###    ######## ####  #######  ##    ##  ######
 ##     ## ##       ##    ## ##         ## ##   ##     ##   ## ##      ##     ##  ##     ## ###   ## ##    ##
@@ -21,7 +33,7 @@
 // int current_state = INI_STATE; // starting at this, aleady declared in interface.cpp
 int last_state = -1; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
-unsigned long state_entry = max_future;
+unsigned long t_state_entry = max_future;
 unsigned long this_ITI_dur;
 float r; // for random
 
@@ -74,8 +86,12 @@ void update_p_reward(){
 ########  #######   ######    ######   #### ##    ##  ######
 */
 
+// float now(){
+//     return (unsigned long) micros() / 1000;
+// }
+
 float now(){
-    return (unsigned long) micros() / 1000;
+    return millis();
 }
 
 void log_code(int code){
@@ -110,7 +126,7 @@ void log_choice(){
 void send_sync_pulse(){
     // sync w load cell
     digitalWrite(LC_SYNC_PIN,HIGH);
-    delay(1); // 1 ms unavoidable blindness 
+    delay(1); // 1 ms unavoidable blindness - TODO delayMicroseconds - test!
     digitalWrite(LC_SYNC_PIN,LOW);
 }
 
@@ -136,12 +152,11 @@ void read_lick(){
   }
 }
 
-unsigned long last_center_leave = 0;
-unsigned long last_buzz = max_future;
-unsigned long debounce = 250;
+unsigned long t_last_buzz = max_future;
+unsigned long debounce_dur = 250;
 
 bool in_fix_box = false;
-unsigned long last_fix_box_entry = 0;
+unsigned long t_last_fix_box_entry = 0;
 
 void process_loadcell() {
 
@@ -160,7 +175,7 @@ void process_loadcell() {
     if (X > -1*XY_fix_box && X < XY_fix_box && Y > -1*XY_fix_box && Y < XY_fix_box){
         if (in_fix_box == false){
             in_fix_box = true;
-            last_fix_box_entry = now();
+            t_last_fix_box_entry = now();
         }
     }
     else{
@@ -173,10 +188,9 @@ void process_loadcell() {
 
         // on center leave
         if (last_zone == center) {
-            last_center_leave = now();
-            if (last_center_leave - last_buzz > debounce){
+            if (now() - t_last_buzz > debounce_dur){
                 buzz_controller.play(6,230);
-                last_buzz = now();
+                t_last_buzz = now();
             }
         }
         last_zone = current_zone;
@@ -250,20 +264,21 @@ void X_controller_update(){
         dt = now() - X_controller_switch_on_time;
         dX = instructed_cue_speed * dt;
 
-        if (correct_zone == 6){
+        if (correct_zone == right){
             X = X + dX;
         }
-        if (correct_zone == 4){
+        if (correct_zone == left){
             X = X - dX;
         }
     }
 }
 
-unsigned long last_X_controller_update = 0;
+// run X_controller at fixed rate
+unsigned long t_last_X_controller_update = 0;
 void X_controller(){
-    if (now() - last_X_controller_update > 1000 / fps){
+    if (now() - t_last_X_controller_update > 1000 / fps){
         X_controller_update();
-        last_X_controller_update = now();
+        t_last_X_controller_update = now();
     }
 }
 
@@ -283,7 +298,7 @@ float gaussian(float x, float mu, float sig){
     return y;
 }
 
-float sigma = 1;
+// float sigma = 1;
 float vis_coupling = 2;
 
 void update_led_cursor(){
@@ -299,11 +314,11 @@ void update_led_cursor(){
 }
 
 // for updating the LED strip at a fixed rate
-unsigned long last_cursor_update = 0;
+unsigned long t_last_cursor_update = 0;
 void led_cursor_controller(){
-    if (now() - last_cursor_update > 1000 / fps){
+    if (now() - t_last_cursor_update > 1000 / fps){
         update_led_cursor();
-        last_cursor_update = now();
+        t_last_cursor_update = now();
     }
 }
 
@@ -353,26 +368,26 @@ void led_cursor_controller(){
 
 // speaker
 Tone tone_controller;
-unsigned long tone_duration = 100;
+unsigned long tone_dur = 100;
 
 // buzzer related
-unsigned long buzz_duration = 10;
-unsigned long choice_buzz_duration = 50;
+unsigned long buzz_dur = 10;
+unsigned long choice_buzz_dur = 50;
 
 void go_cue(){ // future timing cue 2
     log_code(GO_CUE_EVENT);
     // buzz
-    buzz_controller.play(235, buzz_duration);
+    buzz_controller.play(235, buzz_dur);
 }
 
 void choice_cue(){
     // buzz
-    buzz_controller.play(235,choice_buzz_duration);
+    buzz_controller.play(235,choice_buzz_dur);
 }
 
 void correct_choice_cue(){
     // beep
-    tone_controller.play(correct_choice_cue_freq, tone_duration);
+    tone_controller.play(correct_choice_cue_freq, tone_dur);
 
     // center blink
     led_hsv = 32;
@@ -396,14 +411,14 @@ unsigned int generateNoise(){
 }
 
 unsigned long error_cue_start = max_future;
-unsigned long error_cue_dur = tone_duration * 1000; // to save instructions - work in micros
+unsigned long error_cue_dur = tone_dur * 1000; // to save instructions - work in micros
 unsigned long lastClick = max_future;
 
 void incorrect_choice_cue(){
     // beep
-    // tone_controller.play(incorrect_choice_cue_freq, tone_duration);
+    // tone_controller.play(incorrect_choice_cue_freq, tone_dur);
 
-    // white noise - blocking arduino for tone_duration
+    // white noise - blocking arduino for tone_dur
     error_cue_start = micros();
     lastClick = micros();
     while (micros() - error_cue_start < error_cue_dur){
@@ -428,21 +443,21 @@ float ul2time(unsigned long reward_volume){
     return (float) reward_volume / valve_ul_ms;
 }
 
-bool reward_valve_closed = true;
+bool reward_valve_is_closed = true;
 // bool deliver_reward = false; // already forward declared in interface.cpp
-unsigned long reward_valve_open_time = max_future;
+unsigned long t_reward_valve_open = max_future;
 float reward_valve_dur;
 
 void reward_valve_controller(){
     // a self terminating digital pin switch
     // flipped by setting deliver_reward to true somewhere in the FSM
     
-    if (reward_valve_closed == true && deliver_reward == true) {
+    if (reward_valve_is_closed == true && deliver_reward == true) {
         digitalWrite(REWARD_VALVE_PIN, HIGH);
         log_code(REWARD_VALVE_ON);
-        reward_valve_closed = false;
+        reward_valve_is_closed = false;
         reward_valve_dur = ul2time(reward_magnitude);
-        reward_valve_open_time = now();
+        t_reward_valve_open = now();
         deliver_reward = false;
         
         // present cue? (this is necessary for keeping the keyboard reward functionality)
@@ -452,10 +467,10 @@ void reward_valve_controller(){
         }
     }
 
-    if (reward_valve_closed == false && now() - reward_valve_open_time > reward_valve_dur) {
+    if (reward_valve_is_closed == false && now() - t_reward_valve_open > reward_valve_dur) {
         digitalWrite(REWARD_VALVE_PIN, LOW);
         log_code(REWARD_VALVE_OFF);
-        reward_valve_closed = true;
+        reward_valve_is_closed = true;
     }
 }
 
@@ -557,7 +572,7 @@ void move_X_thresh(float percent_change){
 void state_entry_common(){
     // common tasks to do at state entry for all states
     last_state = current_state;
-    state_entry = now();
+    t_state_entry = now();
     log_code(current_state);
 }
 
@@ -600,7 +615,7 @@ void finite_state_machine() {
             }
             
             // exit condition 
-            if (now() - state_entry > min_fix_dur && now() - last_fix_box_entry > min_fix_dur && in_fix_box == true) {
+            if (now() - t_state_entry > min_fix_dur && now() - t_last_fix_box_entry > min_fix_dur && in_fix_box == true) {
                 current_state = CHOICE_STATE;
             }
             break;
@@ -687,7 +702,7 @@ void finite_state_machine() {
             }
                         
             // no report, timeout
-            if (now() - state_entry > choice_dur){
+            if (now() - t_state_entry > choice_dur){
                 log_code(CHOICE_MISSED_EVENT);
                 log_code(TRIAL_UNSUCCESSFUL_EVENT);
 
@@ -752,7 +767,7 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (now() - state_entry > reward_available_dur) {
+            if (now() - t_state_entry > reward_available_dur) {
                 // transit to ITI after certain time
                 log_code(REWARD_MISSED_EVENT);
                 current_state = ITI_STATE;
@@ -763,7 +778,7 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-                this_ITI_dur = random(ITI_dur_min, ITI_dur_max);
+                this_ITI_dur = (unsigned long) random(ITI_dur_min, ITI_dur_max);
 
                 // deactivate X_controller in case
                 if (X_controller_is_active == true){
@@ -777,7 +792,7 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (now() - state_entry > this_ITI_dur) {
+            if (now() - t_state_entry > this_ITI_dur) {
                 current_state = TRIAL_ENTRY_STATE;
             }
             break;
@@ -815,6 +830,7 @@ void setup() {
 
     Serial.println("<Arduino is ready to receive commands>");
     delay(1000);
+    // setMillis(-30000);
 }
 
 void loop() {

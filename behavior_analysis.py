@@ -24,6 +24,20 @@ from behavior_plotters import *
 # Plotting Defaults
 plt.rcParams["xtick.direction"] = "in"
 plt.rcParams["ytick.direction"] = "in"
+plt.rcParams["xtick.major.size"] = 1.5
+plt.rcParams["ytick.major.size"] = 1.5
+
+SMALL_SIZE = 7
+MEDIUM_SIZE = 9
+BIGGER_SIZE = 11
+
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 # %%
 """
@@ -46,7 +60,7 @@ os.makedirs(plot_dir, exist_ok=True)
 LogDf = bhv.get_LogDf_from_path(log_path)
 LogDf = bhv.filter_bad_licks(LogDf)
 
-# %% across sessino - plot weight
+# %% across sessions - plot weight
 SessionsDf = utils.get_sessions(log_path.parent.parent)
 Df = pd.read_csv(log_path.parent.parent / 'animal_meta.csv')
 ini_weight = float(Df[Df['name'] == 'Weight']['value'])
@@ -246,7 +260,7 @@ sides = ['left', 'right']
 outcomes = ['correct', 'incorrect']
 fig, axes = plt.subplots(nrows=len(outcomes), ncols=len(sides), figsize=[5, 5], sharex=True, sharey=True)
 
-pre, post = -100, 1000
+pre, post = -100, 500
 align_event = "CHOICE_EVENT"
 
 for i, side in enumerate(sides):
@@ -284,8 +298,8 @@ for i, side in enumerate(sides):
         ax.plot(Fx_avg, Fy_avg, lw=1, color='k', alpha=0.8)
         ax.plot(Fx_avg[event_ix], Fy_avg[event_ix], 'o', color='k', alpha=0.8, markersize=5)
        
-        ax.set_xlim(-3000, 3000)
-        ax.set_ylim(-3000, 3000)
+        ax.set_xlim(-4000, 4000)
+        ax.set_ylim(-4000, 4000)
 
         line_kwargs = dict(color='k', linestyle=':', alpha=0.5, zorder=-100)
         ax.axvline(0, **line_kwargs)
@@ -294,17 +308,6 @@ for i, side in enumerate(sides):
         line_kwargs = dict(color='k', lw=0.5, linestyle='-', alpha=0.25, zorder=-100)
         ax.axvline(-2500, **line_kwargs)
         ax.axvline(+2500, **line_kwargs)
-        ax.axhline(-1500, **line_kwargs)
-        ax.axhline(+1500, **line_kwargs)
-
-        # # for inspecting clean choices
-        # tvec = sp.linspace(pre, post, Fx.shape[0])
-        # for k in range(Fx.shape[1]):
-        #     ax.plot(tvec, Fx[:, k], lw=0.5, alpha=0.5)
-        #     ax.plot(tvec[event_ix], Fx[event_ix, k], 'o', markersize = 5, alpha=0.5)
-        # ax.plot(tvec, sp.average(Fx, 1), lw=1, color='k', alpha=0.8)
-        # ax.set_ylim(-2500, 2500)
-        # ax.axvline(0, color='k', linestyle=':', alpha=0.5, lw=1, zorder=-1)
 
 sns.despine(fig)
 axes[0, 0].set_title('left')
@@ -314,9 +317,9 @@ axes[1, 0].set_ylabel('incorrect')
 fig.tight_layout()
 
 # %% Heatmaps
-pre, post = -1000, 2500
-force_thresh = 2000
-align_event = "GO_CUE_EVENT"
+pre, post = -500, 2000
+force_thresh = 3000
+align_event = "CHOICE_EVENT"
 
 order = [['left','correct'],
          ['left','incorrect'],
@@ -336,7 +339,7 @@ for i, (side, outcome) in enumerate(order):
     Fx = []
     Fy = []
     choice_rt = []
-    for _, row in tqdm(SDf.iterrows()):
+    for _, row in tqdm(SDf.iterrows(), position = 0, leave=True):
         TrialDf = TrialDfs[row.name]
         t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
         # identical to:
@@ -344,24 +347,22 @@ for i, (side, outcome) in enumerate(order):
         LCDf = bhv.time_slice(LoadCellDf, t_align+pre, t_align+post)
         Fx.append(LCDf['x'].values)
         Fy.append(LCDf['y'].values)
-        choice_rt.append(bhv.choice_RT(TrialDf).values-pre)
+        #choice_rt.append(bhv.choice_RT(TrialDf).values-pre)
 
     Fx = sp.array(Fx).T
     Fy = sp.array(Fy).T
 
-    # event_ix = Fx.shape[0] - post
-
     ## for heatmaps
-    axes[i,0].matshow(Fx.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
-    axes[i,1].matshow(Fy.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
-    axes[i,0].axvline(x=1000, ymin=0, ymax=1, color = 'k', alpha = 0.5)
-    axes[i,1].axvline(x=1000, ymin=0, ymax=1, color = 'k', alpha = 0.5)
+    heat1 = axes[i,0].matshow(Fx.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
+    heat2 = axes[i,1].matshow(Fy.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
+    axes[i,0].axvline(x=-pre, ymin=0, ymax=1, color = 'k', alpha = 0.5)
+    axes[i,1].axvline(x=-pre, ymin=0, ymax=1, color = 'k', alpha = 0.5)
 
-    ymin = np.arange(-0.5,len(choice_rt)-1) # need to shift since lines starts at center of trial
-    ymax = np.arange(0.45,len(choice_rt))
-    axes[i,0].vlines(choice_rt, ymin, ymax, colors='k', linewidth=1)
+    #ymin = np.arange(-0.5,len(choice_rt)-1) # need to shift since lines starts at center of trial
+    #ymax = np.arange(0.45,len(choice_rt))
+    #axes[i,0].vlines(choice_rt, ymin, ymax, colors='k', linewidth=1)
 
-plt.setp(axes, xticks=np.arange(0, post-pre+1, 1000), xticklabels=np.arange(pre/1000, post/1000+0.1, 1))
+plt.setp(axes, xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(pre/1000, post/1000+0.1, 0.5))
 
 for ax in axes.flatten():
     ax.set_aspect('auto')
@@ -372,27 +373,33 @@ for ax in axes[-1,:]:
 for ax, (side, outcome) in zip(axes[:,0],order):
     ax.set_ylabel('\n'.join([side,outcome]))
 
-axes[0,0].set_title('Fx (aligned on go cue)')
-axes[0,1].set_title('Fy')
-
+axes[0,0].set_title('X axis')
+axes[0,1].set_title('Y axis')
 axes[-1,0].set_xlabel('Time (s)')
 axes[-1,1].set_xlabel('Time (s)')
 
-fig.tight_layout()
+fig.suptitle('Forces aligned on ' + str(align_event) + ' for ' + str(animal_id))
 fig.subplots_adjust(hspace=0.05)
 
+cbar = plt.colorbar(heat1, ax=axes[:,0], orientation='horizontal', aspect = 30)
+cbar.set_ticks([-3000,-1500,0,1500,3000]); cbar.set_ticklabels(["-3000 \n Left","-1500","0","1500", "3000 \n Right"])
+
+cbar = plt.colorbar(heat1, ax=axes[:,1], orientation='horizontal', aspect = 30)
+cbar.set_ticks([-3000,-1500,0,1500,3000]); cbar.set_ticklabels(["-3000 \n Back","-1500","0","1500", "3000 \n Front"])
+
 # %% Response Forces cues
-bin_width = 75 #ms
+bin_width = 25 #ms
 first_cue_ref = "TRIAL_ENTRY_EVENT"
+align_event = "CHOICE_EVENT"
 
 plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, align_event, bin_width, axes=None)
 
 # %% Response Forces aligned to anything split by any input 
-split_by = 'choice' 
+split_by = 'successful' 
 align_event = "CHOICE_EVENT"
 pre, post, thresh = 500,2000,4000
 
-axes = split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, post, split_by)
+axes = split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, post, split_by, animal_id)
 
 # Formatting
 for ax in axes:
@@ -739,7 +746,7 @@ axes[0].hist(times,bins=bins,density=True)
 
 # %% 
 "Learn to PUSH inspections"
-task_name = ['learn_to_push', 'learn_to_push_cr', 'learn_to_push_vis_feedback']
+task_name = ['learn_to_push_cr', 'learn_to_push_vis_feedback']
 SessionsDf = utils.get_sessions(animal_folder)
 
 PushSessionsDf = pd.concat([SessionsDf.groupby('task').get_group(name) for name in task_name])
@@ -776,7 +783,7 @@ percentile = 75 # Choice RTs compromise X% of data
 choice_rt_across_sessions(LogDfs, bin_width, choice_interval, percentile, animal_id, axes = None)
 plt.savefig(plot_dir / 'learn_to_push_choice_rt_distro.png', dpi=300)
 
-# Get Fx and Fy forces for all sessons in a 2D histogram and a contour plot
+# %% Get Fx and Fy forces for all sessons in a 2D histogram and a contour plot
 trials_only = False
 thresh = 4000
 axis1, axis2 = force_2D_hist_contour_across_sessions(paths, thresh, task_name[0], animal_id, trials_only)
@@ -816,7 +823,12 @@ axes.set_ylabel('Missed trials rolling average')
 # %% Force mag to go cue across sessions
 fig, axes = plt.subplots()
 
+align_event = "GO_CUE_EVENT"
+pre, post = -1000,2000
+
 for path in paths:
+
+    LoadCellDf = pd.read_csv(path / "loadcell_data.csv")
 
     TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_AVAILABLE_STATE", "ITI_STATE")
     if TrialSpans.empty:
@@ -920,8 +932,6 @@ axes[0].set_ylabel('Time (ms)')
 plt.suptitle('3rd quartile for Choice RT',fontsize='small')
 fig.tight_layout()
 plt.savefig(group_plot_dir / 'choice_rt_percentile_group.png', dpi=300)
-
-# %% Do animals learn faster how to press aligned to cue on new task? 
 
 
 # %% Weight x sucess rate and x missed_rate

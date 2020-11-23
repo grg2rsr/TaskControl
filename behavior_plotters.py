@@ -445,7 +445,7 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
     "Licks"
     twin_ax2 = axes[1].twinx()
 
-    pre, plot_dur, force_tresh = -500 , 2000, 2000
+    pre, post, force_tresh = -500 , 2000, 3000
     outcomes = ['correct', 'incorrect', 'missed']
 
     for outcome in outcomes:
@@ -493,7 +493,7 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
         if not licks:
             pass
         else:
-            no_bins = round((plot_dur-pre)/bin_width)
+            no_bins = round((post-pre)/bin_width)
             counts_2, bins = np.histogram(np.concatenate(licks),no_bins)
             licks_2nd_freq = np.divide(counts_2, ((bin_width/1000)*len(ys_2nd)))
             twin_ax2.step(bins[1:], licks_2nd_freq, alpha=0.5, label = outcome)
@@ -502,17 +502,17 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
     # Left plot
     axes[0].legend(loc='upper right', frameon=False)
     axes[0].set_ylabel('Force magnitude (a.u.)')
-    plt.setp(axes[0], xticks=np.arange(0, plot_dur-pre+1, 500), xticklabels=np.arange(-0.5, plot_dur//1000 + 0.1, 0.5))
+    plt.setp(axes[0], xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(-0.5, post//1000 + 0.1, 0.5))
 
     # Right plot
     axes[1].legend(loc='upper right', frameon=False)
-    plt.setp(axes[1], xticks=np.arange(0, plot_dur-pre+1, 500), xticklabels=np.arange(-0.5, plot_dur//1000 + 0.1, 0.5))
+    plt.setp(axes[1], xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(-0.5, post//1000 + 0.1, 0.5))
     
     # Shared
     plt.setp(axes, yticks=np.arange(0, force_tresh+1, 500), yticklabels=np.arange(0, force_tresh+1, 500))
-    axes[0].set_xlim(0,plot_dur-pre)
+    axes[0].set_xlim(0,post-pre)
     axes[0].set_ylim(0,force_tresh)
-    axes[1].set_xlim(0,plot_dur-pre)
+    axes[1].set_xlim(0,post-pre)
     axes[1].set_ylim(0,force_tresh)
 
     " Licks "
@@ -532,8 +532,8 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
     axes[0].yaxis.tick_left()
     axes[1].tick_params(labelleft = False, left = False)
 
-    axes[0].set_title('Align to 1st cue')
-    axes[1].set_title('Align to 2nd cue')
+    axes[0].set_title('Align to ' + str(first_cue_ref))
+    axes[1].set_title('Align to ' + str(second_cue_ref))
 
     return axes
 
@@ -784,7 +784,7 @@ def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None):
 
     return axes
 
-def split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, post, split_by, axes=None):
+def split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, post, split_by, animal_id, axes=None):
     """ 
         Force magnitude for Fx and Fy split by any input as long as a metric in SessionDf contemplates it
     """
@@ -821,7 +821,7 @@ def split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, po
     axes[0].set_ylabel('Left/Right axis')
     axes[1].set_ylabel('Back/Front axis')
     plt.setp(axes, xticks=np.arange(0, post + pre+1, 500), xticklabels=np.arange(-pre/1000, post/1000+0.1, 0.5))
-    plt.suptitle("Forces split by" + str(split_by) + "for separate Fx/Fy axis")
+    plt.suptitle("Mean forces split by " + str(split_by) + " for separate Fx/Fy axis \n aligned to " + str(align_event) + " for " + str(animal_id))
 
     fig.tight_layout()
 
@@ -837,7 +837,7 @@ def force_to_go_cue(LoadCellDf, TrialDfs, align_event, pre, post, axes=None):
 
         t = float(TrialDf[TrialDf.name == align_event]['t'])
         f = bhv.time_slice(LoadCellDf,t+pre,t+post)
-        F.append([f['x'], f['y']])
+        F.append(np.sqrt(f['x']**2 + f['y']**2))
  
     F_mean = np.mean(F)
     plt.plot(F_mean)
@@ -942,7 +942,7 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_id, axes = None):
     axes[1].set_ylabel('a.u. (%)')
     plt.setp(axes[1], yticks=np.arange(0,100,10), yticklabels=np.arange(0,100,10))
 
-    weight = np.multiply(weight,90)
+    weight = np.multiply(weight,100)
     twin_ax = axes[1].twinx()
     twin_ax.plot(weight, color = 'gray')
     twin_ax.set_ylabel('Normalized Weight to max (%)', color = 'gray')
@@ -1035,7 +1035,7 @@ def choice_rt_across_sessions(LogDfs, bin_width, choice_interval, percentile, an
         TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
 
         TrialDfs = []
-        for j, row in tqdm(TrialSpans.iterrows(),position=0, leave=True):
+        for j, row in TrialSpans.iterrows():
             TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
 
         choice_rt = np.empty(0)

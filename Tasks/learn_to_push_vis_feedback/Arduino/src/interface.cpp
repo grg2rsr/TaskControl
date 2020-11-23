@@ -179,6 +179,10 @@ void processSerialData() {
             if (strcmp(varname,"contrast")==0){
                 Serial.println(String("<VAR ")+String(varname)+String(" ")+String(contrast)+String(">"));
             }
+    
+            if (strcmp(varname,"sigma")==0){
+                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(sigma)+String(">"));
+            }
                 if (strcmp(varname,"current_state")==0){
                 Serial.println(String("<")+String(varname)+String(" ")+String(current_state)+String(">"));
             }
@@ -221,6 +225,14 @@ void processSerialData() {
                 correction_loops = atoi(varvalue);
             }
     
+            if (strcmp(varname,"corr_loop_entry")==0){
+                corr_loop_entry = atoi(varvalue);
+            }
+    
+            if (strcmp(varname,"corr_loop_exit")==0){
+                corr_loop_exit = atoi(varvalue);
+            }
+    
             if (strcmp(varname,"omit_rewards")==0){
                 omit_rewards = atoi(varvalue);
             }
@@ -251,14 +263,6 @@ void processSerialData() {
     
             if (strcmp(varname,"reward_available_dur")==0){
                 reward_available_dur = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"corr_loop_entry")==0){
-                corr_loop_entry = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"corr_loop_exit")==0){
-                corr_loop_exit = strtoul(varvalue,NULL,10);
             }
     
             if (strcmp(varname,"valve_ul_ms")==0){
@@ -303,6 +307,10 @@ void processSerialData() {
     
             if (strcmp(varname,"contrast")==0){
                 contrast = atof(varvalue);
+            }
+    
+            if (strcmp(varname,"sigma")==0){
+                sigma = atof(varvalue);
             }
     
         }
