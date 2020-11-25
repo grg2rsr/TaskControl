@@ -283,8 +283,8 @@ void X_controller(){
 }
 
 // LED feedback cursor
-int sep = (NUM_LEDS-1)/4; // 90 deg separation (if LED strip is actually 180 which it isn't currently)
-int cursor_pos = 0;
+float sep = (NUM_LEDS-1)/4; // 90 deg separation (if LED strip is actually 180 which it isn't currently)
+float cursor_pos = 0;
 // int fps = 10;
 
 // to be set in get_trial_type()
@@ -303,10 +303,10 @@ float vis_coupling = 2;
 
 void update_led_cursor(){
     if (cursor_is_active == true){
-        cursor_pos = map(X, -X_thresh * vis_coupling, X_thresh * vis_coupling, 0.0, (float) NUM_LEDS); // TODO check if cast is needed
+        cursor_pos = map(X, -X_thresh * vis_coupling, X_thresh * vis_coupling, 0.0, NUM_LEDS*100.0)/100.0;
         for (int i = 0; i < NUM_LEDS; i++){
-            float left_brightness = left_cue_brightness * 255 * gaussian((float) i, (float) cursor_pos - sep, sigma); // contrast to be mult into this
-            float right_brightness = right_cue_brightness * 255 * gaussian((float) i, (float) cursor_pos + sep, sigma);
+            float left_brightness = left_cue_brightness * 255 * gaussian((float) i, cursor_pos - sep, sigma); // contrast to be mult into this
+            float right_brightness = right_cue_brightness * 255 * gaussian((float) i, cursor_pos + sep, sigma);
             leds[i] = CHSV(160, 255, constrain(left_brightness + right_brightness, 0, 255));
         }
         FastLED.show();
