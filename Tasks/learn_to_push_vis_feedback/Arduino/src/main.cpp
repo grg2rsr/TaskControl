@@ -10,15 +10,15 @@
 
 
 // DEBUG
-#include <util/atomic.h>
+// #include <util/atomic.h>
 
-void setMillis(unsigned long ms)
-{
-    extern unsigned long timer0_millis;
-    ATOMIC_BLOCK (ATOMIC_RESTORESTATE) {
-        timer0_millis = ms;
-    }
-}
+// void setMillis(unsigned long ms)
+// {
+//     extern unsigned long timer0_millis;
+//     ATOMIC_BLOCK (ATOMIC_RESTORESTATE) {
+//         timer0_millis = ms;
+//     }
+// }
 
 /*
 ########  ########  ######  ##          ###    ########     ###    ######## ####  #######  ##    ##  ######
@@ -91,19 +91,19 @@ void update_p_reward(){
 // }
 
 float now(){
-    return millis();
+    return (unsigned long) millis();
 }
 
 void log_code(int code){
-    Serial.println(String(code) + '\t' + String(micros()/1000.0));
+    Serial.println(String(code) + '\t' + String(now()));
 }
 
 void log_msg(String Message){
-    Serial.println("<MSG " + Message + " "+String(micros()/1000.0)+">");
+    Serial.println("<MSG " + Message + " "+String(now())+">");
 }
 
 void log_var(String name, String value){
-    Serial.println("<VAR " + name + " " + value + " "+String(micros()/1000.0)+">");
+    Serial.println("<VAR " + name + " " + value + " "+String(now())+">");
 }
 
 void log_choice(){
@@ -208,7 +208,7 @@ void process_loadcell() {
 */
 
 // LED strip related
-#define NUM_LEDS 21 // num of LEDs in strip
+#define NUM_LEDS 71 // num of LEDs in strip
 CRGB leds[NUM_LEDS]; // Define the array of leds
 int center_led = (NUM_LEDS-1)/2;
 
@@ -283,7 +283,7 @@ void X_controller(){
 }
 
 // LED feedback cursor
-float sep = (NUM_LEDS-1)/4; // 90 deg separation (if LED strip is actually 180 which it isn't currently)
+float sep = (NUM_LEDS-1)/4; // 90 deg separation
 float cursor_pos = 0;
 // int fps = 10;
 
@@ -487,9 +487,9 @@ void reward_valve_controller(){
 // bool correction_loops = true;
 // int correction_loops = 1;
 bool in_corr_loop = false;
-unsigned long left_error_counter = 0;
-unsigned long right_error_counter = 0;
-unsigned long succ_trial_counter = 0;
+int left_error_counter = 0;
+int right_error_counter = 0;
+int succ_trial_counter = 0;
 bool instructed_trial = false;
 bool corr_loop_reset_mode = true;
 /*
