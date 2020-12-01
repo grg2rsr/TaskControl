@@ -15,17 +15,17 @@ const unsigned int ITI_STATE = 3;
 const unsigned int TIMEOUT_STATE = 4;
 
 // SPANS
-const unsigned int LICK_ON = 10;
-const unsigned int LICK_OFF = 11;
-const unsigned int REWARD_VALVE_ON = 12;
-const unsigned int REWARD_VALVE_OFF = 13;
+unsigned int LICK_ON = 10;
+unsigned int LICK_OFF = 11;
+unsigned int REWARD_VALVE_ON = 12;
+unsigned int REWARD_VALVE_OFF = 13;
 
 // EVENTS
 // reward related
-const unsigned int REWARD_AVAILABLE_EVENT = 30;
-const unsigned int REWARD_COLLECTED_EVENT = 31;
-const unsigned int REWARD_MISSED_EVENT = 33;
-const unsigned int REWARD_OMITTED_EVENT = 34;
-const unsigned int NO_REWARD_AVAILABLE_EVENT = 35;
+unsigned int REWARD_AVAILABLE_EVENT = 30;
+unsigned int REWARD_COLLECTED_EVENT = 31;
+unsigned int REWARD_MISSED_EVENT = 33;
+unsigned int REWARD_OMITTED_EVENT = 34;
+unsigned int NO_REWARD_AVAILABLE_EVENT = 35;
 
 
