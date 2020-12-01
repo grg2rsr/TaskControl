@@ -2,13 +2,13 @@
 // http://forum.arduino.cc/index.php?topic=396450.0
 
 #include <Arduino.h>
-#include <string.h>
-
 #include "interface_variables.h"
 
-// this line limits total command length to 200 chars - adjust if necessary (very long var names)
-const byte numChars = 200;
+// this line limits total command length to 128 chars - adjust if necessary (very long var names)
+const byte numChars = 128;
 char receivedChars[numChars];
+char buf[numChars];
+
 boolean newData = false;
 bool verbose = true;
 bool run = false;
@@ -18,8 +18,13 @@ bool punish = false;
 
 int current_state = 0; // WATCH OUT this is ini state
 
-// HARDCODED trial type probabilites
-float p_interval[6] = {1,0.5,0,0,0.5,1}; // FIXME HARDCODE
+// fwd declare functions for logging
+unsigned long now();
+void log_bool(const char name[], bool value);
+void log_int(const char name[], int value);
+// void log_long(const char name[], long value);
+void log_ulong(const char name[], unsigned long value);
+void log_float(const char name[], float value);
 
 void getSerialData() {
     // check if command data is available and if yes read it
@@ -63,9 +68,8 @@ void processSerialData() {
     if (newData == true) {
         // echo back command if verbose
         if (verbose==true) {
-            Serial.print("<Arduino received: ");
-            Serial.print(receivedChars);
-            Serial.println(">");
+            snprintf(buf, sizeof(buf), "<Arduino received: %s>", receivedChars);
+            Serial.println(buf);
         }
 
         // get total length of message
@@ -86,10 +90,8 @@ void processSerialData() {
             char varname[len-4+1];
             strlcpy(varname, receivedChars+4, len-4+1);
 
-            // INSERT_GETTERS
-            if (strcmp(varname,"current_state")==0){
-                Serial.println(String("<")+String(varname)+String(" ")+String(current_state)+String(">"));
-            }
+        // INSERT_GETTERS
+
         }
 
         // SET
@@ -114,43 +116,38 @@ void processSerialData() {
             char varvalue[len-split+1];
             strlcpy(varvalue, line+split+1, len-split+1);
 
-            // for the state machine "force state" buttons
-            // if (strcmp(varname,"current_state")==0){
-            //     current_state = atoi(varvalue);
-            // }
-
             // INSERT_SETTERS
 
         }
 
         // UPD - update trial probs - HARDCODED for now, n trials
         // format UPD 0 0.031 or similar
-        if (strcmp(mode,"UPD")==0){
+        // if (strcmp(mode,"UPD")==0){
             
-            char line[len-4+1];
-            strlcpy(line, receivedChars+4, len-4+1);
+        //     char line[len-4+1];
+        //     strlcpy(line, receivedChars+4, len-4+1);
 
-            // get index of space
-            len = sizeof(line)/sizeof(char);
-            unsigned int split = 0;
-            for (unsigned int i = 0; i < numChars; i++){
-                if (line[i] == ' '){
-                    split = i;
-                    break;
-                }
-            }
+        //     // get index of space
+        //     len = sizeof(line)/sizeof(char);
+        //     unsigned int split = 0;
+        //     for (unsigned int i = 0; i < numChars; i++){
+        //         if (line[i] == ' '){
+        //             split = i;
+        //             break;
+        //         }
+        //     }
 
-            // split by space
-            char varname[split+1];
-            strlcpy(varname, line, split+1);
+        //     // split by space
+        //     char varname[split+1];
+        //     strlcpy(varname, line, split+1);
 
-            char varvalue[len-split+1];
-            strlcpy(varvalue, line+split+1, len-split+1);
+        //     char varvalue[len-split+1];
+        //     strlcpy(varvalue, line+split+1, len-split+1);
 
-            int ix = atoi(varname);
-            float p = atof(varvalue);
-            p_interval[ix] = p;
-        }
+        //     int ix = atoi(varname);
+        //     float p = atof(varvalue);
+        //     p_interval[ix] = p;
+        // }
 
         // CMD
         if (strcmp(mode,"CMD")==0){

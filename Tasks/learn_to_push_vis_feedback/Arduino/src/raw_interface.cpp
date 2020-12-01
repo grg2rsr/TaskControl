@@ -87,9 +87,9 @@ void processRawData() {
         y = (float) Yb.f;
         
         if (x < -10000 || x > 10000 || y < -10000 || y > 10000){
-            Serial.println(String("<MSG LC read out of bounds ") + " "+String(millis())+">");
-            Serial.println(String(x));
-            Serial.println(String(y));
+            Serial.println("LC read out of bounds");
+            Serial.println(x);
+            Serial.println(y);
         }
         else{
             X = x;

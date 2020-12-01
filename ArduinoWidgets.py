@@ -149,6 +149,7 @@ class ArduinoController(QtWidgets.QWidget):
 
     def send_raw(self,bytestr):
         """ sends bytestring """
+        print(len(bytestr))
         if hasattr(self,'connection'):
             if self.connection.is_open:
                 self.connection.write(bytestr)
@@ -157,13 +158,13 @@ class ArduinoController(QtWidgets.QWidget):
 
     def run_btn_clicked(self):
         if self.RunBtn.isChecked():
+            # on startup, poll all vars
+            self.VariableController.query()
+
             # after being activated
             self.send('CMD RUN')
             self.RunBtn.setText('HALT')
             self.RunBtn.setStyleSheet("background-color: red")
-
-            # on startup, poll all vars
-            self.VariableController.query()
 
         else: 
             self.send('CMD HALT')
@@ -427,7 +428,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
                 # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
                 # self.parent().connection.write(bytestr)
                 self.parent().send_raw(bytestr)
-                time.sleep(0.01) # to fix incomplete sends? verify if this really works ... 
+                time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
         else:
             print("Arduino is not connected")
 
@@ -454,7 +455,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         """ report back all variable values """
         for name in self.Df['name'].values:
             self.parent().send("GET "+name)
-            time.sleep(0.01)
+            time.sleep(0.05)
 
     def on_serial(self, line):
         """ if the var is in the interface variables, set it """

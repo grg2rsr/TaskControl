@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <string.h>
 #include <Tone.h>
 #include <FastLED.h>
 
@@ -50,8 +49,8 @@ int choice;
 int correct_zone;
 
 // laterality related
-String last_correct_side = "left";
-String this_correct_side = "right";
+int last_correct_side = left;
+int this_correct_side = right;
 
 // bias related
 // float bias = 0.5; // exposed in interface_variables.h
@@ -68,7 +67,7 @@ void update_bias(){
 float p_reward_left = 1.0;
 float p_reward_right = 1.0;
 float this_p_reward = p_reward_left;
-unsigned long reward_magnitude_full = reward_magnitude;
+float reward_magnitude_full = reward_magnitude;
 
 void update_p_reward(){
     float b = (bias*2)-1; // rescale to [-1,1]
@@ -86,27 +85,63 @@ void update_p_reward(){
 ########  #######   ######    ######   #### ##    ##  ######
 */
 
-// float now(){
-//     return (unsigned long) micros() / 1000;
+
+// time
+unsigned long now(){
+    return millis();
+}
+
+// VAR reporters
+char s[128]; // message buffer
+
+void log_bool(const char name[], bool value){
+    if (value==true){
+        snprintf(s, sizeof(s), "<VAR %s %s %lu>", name, "true", now());
+    }
+    else {
+        snprintf(s, sizeof(s), "<VAR %s %s %lu>", name, "false", now());
+    }
+    Serial.println(s);
+}
+
+void log_int(const char name[], int value){
+    snprintf(s, sizeof(s), "<VAR %s %i %lu>", name, value, now());
+    Serial.println(s);
+}
+
+// void log_long(const char name[], long value){
+//     snprintf(s, sizeof(s), "<VAR %s %u %lu>", name, value, now());
+//     Serial.println(s);
 // }
 
-float now(){
-    return (unsigned long) millis();
+void log_ulong(const char name[], unsigned long value){
+    snprintf(s, sizeof(s), "<VAR %s %lu %lu>", name, value, now());
+    Serial.println(s);
 }
+
+void log_float(const char name[], float value){
+    snprintf(s, sizeof(s), "<VAR %s ", name);
+    Serial.print(s);
+    Serial.print(value);
+    snprintf(s, sizeof(s), " %lu>", now());
+    Serial.println(s);
+}
+
+// specific
 
 void log_code(int code){
-    Serial.println(String(code) + '\t' + String(now()));
+    // Serial.println(String(code) + '\t' + String(now()));
+    snprintf(s, sizeof(s), "%u\t%lu", code, now());
+    Serial.println(s);
 }
 
-void log_msg(String Message){
-    Serial.println("<MSG " + Message + " "+String(now())+">");
+void log_msg(const char Message[]){
+    // Serial.println("<MSG " + Message + " "+String(now())+">");
+    snprintf(s, sizeof(s), "<MSG %s %lu>", Message, now());
+    Serial.println(s);
 }
 
-void log_var(String name, String value){
-    Serial.println("<VAR " + name + " " + value + " "+String(now())+">");
-}
-
-void log_choice(){
+void log_choice(){ // remove this guy ... 
     if (current_zone == right){
         log_code(CHOICE_RIGHT_EVENT);
         n_choices_right++;
@@ -140,16 +175,20 @@ void send_sync_pulse(){
  ######  ######## ##    ##  ######   #######  ##     ##  ######
 */
 bool lick_in = false;
+bool lick = false;
+unsigned long t_last_lick_in = max_future;
 
 void read_lick(){
-  if (lick_in == false && digitalRead(LICK_PIN) == true){
-    log_code(LICK_ON);
-    lick_in = true;
-  }
-  if (lick_in == true && digitalRead(LICK_PIN) == false){
-    log_code(LICK_OFF);
-    lick_in = false;
-  }
+    lick = digitalRead(LICK_PIN);
+    if (lick_in == false && lick == true){
+        log_code(LICK_ON);
+        lick_in = true;
+        t_last_lick_in = now();
+    }
+    if (lick_in == true && lick == false){
+        log_code(LICK_OFF);
+        lick_in = false;
+    }
 }
 
 unsigned long t_last_buzz = max_future;
@@ -184,7 +223,8 @@ void process_loadcell() {
 
     if (current_zone != last_zone){
 
-        log_var("current_zone", String(current_zone));
+        // log_var("current_zone", String(current_zone));
+        log_int("current_zone", current_zone);
 
         // on center leave
         if (last_zone == center) {
@@ -276,7 +316,7 @@ void X_controller_update(){
 // run X_controller at fixed rate
 unsigned long t_last_X_controller_update = 0;
 void X_controller(){
-    if (now() - t_last_X_controller_update > 1000 / fps){
+    if (now() - t_last_X_controller_update > (unsigned long) (1000 / fps)){
         X_controller_update();
         t_last_X_controller_update = now();
     }
@@ -316,7 +356,7 @@ void update_led_cursor(){
 // for updating the LED strip at a fixed rate
 unsigned long t_last_cursor_update = 0;
 void led_cursor_controller(){
-    if (now() - t_last_cursor_update > 1000 / fps){
+    if (now() - t_last_cursor_update > (unsigned long) (1000 / fps)){
         update_led_cursor();
         t_last_cursor_update = now();
     }
@@ -439,14 +479,14 @@ void incorrect_choice_cue(){
    ###    ##     ## ########    ###    ########
 */
 
-float ul2time(unsigned long reward_volume){
-    return (float) reward_volume / valve_ul_ms;
+unsigned long ul2time(float reward_volume){
+    return (unsigned long) reward_volume / valve_ul_ms;
 }
 
 bool reward_valve_is_closed = true;
 // bool deliver_reward = false; // already forward declared in interface.cpp
 unsigned long t_reward_valve_open = max_future;
-float reward_valve_dur;
+unsigned long reward_valve_dur;
 
 void reward_valve_controller(){
     // a self terminating digital pin switch
@@ -521,14 +561,14 @@ void get_trial_type(){
         r = random(0,1000) / 1000.0;
         if (r > bias){
             // 0 = left bias, 1 = right bias
-            this_correct_side = "right";
+            this_correct_side = right;
             correct_zone = right;
 
             left_cue_brightness = 1.0;
             right_cue_brightness = left_cue_brightness - contrast * left_cue_brightness;
         }
         else {
-            this_correct_side = "left";
+            this_correct_side = left;
             correct_zone = left;
 
             right_cue_brightness = 1.0;
@@ -536,9 +576,9 @@ void get_trial_type(){
         }
     }
     
-    log_var("correct_zone", String(correct_zone));
-    log_var("in_corr_loop", String(in_corr_loop));
-    log_var("instructed_trial", String(instructed_trial));
+    log_int("correct_zone", correct_zone);
+    // log_bool("in_corr_loop", in_corr_loop);
+    // log_bool("instructed_trial", instructed_trial);
 }
                
 /*
@@ -556,7 +596,7 @@ void get_trial_type(){
 void move_X_thresh(float percent_change){
     X_thresh += X_thresh * percent_change;
     X_thresh = constrain(X_thresh, X_thresh_start, X_thresh_target);
-    log_var("X_thresh",String(X_thresh));
+    log_float("X_thresh",X_thresh);
 }
 
 /*
@@ -602,7 +642,7 @@ void finite_state_machine() {
                 }
 
                 // log bias
-                log_var("bias", String(bias));
+                log_float("bias", bias);
 
                 // determine the type of trial:
                 get_trial_type(); // updates this_correct_side
@@ -732,11 +772,11 @@ void finite_state_machine() {
                 if (lick_in == true){
 
                     // deliver reward?
-                    if (last_correct_side == "left"){
+                    if (last_correct_side == left){
                         this_p_reward = p_reward_left;
                     }
 
-                    if (last_correct_side == "right"){
+                    if (last_correct_side == right){
                         this_p_reward = p_reward_right;
                     }
 
