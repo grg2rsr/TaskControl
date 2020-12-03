@@ -27,9 +27,9 @@ plt.rcParams["ytick.direction"] = "in"
 plt.rcParams["xtick.major.size"] = 1.5
 plt.rcParams["ytick.major.size"] = 1.5
 
-SMALL_SIZE = 7
-MEDIUM_SIZE = 9
-BIGGER_SIZE = 11
+SMALL_SIZE = 8
+MEDIUM_SIZE = 10
+BIGGER_SIZE = 12
 
 plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
 plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
@@ -252,7 +252,7 @@ TrialDfs = []
 for i, row in tqdm(TrialSpans.iterrows(),position=0, leave=True):
     TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
 
-metrics = (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.choice_RT, bhv.is_successful, bhv.get_outcome)
+metrics = (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.choice_RT, bhv.is_successful, bhv.get_outcome, bhv.get_instructed)
 SessionDf = bhv.parse_trials(TrialDfs, metrics)
 
 # %% Choice / outcome grid for LC forces
@@ -276,8 +276,7 @@ for i, side in enumerate(sides):
         for _, row in tqdm(SDf.iterrows(),position=0, leave=True):
             TrialDf = TrialDfs[row.name]
             t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
-            # identical to:
-            # t_align = TrialDf.groupby('name').get_group(align_event)['t'].values
+
             LCDf = bhv.time_slice(LoadCellDf, t_align+pre, t_align+post)
             Fx.append(LCDf['x'].values)
             Fy.append(LCDf['y'].values)
@@ -321,71 +320,7 @@ pre, post = -500, 2000
 force_thresh = 3000
 align_event = "CHOICE_EVENT"
 
-order = [['left','correct'],
-         ['left','incorrect'],
-         ['right','correct'],
-         ['right','incorrect']]
-
-height_ratios = SessionDf.groupby(['choice', 'outcome']).count()['t_on'][order].values
-
-fig, axes = plt.subplots(nrows=len(order), ncols=2, figsize=[5, 5], sharex=True, gridspec_kw=dict(height_ratios=height_ratios))
-
-for i, (side, outcome) in enumerate(order):
-    try:
-        SDf = SessionDf.groupby(['choice', 'outcome']).get_group((side, outcome))
-    except:
-        continue
-
-    Fx = []
-    Fy = []
-    choice_rt = []
-    for _, row in tqdm(SDf.iterrows(), position = 0, leave=True):
-        TrialDf = TrialDfs[row.name]
-        t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
-        # identical to:
-        # t_align = TrialDf.groupby('name').get_group(align_event)['t'].values
-        LCDf = bhv.time_slice(LoadCellDf, t_align+pre, t_align+post)
-        Fx.append(LCDf['x'].values)
-        Fy.append(LCDf['y'].values)
-        #choice_rt.append(bhv.choice_RT(TrialDf).values-pre)
-
-    Fx = sp.array(Fx).T
-    Fy = sp.array(Fy).T
-
-    ## for heatmaps
-    heat1 = axes[i,0].matshow(Fx.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
-    heat2 = axes[i,1].matshow(Fy.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
-    axes[i,0].axvline(x=-pre, ymin=0, ymax=1, color = 'k', alpha = 0.5)
-    axes[i,1].axvline(x=-pre, ymin=0, ymax=1, color = 'k', alpha = 0.5)
-
-    #ymin = np.arange(-0.5,len(choice_rt)-1) # need to shift since lines starts at center of trial
-    #ymax = np.arange(0.45,len(choice_rt))
-    #axes[i,0].vlines(choice_rt, ymin, ymax, colors='k', linewidth=1)
-
-plt.setp(axes, xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(pre/1000, post/1000+0.1, 0.5))
-
-for ax in axes.flatten():
-    ax.set_aspect('auto')
-
-for ax in axes[-1,:]:
-    ax.xaxis.set_ticks_position('bottom')
-
-for ax, (side, outcome) in zip(axes[:,0],order):
-    ax.set_ylabel('\n'.join([side,outcome]))
-
-axes[0,0].set_title('X axis')
-axes[0,1].set_title('Y axis')
-axes[-1,0].set_xlabel('Time (s)')
-axes[-1,1].set_xlabel('Time (s)')
-
-fig.suptitle('Forces aligned on ' + str(align_event) + ' for ' + str(animal_id))
-fig.subplots_adjust(hspace=0.05)
-
-cbar = plt.colorbar(heat1, ax=axes[:,0], orientation='horizontal', aspect = 30)
-cbar.set_ticks([-3000,-1500,0,1500,3000]); cbar.set_ticklabels(["-3000 \n Left","-1500","0","1500", "3000 \n Right"])
-
-cbar = plt.colorbar(heat1, ax=axes[:,1], orientation='horizontal', aspect = 30)
-cbar.set_ticks([-3000,-1500,0,1500,3000]); cbar.set_ticklabels(["-3000 \n Back","-1500","0","1500", "3000 \n Front"])
+plot_forces_heatmaps(LoadCellDf, SessionDf, TrialDfs, align_event, pre, post, force_thresh, animal_id, axes=None)
 
 # %% Response Forces cues
 bin_width = 25 #ms
@@ -746,7 +681,7 @@ axes[0].hist(times,bins=bins,density=True)
 
 # %% 
 "Learn to PUSH inspections"
-task_name = ['learn_to_push_cr', 'learn_to_push_vis_feedback']
+task_name = ['learn_to_push_vis_feedback']
 SessionsDf = utils.get_sessions(animal_folder)
 
 PushSessionsDf = pd.concat([SessionsDf.groupby('task').get_group(name) for name in task_name])
@@ -826,7 +761,7 @@ fig, axes = plt.subplots()
 align_event = "GO_CUE_EVENT"
 pre, post = -1000,2000
 
-for path in paths:
+for i,path in enumerate(paths):
 
     LoadCellDf = pd.read_csv(path / "loadcell_data.csv")
 
@@ -838,7 +773,11 @@ for path in paths:
     for j, row in TrialSpans.iterrows():
         TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
 
-    force_to_go_cue(LoadCellDf, TrialDfs, align_event, pre, post, axes=axes)
+    _,_,Fmag = bhv.get_FxFy_aligned_on_event(LoadCellDf, TrialDfs, align_event, pre, post)
+
+    F_mean = np.mean(Fmag)
+    axes.plot(F_mean, label = i)
+    plt.legend(loc='upper right', frameon=False)
 
 
 """

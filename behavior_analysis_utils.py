@@ -806,7 +806,7 @@ def triaL_to_choice_matrix(trial, choice_matrix):
 
 def truncate_pad_vector(arrs, max_len):
     " Truncate and pad an array with rows of different dimensions to max_len"
-    trunc_pad_arr = np.empty((len(arrs), max_len))   
+    trunc_pad_arr = np.empty((len(arrs), max_len)) 
 
     for i, arr in enumerate(arrs):
         if len(arr) < max_len:
@@ -816,3 +816,57 @@ def truncate_pad_vector(arrs, max_len):
 
     return trunc_pad_arr.T
 
+def get_FxFy_aligned_on_event(LoadCellDf, TrialDfs, align_event, pre, post):
+    " Returns Fx/Fy/Fmag NUMPY ARRAY for all trials aligned to an event in a window defined by [align-pre, align+post]"
+
+    Fx, Fy, Fmag = [],[],[]
+    for TrialDf in TrialDfs:
+        t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
+        LCDf = bhv.time_slice(LoadCellDf, t_align-pre, t_align+post)
+
+        Fx.append(LCDf['x'].values)
+        Fy.append(LCDf['y'].values)
+        Fmag.append(np.sqrt(LCDf['x']**2 + LCDf['y']**2))
+
+    Fx = np.array(Fx).T
+    Fy = np.array(Fy).T
+    Fmag = np.array(Fmag).T
+
+    return Fx,Fy,Fmag
+
+def get_FxFy_from_events(LoadCellDf, TrialDfs, first_event, second_event):
+    """
+        Returns Fx/Fy/Fmag of all trials in a window between two events
+        Trials have different lengths hence Fx/Fy/Fmag are LIST of NUMPY ARRAYS
+    """
+
+    Fx, Fy, Fmag = [],[],[]
+    for TrialDf in TrialDfs:
+        time_1st = float(TrialDf[TrialDf.name == first_event]['t'])
+        time_2nd = float(TrialDf[TrialDf.name == second_event]['t'])
+
+        LCDf = bhv.time_slice(LoadCellDf, time_1st, time_2nd)
+        Fx.append(LCDf['x'].values)
+        Fy.append(LCDf['y'].values)
+        Fmag.append(np.sqrt(LCDf['x']**2 + LCDf['y']**2))
+
+    return Fx,Fy,Fmag
+
+def filter_trials_by(SessionDf,TrialDfs, filter_pairs):
+    """
+        This function filters input TrialDfs given filter_pair tuple (or list of tuples)
+        Example: given filter_pair [(outcome,correct) , (choice,left)] it will output only the trials which were correct to left side 
+    """
+
+    if type(filter_pairs) is list:
+        groupby_keys = [filter_pair[0] for filter_pair in filter_pairs]
+        getgroup_keys = tuple([filter_pair[1] for filter_pair in filter_pairs])
+    else:
+        groupby_keys = filter_pairs[0]
+        getgroup_keys = filter_pairs[1]
+
+    SDf = SessionDf.groupby(groupby_keys).get_group(getgroup_keys)
+
+    TrialDfs = np.array(TrialDfs)[SDf.index.values.astype(int)]
+
+    return TrialDfs

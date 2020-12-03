@@ -2,9 +2,12 @@
 #%load_ext autoreload
 #%autoreload 2
 
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 166
 from matplotlib import pyplot as plt
 from matplotlib import cm 
 from matplotlib import patches
+from matplotlib.collections import LineCollection
 
 from sklearn.linear_model import LogisticRegression
 
@@ -231,65 +234,84 @@ def general_info(LogDf, path, axes=None):
 
     return axes
 
-def plot_forces_heatmaps(LogDf, LoadCellDf, align_event, pre, post, axes=None, tick_ref = None):
-    """ Plots heatmaps of LC forces in X axes algined to any event (also marks choice times) """
+def plot_forces_heatmaps(LoadCellDf, SessionDf, TrialDfs, align_event, pre, post, force_thresh, animal_id, axes=None):
+    """ Plots heatmaps of LC forces in X/Y axes aligned to any event split by outcome (also marks choice times) """
 
-    if axes==None:
-        _ , axes = plt.subplots()
+    order = [('left','correct'),
+            ('left','incorrect'),
+            ('right','correct'),
+            ('right','incorrect')]
 
-    event_times = bhv.get_events_from_name(LogDf, align_event)
-    Fx, correct_idx, incorrect_idx = [],[],[]
-    
-    i = 0
-    # Splitting Fx  by trial result type (correct/incorrect)
-    for t in event_times['t']:
-        
-        F = bhv.time_slice(LoadCellDf,t+pre,t+post)
-        if (len(F) < post+pre):
-            print('LCDf is shorter than LogDf!')
+    height_ratios = SessionDf.groupby(['choice', 'outcome']).count()['t_on'].reindex(order).values
+
+    # Robust against trials missing for specific (choice,outcome) pair
+    idx = []
+    for i in range(len(height_ratios)):
+        if np.isnan(height_ratios[i]): idx = i
+    order.pop(idx)
+    height_ratios = np.delete(height_ratios,idx, axis = 0)
+
+    fig, axes = plt.subplots(nrows=len(order), ncols=2, figsize=[5, 5], sharex=True, gridspec_kw=dict(height_ratios=height_ratios))
+
+    for i, (side, outcome) in enumerate(order):
+        try:
+            SDf = SessionDf.groupby(['choice', 'outcome']).get_group((side, outcome))
+        except:
             continue
-        Fx.append(F['x'])
 
-        TrialDf = bhv.time_slice(LogDf,t+pre,t+post)
+        Fx = []
+        Fy = []
+        choice_rt = []
+        for _, row in tqdm(SDf.iterrows(), position = 0, leave=True):
+            TrialDf = TrialDfs[row.name]
+            t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
+            LCDf = bhv.time_slice(LoadCellDf, t_align+pre, t_align+post)
+            Fx.append(LCDf['x'].values)
+            Fy.append(LCDf['y'].values)
+            choice_rt.append(bhv.choice_RT(TrialDf).values-pre)
 
-        if "CHOICE_CORRECT_EVENT" in TrialDf.name.values:
-            correct_idx.append(i)
-        elif "CHOICE_INCORRECT_EVENT" in TrialDf.name.values:
-            incorrect_idx.append(i)
+        Fx = sp.array(Fx).T
+        Fy = sp.array(Fy).T
 
-        i = i + 1
+        # Plot heatmaps
+        heat1 = axes[i,0].matshow(Fx.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
+        heat2 = axes[i,1].matshow(Fy.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
+        axes[i,0].axvline(x=-pre, ymin=0, ymax=1, color = 'k', alpha = 0.5)
+        axes[i,1].axvline(x=-pre, ymin=0, ymax=1, color = 'k', alpha = 0.5)
 
-    # Appending groups of trials into one and truncating them
-    correct_idx = np.array(correct_idx)
-    incorrect_idx = np.array(incorrect_idx)
-    Fx = np.array(Fx)
-    Fx = Fx[np.concatenate((correct_idx,incorrect_idx))]
+        # Plot choice_rt ticks
+        ymin = np.arange(-0.5,len(choice_rt)-1) # need to shift since lines starts at center of trial
+        ymax = np.arange(0.45,len(choice_rt))
+        axes[i,0].vlines(choice_rt, ymin, ymax, colors='k', linewidth=1)
 
-    force_x_tresh = 2500
+    plt.setp(axes, xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(pre/1000, post/1000+0.1, 0.5))
 
-    heat = axes.matshow(Fx, cmap='PiYG',vmin=-force_x_tresh,vmax=force_x_tresh) # X axis
+    for ax in axes.flatten():
+        ax.set_aspect('auto')
 
-    # Labels, title and formatting
-    axes.set_title('Forces in L/R axis aligned to ' + align_event)
-    axes.set_xlabel('Time')
-    axes.set_ylabel('Trials')
+    for ax in axes[-1,:]:
+        ax.xaxis.set_ticks_position('bottom')
 
-    # xticks in seconds
-    plt.setp(axes, xticks=np.arange(0, post-pre + 1, 500), xticklabels=np.arange(pre//1000, post//1000 + 0.1, 0.5))
+    for ax, (side, outcome) in zip(axes[:,0],order):
+        ax.set_ylabel('\n'.join([side,outcome]))
 
-    # colorbar 
-    cbar = plt.colorbar(heat, ax=axes, orientation='horizontal', aspect = 30)
-    cbar.set_ticks([-2000,-1000,0,1000,2000]); cbar.set_ticklabels(["Left (-2000)","-1000","0","1000","Right (2000)"])
+    axes[0,0].set_title('X axis')
+    axes[0,1].set_title('Y axis')
+    axes[-1,0].set_xlabel('Time (s)')
+    axes[-1,1].set_xlabel('Time (s)')
 
-    # Color code on the right
-    axes.vlines(post-pre-5, 0, len(correct_idx), colors='g', linewidth=4)
-    axes.vlines(post-pre-5, len(correct_idx), len(correct_idx) + len(incorrect_idx) - 1, colors='r', linewidth=4)
+    fig.suptitle('Forces aligned on ' + str(align_event) + ' for ' + str(animal_id))
+    fig.subplots_adjust(hspace=0.05)
 
-    axes.set_aspect('auto')
+    cbar = plt.colorbar(heat1, ax=axes[:,0], orientation='horizontal', aspect = 30)
+    cbar.set_ticks([-3000,-1500,0,1500,3000]); cbar.set_ticklabels(["-3000 \n Left","-1500","0","1500", "3000 \n Right"])
+
+    cbar = plt.colorbar(heat1, ax=axes[:,1], orientation='horizontal', aspect = 30)
+    cbar.set_ticks([-3000,-1500,0,1500,3000]); cbar.set_ticklabels(["-3000 \n Back","-1500","0","1500", "3000 \n Front"])
 
     return axes
 
-def plot_choice_time_hist(LogDf, TrialDfs, bin_width, axes=None):
+def plot_choice_RT_hist(LogDf, TrialDfs, bin_width, axes=None):
     " Plots the choice RT histograms split by trial type and outcome "
 
     if axes==None:
@@ -340,7 +362,7 @@ def plot_choice_time_hist(LogDf, TrialDfs, bin_width, axes=None):
 
     return axes  
 
-def plot_success_rate(SessionDf, LogDf, history=None, axes=None): 
+def plot_success_rate(LogDf, SessionDf, history=None, axes=None): 
     " Plots success rate with trial outcome tickmarks, if history given includes a rolling smooth "
     if axes is None:
         axes = plt.gca()
@@ -445,7 +467,7 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
     "Licks"
     twin_ax2 = axes[1].twinx()
 
-    pre, post, force_tresh = -500 , 2000, 3000
+    pre, post, force_tresh = 500 , 2000, 3000
     outcomes = ['correct', 'incorrect', 'missed']
 
     for outcome in outcomes:
@@ -468,21 +490,21 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
             time_last = float(TrialDf['t'].iloc[-1])
             
             # Aligned to first cue
-            F = bhv.time_slice(LoadCellDf, time_1st+pre, time_2nd) # also get previous 0.5s
+            F = bhv.time_slice(LoadCellDf, time_1st-pre, time_2nd) # also get previous 0.5s
             y = np.sqrt(F['x']**2+F['y']**2)
             ys_1st.append(y)
 
             # Aligned to second cue
-            F = bhv.time_slice(LoadCellDf, time_2nd+pre, time_last) # also get previous 0.5s
+            F = bhv.time_slice(LoadCellDf, time_2nd-pre, time_last) # also get previous 0.5s
             y = np.sqrt(F['x']**2+F['y']**2)
             ys_2nd.append(y)
 
             try:
-                licks.append(bhv.get_licks(TrialDf, time_2nd+pre, time_last))
+                licks.append(bhv.get_licks(TrialDf, time_2nd-pre, time_last))
             except:
                 pass
 
-        # Compute mean force for each outcome aligned to first or second        
+        # Compute mean force    
         Fmag_1st = bhv.tolerant_mean(np.array(ys_1st))
         Fmag_2nd = bhv.tolerant_mean(np.array(ys_2nd))
 
@@ -493,7 +515,7 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
         if not licks:
             pass
         else:
-            no_bins = round((post-pre)/bin_width)
+            no_bins = round((post+pre)/bin_width)
             counts_2, bins = np.histogram(np.concatenate(licks),no_bins)
             licks_2nd_freq = np.divide(counts_2, ((bin_width/1000)*len(ys_2nd)))
             twin_ax2.step(bins[1:], licks_2nd_freq, alpha=0.5, label = outcome)
@@ -510,10 +532,9 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
     
     # Shared
     plt.setp(axes, yticks=np.arange(0, force_tresh+1, 500), yticklabels=np.arange(0, force_tresh+1, 500))
-    axes[0].set_xlim(0,post-pre)
-    axes[0].set_ylim(0,force_tresh)
-    axes[1].set_xlim(0,post-pre)
-    axes[1].set_ylim(0,force_tresh)
+    for ax in axes:
+        ax.set_xlim(0,post-pre)
+        ax.set_ylim(0,force_tresh)
 
     " Licks "
     twin_ax2.tick_params(axis='y', labelcolor='C0')
@@ -537,7 +558,7 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
 
     return axes
 
-def plot_choice_matrix(SessionDf, LogDf, trial_type, axes=None):
+def plot_choice_matrix(LogDf, SessionDf, trial_type, axes=None):
     'Plots percentage of choices made in a session in a 3x3 choice matrix following a KB layout'
 
     if axes is None:
@@ -577,55 +598,22 @@ def plot_choice_matrix(SessionDf, LogDf, trial_type, axes=None):
 
     return axes
 
-def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_event, trial_outcome, animal_id, axes=None):
-    """ Plots trajectories in 2D aligned to an event for specific trial outcome"""
+def plot_forces_trajectories(LogDf, LoadCellDf, SessionDf, TrialDfs, align_event, pre,post, animal_id, axes=None):
+    """ Plots trajectories in 2D aligned to an event for specific trial filter_pair"""
 
     if axes==None:
         fig , axes = plt.subplots()
 
-    pre,post = -500, 500
-
-    F = []; idx_left, idx_right = [],[]; i = 0
-
-    # Obtain forces of every trial with specified trial_outcome
-    for TrialDf in TrialDfs:
-
-        if bhv.get_outcome(TrialDf).values[0] == trial_outcome:
-            t = float(TrialDf[TrialDf.name == align_event]['t'])
-            f = bhv.time_slice(LoadCellDf,t+pre,t+post)
-            F.append([f['x'], f['y']])
-
-            # Split into L/R in case of trial outcome being correct
-            if trial_outcome == 'correct':
-                if bhv.get_choice(TrialDf).values[0] == 'right':
-                    idx_right.append(i)
-                if bhv.get_choice(TrialDf).values[0] == 'left':
-                    idx_left.append(i)
-                i = i + 1
-
-    F = np.array(F)
+    Fx,Fy,_ = bhv.get_FxFy_aligned_on_event(LoadCellDf, TrialDfs, align_event, pre, post)
+    F = [Fx,Fy]
     
     # time-varying color code
-    if trial_outcome == 'correct':
-        cm0 = plt.cm.get_cmap('Reds')
-        cm1 = plt.cm.get_cmap('Greens')
-    elif trial_outcome == 'incorrect':
-        cm = plt.cm.get_cmap('Reds')
-    elif trial_outcome == 'premature': 
-        cm = plt.cm.get_cmap('RdPu')
-    else:
-        cm = plt.cm.get_cmap('Greys')
+    cm = plt.cm.get_cmap('Greys')
 
     z = np.linspace(0, 1, num = F.shape[2])
 
-    if trial_outcome == 'correct':
-        F_left_mean = np.mean(F[idx_left],0).T
-        F_right_mean = np.mean(F[idx_right],0).T
-        scatter = plt.scatter(F_left_mean[:, 0], F_left_mean[:, 1], c=z, cmap= cm0, s = 4, label = 'left')
-        scatter = plt.scatter(F_right_mean[:, 0], F_right_mean[:, 1], c=z, cmap= cm1, s = 4, label = 'right')
-    else:
-        F_mean = np.mean(F,0).T
-        scatter = plt.scatter(F_mean[:, 0], F_mean[:, 1], c=z, cmap= cm, s = 4, label = trial_outcome)
+    F_mean = np.mean(F,0).T
+    scatter = plt.scatter(F_mean[:, 0], F_mean[:, 1], c=z, cmap= cm, s = 4)
 
     plt.clim(-0.3, 1)
     cbar = plt.colorbar(scatter, orientation='vertical', aspect=60)
@@ -636,13 +624,12 @@ def plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_event, trial_out
     axes.axhline(0 ,linestyle=':',alpha=0.5,lw=1,color='k')
     axes.set_xlabel('Left/Right axis')
     axes.set_ylabel('Front/Back axis')
-    axes.set_title(' Mean 2D trajectories aligned to ' + str(align_event) + '\n on ' + str(trial_outcome) + ' trials for ' + str(animal_id))
+    axes.set_title(' Mean 2D trajectories aligned to ' + str(align_event) + '' + str(animal_id))
     axes.legend(frameon=False, markerscale = 3)
 
-    leg = axes.get_legend()
-    leg.legendHandles[0].set_color('red')
-    if trial_outcome == 'correct': # also plot the right side 
-        leg.legendHandles[1].set_color('green')
+    # Previously used to change dot color in legend
+    #leg = axes.get_legend()
+    #leg.legendHandles[0].set_color('red')
 
     axes.set_xlim([-3500,3500])
     axes.set_ylim([-3500,3500])
@@ -827,22 +814,73 @@ def split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, po
 
     return axes
 
-def force_to_go_cue(LoadCellDf, TrialDfs, align_event, pre, post, axes=None):
-    F = []
+def trajectories_with_choice_marker(LoadCellDf, TrialDfs, SessionDf, first_event, animal_id, axes=None):
+    " Trajectories from first event to choice "
 
     if axes == None:
-        _ , axes = plt.subplots()
+        fig , axes = plt.subplots(figsize=[4, 3])
 
-    for TrialDf in TrialDfs:
+    force_tresh = 4000
+    second_event = 'CHOICE_EVENT'
 
-        t = float(TrialDf[TrialDf.name == align_event]['t'])
-        f = bhv.time_slice(LoadCellDf,t+pre,t+post)
-        F.append(np.sqrt(f['x']**2 + f['y']**2))
- 
-    F_mean = np.mean(F)
-    plt.plot(F_mean)
+    Fxs,Fys,_ = bhv.get_FxFy_from_events(LoadCellDf, TrialDfs, first_event, second_event)
 
-    return axes
+    idx_left, idx_right = 0,0 # 
+
+    # time-varying color code
+    cm = plt.cm.get_cmap('Greys')
+    z = np.linspace(0, 1, num = len(Fxs))
+
+    for (Fx,Fy) in zip(Fxs,Fys):
+        # All trajectories
+        axes.plot(Fx, Fy, lw=0.5, alpha=0.1, zorder = -1)
+        
+        #Line gradients
+        points = np.array([Fx, Fy]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+        lc = LineCollection(segments, cmap=plt.get_cmap('Greys'),
+            norm=plt.Normalize(0, 1))
+        lc.set_array(z)
+        lc.set_linewidth(0.5)
+        lc.set_alpha(0.5)
+        axes.add_collection(lc)
+
+        # Choice markers
+        if np.sqrt(Fx[-1]**2+Fy[-1]**2) < 500:
+            color = '#808080'
+        elif Fx[-1] < 0:
+            color = 'crimson'
+            idx_left += 1
+        elif Fx[-1] > 0:
+            color = 'royalblue'
+            idx_right += 1
+
+        axes.plot(Fx[-1], Fy[-1], 'o', markersize = 2, color = color, zorder = 2)
+
+    axes.set_xlim(-force_tresh, force_tresh)
+    axes.set_ylim(-force_tresh, force_tresh)
+
+    # Center cross
+    line_kwargs = dict(color='k', linestyle=':', linewidth = 0.75, alpha=0.5, zorder=-100)
+    axes.axvline(0, **line_kwargs)
+    axes.axhline(0, **line_kwargs)
+
+    # Boundaries lines
+    #line_kwargs = dict(color='k', lw=0.5, linestyle='-', alpha=0.25, zorder=-100)
+    #axes.axvline(-2500, **line_kwargs)
+    #axes.axvline(+2500, **line_kwargs)
+    
+    # Text
+    plt.text(-force_tresh/2,force_tresh/2, 'n = ' + str(idx_left), color = 'r')
+    plt.text(force_tresh/2,force_tresh/2, 'n = ' + str(idx_right), color = 'b')
+    plt.text(0,force_tresh/2, str(len(TrialDfs)) + ' trials', color = 'k')
+
+    axes.set_title('Trajectories of manipulandum and \n marker at time of choice ' + str(animal_id))
+    axes.set_xlabel('Left/Right axis')
+    axes.set_ylabel('Back/Front axis')
+
+    fig.tight_layout()
 
 """
  
