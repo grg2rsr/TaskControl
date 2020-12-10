@@ -211,7 +211,10 @@ class ArduinoController(QtWidgets.QWidget):
         shutil.copy(self.vars_path,self.vars_path.with_suffix('.default'))
 
         # setting the valve calibration factor
-        self.VariableController.VariableEditWidget.set_entry('valve_ul_ms',self.config['box']['valve_ul_ms'])
+        try:
+            self.VariableController.VariableEditWidget.set_entry('valve_ul_ms',self.config['box']['valve_ul_ms'])
+        except:
+            print("can't set valve calibration factor")
         
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
@@ -651,7 +654,10 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.lines = []
         self.code_map = code_map
         self.code_map_inv = dict(zip(code_map.values(), code_map.keys()))
-        self.filter = ["<VAR current_zone", self.code_map_inv['LICK_ON']+'\t', self.code_map_inv['LICK_OFF']+'\t']
+        try:
+            self.filter = ["<VAR current_zone", self.code_map_inv['LICK_ON']+'\t', self.code_map_inv['LICK_OFF']+'\t']
+        except KeyError:
+            self.filter = []
 
         # connect to parent signals
         parent.serial_data_available.connect(self.update)
