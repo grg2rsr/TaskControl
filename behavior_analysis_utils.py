@@ -340,10 +340,13 @@ def create_LogDf_LCDf_csv(fd_path, task_name):
  
 """
 
-def time_slice(Df, t_min, t_max, col='t', reset_index=True):
+def time_slice(Df, t_min, t_max, col='t', reset_index=True, mode='inclusive'):
     """ helper to slice a dataframe along time (defined by col) """
     vals = Df[col].values
-    binds = np.logical_and(vals > t_min, vals < t_max)
+    if mode=='exclusive':
+        binds = np.logical_and(vals > t_min, vals < t_max)
+    if mode is 'inclusive':
+        binds = np.logical_and(vals >= t_min, vals <= t_max)
 
     if reset_index:
         Df = Df.reset_index(drop=True)

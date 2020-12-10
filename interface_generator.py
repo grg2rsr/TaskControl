@@ -1,5 +1,4 @@
 # python me to generate an interface.cpp based on the variables in `init_variables.h`
-
 import pandas as pd
 import scipy as sp
 import sys,os
@@ -14,50 +13,6 @@ dtype_map = {
             'float':'f4',
             'double':'f8',
             }
-
-# def parse_arduino_vars(path):
-#     """ a hacky parser """  # FIXME this needs a new name as well
-#     with open(path, 'r') as fH:
-#         lines = fH.readlines()
-#         lines = [line.strip() for line in lines]
-
-#     # hacky parser:
-#     dfs = []
-#     for line in lines:
-#         line = line.strip()
-#         # to skip
-#         if line == '':
-#             continue
-#         if '*' in line:  # in block comment
-#             continue
-#         if line[:2] == '//': # full line comment
-#             continue
-#         if '//' in line: # remove everything after comment
-#             line = line.split('//')[0]
-#             print(line)
-        
-#         line = line.strip()
-#         try:
-#             elements, value = line.split('=')
-#             value = value[:-1].strip()
-#             elements = elements.strip().split(' ')
-#             elements = [elem.strip() for elem in elements]
-#             name = elements[-1]
-#             if elements[0] == 'const':
-#                 const = True
-#                 dtype = ' '.join(elements[1:-1])
-#             else:
-#                 const = False
-#                 dtype = ' '.join(elements[:-1])
-#             value = sp.array(value, dtype=dtype_map[dtype])
-#             dfs.append(pd.DataFrame([[name, value, dtype, const]],columns=['name', 'value', 'dtype', 'const']))
-#         except:
-#             print('unreadable line: ',line)
-#             pass
-#     arduino_vars = pd.concat(dfs, axis=0)
-#     arduino_vars = arduino_vars.reset_index(drop=True)
-
-#     return arduino_vars
 
 def parse_arduino_vars(path):
     """ a kind of hacky parser for init_variables.h """
@@ -99,98 +54,99 @@ def parse_arduino_vars(path):
 
     return arduino_vars
 
+bool_getter_template = """
+        if (strcmp(varname,"VARNAME")==0){
+            log_bool("VARNAME", VARNAME);
+        }
+"""
+
+int_getter_template = """
+        if (strcmp(varname,"VARNAME")==0){
+            log_int("VARNAME", VARNAME);
+        }
+"""
+
+long_getter_template = """
+        if (strcmp(varname,"VARNAME")==0){
+            log_long("VARNAME", VARNAME);
+        }
+"""
+
+ulong_getter_template = """
+        if (strcmp(varname,"VARNAME")==0){
+            log_ulong("VARNAME", VARNAME);
+        }
+"""
+
+float_getter_template = """
+        if (strcmp(varname,"VARNAME")==0){
+            log_float("VARNAME", VARNAME);
+        }
+"""
+
+bool_setter_template = """
+        if (strcmp(varname,"VARNAME")==0){
+            if (strcmp(varvalue,"false")==0) {
+                VARNAME = false;
+            }
+            else {
+                VARNAME = true;
+            }
+        }
+"""
+
+int_setter_template = """
+        if (strcmp(varname,"VARNAME")==0){
+            VARNAME = atoi(varvalue);
+        }
+"""
+
+long_setter_template = """
+        if (strcmp(varname,"VARNAME")==0){
+            VARNAME = atol(varvalue);
+        }
+"""
+
+ulong_setter_template = """
+        if (strcmp(varname,"VARNAME")==0){
+            VARNAME = strtoul(varvalue,NULL,10);
+        }
+"""
+
+float_setter_template = """
+        if (strcmp(varname,"VARNAME")==0){
+            VARNAME = atof(varvalue);
+        }
+"""
+Getters = {'int': int_getter_template,
+           'unsigned long': ulong_getter_template,
+           'float':float_getter_template,
+           'bool':bool_getter_template}
+
+Setters = {'int': int_setter_template,
+           'unsigned long': ulong_setter_template,
+           'float':float_setter_template,
+           'bool':bool_setter_template}
+
 
 def run(variables_path):
-    init_vars = parse_arduino_vars(variables_path)
+    arduino_vars = parse_arduino_vars(variables_path)
 
-    getter_template = """
-            if (strcmp(varname,"VARNAME")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(VARNAME)+String(">"));
-            }
-    """
+    # generate lines for getters
+    all_getters = [] 
+    for i, row in arduino_vars.iterrows():
+        template = Getters[row['dtype']]
+        template = template.replace("VARNAME", row['name'])
+        all_getters.append(template)
 
-    bool_setter_template = """
-            if (strcmp(varname,"VARNAME")==0){
-                if (strcmp(varvalue,"false")==0) {
-                    VARNAME = false;
-                }
-                else {
-                    VARNAME = true;
-                }
-            }
-    """
+    # generate lines for setters
+    all_setters = [] 
+    for i, row in arduino_vars.iterrows():
+        template = Setters[row['dtype']]
+        template = template.replace("VARNAME", row['name'])
+        all_setters.append(template)
 
-    int_setter_template = """
-            if (strcmp(varname,"VARNAME")==0){
-                VARNAME = atoi(varvalue);
-            }
-    """
-
-    long_setter_template = """
-            if (strcmp(varname,"VARNAME")==0){
-                VARNAME = atol(varvalue);
-            }
-    """
-
-    unsigned_long_setter_template = """
-            if (strcmp(varname,"VARNAME")==0){
-                VARNAME = strtoul(varvalue,NULL,10);
-            }
-    """
-
-    float_setter_template = """
-            if (strcmp(varname,"VARNAME")==0){
-                VARNAME = atof(varvalue);
-            }
-    """
-
-
-    # make getters
-    all_getters = []
-    all_varnames = []
-    for i,row in init_vars.iterrows():
-        all_varnames.append(row['name'])
-
-    for i in range(len(all_varnames)):
-        all_getters.append(getter_template.replace("VARNAME",all_varnames[i]))
-
-    # make setters
-    all_setters = []
-    try:
-        for i, row in init_vars.groupby('dtype').get_group('bool').iterrows():
-            all_setters.append(bool_setter_template.replace("VARNAME",row['name']))
-    except KeyError:
-        # no bools found
-        pass
-
-    try:
-        for i, row in init_vars.groupby('dtype').get_group('int').iterrows():
-            all_setters.append(int_setter_template.replace("VARNAME",row['name']))
-    except KeyError:
-        # no ints found
-        pass
-
-    try:
-        for i, row in init_vars.groupby('dtype').get_group('long').iterrows():
-            all_setters.append(long_setter_template.replace("VARNAME",row['name']))
-    except KeyError:
-        # no longs found
-        pass
-
-    try:
-        for i, row in init_vars.groupby('dtype').get_group('unsigned long').iterrows():
-            all_setters.append(unsigned_long_setter_template.replace("VARNAME",row['name']))
-    except KeyError:
-        # no unsigned longs found
-        pass
-
-    try:
-        for i, row in init_vars.groupby('dtype').get_group('float').iterrows():
-            all_setters.append(float_setter_template.replace("VARNAME",row['name']))
-    except KeyError:
-        #  no floats ...
-        pass
-
+    # read in template
     with open(Path(__file__).with_name("interface_template.cpp"),'r') as fH:
         lines = fH.readlines()
 
@@ -202,7 +158,7 @@ def run(variables_path):
 
     # insert getters
     for i,line in enumerate(lines):
-        if line == '            // INSERT_GETTERS\n':
+        if line == '        // INSERT_GETTERS\n':
             getter_insertion_ind = i
     lines.insert(getter_insertion_ind+1,''.join(all_getters))
 

@@ -26,4 +26,4 @@ int fps = 100;
 
 float bias = 0.5;
 float contrast = 1.0;
-float sigma = 0.75;
+float sigma = 1.0;

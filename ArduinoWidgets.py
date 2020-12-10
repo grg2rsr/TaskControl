@@ -149,6 +149,7 @@ class ArduinoController(QtWidgets.QWidget):
 
     def send_raw(self,bytestr):
         """ sends bytestring """
+        print(len(bytestr))
         if hasattr(self,'connection'):
             if self.connection.is_open:
                 self.connection.write(bytestr)
@@ -157,13 +158,13 @@ class ArduinoController(QtWidgets.QWidget):
 
     def run_btn_clicked(self):
         if self.RunBtn.isChecked():
+            # on startup, poll all vars
+            self.VariableController.query()
+
             # after being activated
             self.send('CMD RUN')
             self.RunBtn.setText('HALT')
             self.RunBtn.setStyleSheet("background-color: red")
-
-            # on startup, poll all vars
-            self.VariableController.query()
 
         else: 
             self.send('CMD HALT')
@@ -210,7 +211,10 @@ class ArduinoController(QtWidgets.QWidget):
         shutil.copy(self.vars_path,self.vars_path.with_suffix('.default'))
 
         # setting the valve calibration factor
-        self.VariableController.VariableEditWidget.set_entry('valve_ul_ms',self.config['box']['valve_ul_ms'])
+        try:
+            self.VariableController.VariableEditWidget.set_entry('valve_ul_ms',self.config['box']['valve_ul_ms'])
+        except:
+            print("can't set valve calibration factor")
         
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
@@ -427,7 +431,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
                 # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
                 # self.parent().connection.write(bytestr)
                 self.parent().send_raw(bytestr)
-                time.sleep(0.01) # to fix incomplete sends? verify if this really works ... 
+                time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
         else:
             print("Arduino is not connected")
 
@@ -454,7 +458,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         """ report back all variable values """
         for name in self.Df['name'].values:
             self.parent().send("GET "+name)
-            time.sleep(0.01)
+            time.sleep(0.05)
 
     def on_serial(self, line):
         """ if the var is in the interface variables, set it """
@@ -650,7 +654,10 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.lines = []
         self.code_map = code_map
         self.code_map_inv = dict(zip(code_map.values(), code_map.keys()))
-        self.filter = ["<VAR current_zone", self.code_map_inv['LICK_ON']+'\t', self.code_map_inv['LICK_OFF']+'\t']
+        try:
+            self.filter = ["<VAR current_zone", self.code_map_inv['LICK_ON']+'\t', self.code_map_inv['LICK_OFF']+'\t']
+        except KeyError:
+            self.filter = []
 
         # connect to parent signals
         parent.serial_data_available.connect(self.update)

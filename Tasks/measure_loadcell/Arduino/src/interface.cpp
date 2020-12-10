@@ -92,6 +92,14 @@ void processSerialData() {
 
         // INSERT_GETTERS
 
+        if (strcmp(varname,"ITI_dur")==0){
+            log_ulong("ITI_dur", ITI_dur);
+        }
+
+        if (strcmp(varname,"Trial_dur")==0){
+            log_ulong("Trial_dur", Trial_dur);
+        }
+
         }
 
         // SET
@@ -117,6 +125,14 @@ void processSerialData() {
             strlcpy(varvalue, line+split+1, len-split+1);
 
             // INSERT_SETTERS
+
+        if (strcmp(varname,"ITI_dur")==0){
+            ITI_dur = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"Trial_dur")==0){
+            Trial_dur = strtoul(varvalue,NULL,10);
+        }
 
         }
 
