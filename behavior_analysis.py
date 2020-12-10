@@ -9,6 +9,8 @@ import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 166 # the screens in the viv
 import behavior_analysis_utils as bhv
 import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from scipy.special import expit
 
 # this should be changed ... 
 from pathlib import Path
@@ -113,7 +115,7 @@ LogDf = LogDf.sort_values('t')
 # note for the future - mind this distinction! If response to both is wanted, use REWARD_AVAILABLE_STATE
 
 # %% learn to lick inspections
-pre, post = -2000, 4000
+pre, post = 2000, 4000
 fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
 
 events = ['REWARD_AVAILABLE_EVENT', 'OMITTED_REWARD_AVAILABLE_EVENT', 'NO_REWARD_AVAILABLE_EVENT']
@@ -121,7 +123,7 @@ LicksDf = bhv.get_events_from_name(LogDf, 'LICK_EVENT')
 for event, ax in zip(events, axes):
     times = bhv.get_events_from_name(LogDf, event)['t'] # task event times
     try:
-        plot_psth(LicksDf, times, bins=sp.linspace(pre, post, 50), axes=ax, density=True) # Density with time on ms screws up everything
+        plot_psth(LicksDf, times, bins=sp.linspace(-pre, post, 50), axes=ax, density=True) # Density with time on ms screws up everything
     except:
         continue
     ax.set_title(event, fontsize='x-small')
@@ -133,8 +135,6 @@ fig.tight_layout()
 plt.savefig(plot_dir / 'lick_to_cues_psth.png', dpi=300)
 
 # %% Reaction times - first lick to cue
-pre, post = -2000, 4000
-
 fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
 
 events = ['REWARD_AVAILABLE_EVENT', 'OMITTED_REWARD_AVAILABLE_EVENT', 'NO_REWARD_AVAILABLE_EVENT']
@@ -252,61 +252,37 @@ TrialDfs = []
 for i, row in tqdm(TrialSpans.iterrows(),position=0, leave=True):
     TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
 
-metrics = (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.choice_RT, bhv.is_successful, bhv.get_outcome, bhv.get_instructed)
+metrics = (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.choice_RT, bhv.get_in_corr_loop, \
+            bhv.is_successful, bhv.get_outcome, bhv.get_instructed, bhv.get_bias, bhv.get_correct_zone)
 SessionDf = bhv.parse_trials(TrialDfs, metrics)
 
-# %% Choice / outcome grid for LC forces
-sides = ['left', 'right']
+# %% Success rate
+history = 10 # trial rolling mean 
+plot_success_rate(LogDf, SessionDf, history, axes=None)
+plt.savefig(plot_dir / ('success_rate.png'), dpi=300)
+
+# %% Choice / Outcome grid for LC forces
+choices = ['left', 'right']
 outcomes = ['correct', 'incorrect']
-fig, axes = plt.subplots(nrows=len(outcomes), ncols=len(sides), figsize=[5, 5], sharex=True, sharey=True)
+fig, axes = plt.subplots(nrows=len(outcomes), ncols=len(choices), figsize=[5, 5], sharex=True, sharey=True)
 
-pre, post = -100, 500
-align_event = "CHOICE_EVENT"
+plot_lim = 5000
+first_event = "GO_CUE_EVENT"
+second_event = "CHOICE_EVENT"
 
-for i, side in enumerate(sides):
+for i, side in enumerate(choices):
     for j, outcome in enumerate(outcomes):
         try:
-            SDf = SessionDf.groupby(['choice', 'outcome']).get_group((side, outcome))
+            # Only get filter pair combination
+            filter_pair = [('choices', choice),('outcomes', outcome)]
+            TrialDfs_filt = filter_trials_by(SessionDf,TrialDfs, filter_pair)
         except:
             continue
 
         ax = axes[j, i]
-        Fx = []
-        Fy = []
-        for _, row in tqdm(SDf.iterrows(),position=0, leave=True):
-            TrialDf = TrialDfs[row.name]
-            t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
-
-            LCDf = bhv.time_slice(LoadCellDf, t_align+pre, t_align+post)
-            Fx.append(LCDf['x'].values)
-            Fy.append(LCDf['y'].values)
-
-        Fx = sp.array(Fx).T
-        Fy = sp.array(Fy).T
-
-        event_ix = Fx.shape[0] - post
 
         ## for trajectories
-        for k in range(Fx.shape[1]):
-            ax.plot(Fx[:, k], Fy[:, k], lw=0.5, alpha=0.5)
-            ax.plot(Fx[event_ix, k], Fy[event_ix, k], 'o', markersize = 5, alpha=0.5)
-     
-        Fx_avg = sp.average(Fx, 1) 
-        Fy_avg = sp.average(Fy, 1)
-
-        ax.plot(Fx_avg, Fy_avg, lw=1, color='k', alpha=0.8)
-        ax.plot(Fx_avg[event_ix], Fy_avg[event_ix], 'o', color='k', alpha=0.8, markersize=5)
-       
-        ax.set_xlim(-4000, 4000)
-        ax.set_ylim(-4000, 4000)
-
-        line_kwargs = dict(color='k', linestyle=':', alpha=0.5, zorder=-100)
-        ax.axvline(0, **line_kwargs)
-        ax.axhline(0, **line_kwargs)
-
-        line_kwargs = dict(color='k', lw=0.5, linestyle='-', alpha=0.25, zorder=-100)
-        ax.axvline(-2500, **line_kwargs)
-        ax.axvline(+2500, **line_kwargs)
+        ax = bhv.trajectories_with_marker(LoadCellDf, TrialDfs_filt, SessionDf, first_event, second_event, plot_lim, animal_id, ax)
 
 sns.despine(fig)
 axes[0, 0].set_title('left')
@@ -316,25 +292,29 @@ axes[1, 0].set_ylabel('incorrect')
 fig.tight_layout()
 
 # %% Heatmaps
-pre, post = -500, 2000
+pre, post = 500, 2000
 force_thresh = 3000
 align_event = "CHOICE_EVENT"
 
 plot_forces_heatmaps(LoadCellDf, SessionDf, TrialDfs, align_event, pre, post, force_thresh, animal_id, axes=None)
+plt.savefig(plot_dir / ('forces_heatmap.png'), dpi=300)
 
-# %% Response Forces cues
+# %% Plot_force_magnitude
+pre, post = 500, 2000
 bin_width = 25 #ms
+force_thresh = 3000
 first_cue_ref = "TRIAL_ENTRY_EVENT"
-align_event = "CHOICE_EVENT"
+second_cue_ref = "CHOICE_EVENT"
 
-plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, align_event, bin_width, axes=None)
+plot_force_magnitude(LogDf, LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_cue_ref, pre, post, force_thresh, bin_width, axes=None)
+plt.savefig(plot_dir / ('forces_mag.png'), dpi=300)
 
 # %% Response Forces aligned to anything split by any input 
 split_by = 'successful' 
 align_event = "CHOICE_EVENT"
 pre, post, thresh = 500,2000,4000
 
-axes = split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, post, split_by, animal_id)
+axes = plot_split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, post, split_by, animal_id)
 
 # Formatting
 for ax in axes:
@@ -351,12 +331,12 @@ choice_interval = 2500
 
 fig, axes = plt.subplots()
 
-choice_rt = np.empty(0)
-for TrialDf in TrialDfs:
-    choice_rt = np.append(choice_rt, bhv.choice_RT(TrialDf).values)
+filter_pair = ('has_choice', True)
+TrialDfs_filt = filter_trials_by(SessionDf,TrialDfs, filter_pair)
 
-# includes front and back pushes, eliminates nans due to missed trials
-clean_choice_rt = [x for x in choice_rt if not pd.isnull(x)] 
+choice_rt = np.empty(0)
+for TrialDf in TrialDfs_filt:
+    choice_rt = np.append(choice_rt, bhv.choice_RT(TrialDf).values)
 
 no_bins = round(choice_interval/bin_width)
 
@@ -366,26 +346,34 @@ axes.step(bins[1:], counts, color='C0')
 axes.set_ylabel('Prob (%)')
 axes.set_xlabel('Time (s)')
 axes.set_title('Choice RT distribution')
+plt.savefig(plot_dir / ('choice_rt_distro.png'), dpi=300)
 
-# %% Bias over time
-Df = LogDf[LogDf['var'] == 'bias']
+# %% XY and Bias over time
+plot_x_y_thresh_bias(LogDf)
+plt.savefig(plot_dir / ('x_y_tresh_bias.png'), dpi=300)
 
-fig, axes = plt.subplots()
-values = Df['value']
-times = Df['t'] / 1e3 
-times = times - times.iloc[0]
+# %% Autocorr during ITI state to see if mice have periodic movements and if these twitches are biased to a side
+TrialSpans = bhv.get_spans_from_names(LogDf, "ITI_STATE", "TRIAL_ENTRY_STATE")
 
-axes.plot(times, values, label='grand')
-axes.plot(times, Df['value'].rolling(10).mean(), label='last 10')
-axes.axhline(0.5, color='k', linestyle=':', alpha=0.5, lw=1, zorder=-1)
-axes.legend()
-axes.set_ylim(0, 1)
-axes.set_ylabel('bias')
-axes.set_xlabel('time (min.)')
-axes.set_title('Lateral bias')
-plt.setp(axes, xticks=np.arange(0, int(times.iloc[-1]), 5*60), xticklabels=np.arange(0, int(times.iloc[-1]/60), 5))
-sns.despine(fig)
-fig.tight_layout()
+TrialDfs = []
+for i, row in tqdm(TrialSpans.iterrows(),position=0, leave=True):
+    TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+metrics = (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.choice_RT, bhv.get_in_corr_loop, \
+            bhv.is_successful, bhv.get_outcome, bhv.get_instructed, bhv.get_bias, bhv.get_correct_zone)
+SessionDf = bhv.parse_trials(TrialDfs, metrics)
+
+first_event = "first"
+second_event = "last"
+plot_lim = 5000
+
+# Check if they are making periodic pushes during ITI
+axes = autocorr_forces(LoadCellDf, TrialDfs, first_event, second_event)
+plt.savefig(plot_dir / ('autocorr_during_ITI.png'), dpi=300)
+
+# Analyze "twitches" during ITI
+axes = trajectories_with_marker(LoadCellDf, TrialDfs, SessionDf, first_event, second_event, plot_lim, animal_id)
+plt.savefig(plot_dir / ('twitches_during_ITI.png'), dpi=300)
 
 # %% 
 
@@ -404,7 +392,7 @@ all the above plus
 """
 # %% force aligned on cues
 
-pre, post = -1000, 1000
+pre, post = 1000, 1000
 events = ["FIRST_TIMING_CUE_EVENT", "SECOND_TIMING_CUE_EVENT"]
 fig, axes = plt.subplots(ncols=len(events), sharex=True, sharey=True, figsize=[5, 4])
 
@@ -415,7 +403,7 @@ for event, ax in zip(events, axes):
     Fy = []
 
     for t in tqdm(EventDf['t'].values):
-        LCDf = bhv.time_slice(LoadCellDf, t+pre, t+post)
+        LCDf = bhv.time_slice(LoadCellDf, t-pre, t+post)
         Fx.append(LCDf['x'].values)
         Fy.append(LCDf['y'].values)
 
@@ -424,7 +412,7 @@ for event, ax in zip(events, axes):
 
     M = sp.sqrt(Fx**2+Fy**2)
 
-    tvec = sp.linspace(pre, post, Fx.shape[0])
+    tvec = sp.linspace(-pre, post, Fx.shape[0])
     for i in range(Fx.shape[1]):
         ax.plot(tvec, M[:, i], lw=0.5, alpha=0.5)
     ax.plot(tvec, sp.average(M, 1), lw=1, color='k', alpha=0.5)
@@ -512,12 +500,35 @@ fig.tight_layout()
 ######## ######## ##     ## ##     ## ##    ##       ##     #######        ##    #### ##     ## ########
 """
 
-"""
-all of the above, and:
-"""
+# %% Loading up everything
+log_path = utils.get_file_dialog()
 
-# %%
-# make SessionDf - slice into trials
+animal_meta = pd.read_csv(log_path.parent.parent / 'animal_meta.csv')
+animal_id = animal_meta[animal_meta['name'] == 'ID']['value'].values[0]
+
+plot_dir = log_path.parent / 'plots'
+os.makedirs(plot_dir, exist_ok=True)
+
+LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)
+arduino_sync = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT")
+
+t_harp = pd.read_csv(log_path.parent / "harp_sync.csv")['t'].values
+t_arduino = pd.read_csv(log_path.parent / "arduino_sync.csv")['t'].values
+
+if t_harp.shape != t_arduino.shape:
+    t_arduino, t_harp = bhv.cut_timestamps(t_arduino, t_harp, verbose = True)
+
+m, b = bhv.sync_clocks(t_harp, t_arduino, log_path)
+LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
+
+# median correction
+samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
+LoadCellDf['x'] = LoadCellDf['x'] - LoadCellDf['x'].rolling(samples).median()
+LoadCellDf['y'] = LoadCellDf['y'] - LoadCellDf['y'].rolling(samples).median()
+
+# cut LogDf to same data len in case (for example bc of bonsai crashes)
+LogDf = LogDf.loc[LogDf['t'] < LoadCellDf.iloc[-1]['t']]
+
 TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
 
 TrialDfs = []
@@ -526,72 +537,44 @@ for i, row in tqdm(TrialSpans.iterrows()):
 
 SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.has_choice, bhv.get_choice, bhv.choice_RT, bhv.is_successful, bhv.get_outcome, bhv.get_interval))
 
-# %% adding logistic regression fit
-from sklearn.linear_model import LogisticRegression
-from scipy.special import expit
+# %% Plotting 
+window_size = 1000
+pre, post = 1000, 4000
+force_tresh = 3000
+history_trials = 10
+first_cue_ref = "FIRST_TIMING_CUE_EVENT"
+align_ref = "SECOND_TIMING_CUE_EVENT"
 
-# get only the subset with choices
-SDf = SessionDf.groupby('has_choice').get_group(True)
-y = SDf['choice'].values == 'right'
-x = SDf['this_interval'].values
+plot_general_info(LogDf, path)
 
-# plot choices
-fig, axes = plt.subplots(figsize=[6, 2])
-axes.plot(x, y, '.', color='k', alpha=0.5)
-axes.set_yticks([0, 1])
-axes.set_yticklabels(['short', 'long'])
-axes.set_ylabel('choice')
-axes.axvline(1500, linestyle=':', alpha=0.5, lw=1, color='k')
+# Heat map plots for X/Y
+plot_forces_heatmaps(LogDf, LoadCellDf, align_ref, pre, post,)
 
-def log_reg(x, y, x_fit=None):
-    """ x and y are of shape (N, ) y are choices in [0, 1] """
-    if x_fit is None:
-        x_fit = sp.linspace(x.min(), x.max(), 100)
+# Sucess rate over session
+plot_success_rate(SessionDf, LogDf, history_trials)
 
-    cLR = LogisticRegression()
-    cLR.fit(x[:, sp.newaxis], y)
+# Psychometric adapted from Georg's code
+plot_psychometric(SessionDf)
 
-    y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
-    return y_fit
+# Choice matrix
+plot_choice_matrix(SessionDf,LogDf,'incorrect')
+plot_choice_matrix(SessionDf,LogDf,'premature')
 
-x_fit = sp.linspace(0, 3000, 100)
-line, = plt.plot([], color='red', linewidth=2, alpha=0.75)
-line.set_data(x_fit, log_reg(x, y, x_fit))
+# Force magnitude aligned to 1st and 2nd timing cues with lick freq. on top
+bin_width = 75 # ms
+plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, align_ref, pre, post, force_tresh, bin_width)
 
-# %% random margin - without bias
-t = SDf['this_interval'].values
-R = []
-for i in tqdm(range(100)):
-    rand_choices = sp.random.randint(2, size=t.shape).astype('bool')
-    R.append(log_reg(x, rand_choices, x_fit))
-R = sp.array(R)
+# CT histogram to detect/quantify biases or motor strategies
+bin_width = 100 # ms
+plot_choice_RT_hist(LogDf, TrialDfs, bin_width) # switched temporarily
 
-alphas = [5, 0.5, 0.05]
-opacities = [0.5, 0.4, 0.3]
-for alpha, a in zip(alphas, opacities):
-    R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
-    # plt.plot(x_fit, R_pc[0], color='blue', alpha=a)
-    # plt.plot(x_fit, R_pc[1], color='blue', alpha=a)
-    plt.fill_between(x_fit, R_pc[0], R_pc[1], color='blue', alpha=a)
+# Trajectory plots
+TrialDfs_correct = bhv.filter_trials_by(SessionDf,TrialDfs, ('outcome', 'correct'))
+TrialDfs_incorrect = bhv.filter_trials_by(SessionDf,TrialDfs, ('outcome', 'incorrect'))
+plot_mean_trajectories(LogDf, LoadCellDf, SessionDf, TrialDfs_correct, align_event, pre, post, animal_id)
+plot_mean_trajectories(LogDf, LoadCellDf, SessionDf, TrialDfs_incorrect, align_event, pre, post, animal_id)
 
-# %% random margin - with animal bias
-t = SDf['this_interval'].values
-bias = (SessionDf['choice'] == 'right').sum() / SessionDf.shape[0]
-R = []
-for i in tqdm(range(100)):
-    rand_choices = sp.rand(t.shape[0]) < bias
-    R.append(log_reg(x, rand_choices, x_fit))
-R = sp.array(R)
-
-alphas = [5, 0.5, 0.05]
-opacities = [0.5, 0.4, 0.3]
-for alpha, a in zip(alphas, opacities):
-    R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
-    # plt.plot(x_fit, R_pc[0], color='blue', alpha=a)
-    # plt.plot(x_fit, R_pc[1], color='blue', alpha=a)
-    plt.fill_between(x_fit, R_pc[0], R_pc[1], color='blue', alpha=a)
-
-# %% histograms
+# Histograms
 fig, axes = plt.subplots()
 shorts = SDf.groupby('choice').get_group('left')['this_interval'].values
 longs = SDf.groupby('choice').get_group('right')['this_interval'].values
@@ -601,10 +584,6 @@ axes.hist(longs, **kwargs, label='long')
 plt.legend()
 axes.set_xlabel('interval (ms)')
 axes.set_ylabel('density')
-
-
-
-
 
 
 # %%
@@ -617,7 +596,6 @@ axes.set_ylabel('density')
 ##     ## ##     ## ##          ##     ##     ##    ## ##       ##    ## ##    ##  ##  ##     ## ##   ###
 ##     ##  #######  ########    ##    ####     ######  ########  ######   ######  ####  #######  ##    ##
 """
-
 # %% Loading
 animal_folder = utils.get_folder_dialog()
 plot_dir = animal_folder / 'plots'
@@ -628,7 +606,6 @@ os.makedirs(plot_dir, exist_ok=True)
 
 # %%
 "Learn to LICK inspections"
-
 SessionsDf = utils.get_sessions(animal_folder)
 paths = [Path(path) for path in SessionsDf.groupby('task').get_group('learn_to_lick')['path']]
 
@@ -639,12 +616,12 @@ for path in tqdm(paths,position=0, leave=True):
     LogDf = bhv.filter_bad_licks(LogDf)
     LogDfs.append(LogDf)
    
-pre, post = -2000, 4000
+pre, post = 2000, 4000
 fig, axes = plt.subplots(nrows=3, figsize=[3, 5], sharey=True, sharex=True)
 
 events = ['REWARD_AVAILABLE_EVENT', 'OMITTED_REWARD_AVAILABLE_EVENT', 'NO_REWARD_AVAILABLE_EVENT']
 colors = sns.color_palette(palette='turbo',n_colors=len(LogDfs))
-bins = sp.linspace(pre, post, 50)
+bins = sp.linspace(-pre, post, 50)
 
 for i,LogDf in enumerate(LogDfs):
     LicksDf = bhv.get_events_from_name(LogDf, 'LICK_EVENT')
@@ -698,7 +675,7 @@ for path in tqdm(paths, position=0, leave=True):
 colors = sns.color_palette(palette='turbo',n_colors=len(LogDfs))
 
 # %%
-" GENERAL FUNCTIONS THAT WORK FOR ANY TASK"
+" General functions"
 
 # Sessions overview
 plot_sessions_overview(LogDfs, paths, task_name[0], animal_id)
@@ -706,16 +683,17 @@ plt.savefig(plot_dir / 'learn_to_push_overview.png', dpi=300)
 
 #  Reward collection across sessions
 rew_collected_across_sessions(LogDfs)
+plt.savefig(plot_dir / 'rew_collected_across_sessions.png', dpi=300)
 
 # X/Y thresh and bias across sessions
-x_y_tresh_bias_across_sessions(LogDfs, axes = None)
+x_y_tresh_bias_across_sessions(LogDfs, paths)
 plt.savefig(plot_dir / 'learn_to_push_x_y_thresh_bias_across_sessions.png', dpi=300)
 
 # Choice RT's distribution 
 bin_width = 250 #ms
 choice_interval = 5000
 percentile = 75 # Choice RTs compromise X% of data
-choice_rt_across_sessions(LogDfs, bin_width, choice_interval, percentile, animal_id, axes = None)
+choice_rt_across_sessions(LogDfs, bin_width, choice_interval, percentile, animal_id)
 plt.savefig(plot_dir / 'learn_to_push_choice_rt_distro.png', dpi=300)
 
 # %% Get Fx and Fy forces for all sessons in a 2D histogram and a contour plot
@@ -729,37 +707,11 @@ plt.savefig(plot_dir / ('learn_to_push_2D_Hist_' + str(trials_only) + '.png'), d
 plt.sca(axis2)
 plt.savefig(plot_dir / ('learn_to_push_2D_Contour_' + str(trials_only) + '.png'), dpi=300)
 
-# %% Rolling average of missed trials as session goes on (proxy of trial engagement)
-fig, axes = plt.subplots()
-
-for j, LogDf in enumerate(LogDfs[12:]):
-
-    TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
-
-    TrialDfs = []
-    for i, row in TrialSpans.iterrows():
-        TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
-
-    SessionDf = bhv.parse_trials(TrialDfs, (bhv.get_start, bhv.get_stop, bhv.get_outcome))
-
-    x = np.arange(len(SessionDf))  
-    MissedDf = SessionDf['outcome'] == 'missed'
-
-    # Rolling average
-    y_filt = (SessionDf['outcome'] == 'missed').rolling(20).mean()
-    axes.plot(x,y_filt, color = colors[j], alpha = 0.5, label = 'day '+ str(j+1))
-
-plt.legend(frameon=False)
-axes.set_ylim([0,1])
-axes.set_title('Ratio of missed trials across sessions')
-axes.set_xlabel('Trial #')
-axes.set_ylabel('Missed trials rolling average')
-
 # %% Force mag to go cue across sessions
 fig, axes = plt.subplots()
 
 align_event = "GO_CUE_EVENT"
-pre, post = -1000,2000
+pre, post = 1000,2000
 
 for i,path in enumerate(paths):
 
@@ -773,7 +725,7 @@ for i,path in enumerate(paths):
     for j, row in TrialSpans.iterrows():
         TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
 
-    _,_,Fmag = bhv.get_FxFy_aligned_on_event(LoadCellDf, TrialDfs, align_event, pre, post)
+    _,_,Fmag = bhv.get_FxFy_window_aligned_on_event(LoadCellDf, TrialDfs, align_event, pre, post)
 
     F_mean = np.mean(Fmag)
     axes.plot(F_mean, label = i)
@@ -804,7 +756,6 @@ colors = sns.color_palette(palette='turbo', n_colors=len(animal_tags))
 
 # %% Do animals learn faster to react to cue and make choice on new task?
 bin_width = 250 #ms
-pre, pos = 500, 5000
 choice_interval = 5000
 fig, axes = plt.subplots(ncols = 2, figsize=[6, 3])
 
@@ -872,7 +823,6 @@ plt.suptitle('3rd quartile for Choice RT',fontsize='small')
 fig.tight_layout()
 plt.savefig(group_plot_dir / 'choice_rt_percentile_group.png', dpi=300)
 
-
 # %% Weight x sucess rate and x missed_rate
 fig, axes = plt.subplots(ncols = 2, figsize=[6, 3])
 
@@ -939,9 +889,7 @@ plt.savefig(group_plot_dir / 'weight_sucess_missed_corr_group.png', dpi=300)
 ########  ######## ########   #######   ######    ######   #### ##    ##  ######
 """
 
-
 # %% Raw forces timecourse with L/R choice and go_cue timestamps 
-
 fig, axes = plt.subplots()
 ds = 10 # downsampling factor
 axes.plot(LoadCellDf['t'].values[::ds], LoadCellDf['x'].values[::ds])
@@ -959,51 +907,6 @@ plt.title('Raw forces timecourse with L/R choice and go_cue timestamps ')
 
 
 
-# %% force aligned on cues
-
-pre, post = -1000, 1000
-fig, ax = plt.subplots(figsize=[5, 4])
-
-Fx = []
-Fy = []
-
-for t in times:
-    LCDf = bhv.time_slice(LoadCellDf, t+pre, t+post)
-    Fx.append(LCDf['x'].values)
-    Fy.append(LCDf['y'].values)
-
-Fx = sp.array(Fx).T
-Fy = sp.array(Fy).T
-
-# M = sp.sqrt(Fx**2+Fy**2)
-M = Fx
-
-tvec = sp.linspace(pre, post, Fx.shape[0])
-for i in range(Fx.shape[1]):
-    ax.plot(tvec, M[:, i], lw=0.5, alpha=0.5)
-# ax.plot(tvec, sp.average(M, 1), lw=1, color='k', alpha=0.5)
-ax.axvline(0, linestyle=':', lw=1, alpha=0.5, color='k')
-# ax.set_title(event, fontsize='x-small')
-ax.set_xlabel('time (ms)')
-
-sns.despine(fig)
-fig.tight_layout()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 """
  #######  ##       ########        ###    ##    ## ########     ##     ## ##    ## ##     ##  ######  ######## ########
@@ -1014,17 +917,6 @@ fig.tight_layout()
 ##     ## ##       ##     ##    ##     ## ##   ### ##     ##    ##     ## ##   ### ##     ## ##    ## ##       ##     ##
  #######  ######## ########     ##     ## ##    ## ########      #######  ##    ##  #######   ######  ######## ########
 """
-
-
-# """
-# ##        #######     ###    ########   ######  ######## ##       ##
-# ##       ##     ##   ## ##   ##     ## ##    ## ##       ##       ##
-# ##       ##     ##  ##   ##  ##     ## ##       ##       ##       ##
-# ##       ##     ## ##     ## ##     ## ##       ######   ##       ##
-# ##       ##     ## ######### ##     ## ##       ##       ##       ##
-# ##       ##     ## ##     ## ##     ## ##    ## ##       ##       ##
-# ########  #######  ##     ## ########   ######  ######## ######## ########
-# """
 
 # # %% syncing
 # LoadCellDf, harp_sync = bhv.parse_harp_csv(log_path.parent / "bonsai_harp_log.csv", save=True)

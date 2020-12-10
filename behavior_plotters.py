@@ -5,9 +5,10 @@
 import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 166
 from matplotlib import pyplot as plt
+from matplotlib.collections import LineCollection
 from matplotlib import cm 
 from matplotlib import patches
-from matplotlib.collections import LineCollection
+from scipy import signal
 
 from sklearn.linear_model import LogisticRegression
 
@@ -45,7 +46,7 @@ def plot_session_overview(LogDf, t_ref, pre, post, axes=None, how='dots',cdict=N
         pass
 
     for i,t in enumerate(tqdm(t_ref)):
-        Df = bhv.time_slice(LogDf,t+pre,t+post,'t')
+        Df = bhv.time_slice(LogDf,t-pre,t+post,'t')
 
         for name, group in Df.groupby('name'):
             # plot events
@@ -115,7 +116,7 @@ def plot_raster(EventsDf, t_ref, pre, post, axes=None, **kwargs):
         axes = plt.gca()
 
     for i,t in enumerate(t_ref):
-        times = bhv.time_slice(EventsDf, t+pre, t+post)['t'] - t
+        times = bhv.time_slice(EventsDf, t-pre, t+post)['t'] - t
         axes.plot(times, np.ones(times.shape[0])*i,'.',color='k')
 
     return axes
@@ -171,7 +172,7 @@ def plot_reward_collection_RT(SessionDf, bins=None, axes=None, **kwargs):
 ########  #### ##     ##  ######   ##    ##  #######   ######     ##    ####  ######      #######  ####
 """
 
-def general_info(LogDf, path, axes=None):
+def plot_general_info(LogDf, path, axes=None):
     " Plots general info about a session (trial outcome, water consumed and weight) "
     
     if axes is None:
@@ -248,8 +249,9 @@ def plot_forces_heatmaps(LoadCellDf, SessionDf, TrialDfs, align_event, pre, post
     idx = []
     for i in range(len(height_ratios)):
         if np.isnan(height_ratios[i]): idx = i
-    order.pop(idx)
-    height_ratios = np.delete(height_ratios,idx, axis = 0)
+    if idx:
+        order.pop(idx)
+        height_ratios = np.delete(height_ratios,idx, axis = 0)
 
     fig, axes = plt.subplots(nrows=len(order), ncols=2, figsize=[5, 5], sharex=True, gridspec_kw=dict(height_ratios=height_ratios))
 
@@ -265,10 +267,10 @@ def plot_forces_heatmaps(LoadCellDf, SessionDf, TrialDfs, align_event, pre, post
         for _, row in tqdm(SDf.iterrows(), position = 0, leave=True):
             TrialDf = TrialDfs[row.name]
             t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
-            LCDf = bhv.time_slice(LoadCellDf, t_align+pre, t_align+post)
+            LCDf = bhv.time_slice(LoadCellDf, t_align-pre, t_align+post)
             Fx.append(LCDf['x'].values)
             Fy.append(LCDf['y'].values)
-            choice_rt.append(bhv.choice_RT(TrialDf).values-pre)
+            choice_rt.append(bhv.choice_RT(TrialDf).values+pre)
 
         Fx = sp.array(Fx).T
         Fy = sp.array(Fy).T
@@ -276,15 +278,15 @@ def plot_forces_heatmaps(LoadCellDf, SessionDf, TrialDfs, align_event, pre, post
         # Plot heatmaps
         heat1 = axes[i,0].matshow(Fx.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
         heat2 = axes[i,1].matshow(Fy.T, origin='lower', vmin=-force_thresh, vmax=force_thresh, cmap='PiYG')
-        axes[i,0].axvline(x=-pre, ymin=0, ymax=1, color = 'k', alpha = 0.5)
-        axes[i,1].axvline(x=-pre, ymin=0, ymax=1, color = 'k', alpha = 0.5)
+        axes[i,0].axvline(x=pre, ymin=0, ymax=1, color = 'k', alpha = 0.5)
+        axes[i,1].axvline(x=pre, ymin=0, ymax=1, color = 'k', alpha = 0.5)
 
         # Plot choice_rt ticks
         ymin = np.arange(-0.5,len(choice_rt)-1) # need to shift since lines starts at center of trial
         ymax = np.arange(0.45,len(choice_rt))
         axes[i,0].vlines(choice_rt, ymin, ymax, colors='k', linewidth=1)
 
-    plt.setp(axes, xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(pre/1000, post/1000+0.1, 0.5))
+    plt.setp(axes, xticks=np.arange(0, post+pre+1, 500), xticklabels=np.arange(-pre/1000, post/1000+0.1, 0.5))
 
     for ax in axes.flatten():
         ax.set_aspect('auto')
@@ -362,56 +364,74 @@ def plot_choice_RT_hist(LogDf, TrialDfs, bin_width, axes=None):
 
     return axes  
 
-def plot_success_rate(LogDf, SessionDf, history=None, axes=None): 
-    " Plots success rate with trial outcome tickmarks, if history given includes a rolling smooth "
+def plot_success_rate(LogDf, SessionDf, history, axes=None): 
+    " Plots success rate with trial type and choice tickmarks "
+
     if axes is None:
-        axes = plt.gca()
+        fig, axes = plt.subplots()
 
     x = SessionDf.index.values+1
     
-    correctDf = SessionDf[SessionDf['outcome'] == 'correct']
-    incorrectDf = SessionDf[SessionDf['outcome'] == 'incorrect']
-    missedDf = SessionDf[SessionDf['outcome'] == 'missed']
-    #prematureDf = SessionDf[SessionDf['outcome'] == 'premature'] # uncomment once premature trials become less frequent
-    
-    line_width = 0.04
-    value = np.ones(len(SessionDf))*line_width
+    # Plot trial outcome on the back
+    # axes.plot(correctDf.index, correctDf['outcome'] == 'correct', '|',alpha=0.75,color='g')
+    # correctDf = SessionDf[SessionDf['outcome'] == 'correct']
 
-    # plot raw as markers
-    axes.plot(correctDf.index, correctDf['outcome'] == 'correct', '|',alpha=0.75,color='g')
-    axes.plot(incorrectDf.index, incorrectDf['outcome'] != 'incorrect', '|',alpha=0.75,color='r')
-    axes.plot(missedDf.index, value[missedDf.index], '|',alpha=0.75,color='k')
-    #axes.plot(prematureDf.index, prematureDf['outcome'] != 'premature', '|',alpha=0.5,color='m')
+    line_width = 0.04
+
+    # L/R trial types
+    left_trials = SessionDf.loc[SessionDf['correct_zone'] == 4].index + 1
+    y_left_trials = np.zeros(left_trials.shape[0]) - line_width
+    right_trials = SessionDf.loc[SessionDf['correct_zone'] == 6].index + 1
+    y_right_trials = np.zeros(right_trials.shape[0]) + 1 + line_width
+
+    # L/R trial choices
+    try:
+        SDf = SessionDf.groupby('choice').get_group('left')
+        left_choices = SDf.index.values+1
+        y_left_choices = np.zeros(left_choices.shape[0])
+    except:
+        pass
+
+    try:
+        SDf = SessionDf.groupby('choice').get_group('right')
+        right_choices = SDf.index.values+1
+        y_right_choices = np.zeros(right_choices.shape[0]) + 1
+    except:
+        pass
     
-    # grand average rate
+    # If in correction loops
+    in_corr_loop = SessionDf.loc[SessionDf['in_corr_loop'] == True].index + 1
+    y_in_corr_loop = np.zeros(in_corr_loop.shape[0]) + 1 + 2*line_width
+    
+    # If instructed trials
+    in_instructed_trial = SessionDf.loc[SessionDf['instructed_trial'] == True].index + 1
+    y_instructed_trial = np.zeros(in_instructed_trial.shape[0]) + 1 + 3*line_width
+
+    # Grand average rate
     y = np.cumsum(SessionDf['successful'].values) / (SessionDf.index.values+1)
+
+    # Plotting in the same order as computed
+    axes.plot(left_trials, y_left_trials, '|', color='k')
+    axes.plot(right_trials, y_right_trials, '|', color='k')
+    axes.plot(left_choices, y_left_choices, '|', color='m', label = 'left choice')
+    axes.plot(right_choices, y_right_choices, '|', color='green', label = 'right choice')
+    axes.plot(in_corr_loop, y_in_corr_loop, '|', color='r', label = 'corr. loops')
+    axes.plot(in_instructed_trial, y_instructed_trial, '|', color='blue', label = 'instructed')
     axes.plot(x,y, color='C0', label = 'grand average')
-    
+
     if history is not None:
         y_filt = SessionDf['successful'].rolling(history).mean()
         axes.plot(x,y_filt, color='C0',alpha=0.3, label = 'rolling mean')
     
     axes.set_ylabel('frac. successful')
     axes.set_xlabel('trial #')
-    axes.set_title('Success rate and bias')
-
-    try:
-        # Bias over time
-        Df = LogDf[LogDf['var'] == 'bias']
-        times = Df['t'] / 1e3 
-        times = times - times.iloc[0]
-
-        twin_ax = axes.twinx()
-        twin_ax.plot(x, Df['value'].rolling(history).mean()[1:], label='last 10', c ='k', alpha=0.5)
-        twin_ax.axhline(0.5, color='k', linestyle=':', alpha=0.5, lw=1, zorder=-1)
-        twin_ax.set_ylim(0, 1) 
-        twin_ax.set_ylabel('bias', c ='k')
-    except:
-        print("This session does not have bias recorded")
+    axes.set_title('Success rate')
+    axes.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc="upper center", handletextpad = 0.3, \
+                frameon=False, mode = "expand", ncol = 6, borderaxespad=0., handlelength = 0.5)
 
     return axes
 
-def simple_psychometric(SessionDf, axes=None):
+def plot_psychometric(SessionDf, axes=None):
     " Timing task classic psychometric fit to data"
 
     if axes is None:
@@ -442,20 +462,25 @@ def simple_psychometric(SessionDf, axes=None):
             rand_choices = np.rand(t.shape[0]) < bias # can break here if bias value is too low
             R.append(bhv.log_reg(x, rand_choices,x_fit))
         R = np.array(R)
-        alpha = .5
-        R_pc = np.percentile(R, (alpha, 100-alpha), 0)
-        plt.fill_between(x_fit, R_pc[0],R_pc[1],color='blue',alpha=0.5)
-        plt.set_cmap
-    except:
-        print('Bias too high')
 
+        # Several statistical boundaries (?)
+        alphas = [5, 0.5, 0.05]
+        opacities = [0.5, 0.4, 0.3]
+        for alpha, a in zip(alphas, opacities):
+            R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
+            # plt.plot(x_fit, R_pc[0], color='blue', alpha=a)
+            # plt.plot(x_fit, R_pc[1], color='blue', alpha=a)
+            plt.fill_between(x_fit, R_pc[0], R_pc[1], color='blue', alpha=a)
+        plt.set_cmap
+    except KeyError:
+        print('Bias too high')
 
     plt.setp(axes, xticks=np.arange(0, 3000+1, 500), xticklabels=np.arange(0, 3000//1000 +0.1, 0.5))
     axes.set_xlabel('Time (s)')
 
     return axes
 
-def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_cue_ref, bin_width, axes=None):
+def plot_force_magnitude(LogDf, LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_cue_ref, pre, post, force_tresh, bin_width, axes=None):
     """ 
         Plots the magnitude of the 2D forces vector aligned to 1st and 2nd cue with
         lick frequency histogram on top (also includes premature trials on left)
@@ -463,83 +488,60 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
     
     if axes is None:
         _ , axes = plt.subplots(1, 2, sharey=True, sharex=True)
-    
-    "Licks"
-    twin_ax2 = axes[1].twinx()
 
-    pre, post, force_tresh = 500 , 2000, 3000
     outcomes = ['correct', 'incorrect', 'missed']
 
-    for outcome in outcomes:
+    "Licks"
+    twin_ax = axes[1].twinx()
+
+    for outcome in tqdm(outcomes,position=0, leave=True, desc = 'Plotting outcomes'):
         
-        Fmag_1st, Fmag_2nd, licks = [],[],[]
-        ys_1st, ys_2nd = [],[]
+        # Get Trials with specific outcome
+        filter_pair = ('outcome', outcome)
+        TrialDfs_filt = bhv.filter_trials_by(SessionDf,TrialDfs, filter_pair)
 
-        # Get Session rows containing only trials with specific outcome
-        try:
-            SDf = SessionDf.groupby('outcome').get_group(outcome)
-        except:
-            continue
+        _,_,Fmag_1st = bhv.get_FxFy_window_aligned_on_event(LoadCellDf, TrialDfs_filt, first_cue_ref, pre, post)
+        _,_,Fmag_2nd = bhv.get_FxFy_window_aligned_on_event(LoadCellDf, TrialDfs_filt, second_cue_ref, pre, post)
 
-        # Go trough each row and get forces
-        for _, row in tqdm(SDf.iterrows(),position=0, leave=True):
-            TrialDf = TrialDfs[row.name]
-                
-            time_1st = float(TrialDf[TrialDf.name == first_cue_ref]['t'])
-            time_2nd = float(TrialDf[TrialDf.name == second_cue_ref]['t'])
-            time_last = float(TrialDf['t'].iloc[-1])
-            
-            # Aligned to first cue
-            F = bhv.time_slice(LoadCellDf, time_1st-pre, time_2nd) # also get previous 0.5s
-            y = np.sqrt(F['x']**2+F['y']**2)
-            ys_1st.append(y)
+        F_avg_1st = np.mean(Fmag_1st, axis = 1)
+        F_avg_2nd = np.mean(Fmag_2nd, axis = 1)
 
-            # Aligned to second cue
-            F = bhv.time_slice(LoadCellDf, time_2nd-pre, time_last) # also get previous 0.5s
-            y = np.sqrt(F['x']**2+F['y']**2)
-            ys_2nd.append(y)
+        licks = bhv.get_events_window_aligned_on_event(LogDf, second_cue_ref, pre, post)
+        licks = np.array(licks)+pre
 
-            try:
-                licks.append(bhv.get_licks(TrialDf, time_2nd-pre, time_last))
-            except:
-                pass
-
-        # Compute mean force    
-        Fmag_1st = bhv.tolerant_mean(np.array(ys_1st))
-        Fmag_2nd = bhv.tolerant_mean(np.array(ys_2nd))
-
-        axes[0].plot(np.arange(len(Fmag_1st))+1, Fmag_1st, label = outcome)
-        axes[1].plot(np.arange(len(Fmag_2nd))+1, Fmag_2nd, label = outcome) 
+        # Plotting
+        axes[0].plot(np.arange(len(F_avg_1st))+1, F_avg_1st, label = outcome)
+        axes[1].plot(np.arange(len(F_avg_2nd))+1, F_avg_2nd, label = outcome) 
 
         # Get lick histogram
-        if not licks:
-            pass
-        else:
+        if len(licks) != 0:
             no_bins = round((post+pre)/bin_width)
-            counts_2, bins = np.histogram(np.concatenate(licks),no_bins)
-            licks_2nd_freq = np.divide(counts_2, ((bin_width/1000)*len(ys_2nd)))
-            twin_ax2.step(bins[1:], licks_2nd_freq, alpha=0.5, label = outcome)
+            counts, bins = np.histogram(np.concatenate(licks),no_bins)
+            licks_freq = np.divide(counts, ((bin_width/1000)*Fmag_1st.shape[1]))
+            twin_ax.step(bins[1:], licks_freq, alpha=0.5, label = outcome)
+        else: 
+            pass
                                
     " Force "
     # Left plot
     axes[0].legend(loc='upper right', frameon=False)
     axes[0].set_ylabel('Force magnitude (a.u.)')
-    plt.setp(axes[0], xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(-0.5, post//1000 + 0.1, 0.5))
+    plt.setp(axes[0], xticks=np.arange(-pre, post+1, 500), xticklabels=np.arange(0, post/1000 + 0.1, 0.5))
 
     # Right plot
     axes[1].legend(loc='upper right', frameon=False)
-    plt.setp(axes[1], xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange(-0.5, post//1000 + 0.1, 0.5))
+    plt.setp(axes[1], xticks=np.arange(-pre, post+1, 500), xticklabels=np.arange(0, post/1000 + 0.1, 0.5))
     
     # Shared
     plt.setp(axes, yticks=np.arange(0, force_tresh+1, 500), yticklabels=np.arange(0, force_tresh+1, 500))
     for ax in axes:
-        ax.set_xlim(0,post-pre)
+        ax.set_xlim(0,post+pre)
         ax.set_ylim(0,force_tresh)
 
     " Licks "
-    twin_ax2.tick_params(axis='y', labelcolor='C0')
-    twin_ax2.set_ylabel('Lick freq. (Hz)', color='C0')
-    plt.setp(twin_ax2, yticks=np.arange(0, 11), yticklabels=np.arange(0, 11))
+    twin_ax.tick_params(axis='y', labelcolor='C0')
+    twin_ax.set_ylabel('Lick freq. (Hz)', color='C0')
+    plt.setp(twin_ax, yticks=np.arange(0, 11), yticklabels=np.arange(0, 11))
 
     # hide the spines between axes 
     axes[0].spines['right'].set_visible(False)
@@ -547,8 +549,8 @@ def plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, second_
     axes[1].spines['left'].set_visible(False)
     axes[1].spines['top'].set_visible(False)
 
-    twin_ax2.spines['left'].set_visible(False)
-    twin_ax2.spines['top'].set_visible(False)
+    twin_ax.spines['left'].set_visible(False)
+    twin_ax.spines['top'].set_visible(False)
 
     axes[0].yaxis.tick_left()
     axes[1].tick_params(labelleft = False, left = False)
@@ -598,13 +600,13 @@ def plot_choice_matrix(LogDf, SessionDf, trial_type, axes=None):
 
     return axes
 
-def plot_forces_trajectories(LogDf, LoadCellDf, SessionDf, TrialDfs, align_event, pre,post, animal_id, axes=None):
-    """ Plots trajectories in 2D aligned to an event for specific trial filter_pair"""
+def plot_mean_trajectories(LogDf, LoadCellDf, SessionDf, TrialDfs, align_event, pre, post, animal_id, axes=None):
+    """ Plots trajectories in 2D aligned to an event """
 
     if axes==None:
         fig , axes = plt.subplots()
 
-    Fx,Fy,_ = bhv.get_FxFy_aligned_on_event(LoadCellDf, TrialDfs, align_event, pre, post)
+    Fx,Fy,_ = bhv.get_FxFy_window_aligned_on_event(LoadCellDf, TrialDfs, align_event, pre, post)
     F = [Fx,Fy]
     
     # time-varying color code
@@ -653,22 +655,42 @@ def plot_forces_trajectories(LogDf, LoadCellDf, SessionDf, TrialDfs, align_event
 
     return axes
 
-
-" Currently not used on learn to time daily GUI"
-
-def x_y_threshold_across_time(LogDf, axes=None):
+def plot_x_y_thresh_bias(LogDf, axes=None):
     "X/Y threshold across time for a single session"
 
     if axes is None:
-        axes = plt.subplots()
+        fig, axes = plt.subplots()
 
-    t_vec = np.arrange(0,len(LogDf))
+    t_vec = np.arange(0,len(LogDf))
 
     x_thresh = LogDf[LogDf['var'] == 'X_thresh'].value.values
     y_thresh = LogDf[LogDf['var'] == 'Y_thresh'].value.values
 
-    axes.plt(t_vec, x_thresh, color = 'g', label = 'x_tresh')
-    axes.plt(t_vec, y_thresh, color = 'r', label = 'y_tresh')
+    # Bias
+    TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+    TrialDfs = []
+    for i, row in tqdm(TrialSpans.iterrows(),position=0, leave=True):
+        TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+    metrics = (bhv.get_start, bhv.get_stop, bhv.get_bias)
+    SessionDf = bhv.parse_trials(TrialDfs, metrics)
+                
+    try:
+        # Bias over time
+        twin_ax = axes.twinx()
+        x = SessionDf.index
+        y = SessionDf['bias'].values
+        
+        twin_ax.set_xlim(0.5, SessionDf.shape[0]+0.5)
+        twin_ax.plot([], [], '.', lw=1, label='bias', color='k')
+
+        twin_ax.set_ylabel('bias', c ='k')
+    except:
+        print("This session does not have bias recorded")
+
+    axes.plot(t_vec, x_thresh, color = 'royalblue', label = 'x_tresh')
+    axes.plot(t_vec, y_thresh, color = 'crimson', label = 'y_tresh')
+    axes.plot(t_vec, bias, color = 'green', label = 'bias')
     axes.legend(loc='upper right', frameon=False, fontsize = 8)
     axes.set_ylabel('Force (a.u.)')
 
@@ -676,11 +698,10 @@ def x_y_threshold_across_time(LogDf, axes=None):
 
 def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None): 
     """
-        Heatmap aligned to 1st cue with 2nd cue and choice RT markers, 
-        split by trial outcome and trial type
+        Heatmap aligned to 1st cue with 2nd cue and choice RT markers, split by trial outcome and trial type
     """
 
-    pre, post = -500, 5000
+    pre, post = 500, 5000
     Fx, interval, choice_RT = [],[],[]
     correct_idx, incorrect_idx, pre_idx, missed_idx = [],[],[],[]
 
@@ -692,8 +713,8 @@ def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None):
     for TrialDf in TrialDfs:
         time_1st = float(TrialDf[TrialDf.name == 'FIRST_TIMING_CUE_EVENT']['t'])
 
-        F = bhv.time_slice(LoadCellDf, time_1st+pre, time_1st+post)
-        if (len(F) < post+pre):
+        F = bhv.time_slice(LoadCellDf, time_1st-pre, time_1st+post)
+        if (len(F) < post-pre):
             print('LCDf is shorter than LogDf!')
             continue
 
@@ -716,7 +737,7 @@ def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None):
         i = i + 1
 
     # Ugly and hacky way to do what I want
-    interval = np.array(interval) - pre
+    interval = np.array(interval) + pre
     choice_RT = np.array(choice_RT) + interval
     correct_idx = np.array(correct_idx)
     incorrect_idx = np.array(incorrect_idx)
@@ -763,7 +784,7 @@ def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None):
 
     # Formatting
     axes.xaxis.set_ticks_position('bottom')
-    plt.setp(axes, xticks=np.arange(0, post-pre+1, 500), xticklabels=np.arange((pre/1000), (post/1000)+0.5, 0.5))
+    plt.setp(axes, xticks=np.arange(0, post+pre+1, 500), xticklabels=np.arange((-pre/1000), (post/1000)+0.5, 0.5))
     plt.xlabel('Time')
     
     cbar = plt.colorbar(heat, orientation='horizontal', aspect = 50)
@@ -771,7 +792,7 @@ def plot_timing_overview(LogDf, LoadCellDf, TrialDfs, axes=None):
 
     return axes
 
-def split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, post, split_by, animal_id, axes=None):
+def plot_split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, post, split_by, animal_id, axes=None):
     """ 
         Force magnitude for Fx and Fy split by any input as long as a metric in SessionDf contemplates it
     """
@@ -814,52 +835,39 @@ def split_forces_magnitude(SessionDf, LoadCellDf, TrialDfs, align_event, pre, po
 
     return axes
 
-def trajectories_with_choice_marker(LoadCellDf, TrialDfs, SessionDf, first_event, animal_id, axes=None):
-    " Trajectories from first event to choice "
+def trajectories_with_marker(LoadCellDf, TrialDfs, SessionDf, first_event, second_event, plot_lim, animal_id, axes=None):
+    " Trajectories from first to second event (with markers at end of event)"
 
     if axes == None:
         fig , axes = plt.subplots(figsize=[4, 3])
 
-    force_tresh = 4000
-    second_event = 'CHOICE_EVENT'
+    y_lim_offset = 1000
 
-    Fxs,Fys,_ = bhv.get_FxFy_from_events(LoadCellDf, TrialDfs, first_event, second_event)
+    Fxs,Fys,_ = bhv.get_FxFy_window_between_events(LoadCellDf, TrialDfs, first_event, second_event)
 
-    idx_left, idx_right = 0,0 # 
-
-    # time-varying color code
-    cm = plt.cm.get_cmap('Greys')
-    z = np.linspace(0, 1, num = len(Fxs))
-
-    for (Fx,Fy) in zip(Fxs,Fys):
+    idx_left,idx_right = [],[]
+    for i, (Fx,Fy) in enumerate(zip(Fxs,Fys)):
         # All trajectories
         axes.plot(Fx, Fy, lw=0.5, alpha=0.1, zorder = -1)
-        
-        #Line gradients
-        points = np.array([Fx, Fy]).T.reshape(-1, 1, 2)
-        segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-        lc = LineCollection(segments, cmap=plt.get_cmap('Greys'),
-            norm=plt.Normalize(0, 1))
-        lc.set_array(z)
-        lc.set_linewidth(0.5)
-        lc.set_alpha(0.5)
-        axes.add_collection(lc)
+        # Choice markers in the form of list of tuples (trial, last_point) 
+        if bhv.get_choice(TrialDfs[i]).values[0] == 'left':
+            idx_left.append((i,(np.isnan(Fx)).argmax(axis=0)-1))
 
-        # Choice markers
-        if np.sqrt(Fx[-1]**2+Fy[-1]**2) < 500:
-            color = '#808080'
-        elif Fx[-1] < 0:
-            color = 'crimson'
-            idx_left += 1
-        elif Fx[-1] > 0:
-            color = 'royalblue'
-            idx_right += 1
+        elif bhv.get_choice(TrialDfs[i]).values[0] == 'right':
+            idx_right.append((i,(np.isnan(Fx)).argmax(axis=0)-1))
 
-        axes.plot(Fx[-1], Fy[-1], 'o', markersize = 2, color = color, zorder = 2)
+    # TODO: turn this ugly hack into something actually elegant
+    idx_left = tuple(np.array(idx_left).T)
+    idx_right = tuple(np.array(idx_right).T)
 
-    axes.set_xlim(-force_tresh, force_tresh)
-    axes.set_ylim(-force_tresh, force_tresh)
+    if idx_left:
+        axes.plot(Fxs[idx_left], Fys[idx_left], 'o', markersize = 2, color = 'crimson', zorder = 2, label = 'left')
+    if idx_right:
+        axes.plot(Fxs[idx_right], Fys[idx_right], 'o', markersize = 2, color = 'royalblue', zorder = 2, label = 'right')
+
+    axes.set_xlim(-plot_lim, plot_lim)
+    axes.set_ylim(-plot_lim-y_lim_offset, plot_lim-y_lim_offset)
 
     # Center cross
     line_kwargs = dict(color='k', linestyle=':', linewidth = 0.75, alpha=0.5, zorder=-100)
@@ -867,20 +875,76 @@ def trajectories_with_choice_marker(LoadCellDf, TrialDfs, SessionDf, first_event
     axes.axhline(0, **line_kwargs)
 
     # Boundaries lines
-    #line_kwargs = dict(color='k', lw=0.5, linestyle='-', alpha=0.25, zorder=-100)
-    #axes.axvline(-2500, **line_kwargs)
-    #axes.axvline(+2500, **line_kwargs)
+    line_kwargs = dict(color='k', lw=0.5, linestyle='-', alpha=0.75, zorder=-100)
+    axes.axvline(-2500, **line_kwargs)
+    axes.axvline(+2500, **line_kwargs)
     
     # Text
-    plt.text(-force_tresh/2,force_tresh/2, 'n = ' + str(idx_left), color = 'r')
-    plt.text(force_tresh/2,force_tresh/2, 'n = ' + str(idx_right), color = 'b')
-    plt.text(0,force_tresh/2, str(len(TrialDfs)) + ' trials', color = 'k')
+    plt.text(0,plot_lim-2*y_lim_offset, str(len(TrialDfs)) + ' trials', color = 'k')
 
+    axes.legend(title = 'Trial Type', loc='upper right', frameon=False) 
     axes.set_title('Trajectories of manipulandum and \n marker at time of choice ' + str(animal_id))
     axes.set_xlabel('Left/Right axis')
     axes.set_ylabel('Back/Front axis')
-
+    
     fig.tight_layout()
+
+def autocorr_forces(LoadCellDf,TrialDfs, first_event, second_event, axes=None):
+    " Compute the autocorrelation of trajectories between two events (classically computed vs through FFT)"
+
+    if axes is None:
+        fig, axes = plt.subplots(ncols=2, figsize=(5,3))
+
+    from numpy.fft import fft, ifft; import time
+
+    Fxs,Fys,_ = bhv.get_FxFy_window_between_events(LoadCellDf, TrialDfs, first_event, second_event, pad_with = 0)
+    
+    ## FFT solution ~3 sec ##
+    dataRD = np.zeros((1,Fxs.shape[1], 2))
+    for Fx,Fy in zip(Fxs,Fys):
+        data = np.dstack((Fx,Fy)) # 1st dim is trials, 2nd is length, 3rd is Fx/Fy
+
+        # Padding because autocorrelation is circular and padding avoids wrapping
+        padding = np.zeros((data.shape[0], data.shape[1]-1, data.shape[2]))
+        dataPadded = np.concatenate((data, padding), axis=1)
+
+        dataFT = fft(dataPadded, axis=1)
+        dataAC = ifft(dataFT * np.conjugate(dataFT), axis=1).real # https://mathworld.wolfram.com/Wiener-KhinchinTheorem.html
+        dataRD = np.vstack((dataRD, np.round(dataAC, 10)[:, :data.shape[1],:])) # round output and cut second half which is symmetric
+
+    dataAC_mean = np.mean(dataRD, axis = 0) # mean out of all ITIs
+
+    ## Brute force correlate solution with autocorr seperately for Fx and Fy ~10 sec ##
+    Fx_AC_filt, Fy_AC_filt = np.zeros((Fxs.shape)), np.zeros((Fys.shape))
+    for Fx,Fy in zip(Fxs,Fys):
+        
+        Fx_AC = np.correlate(Fx, Fx, mode='full')
+        Fy_AC = np.correlate(Fy, Fy, mode='full')
+        Fx_AC_filt = np.vstack((Fx_AC_filt, Fx_AC[round(Fx_AC.size/2):])) # only want positive periods
+        Fy_AC_filt = np.vstack((Fy_AC_filt, Fy_AC[round(Fy_AC.size/2):])) # only want positive periods
+
+    Fx_AC_mean = np.mean(Fx_AC_filt, axis = 0)
+    Fy_AC_mean = np.mean(Fy_AC_filt, axis = 0)
+    
+    t0,t1,t2 = 500,2000,8000
+
+    # First t1 seconds
+    axes[0].plot(dataAC_mean[t0:t1,0], label = 'Fx FFT'); axes[0].plot(dataAC_mean[t0:t1,1], label = 'Fy FFT')
+    axes[0].plot(Fx_AC_mean[t0:t1], label = 'Fx Autocorr'); axes[0].plot(Fy_AC_mean[t0:t1], label = 'Fy Autocorr')
+    plt.setp(axes[0], xticks=np.arange(t0, t1+0.1, 500), xticklabels=np.arange(t0, t1/1000+0.1, 0.5))
+
+    # From t1 to t2 seconds
+    axes[1].plot(dataAC_mean[t1:t2,0], label = 'Fx FFT'); axes[1].plot(dataAC_mean[t1:t2,1], label = 'Fy FFT')
+    axes[1].plot(Fx_AC_mean[t1:t2], label = 'Fx Autocorr'); axes[1].plot(Fy_AC_mean[t1:t2], label = 'Fy Autocorr')
+    plt.setp(axes[1], xticks=np.arange(0, t2-t1+0.1, 1000), xticklabels=np.arange(t1/1000, t2/1000+0.1, 1))
+
+    fig.suptitle('Autocorrelation of movements in Fx and Fy during ITI')
+    axes[1].legend(frameon=False, fontsize = 8, loc='upper right')
+
+    for ax in axes:
+        ax.set_xlabel('time')
+
+    return axes
 
 """
  
@@ -898,7 +962,7 @@ def plot_sessions_overview(LogDfs, paths, task_name, animal_id, axes = None):
     " Plots trials performed together with every trial outcome plus sucess rate and weight across sessions"
 
     if axes is None:
-        fig , axes = plt.subplots(ncols=2, sharex=True)
+        fig , axes = plt.subplots(ncols=2, sharex=True, figsize=(9, 4))
 
     trials_performed = []
     trials_correct = []
@@ -1024,21 +1088,34 @@ def rew_collected_across_sessions(LogDfs, axes = None):
 
     return axes
 
-def x_y_tresh_bias_across_sessions(LogDfs, axes = None):
+def x_y_tresh_bias_across_sessions(LogDfs, paths, axes = None):
     
     if axes is None:
         fig, axes = plt.subplots(figsize=(5, 3))
 
-    x_thresh, y_thresh, bias = [],[],[]
-    for LogDf in LogDfs:
+    x_thresh, y_thresh, bias, date = [],[],[],[]
+    for LogDf,path in zip(LogDfs, paths):
+
+        # Correct date format
+        folder_name = os.path.basename(path)
+        complete_date = folder_name.split('_')[0]
+        month = calendar.month_abbr[int(complete_date.split('-')[1])]
+        day = complete_date.split('-')[2]
+        date.append(month+'-'+day)
 
         x_thresh = np.append(x_thresh, np.mean(LogDf[LogDf['var'] == 'X_thresh'].value.values))
         y_thresh = np.append(y_thresh, np.mean(LogDf[LogDf['var'] == 'Y_thresh'].value.values))
         
-        try:
-            bias = np.append(bias, LogDf[LogDf['var'] == 'bias'].value.values[-1]) # last bias value
-        except:
-            bias = False
+        TrialSpans = bhv.get_spans_from_names(LogDf, "TRIAL_ENTRY_STATE", "ITI_STATE")
+
+        TrialDfs = []
+        for i, row in tqdm(TrialSpans.iterrows(),position=0, leave=True):
+            TrialDfs.append(bhv.time_slice(LogDf, row['t_on'], row['t_off']))
+
+        metrics = (bhv.get_start, bhv.get_stop, bhv.get_bias)
+        SessionDf = bhv.parse_trials(TrialDfs, metrics)
+                    
+        bias = np.append(bias, SessionDf['bias'].values[-1]) # last bias value
 
     axes.plot(np.arange(len(LogDfs)), x_thresh, color = 'C0', label = 'X thresh')
     axes.plot(np.arange(len(LogDfs)), y_thresh, color = 'm', label = 'Y thresh')
@@ -1047,15 +1124,16 @@ def x_y_tresh_bias_across_sessions(LogDfs, axes = None):
     axes.set_ylabel('Force (a.u.)')
     axes.set_title('Mean X/Y thresh forces and bias across sessions')
     axes.legend(frameon=False)
-    axes.set_xticks(np.arange(len(LogDfs)))
-    axes.set_xticklabels(np.arange(len(LogDfs))) 
+
+    plt.setp(axes, xticks=np.arange(0, len(date), 1), xticklabels=date)
+    plt.xticks(rotation=-45)
 
     if bias.any():
         twin_ax = axes.twinx()
         twin_ax.plot(bias, color = 'g', alpha = 0.5)
         twin_ax.set_ylabel('Bias', color = 'g')
-        twin_ax.set_yticks([0,0.5,1])
-        twin_ax.set_yticklabels(['left','center','right'])
+        twin_ax.set_yticks([0,0.25,0.5,0.75,1])
+        twin_ax.set_yticklabels(['left (0%)', '25%','center (50%)', '75%','right (100%)'])
 
     fig.tight_layout()
 
@@ -1064,7 +1142,7 @@ def x_y_tresh_bias_across_sessions(LogDfs, axes = None):
 def choice_rt_across_sessions(LogDfs, bin_width, choice_interval, percentile, animal_id, axes = None):
 
     if axes == None:
-        fig, axes = plt.subplots()
+        fig, axes = plt.subplots(figsize=(5, 3))
 
     colors = sns.color_palette(palette='turbo', n_colors=len(LogDfs))
 
@@ -1096,7 +1174,7 @@ def choice_rt_across_sessions(LogDfs, bin_width, choice_interval, percentile, an
     axes.set_xlabel('Time (s)')
     fig.suptitle('Choice RT distribution with' + str(percentile)+ 'th percentile' + "\n" + str(animal_id), fontsize='small')
 
-def force_2D_hist_contour_across_sessions(paths, thresh, task_name, animal_id, trials_only = False):
+def force_2D_contour_across_sessions(paths, thresh, task_name, animal_id, trials_only = False):
 
     Fx,Fy = np.empty(0),np.empty(0)
     for path in tqdm(paths,position=0, leave=True):
@@ -1136,11 +1214,8 @@ def force_2D_hist_contour_across_sessions(paths, thresh, task_name, animal_id, t
             Fx = np.concatenate((Fx, LoadCellDf['x'].values))
             Fy = np.concatenate((Fy, LoadCellDf['y'].values))
 
-    # Downsample from 1Khz to 10Hz in order to be computationally feasible
-    Fx_downsamp = Fx
-    Fy_downsamp = Fy
-    Fx_downsamp = Fx_downsamp[~np.isnan(Fx_downsamp)]
-    Fy_downsamp = Fy_downsamp[~np.isnan(Fy_downsamp)]
+    Fx = Fx[~np.isnan(Fx)]
+    Fy = Fy[~np.isnan(Fy)]
 
     ##  2D histogram ##
     no_bins = 100
@@ -1160,6 +1235,7 @@ def force_2D_hist_contour_across_sessions(paths, thresh, task_name, animal_id, t
     fig, axis2 = plt.subplots(figsize=(5, 4))
     CS = axis2.contour(data, levels = perc_values)
     
+    # Funky way to get percentiles value on the lines
     fmt = {}
     strs = [str(p) + '%' for p in perc]
     for l, s in zip(CS.levels, strs):

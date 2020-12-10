@@ -49,10 +49,9 @@ paths = [Path(path) for path in SessionsDf.groupby('task').get_group(task_name).
 LogDfs = []
 working_paths = [] # some paths can have t_harp or maybe missing log problems
 
-# Obtain list of LogDf and LCDf from csv stored
-for path in tqdm(paths, desc="Obtaining LogDfs and LCDfs' CSV"):
+# Obtain list of LogDf 
+for path in tqdm(paths, desc="Obtaining LogDfs' CSV"):
 
-    # Open LogDf and LCDf from csv
     try:
         LogDfs.append(pd.read_csv(path.joinpath('LogDf.csv')))
     except:
@@ -79,7 +78,6 @@ plt.show()
 
 # Parameters
 window_size = 1000
-pre, post = -1000, 4000
 align_ref = "SECOND_TIMING_CUE_EVENT"
 
 # Get single session folder path
@@ -115,7 +113,8 @@ bhv_plt.plot_timing_overview(LogDf, LoadCellDf, TrialDfs)
 
 # Parameters
 window_size = 1000
-pre, post = -1000, 4000
+pre, post = 1000, 4000
+force_tresh = 3000
 first_cue_ref = "FIRST_TIMING_CUE_EVENT"
 align_ref = "SECOND_TIMING_CUE_EVENT"
 task_name = 'learn_to_time'
@@ -156,7 +155,7 @@ for path_tuple in enumerate(tqdm(paths)):
         # General trial info
         fig_ax1a = fig.add_subplot(gs[0,0:2])
         fig_ax1b = fig.add_subplot(gs[0,2:3])
-        bhv_plt.general_info(LogDf, path, [fig_ax1a, fig_ax1b])
+        bhv_plt.plot_general_info(LogDf, path, [fig_ax1a, fig_ax1b])
 
         # Heat map plots for X/Y
         fig_ax2 = fig.add_subplot(gs[1:,0:3])
@@ -170,7 +169,7 @@ for path_tuple in enumerate(tqdm(paths)):
 
         # Psychometric adapted from Georg's code
         fig_ax4 = fig.add_subplot(gs[3:6,3:5])
-        bhv_plt.simple_psychometric(SessionDf, fig_ax4)
+        bhv_plt.plot_psychometric(SessionDf, fig_ax4)
 
         # Choice matrix - trials incorrect
         fig_ax5a = fig.add_subplot(gs[6:,3])
@@ -182,7 +181,7 @@ for path_tuple in enumerate(tqdm(paths)):
         bin_width = 75 # ms
         fig_ax6a = fig.add_subplot(gs[:3,5])
         fig_ax6b = fig.add_subplot(gs[:3,6])
-        bhv_plt.plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, align_ref, bin_width, [fig_ax6a, fig_ax6b])
+        bhv_plt.plot_force_magnitude(LoadCellDf, SessionDf, TrialDfs, first_cue_ref, align_ref, pre, post, force_tresh, bin_width, [fig_ax6a, fig_ax6b])
 
         # CT histogram to detect/quantify biases or motor strategies
         bin_width = 100 # ms
@@ -192,9 +191,9 @@ for path_tuple in enumerate(tqdm(paths)):
 
         # Trajectory plots
         fig_ax8a = fig.add_subplot(gs[5:,5])
-        bhv_plt.plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, 'incorrect', fig_ax8a)
+        bhv_plt.plot_mean_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, 'incorrect', fig_ax8a)
         fig_ax8b = fig.add_subplot(gs[5:,6])
-        bhv_plt.plot_forces_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, 'correct', fig_ax8b)
+        bhv_plt.plot_mean_trajectories(LogDf, LoadCellDf, TrialDfs, align_ref, 'correct', fig_ax8b)
 
         fig.suptitle('Session overview for ' + str(animal_tag) + ' at ' + str(session_date))
 
