@@ -11,7 +11,7 @@ class BonsaiController(QtWidgets.QWidget):
     
     def __init__(self, parent, config, task_config):
         super(BonsaiController, self).__init__(parent=parent)
-        self.name = BonsaiController
+        self.name = "BonsaiController"
         self.config = config
         self.task_config = task_config
 

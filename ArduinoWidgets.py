@@ -296,24 +296,41 @@ class ArduinoController(QtWidgets.QWidget):
         # start up the online data analyzer
         self.OnlineDataAnalyser.run()
 
+        # external logging
         fH = open(self.run_folder / 'arduino_log.txt','w')
 
         def read_from_port(ser):
             while ser.is_open:
                 try:
                     line = ser.readline().decode('utf-8').strip()
-                    if line is not '': # filtering out empty reads
-                        fH.write(line+os.linesep) # external logging
-                        
-                        # publishing data
-                        self.serial_data_available.emit(line)
+                except AttributeError:
+                    line = ''
+                except TypeError:
+                    line = ''
+                except serial.serialutil.SerialException:
+                    line = ''
 
-                except:
-                    try:
-                        print("failed read from serial!", line)
-                    except:
-                        pass
-                    break
+                if line is not '': # filtering out empty reads
+                    fH.write(line+os.linesep) # external logging
+                    self.serial_data_available.emit(line) # internal publishing
+
+
+        # def read_from_port(ser):
+        #     while ser.is_open:
+        #         try:
+        #             line = ser.readline().decode('utf-8').strip()
+        #             if line is not '': # filtering out empty reads
+        #                 fH.write(line+os.linesep) # external logging
+                        
+        #                 # publishing data
+        #                 self.serial_data_available.emit(line)
+
+        #         except:
+        #             try:
+        #                 print("failed read from serial!", line)
+        #             except:
+        #                 pass
+        #             break
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()

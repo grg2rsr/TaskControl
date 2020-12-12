@@ -220,8 +220,8 @@ class SettingsWidget(QtWidgets.QWidget):
         self.RunInfo = RunInfoWidget(self)
 
         print(" --- RUN --- ")
-        print("Task: ",self.task)
-        print("Animal: ",self.animal)
+        print("Task: ", self.task)
+        print("Animal: ", self.animal)
         
         # make folder structure
         date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
