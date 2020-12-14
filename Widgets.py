@@ -54,16 +54,30 @@ class SettingsWidget(QtWidgets.QWidget):
         FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
         self.setLayout(FormLayout)
 
+        # # animal selector
+        # animals = utils.get_animals(self.config['paths']['animals_folder'])
+        # self.animal = self.config['last']['animal']
+        # self.AnimalChoiceWidget = StringChoiceWidget(self, choices=animals)
+        # self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
+        # try:
+        #     self.AnimalChoiceWidget.set_value(self.animal)
+        # except:
+        #     # if animal is not in list
+        #     self.AnimalChoiceWidget.set_value(animals[0])
+        # FormLayout.addRow('Animal', self.AnimalChoiceWidget)
+
         # animal selector
-        animals = utils.get_animals(self.config['paths']['animals_folder'])
-        self.animal = self.config['last']['animal']
-        self.AnimalChoiceWidget = StringChoiceWidget(self, choices=animals)
+        self.Animals = utils.get_Animals(self.config['paths']['animals_folder'])
+        last_id = self.config['last']['animal']
+        self.Animal, = [Animal for Animal in self.Animals if Animal.ID == last_id]
+        display_names = [animal.display() for animal in self.Animals]
+        self.AnimalChoiceWidget = StringChoiceWidget(self, choices=display_names)
         self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
         try:
-            self.AnimalChoiceWidget.set_value(self.animal)
+            self.AnimalChoiceWidget.set_value(self.Animal.display())
         except:
             # if animal is not in list
-            self.AnimalChoiceWidget.set_value(animals[0])
+            self.AnimalChoiceWidget.set_value(self.Animals[0].display())
         FormLayout.addRow('Animal', self.AnimalChoiceWidget)
 
         # task selector
@@ -162,15 +176,16 @@ class SettingsWidget(QtWidgets.QWidget):
         
         # calling animal changed again to trigger correct layouting
         self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
-        self.AnimalChoiceWidget.set_value(self.animal)
-        
+        self.AnimalChoiceWidget.set_value(self.Animal.display())
+                
         # TODO
         # test if they can't be called wo the check and move above lines 
         # up to the corresponding point 
 
         # enforce function calls if first animal
-        if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
-            self.animal_changed()
+        self.animal_changed()
+        # if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
+        #     self.animal_changed()
         if tasks.index(self.task) == 0: # enforce function call if first task
             self.task_changed()
 
@@ -221,11 +236,12 @@ class SettingsWidget(QtWidgets.QWidget):
 
         print(" --- RUN --- ")
         print("Task: ", self.task)
-        print("Animal: ", self.animal)
+        print("Animal: ", self.Animal.display())
         
         # make folder structure
         date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
-        self.run_folder = Path(self.config['paths']['animals_folder']) / self.animal / '_'.join([date_time,self.task])
+        self.run_folder = self.Animal.folder  / '_'.join([date_time,self.task])
+        # self.run_folder = Path(self.config['paths']['animals_folder']) / self.animal / '_'.join([date_time,self.task])
         
         os.makedirs(self.run_folder,exist_ok=True)
 
@@ -254,7 +270,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # save the current animal metadata (includes weight)
         out_path = self.run_folder / "animal_meta.csv"
-        self.animal_meta.to_csv(out_path)
+        self.Animal.meta.to_csv(out_path)
 
         self.timer.stop()
 
@@ -269,22 +285,22 @@ class SettingsWidget(QtWidgets.QWidget):
         self.task_changed() # this reinitialized all controllers
 
     def animal_changed(self):
-        self.config['current']['animal'] = self.AnimalChoiceWidget.get_value()
-        self.animal = self.config['current']['animal']
-        meta_path = Path(self.config['paths']['animals_folder']) / self.animal / 'animal_meta.csv'
-        self.animal_meta = pd.read_csv(meta_path)
+        current_id = self.AnimalChoiceWidget.get_value().split(' - ')[0]
+        self.config['current']['animal'] = current_id
+        self.Animal, = [Animal for Animal in self.Animals if Animal.ID == current_id]
+
+        # meta_path = Path(self.config['paths']['animals_folder']) / self.animal / 'animal_meta.csv'
+        # self.animal_meta = pd.read_csv(meta_path)
 
         # displaying previous sessions info
         if hasattr(self,'AnimalInfoWidget'):
             self.AnimalInfoWidget.close()
 
-        self.AnimalInfoWidget = AnimalInfoWidget(self, self.config)
+        self.AnimalInfoWidget = AnimalInfoWidget(self, self.config, self.Animal)
         self.Children = []
         self.Children.append(self.AnimalInfoWidget)
 
-        # TODO get animal metadata
-        # animal folder, get all runs, get meta from the folder plus the last weight
-        print("Animal: ", self.animal)
+        print("Animal: ", self.Animal.display())
 
     def task_changed(self):
         # first check if task is running, if yes, don't do anything
@@ -386,11 +402,11 @@ class SettingsWidget(QtWidgets.QWidget):
 
 class AnimalInfoWidget(QtWidgets.QWidget):
     """ displays some interesing info about the animal: list of previous sessions """
-    def __init__(self, parent, config):
+    def __init__(self, parent, config, Animal):
         super(AnimalInfoWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
         self.config = config
-
+        self.Animal = Animal
         self.initUI()
 
     def initUI(self):
@@ -401,14 +417,7 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         self.Layout.addWidget(self.Table)
         self.setLayout(self.Layout)
 
-        Df = self.parent().animal_meta
-        animal_meta = dict(zip(Df['name'], Df['value']))
-        try:
-            nickname = animal_meta['Nickname']
-        except:
-            nickname = ''
-            
-        self.setWindowTitle(animal_meta['ID'] + ' - ' + nickname)
+        self.setWindowTitle(self.Animal.display())
         self.update()
         self.show()
         self.layout()
@@ -419,11 +428,8 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         utils.tile_Widgets([self.parent(),self], how='vertically', gap=big_gap)
 
     def update(self):
-        # TODO get a list of past sessions and parse them
-        # TODO also rename sessions_df
-        current_animal_folder = Path(self.config['paths']['animals_folder']) / self.parent().animal
         try:
-            sessions_df = utils.get_sessions(current_animal_folder)
+            sessions_df = utils.get_sessions(self.Animal.folder)
             # lines = sessions_df['task'].to_list()
             lines = sessions_df['task'].tolist()
             lines = '\n'.join(lines)
@@ -491,7 +497,6 @@ class RunInfoWidget(QtWidgets.QDialog):
         else:
             meta.loc[meta['name'] == 'current_weight','value'] = weight
         self.accept()
-
 
 # class NewAnimalWidget(QtWidgets.QWidget):
 #         # think about completely deprecating this for now 

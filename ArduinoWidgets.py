@@ -309,6 +309,8 @@ class ArduinoController(QtWidgets.QWidget):
                     line = ''
                 except serial.serialutil.SerialException:
                     line = ''
+                except UnicodeDecodeError:
+                    line = ''
 
                 if line is not '': # filtering out empty reads
                     fH.write(line+os.linesep) # external logging
