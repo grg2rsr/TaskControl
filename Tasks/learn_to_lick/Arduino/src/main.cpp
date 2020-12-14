@@ -245,7 +245,7 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (now() - state_entry > this_ITI_dur && now() - t_last_lick > t_lick_block) {
+            if (now() - state_entry > this_ITI_dur && now() - t_last_lick > t_lick_block && lick_in == false) {
                 // determine which cue is next
                 float r = random(0,1000) / 1000.0;
                 if (p_rewarded_cue > r){
