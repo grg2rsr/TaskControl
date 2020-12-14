@@ -489,7 +489,7 @@ class RunInfoWidget(QtWidgets.QDialog):
         self.exec()
 
     def done_btn_clicked(self):
-        meta = self.parent().animal_meta
+        meta = self.parent().Animal.meta
         weight = self.WeigthEditWidget.get_value()
         if 'current_weight' not in meta['name'].values:
             ix = meta.shape[0]
