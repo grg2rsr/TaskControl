@@ -175,6 +175,7 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 log_code(REWARD_AVAILABLE_EVENT);
+                send_sync_pulse();
                 
                 // play the sound
                 correct_choice_cue();
