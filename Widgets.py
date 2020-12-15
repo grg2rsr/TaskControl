@@ -1,6 +1,5 @@
 import sys, os
 from pathlib import Path
-import shutil
 import configparser
 from datetime import datetime
 
@@ -236,7 +235,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
         utils.printer("RUN",'task')
         utils.printer("Task: %s" % self.task,'msg')
-        utils.printer("Animal: %s" % self.Animal.display(),'msg')
+        utils.printer("Animal: %s - body weight: %s%%" % (self.Animal.display(), self.Animal.weight_ratio()),'msg')
         
         # make folder structure
         date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
@@ -300,7 +299,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.Children = []
         self.Children.append(self.AnimalInfoWidget)
 
-        utils.printer("Animal: %s " % self.Animal.display(),'msg')
+        utils.printer("Animal: %s" % self.Animal.display(),'msg')
 
     def task_changed(self):
         # first check if task is running, if yes, don't do anything
@@ -468,8 +467,6 @@ class RunInfoWidget(QtWidgets.QDialog):
         self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
 
         # Fields
-        # self.EarTagWidget = ValueEdit('', 'U', self)
-        # self.FormLayout.addRow("Ear tag", self.EarTagWidget)
         self.WeigthEditWidget = ValueEdit(30, 'f4', self)
         self.FormLayout.addRow("Weight (g)", self.WeigthEditWidget)
 

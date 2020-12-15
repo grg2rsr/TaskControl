@@ -5,13 +5,10 @@ import configparser
 
 from pathlib import Path
 import subprocess
-import datetime
 import shutil
 import serial
 import time
 import threading
-import queue
-from functools import partial
 import pandas as pd
 import scipy as sp
 
@@ -335,7 +332,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()
-        utils.printer("beginning to listen to serial port",'msg')
+        utils.printer("listening to FSM arduino on serial port %s" % self.config['connections']['FSM_arduino_port'],'msg')
     
     def stop(self):
         """ when session is finished """

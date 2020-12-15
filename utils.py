@@ -20,6 +20,12 @@ class Animal(object):
         else:
             return self.ID
 
+    def weight_ratio(self):
+        try:
+            return self.current_weight / self.weight
+        except:
+            return ''
+
 def get_Animals(folder):
     """ checks each folder in folder """
     Animals = []

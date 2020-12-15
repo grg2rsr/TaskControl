@@ -3,8 +3,6 @@ from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 import subprocess
 from pathlib import Path
-import shutil
-import struct
 import utils
 
 class BonsaiController(QtWidgets.QWidget):
@@ -38,7 +36,7 @@ class BonsaiController(QtWidgets.QWidget):
 
         command = ' '.join([str(bonsai_exe),str(bonsai_workflow),"--start",parameters,"&"])
 
-        utils.printer("bonsai command: %s " % command, 'msg')
+        # utils.printer("bonsai command: %s " % command, 'msg')
         log = open(save_path.with_name('bonsai_log.txt') ,'w')
         theproc = subprocess.Popen(command, shell = True, stdout=log, stderr=log)
         # theproc.communicate() # this hangs shell on windows machines, TODO check if this is true for linux
