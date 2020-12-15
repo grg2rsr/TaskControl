@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 import shutil
 import struct
+import utils
 
 class BonsaiController(QtWidgets.QWidget):
     """ a Widget without UI that launches a bonsai sketch """
@@ -18,7 +19,7 @@ class BonsaiController(QtWidgets.QWidget):
     def Run(self, folder):
         """ folder is the logging folder """
 
-        animal = self.config['current']['animal']
+        # animal = self.config['current']['animal']
         task = self.config['current']['task']
         task_folder = Path(self.config['paths']['tasks_folder']) / task
         save_path = folder / 'bonsai_' # this needs to be fixed in bonsai # FIXME TODO
@@ -37,10 +38,9 @@ class BonsaiController(QtWidgets.QWidget):
 
         command = ' '.join([str(bonsai_exe),str(bonsai_workflow),"--start",parameters,"&"])
 
-        print("bonsai command:")
-        print(command)
-
-        theproc = subprocess.Popen(command, shell = True)
+        utils.printer("bonsai command: %s " % command, 'msg')
+        log = open(save_path.with_name('bonsai_log.txt') ,'w')
+        theproc = subprocess.Popen(command, shell = True, stdout=log, stderr=log)
         # theproc.communicate() # this hangs shell on windows machines, TODO check if this is true for linux
         # curious, it should do the opposite ... 
 

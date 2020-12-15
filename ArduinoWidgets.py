@@ -226,7 +226,7 @@ class ArduinoController(QtWidgets.QWidget):
         fH = open(self.run_folder / 'platformio_build_log.txt','w')
         platformio_cmd = self.config['system']['platformio_cmd']
         cmd = ' '.join([platformio_cmd,'run','--target','upload'])
-        proc = subprocess.Popen(cmd,shell=True,stdout=fH)
+        proc = subprocess.Popen(cmd,shell=True,stdout=fH,stderr=fH)
         proc.communicate()
         fH.close()
 
