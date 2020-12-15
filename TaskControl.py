@@ -15,7 +15,7 @@ class TaskControlApp(QtWidgets.QApplication):
         self.config.read(self.config_path)
 
         print(" --- this is TaskControl --- ")
-        print("using config: ", config_path)
+        utils.printer("using config: %s" % config_path, 'msg')
 
         # launch GUI
         self.Settings_Widget = SettingsWidget(self, self.config)

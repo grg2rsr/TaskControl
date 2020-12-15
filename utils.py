@@ -31,8 +31,9 @@ def get_Animals(folder):
                 Animals.append(Animal(path))
     return Animals
 
-def select(neo_objs,value,key="label"):
-    return [obj for obj in neo_objs if obj.annotations[key] == value]
+# def select(neo_objs,value,key="label"):
+#     return [obj for obj in neo_objs if obj.annotations[key] == value]
+
 # def get_animals(folder):
 #     """ checks each folder in folder """
 #     animals = []
@@ -43,6 +44,14 @@ def select(neo_objs,value,key="label"):
 #                 animals.append(os.path.basename(subfolder))
 #     return animals
 
+def printer(s, mode):
+    if mode == 'msg':
+        print(s)
+    if mode == 'task':
+        print("\n--- %s ---" % s)
+    if mode == 'error':
+        print("ERROR: %s" % s)
+        
 def get_tasks(folder):
     """ gets all valid tasks """
     tasks = []

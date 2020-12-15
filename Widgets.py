@@ -234,9 +234,9 @@ class SettingsWidget(QtWidgets.QWidget):
         # animal popup
         self.RunInfo = RunInfoWidget(self)
 
-        print(" --- RUN --- ")
-        print("Task: ", self.task)
-        print("Animal: ", self.Animal.display())
+        utils.printer("RUN",'task')
+        utils.printer("Task: %s" % self.task,'msg')
+        utils.printer("Animal: %s" % self.Animal.display(),'msg')
         
         # make folder structure
         date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
@@ -246,7 +246,7 @@ class SettingsWidget(QtWidgets.QWidget):
         os.makedirs(self.run_folder,exist_ok=True)
 
         for Controller in self.Controllers:
-            print("running controller: ", Controller.name)
+            utils.printer("running controller: %s" % Controller.name,'msg')
             Controller.Run(self.run_folder)
 
         self.running = True
@@ -300,12 +300,12 @@ class SettingsWidget(QtWidgets.QWidget):
         self.Children = []
         self.Children.append(self.AnimalInfoWidget)
 
-        print("Animal: ", self.Animal.display())
+        utils.printer("Animal: %s " % self.Animal.display(),'msg')
 
     def task_changed(self):
         # first check if task is running, if yes, don't do anything
         if self.running == True:
-            print("Warning: trying to change a running task!")
+            utils.printer("trying to change a running task", 'error')
             return None
 
         else:
@@ -313,7 +313,7 @@ class SettingsWidget(QtWidgets.QWidget):
             self.config['current']['task'] = self.TaskChoiceWidget.get_value()
             self.task = self.config['current']['task']
             self.task_folder = Path(self.config['paths']['tasks_folder']) / self.task
-            print("Currently selected Task: ", self.task)
+            utils.printer("Currently selected Task: %s" % self.task, 'msg')
 
             # parse task config file
             self.task_config = configparser.ConfigParser()
@@ -327,7 +327,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
             # run each controller present in task config
             for section in self.task_config.sections():
-                print("initializing " + section)
+                utils.printer("initializing %s" % section, 'msg')
                 if section == 'Arduino':
                     from ArduinoWidgets import ArduinoController
                     self.ArduinoController = ArduinoController(self, self.config, self.task_config['Arduino'])
@@ -742,7 +742,7 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
             self.itemAt(ix,1).widget().set_value(value)
 
         except ValueError:
-            print("attempting to set a name, value not in Df:" + str(name) + " " + str(value))
+            utils.printer("ValueError on attempting to set %s to %s:" % (name, value), 'error')
 
     def setEnabled(self, value):
          for i in range(self.rowCount()):
@@ -752,7 +752,7 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
     def set_entries(self, Df):
         # test compatibility first
         if not sp.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
-            print("can't set entries bc they are not equal ... this indicates some major bug")
+            utils.printer("can't set entries of variable Df bc they are not equal", 'error')
             utils.debug_trace()
         
         # update the model
