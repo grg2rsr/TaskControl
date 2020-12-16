@@ -45,11 +45,11 @@ void read_lick(){
   if (lick_in == false && digitalRead(LICK_PIN) == true){
     log_code(LICK_ON);
     lick_in = true;
-    t_last_lick = now();
   }
   if (lick_in == true && digitalRead(LICK_PIN) == false){
     log_code(LICK_OFF);
     lick_in = false;
+    t_last_lick = now();
   }
 }
 
