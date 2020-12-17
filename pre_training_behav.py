@@ -102,7 +102,10 @@ for path in tqdm(paths[pretraining_sess:], position=0, leave=True, desc= 'Plotti
         continue # go onto next cycle
 
     # ACTUAL PLOTTING
-    trajectories_with_marker(LoadCellDf, TrialDfs, SessionDf, first_event, second_event, plot_lim, animal_id)
+    axes = trajectories_with_marker(LoadCellDf, TrialDfs, SessionDf, first_event, second_event, plot_lim, animal_id)
+    axes.set_title('Trajectories of manipulandum and \n marker at time of choice ' + str(animal_id))
+    axes.set_xlabel('Left/Right axis')
+    axes.set_ylabel('Back/Front axis')
 
     # Saving figure
     match = re.search(r'\d{4}-\d{2}-\d{2}', str(path))

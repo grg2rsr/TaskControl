@@ -249,8 +249,11 @@ def parse_trial(TrialDf, Metrics):
         return TrialMetricsDf
     
 def parse_trials(TrialDfs, Metrics):
-    """ helper to run parse_trial on multiple trials.
-    TrialsDfs is a list of TrialDf """
+    """ helper to run parse_trial on multiple trials """
+
+    for Df in TrialDfs:
+        bhv.parse_trial(Df, Metrics)
+
     SessionDf = pd.concat([parse_trial(Df, Metrics) for Df in TrialDfs], axis=0)
     SessionDf = SessionDf.reset_index(drop=True)
   
@@ -447,13 +450,13 @@ def choice_RT(TrialDf):
  
     return pd.Series(var, name=var_name)
 
-def get_choice(TrialDf):
+def get_choice(TrialDf): # Diagonals are consider as X-axis choices, not Y-axis
     var_name = "choice"
 
     if has_choice(TrialDf).values[0] == True:
-        if "CHOICE_LEFT_EVENT" in TrialDf.name.values:
+        if (bhv.get_choice_zone(TrialDf).values[0] == (1,4,7)).any(): # if any is True
             var = "left"
-        elif "CHOICE_RIGHT_EVENT" in TrialDf.name.values:
+        elif (bhv.get_choice_zone(TrialDf).values[0] == (3,6,9)).any():
             var = "right"
         elif get_choice_zone(TrialDf).values[0] == 8:
             var = "up"
@@ -522,6 +525,16 @@ def get_instructed(TrialDf):
     try:
         Df = TrialDf.groupby('var').get_group(var_name)
         var = Df.iloc[0]['value'].astype('bool')
+    except KeyError:
+        var = np.NaN
+
+    return pd.Series(var, name=var_name)
+
+def get_x_thresh(TrialDf):
+    var_name = "X_thresh"
+    try:
+        Df = TrialDf.groupby('var').get_group(var_name)
+        var = Df.iloc[0]['value']
     except KeyError:
         var = np.NaN
 
@@ -804,7 +817,7 @@ def get_events_window_aligned_on_event(LogDf, event_name, pre, post):
     return event_ts
 
 def get_events_window_between_events(TrialDfs, event_name, first_event, second_event):
-    " Returns list of np.arrays with licks for all trials in a window between any two sequential(!) events"
+    " Returns list of np.arrays with event_name for all trials in a window between any two sequential(!) events"
 
     licks = []
     for TrialDf in TrialDfs:
@@ -931,7 +944,7 @@ def filter_trials_by(SessionDf,TrialDfs, filter_pairs):
         SDf = SessionDf.groupby(groupby_keys).get_group(getgroup_keys)
     except:
         print('The are no trials with given input filter_pair combination')
-        return TrialDfs
+        raise KeyError
 
     TrialDfs_filt = np.array(TrialDfs)[SDf.index.values.astype(int)]
 
