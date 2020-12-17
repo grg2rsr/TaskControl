@@ -444,7 +444,7 @@ void get_trial_type(){
     }
     
     log_int("correct_zone", correct_zone);
-    log_bool("in_corr_loop", in_corr_loop);
+    log_int("in_corr_loop", (int) in_corr_loop);
 }
                
 /*
