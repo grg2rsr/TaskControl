@@ -4,6 +4,7 @@
 #include <event_codes.h> // <>?
 #include "interface.cpp"
 #include "pin_map.h"
+#include "logging.cpp"
 
 /*
 ########  ########  ######  ##          ###    ########     ###    ######## ####  #######  ##    ##  ######
@@ -28,70 +29,6 @@ bool lick_in = false;
 Tone tone_controller;
 unsigned long tone_duration = 100;
 
-/*
-##        #######   ######    ######   #### ##    ##  ######
-##       ##     ## ##    ##  ##    ##   ##  ###   ## ##    ##
-##       ##     ## ##        ##         ##  ####  ## ##
-##       ##     ## ##   #### ##   ####  ##  ## ## ## ##   ####
-##       ##     ## ##    ##  ##    ##   ##  ##  #### ##    ##
-##       ##     ## ##    ##  ##    ##   ##  ##   ### ##    ##
-########  #######   ######    ######   #### ##    ##  ######
-*/
-
-// time
-unsigned long now(){
-    return millis();
-}
-
-// VAR reporters
-char s[128]; // message buffer
-
-void log_bool(const char name[], bool value){
-    if (value==true){
-        snprintf(s, sizeof(s), "<VAR %s %s %lu>", name, "true", now());
-    }
-    else {
-        snprintf(s, sizeof(s), "<VAR %s %s %lu>", name, "false", now());
-    }
-    Serial.println(s);
-}
-
-void log_int(const char name[], int value){
-    snprintf(s, sizeof(s), "<VAR %s %i %lu>", name, value, now());
-    Serial.println(s);
-}
-
-// void log_long(const char name[], long value){
-//     snprintf(s, sizeof(s), "<VAR %s %u %lu>", name, value, now());
-//     Serial.println(s);
-// }
-
-void log_ulong(const char name[], unsigned long value){
-    snprintf(s, sizeof(s), "<VAR %s %lu %lu>", name, value, now());
-    Serial.println(s);
-}
-
-void log_float(const char name[], float value){
-    snprintf(s, sizeof(s), "<VAR %s ", name);
-    Serial.print(s);
-    Serial.print(value);
-    snprintf(s, sizeof(s), " %lu>", now());
-    Serial.println(s);
-}
-
-// specific
-
-void log_code(int code){
-    // Serial.println(String(code) + '\t' + String(now()));
-    snprintf(s, sizeof(s), "%u\t%lu", code, now());
-    Serial.println(s);
-}
-
-void log_msg(const char Message[]){
-    // Serial.println("<MSG " + Message + " "+String(now())+">");
-    snprintf(s, sizeof(s), "<MSG %s %lu>", Message, now());
-    Serial.println(s);
-}
 
 /*
  ######  ######## ##    ##  ######   #######  ########   ######
@@ -108,11 +45,11 @@ void read_lick(){
   if (lick_in == false && digitalRead(LICK_PIN) == true){
     log_code(LICK_ON);
     lick_in = true;
-    t_last_lick = now();
   }
   if (lick_in == true && digitalRead(LICK_PIN) == false){
     log_code(LICK_OFF);
     lick_in = false;
+    t_last_lick = now();
   }
 }
 
@@ -238,6 +175,7 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 log_code(REWARD_AVAILABLE_EVENT);
+                send_sync_pulse();
                 
                 // play the sound
                 correct_choice_cue();
@@ -308,7 +246,7 @@ void finite_state_machine() {
             }
 
             // exit condition
-            if (now() - state_entry > this_ITI_dur && now() - t_last_lick > t_lick_block) {
+            if (now() - state_entry > this_ITI_dur && now() - t_last_lick > t_lick_block && lick_in == false) {
                 // determine which cue is next
                 float r = random(0,1000) / 1000.0;
                 if (p_rewarded_cue > r){

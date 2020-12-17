@@ -91,7 +91,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="dsp:MatrixWriter">
-          <dsp:Path>C:\Users\User\TaskControl\Animals\123\2020-12-10_14-37-44_measure_loadcell\bonsai_harp_log.bin</dsp:Path>
+          <dsp:Path>C:\Users\User\TaskControl\Animals\JJP-01511\2020-12-14_11-23-49_measure_loadcell\bonsai_harp_log.bin</dsp:Path>
           <dsp:Suffix>None</dsp:Suffix>
           <dsp:Overwrite>true</dsp:Overwrite>
           <dsp:Layout>ColumnMajor</dsp:Layout>
@@ -129,7 +129,7 @@
         </PropertyMappings>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\User\TaskControl\Animals\123\2020-12-10_14-37-44_measure_loadcell\bonsai_LoadCellData.csv</io:FileName>
+        <io:FileName>C:\Users\User\TaskControl\Animals\JJP-01511\2020-12-14_11-23-49_measure_loadcell\bonsai_LoadCellData.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
@@ -164,7 +164,7 @@
         </PropertyMappings>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\User\TaskControl\Animals\123\2020-12-10_14-37-44_measure_loadcell\bonsai_harp_sync.csv</io:FileName>
+        <io:FileName>C:\Users\User\TaskControl\Animals\JJP-01511\2020-12-14_11-23-49_measure_loadcell\bonsai_harp_sync.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
@@ -175,7 +175,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>C:\Users\User\TaskControl\Animals\123\2020-12-10_14-37-44_measure_loadcell\bonsai_</Value>
+          <Value>C:\Users\User\TaskControl\Animals\JJP-01511\2020-12-14_11-23-49_measure_loadcell\bonsai_</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">

@@ -96,12 +96,20 @@ void processSerialData() {
             log_int("correct_choice_cue_freq", correct_choice_cue_freq);
         }
 
+        if (strcmp(varname,"choice_dur")==0){
+            log_ulong("choice_dur", choice_dur);
+        }
+
         if (strcmp(varname,"ITI_dur_min")==0){
             log_ulong("ITI_dur_min", ITI_dur_min);
         }
 
         if (strcmp(varname,"ITI_dur_max")==0){
             log_ulong("ITI_dur_max", ITI_dur_max);
+        }
+
+        if (strcmp(varname,"min_fix_dur")==0){
+            log_ulong("min_fix_dur", min_fix_dur);
         }
 
         if (strcmp(varname,"reward_magnitude")==0){
@@ -116,20 +124,60 @@ void processSerialData() {
             log_ulong("reward_available_dur", reward_available_dur);
         }
 
-        if (strcmp(varname,"p_reward")==0){
-            log_float("p_reward", p_reward);
+        if (strcmp(varname,"X_thresh")==0){
+            log_float("X_thresh", X_thresh);
         }
 
-        if (strcmp(varname,"p_rewarded_cue")==0){
-            log_float("p_rewarded_cue", p_rewarded_cue);
+        if (strcmp(varname,"X_thresh_start")==0){
+            log_float("X_thresh_start", X_thresh_start);
         }
 
-        if (strcmp(varname,"t_lick_block")==0){
-            log_ulong("t_lick_block", t_lick_block);
+        if (strcmp(varname,"X_thresh_target")==0){
+            log_float("X_thresh_target", X_thresh_target);
         }
 
-        if (strcmp(varname,"timeout_dur")==0){
-            log_ulong("timeout_dur", timeout_dur);
+        if (strcmp(varname,"X_thresh_increment")==0){
+            log_float("X_thresh_increment", X_thresh_increment);
+        }
+
+        if (strcmp(varname,"X_thresh_decrement")==0){
+            log_float("X_thresh_decrement", X_thresh_decrement);
+        }
+
+        if (strcmp(varname,"XY_fix_box")==0){
+            log_float("XY_fix_box", XY_fix_box);
+        }
+
+        if (strcmp(varname,"correction_loops")==0){
+            log_int("correction_loops", correction_loops);
+        }
+
+        if (strcmp(varname,"corr_loop_entry")==0){
+            log_int("corr_loop_entry", corr_loop_entry);
+        }
+
+        if (strcmp(varname,"corr_loop_exit")==0){
+            log_int("corr_loop_exit", corr_loop_exit);
+        }
+
+        if (strcmp(varname,"omit_rewards")==0){
+            log_int("omit_rewards", omit_rewards);
+        }
+
+        if (strcmp(varname,"fps")==0){
+            log_int("fps", fps);
+        }
+
+        if (strcmp(varname,"bias")==0){
+            log_float("bias", bias);
+        }
+
+        if (strcmp(varname,"contrast")==0){
+            log_float("contrast", contrast);
+        }
+
+        if (strcmp(varname,"sigma")==0){
+            log_float("sigma", sigma);
         }
 
         }
@@ -162,12 +210,20 @@ void processSerialData() {
             correct_choice_cue_freq = atoi(varvalue);
         }
 
+        if (strcmp(varname,"choice_dur")==0){
+            choice_dur = strtoul(varvalue,NULL,10);
+        }
+
         if (strcmp(varname,"ITI_dur_min")==0){
             ITI_dur_min = strtoul(varvalue,NULL,10);
         }
 
         if (strcmp(varname,"ITI_dur_max")==0){
             ITI_dur_max = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"min_fix_dur")==0){
+            min_fix_dur = strtoul(varvalue,NULL,10);
         }
 
         if (strcmp(varname,"reward_magnitude")==0){
@@ -182,20 +238,60 @@ void processSerialData() {
             reward_available_dur = strtoul(varvalue,NULL,10);
         }
 
-        if (strcmp(varname,"p_reward")==0){
-            p_reward = atof(varvalue);
+        if (strcmp(varname,"X_thresh")==0){
+            X_thresh = atof(varvalue);
         }
 
-        if (strcmp(varname,"p_rewarded_cue")==0){
-            p_rewarded_cue = atof(varvalue);
+        if (strcmp(varname,"X_thresh_start")==0){
+            X_thresh_start = atof(varvalue);
         }
 
-        if (strcmp(varname,"t_lick_block")==0){
-            t_lick_block = strtoul(varvalue,NULL,10);
+        if (strcmp(varname,"X_thresh_target")==0){
+            X_thresh_target = atof(varvalue);
         }
 
-        if (strcmp(varname,"timeout_dur")==0){
-            timeout_dur = strtoul(varvalue,NULL,10);
+        if (strcmp(varname,"X_thresh_increment")==0){
+            X_thresh_increment = atof(varvalue);
+        }
+
+        if (strcmp(varname,"X_thresh_decrement")==0){
+            X_thresh_decrement = atof(varvalue);
+        }
+
+        if (strcmp(varname,"XY_fix_box")==0){
+            XY_fix_box = atof(varvalue);
+        }
+
+        if (strcmp(varname,"correction_loops")==0){
+            correction_loops = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"corr_loop_entry")==0){
+            corr_loop_entry = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"corr_loop_exit")==0){
+            corr_loop_exit = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"omit_rewards")==0){
+            omit_rewards = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"fps")==0){
+            fps = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"bias")==0){
+            bias = atof(varvalue);
+        }
+
+        if (strcmp(varname,"contrast")==0){
+            contrast = atof(varvalue);
+        }
+
+        if (strcmp(varname,"sigma")==0){
+            sigma = atof(varvalue);
         }
 
         }

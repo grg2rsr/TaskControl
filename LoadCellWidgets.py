@@ -4,13 +4,10 @@ from PyQt5 import QtWidgets
 import Widgets
 import utils
 import subprocess
-import datetime
 from pathlib import Path
-import shutil
 import socket 
 import struct
 import threading
-import queue
 import serial
 import scipy as sp
 import time
@@ -68,7 +65,6 @@ class LoadCellController(QtWidgets.QWidget):
         self.Children = [self.Monitor2d]
 
         self.initUI()
-        print("LC initialized")
 
     def initUI(self):
         self.setWindowTitle("Loadcell controller")
@@ -100,18 +96,17 @@ class LoadCellController(QtWidgets.QWidget):
         com_port = self.config['connections']['arduino_data_port']
         baud_rate = self.config['connections']['arduino_baud_rate']
 
+        utils.printer("initializing 2nd serial port to arduino: " + com_port,'msg')
         try:
-            print("initializing 2nd serial port to arduino: " + com_port)
             ser = serial.Serial(port=com_port, baudrate=baud_rate, timeout=2)
             ser.setDTR(False) # reset: https://stackoverflow.com/questions/21073086/wait-on-arduino-auto-reset-using-pyserial
             time.sleep(1) # sleep timeout length to drop all data
             ser.flushInput() # 
             ser.setDTR(True)
-            print(" ... done")
             return ser
 
         except:
-            print("could not open 2nd serial connection to the arduino!")
+            utils.printer("Could not open 2nd serial connection to the arduino!",'error')
             sys.exit()
 
 

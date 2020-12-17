@@ -4,16 +4,74 @@ import scipy as sp
 import pathlib
 from pathlib import Path
 
-def get_animals(folder):
-    """ checks each folder in folder """
-    animals = []
-    animals_folder = pathlib.Path(folder)
-    for subfolder in animals_folder.iterdir():
-        if subfolder.is_dir():
-            if os.path.exists(os.path.join(subfolder, 'animal_meta.csv')):
-                animals.append(os.path.basename(subfolder))
-    return animals
+"""
+ 
+  #######  ########        ## ########  ######  ########  ######  
+ ##     ## ##     ##       ## ##       ##    ##    ##    ##    ## 
+ ##     ## ##     ##       ## ##       ##          ##    ##       
+ ##     ## ########        ## ######   ##          ##     ######  
+ ##     ## ##     ## ##    ## ##       ##          ##          ## 
+ ##     ## ##     ## ##    ## ##       ##    ##    ##    ##    ## 
+  #######  ########   ######  ########  ######     ##     ######  
+ 
+"""
 
+class Animal(object):
+    def __init__(self, folder):
+        self.folder = Path(folder) # just in case
+        self.meta = pd.read_csv(self.folder / 'animal_meta.csv')
+        self.update(dict(zip(self.meta.name, self.meta.value)))
+
+    def update(self, Dict):
+        for k,v in Dict.items():
+            self.__dict__[k] = v
+
+    def display(self):
+        if 'Nickname' in self.__dict__.keys():
+            return "%s - %s" % (self.ID, self.Nickname)
+        else:
+            return self.ID
+
+    def weight_ratio(self):
+        try:
+            return self.current_weight / self.weight
+        except:
+            return ''
+
+"""
+ 
+ ##     ## ######## ##       ########  ######## ########   ######  
+ ##     ## ##       ##       ##     ## ##       ##     ## ##    ## 
+ ##     ## ##       ##       ##     ## ##       ##     ## ##       
+ ######### ######   ##       ########  ######   ########   ######  
+ ##     ## ##       ##       ##        ##       ##   ##         ## 
+ ##     ## ##       ##       ##        ##       ##    ##  ##    ## 
+ ##     ## ######## ######## ##        ######## ##     ##  ######  
+ 
+"""
+
+def get_Animals(folder):
+    """ checks each folder in folder """
+    Animals = []
+    animals_folder = pathlib.Path(folder)
+    for path in animals_folder.iterdir():
+        if path.is_dir():
+            # is an animal folder?
+            if (path / 'animal_meta.csv').exists():
+                Animals.append(Animal(path))
+    return Animals
+
+def select(objs,key,value):
+    return [obj for obj in objs if obj.__dict__[key] == value]
+
+def printer(s, mode):
+    if mode == 'msg':
+        print(s)
+    if mode == 'task':
+        print("\n--- %s ---" % s)
+    if mode == 'error':
+        print("ERROR: %s" % s)
+        
 def get_tasks(folder):
     """ gets all valid tasks """
     tasks = []
@@ -49,18 +107,6 @@ def get_sessions(folder):
     Df = Df.reset_index()
 
     return Df
-
-"""
- 
- ##     ## ######## #### ##       #### ######## ##    ## 
- ##     ##    ##     ##  ##        ##     ##     ##  ##  
- ##     ##    ##     ##  ##        ##     ##      ####   
- ##     ##    ##     ##  ##        ##     ##       ##    
- ##     ##    ##     ##  ##        ##     ##       ##    
- ##     ##    ##     ##  ##        ##     ##       ##    
-  #######     ##    #### ######## ####    ##       ##    
- 
-"""
 
 def debug_trace():
     """ Set a tracepoint in the Python debugger that works with Qt

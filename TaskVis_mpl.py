@@ -40,13 +40,15 @@ class SessionVis(QtWidgets.QWidget):
     # FIXME add controls
     """Ultimately, this is a QWidget (as well as a Figureself.CanvasAgg, etc.)."""
 
-    def __init__(self, parent, OnlineDataAnalyser, width=9, height=8, dpi=100):
+    def __init__(self, parent, OnlineDataAnalyser, width=9, height=8):
         super(SessionVis, self).__init__()
 
         # figure init
         # self.fig = Figure(figsize=(width, height), dpi=dpi)
         # self.fig = Figure()
-        self.fig, self.axes = plt.subplots(nrows=2, ncols=3)
+        # self.fig, self.axes = plt.subplots(nrows=2, ncols=3)
+
+        self.fig = plt.figure() # constrained_layout=True)
 
         self.Canvas = FigureCanvas(self.fig)
         self.Canvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -58,6 +60,7 @@ class SessionVis(QtWidgets.QWidget):
         layout.addWidget(self.Canvas)
 
         self.setLayout(layout)
+
         self.init()
         self.show()
 
@@ -67,191 +70,172 @@ class SessionVis(QtWidgets.QWidget):
 
 
     def init(self):
-        # success rate
-        ax = self.axes[0, 0]
-        ax.set_title('success / reward collection rates')
-        ax.set_xlabel('trial #')
-        ax.set_ylabel('fraction')
-        ax.set_ylim(-0.1, 1.1)
-        self.success_rate, = ax.plot([], [], '.', lw=1, label='success', color=colors['success'])
-        self.success_rate_filt, = ax.plot([], [], lw=1, color=colors['success'])
-        self.reward_collection_rate, = ax.plot([], [], '.', lw=1, label='rew.coll.', color=colors['reward'])
-        self.reward_collection_rate_filt, = ax.plot([], [], lw=1, color=colors['reward'])
-        ax.legend(fontsize='x-small')
-        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True))
+        gridspec = self.fig.add_gridspec(3, 2, height_ratios=[0.2,1,1])
+        # self.axes = [gs[0,:],gs[1,0],gs[1,1],gs[2,0],gs[2,1]]
 
-        # trial outcomes
-        ax = self.axes[0, 1]
-        ax.set_title('outcomes')
-        ax.set_xlabel('trial #')
-        ax.set_ylabel('fraction')
-        ax.set_ylim(-0.1, 1.1)
-        self.outcome_rates = {}
-        self.outcome_rates_filt = {}
-        for outcome in outcomes:
-            self.outcome_rates[outcome], = ax.plot([], [], '.', lw=1, color=colors[outcome], label=outcome)
-            self.outcome_rates_filt[outcome], = ax.plot([], [], lw=1, color=colors[outcome])
-        ax.legend(fontsize='x-small')
-        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True))
-
-        # trial outcomes
-        self.outcome_ax = self.axes[1, 0]
-        self.outcome_ax.set_title('outcomes')
-        self.outcome_ax.set_xlabel('trial #')
-        self.outcome_ax.set_ylim(-0.1, 1.1)
-        self.outcome_ax.set_yticks([])
-        self.outcome_ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True))
-
-        # self.outcome_rates = {}
-        # self.outcome_rates_filt = {}
-        # for outcome in outcomes:
-            # self.outcome_rates[outcome], = ax.plot([], [], '.', lw=1, color=colors[outcome], label=outcome)
-            # self.outcome_rates_filt[outcome], = ax.plot([], [], lw=1, color=colors[outcome])
-        # ax.legend(fontsize='x-small')
-
-
-        # choices and bias
-        ax = self.axes[0, 2]
-        ax.set_title('choices')
-        ax.set_xlabel('trial #')
-        ax.set_ylabel('fraction')
-        ax.set_ylim(-0.3, 1.3)
-        self.bias, = ax.plot([], [], '.', lw=1, label='bias', color='k')
-        self.bias_filt, = ax.plot([], [], lw=1, color='k')
-        cmap = mpl.cm.PiYG
-        self.trials_left, = ax.plot([], [], '|', color='k')
-        self.trials_right, = ax.plot([], [], '|', color='k')
-        self.in_corr, = ax.plot([], [], '|', color='r')
-        self.choices_left, = ax.plot([], [], '|', color=cmap(1.0))
-        self.choices_right, = ax.plot([], [], '|', color=cmap(0.0))
-        ax.legend(fontsize='x-small')
-        ax.set_yticks([0, 1])
-        ax.set_yticklabels(['left', 'right'])
-        ax.set_ylabel('choice')
-        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True))
-
-        # choice RT
-        ax = self.axes[1, 1]
-        ax.set_title('choice RT')
-        ax.set_xlabel('choice trial #')
-        ax.set_ylabel('RT (ms)')
-        self.choices_rt_scatter, = ax.plot([], [], 'o')
-        ax.set_ylim(0, 1500)
-        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True))
-
-        # psychometric
-        ax = self.axes[1, 2]
-        ax.set_title('psychometric')
-        # ax.set_ylabel('p')
-        ax.set_xlabel('interval (ms)')
-        ax.set_yticks([0, 1])
-        ax.set_yticklabels(['short', 'long'])
-        ax.set_ylabel('choice')
-        ax.axvline(1500, linestyle=':', alpha=0.5, lw=1, color='k')
-        self.psych_choices, = ax.plot([], [], '.', color='k', alpha=0.5)
-        self.psych_fit, = ax.plot([], [], lw=2, color='r')
-        self.poly = None # fill for error model
+        
+        self.Plotters = [OverviewBarplot(self.fig.add_subplot(gridspec[0,:])),
+                         SessionOverviewPlot(self.fig.add_subplot(gridspec[1,:])),
+                         SuccessratePlot(self.fig.add_subplot(gridspec[2,0])),
+                         ChoiceRTPlot(self.fig.add_subplot(gridspec[2,1]))]
 
         self.fig.tight_layout()
 
     def on_data(self, TrialDf, TrialMetricsDf):
-        t1 = time.time()
-        hist = 5 # to be exposed in the future
         if  self.OnlineDataAnalyser.SessionDf is not None: # FIXME
             SessionDf = self.OnlineDataAnalyser.SessionDf
+            for Plotter in self.Plotters:
+                Plotter.update(SessionDf)
+          
+        self.Canvas.draw()
+      
+
+class SessionOverviewPlot(object):
+    def __init__(self, axes):
+        self.axes = axes
+        self.axes.set_title('overview')
+        self.axes.set_xlabel('trial #')
+        self.axes.set_ylabel('fraction')
+        self.axes.set_ylim(-0.3, 1.3)
+        self.bias, = self.axes.plot([], [], '.', lw=1, label='bias', color='k')
+        self.bias_filt, = self.axes.plot([], [], lw=1, color='k')
+        cmap = mpl.cm.PiYG
+        self.trials_left, = self.axes.plot([], [], '|', color='k')
+        self.trials_right, = self.axes.plot([], [], '|', color='k')
+        self.in_corr, = self.axes.plot([], [], '|', color='r')
+        self.choices_left, = self.axes.plot([], [], '|', color=cmap(1.0))
+        self.choices_right, = self.axes.plot([], [], '|', color=cmap(0.0))
+        self.axes.legend(fontsize='x-small')
+        self.axes.set_yticks([0, 1])
+        self.axes.set_yticklabels(['left', 'right'])
+        self.axes.set_ylabel('choice')
+        self.axes.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True))
+
+    def update(self, SessionDf):
+        # choices
+        x = SessionDf.loc[SessionDf['correct_zone'] == 4].index + 1
+        y = np.zeros(x.shape[0]) - 0.1
+        self.trials_left.set_data(x,y)
+        x = SessionDf.loc[SessionDf['correct_zone'] == 6].index + 1
+        y = np.zeros(x.shape[0]) + 1.1
+        self.trials_right.set_data(x,y)
+
+        x = SessionDf.loc[SessionDf['in_corr_loop'] == True].index + 1
+        y = np.zeros(x.shape[0]) + 1.2
+        self.in_corr.set_data(x,y)
+
+        try:
+            SDf = SessionDf.groupby('choice').get_group('left')
+            x = SDf.index.values+1
+            y = np.zeros(x.shape[0])
+            self.choices_left.set_data(x,y)
+        except:
+            pass
+
+        try:
+            SDf = SessionDf.groupby('choice').get_group('right')
+            x = SDf.index.values+1
+            y = np.zeros(x.shape[0]) + 1
+            self.choices_right.set_data(x,y)
+        except:
+            pass
+
+        x = SessionDf.index
+        y = SessionDf['bias'].values
+        self.bias.set_data(x,y)
+        # y_filt = SDf['bias'].rolling(hist).mean().values
+        # self.bias_filt.set_data(x, y_filt)
+        self.bias.axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
+
+class OverviewBarplot(object):
+    def __init__(self, axes):
+        self.axes = axes
+        self.axes.set_title('outcomes')
+        self.axes.set_xlabel('trial #')
+        self.axes.set_ylim(-0.1, 1.1)
+        self.axes.set_yticks([])
+        self.axes.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True))
+     
+    def update(self, SessionDf):
+        try:
+            x = SessionDf.index[-1]
+            y = 0
+            outcome = SessionDf.iloc[-1]['outcome']
+            rect = mpl.patches.Rectangle((x,y),1,1, edgecolor='none', facecolor=colors[outcome])
+            self.axes.add_patch(rect)
+            self.axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
+        except:
+            pass
+
+class ChoiceRTPlot(object):
+    def __init__(self, axes):
+        self.axes = axes        
+        
+        # choice RT
+        self.axes.set_title('choice RT')
+        self.axes.set_xlabel('choice trial #')
+        self.axes.set_ylabel('RT (ms)')
+        self.scatter, = self.axes.plot([], [], 'o')
+        self.axes.set_ylim(0, 2500)
+        self.axes.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True))
+
+    def update(self, SessionDf):
+        if True in SessionDf['has_choice'].values:
+            SDf = SessionDf.groupby('has_choice').get_group(True)
+            SDf = SDf.reset_index()
+            x = SDf.index.values+1
+            y = SDf['choice_rt'].values
+            self.scatter.set_data(x, y)
+            self.axes.set_xlim(0.5, x.shape[0]+0.5)
+            # self.choices_rt_scatter.axes.set_ylim(0, sp.percentile(y, 95))
             
-            # success rate
-            x = SessionDf.index.values + 1
-            y = np.cumsum(SessionDf['successful'].values) / (SessionDf.index.values + 1)
-            y_filt = SessionDf['successful'].rolling(hist).mean().values
-            
-            self.success_rate.set_data(x, y)
-            self.success_rate_filt.set_data(x, y_filt)
-            self.success_rate.axes.set_xlim(0.5, x.shape[0]+0.5)
 
-            # reward collection rate
-            if True in SessionDf['successful'].values:
-                SDf = SessionDf.groupby(['successful']).get_group((True))
-                # SDf = SDf.reset_index()
-                x = SDf.index.values + 1
-                # y = np.cumsum(SDf['reward_collected'].values) / (SDf.index.values+1)
-                y = np.cumsum(SDf['reward_collected'].values) / (SDf.shape[0])
-                y_filt = SDf['reward_collected'].rolling(hist).mean().values
-                self.reward_collection_rate.set_data(x, y)
-                self.reward_collection_rate_filt.set_data(x, y_filt)
+class SuccessratePlot(object):
+    def __init__(self, axes):
+        self.hist = 5
+        self.axes = axes        
+        self.axes.set_title('success rate')
+        self.axes.set_xlabel('trial #')
+        self.axes.set_ylabel('fraction')
+        self.axes.set_ylim(-0.1, 1.1)
 
-            # outcomes
-            for outcome in outcomes:
-                try:
-                    SDf = SessionDf.groupby('outcome').get_group(outcome)
-                    SDf.reset_index()
-                except:
-                    continue
+        self.line, = self.axes.plot([], [], '.', lw=1, label='success', color=colors['success'])
+        self.line_filt, = self.axes.plot([], [], lw=1, color=colors['success'])
+        # self.reward_collection_rate, = ax.plot([], [], '.', lw=1, label='rew.coll.', color=colors['reward'])
+        # self.reward_collection_rate_filt, = ax.plot([], [], lw=1, color=colors['reward'])
+        self.axes.legend(fontsize='x-small')
+        self.axes.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True))
 
-                x = SDf.index.values+1
-                y = np.cumsum((SDf['outcome'] == outcome).values) / (SDf.index.values+1)
-                # y_filt = (SessionDf['outcome'] == outcome).rolling(hist).mean().values
-                self.outcome_rates[outcome].set_data(x, y)
-                # self.outcome_rates_filt[outcome].set_data(x, y_filt)
-                self.outcome_rates[outcome].axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
+    def update(self, SessionDf):
+        x = SessionDf.index.values + 1
+        y = np.cumsum(SessionDf['successful'].values) / (SessionDf.index.values + 1)
+        y_filt = SessionDf['successful'].rolling(self.hist).mean().values
+        
+        self.line.set_data(x, y)
+        self.line_filt.set_data(x, y_filt)
+        self.axes.set_xlim(0.5, x.shape[0]+0.5)
 
-            # Create a Rectangle patch
-            try:
-                x = SessionDf.index[-1]
-                y = 0
-                outcome = SessionDf.iloc[-1]['outcome']
-                rect = mpl.patches.Rectangle((x,y),1,1, edgecolor='none', facecolor=colors[outcome])
-                self.outcome_ax.add_patch(rect)
-                self.outcome_ax.set_xlim(0.5, SessionDf.shape[0]+0.5)
-            except:
-                pass
 
-            # choices
-            x = SessionDf.loc[SessionDf['correct_zone'] == 4].index + 1
-            y = np.zeros(x.shape[0]) - 0.1
-            self.trials_left.set_data(x,y)
-            x = SessionDf.loc[SessionDf['correct_zone'] == 6].index + 1
-            y = np.zeros(x.shape[0]) + 1.1
-            self.trials_right.set_data(x,y)
 
-            x = SessionDf.loc[SessionDf['in_corr_loop'] == True].index + 1
-            y = np.zeros(x.shape[0]) + 1.2
-            self.in_corr.set_data(x,y)
 
-            try:
-                SDf = SessionDf.groupby('choice').get_group('left')
-                x = SDf.index.values+1
-                y = np.zeros(x.shape[0])
-                self.choices_left.set_data(x,y)
-            except:
-                pass
 
-            try:
-                SDf = SessionDf.groupby('choice').get_group('right')
-                x = SDf.index.values+1
-                y = np.zeros(x.shape[0]) + 1
-                self.choices_right.set_data(x,y)
-            except:
-                pass
 
-            x = SessionDf.index
-            y = SessionDf['bias'].values
-            self.bias.set_data(x,y)
-            # y_filt = SDf['bias'].rolling(hist).mean().values
-            # self.bias_filt.set_data(x, y_filt)
-            self.bias.axes.set_xlim(0.5, SessionDf.shape[0]+0.5)
+# psychmetric
 
-            # choice RT
-            if True in SessionDf['has_choice'].values:
-                SDf = SessionDf.groupby('has_choice').get_group(True)
-                SDf = SDf.reset_index()
-                x = SDf.index.values+1
-                y = SDf['choice_rt'].values
-                self.choices_rt_scatter.set_data(x, y)
-                self.choices_rt_scatter.axes.set_xlim(0.5, x.shape[0]+0.5)
-                # self.choices_rt_scatter.axes.set_ylim(0, sp.percentile(y, 95))
+        # psychometric
+        # ax = self.axes[1, 2]
+        # ax.set_title('psychometric')
+        # # ax.set_ylabel('p')
+        # ax.set_xlabel('interval (ms)')
+        # ax.set_yticks([0, 1])
+        # ax.set_yticklabels(['short', 'long'])
+        # ax.set_ylabel('choice')
+        # ax.axvline(1500, linestyle=':', alpha=0.5, lw=1, color='k')
+        # self.psych_choices, = ax.plot([], [], '.', color='k', alpha=0.5)
+        # self.psych_fit, = ax.plot([], [], lw=2, color='r')
+        # self.poly = None # fill for error model
 
-            # psychmetric
+
             # get only the subset with choices
             # if True in SessionDf['has_choice'].values:
             #     SDf = SessionDf.groupby('has_choice').get_group(True)
@@ -292,16 +276,3 @@ class SessionVis(QtWidgets.QWidget):
 
             #     self.psych_choices.axes.set_xlim(0, 3000)
             #     self.psych_choices.axes.set_ylim(-0.1, 1.1)
-
-        # for ax in self.axes.flatten():
-            # ax.autoscale_view()
-        self.Canvas.draw()
-        # try:
-        #     self.Canvas.draw()
-        # except ValueError:
-        #     print("error while drawing")
-        #     pass
-
-        # print("time for update: ", t2-t1)
-
-

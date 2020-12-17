@@ -5,13 +5,10 @@ import configparser
 
 from pathlib import Path
 import subprocess
-import datetime
 import shutil
 import serial
 import time
 import threading
-import queue
-from functools import partial
 import pandas as pd
 import scipy as sp
 
@@ -145,16 +142,15 @@ class ArduinoController(QtWidgets.QWidget):
             if self.connection.is_open:
                 self.connection.write(bytestr)
         else:
-            print("Arduino is not connected")
+            utils.printer("Arduino is not connected", 'error')
 
     def send_raw(self,bytestr):
         """ sends bytestring """
-        print(len(bytestr))
         if hasattr(self,'connection'):
             if self.connection.is_open:
                 self.connection.write(bytestr)
         else:
-            print("Arduino is not connected")
+            utils.printer("Arduino is not connected", 'error')
 
     def run_btn_clicked(self):
         if self.RunBtn.isChecked():
@@ -181,7 +177,7 @@ class ArduinoController(QtWidgets.QWidget):
         which is in turn specified in the task_config.ini """
 
         # building interface
-        print(" --- generating interface.cpp --- ")
+        utils.printer("generating interface.cpp",'task')
         interface_generator.run(self.vars_path)
 
         # uploading code onto arduino
@@ -213,21 +209,22 @@ class ArduinoController(QtWidgets.QWidget):
         # setting the valve calibration factor
         try:
             self.VariableController.VariableEditWidget.set_entry('valve_ul_ms',self.config['box']['valve_ul_ms'])
+            utils.printer('setting valve calibration factor to %s' % self.config['box']['valve_ul_ms'],'msg')
         except:
-            print("can't set valve calibration factor")
+            utils.printer("can't set valve calibration factor",'error')
         
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
 
         # upload
-        print(" --- uploading code on arduino --- ")
+        utils.printer("uploading code on arduino",'task')
         prev_dir = Path.cwd()
 
         os.chdir(self.task_folder / 'Arduino')
         fH = open(self.run_folder / 'platformio_build_log.txt','w')
         platformio_cmd = self.config['system']['platformio_cmd']
         cmd = ' '.join([platformio_cmd,'run','--target','upload'])
-        proc = subprocess.Popen(cmd,shell=True,stdout=fH)
+        proc = subprocess.Popen(cmd,shell=True,stdout=fH) # ,stderr=fH)
         proc.communicate()
         fH.close()
 
@@ -239,7 +236,7 @@ class ArduinoController(QtWidgets.QWidget):
 
     def log_task(self,folder):
         """ copy the entire arduino folder to the logging folder """
-        print(" --- logging arduino code")
+        utils.printer("logging arduino code",'task')
         src = self.task_folder
         target = folder / self.config['current']['task']
         shutil.copytree(src,target)
@@ -256,7 +253,7 @@ class ArduinoController(QtWidgets.QWidget):
         com_port = self.config['connections']['FSM_arduino_port']
         baud_rate = self.config['connections']['arduino_baud_rate']
         try:
-            print("initializing serial port: " + com_port)
+            utils.printer("initializing serial port: " + com_port,'message')
             # ser = serial.Serial(port=com_port, baudrate=baud_rate,timeout=2)
             connection = serial.Serial(
                 port=com_port,
@@ -273,7 +270,7 @@ class ArduinoController(QtWidgets.QWidget):
             return connection
 
         except:
-            print("failed to connect to the FSM arduino.")
+            utils.printer("failed to connect to the FSM arduino",'error')
             sys.exit()
 
     def Run(self,folder):
@@ -288,7 +285,7 @@ class ArduinoController(QtWidgets.QWidget):
         if self.reprogramCheckBox.checkState() == 2: # true when checked
             self.upload()
         else:
-            print(" --- resetting arduino only --- reusing previous sketch --- ")
+            utils.printer("reusing previously uploaded sketch",'msg')
 
         # connect to serial port
         self.connection = self.connect()      
@@ -296,28 +293,47 @@ class ArduinoController(QtWidgets.QWidget):
         # start up the online data analyzer
         self.OnlineDataAnalyser.run()
 
+        # external logging
         fH = open(self.run_folder / 'arduino_log.txt','w')
 
         def read_from_port(ser):
             while ser.is_open:
                 try:
                     line = ser.readline().decode('utf-8').strip()
-                    if line is not '': # filtering out empty reads
-                        fH.write(line+os.linesep) # external logging
-                        
-                        # publishing data
-                        self.serial_data_available.emit(line)
+                except AttributeError:
+                    line = ''
+                except TypeError:
+                    line = ''
+                except serial.serialutil.SerialException:
+                    line = ''
+                except UnicodeDecodeError:
+                    line = ''
 
-                except:
-                    try:
-                        print("failed read from serial!", line)
-                    except:
-                        pass
-                    break
+                if line is not '': # filtering out empty reads
+                    fH.write(line+os.linesep) # external logging
+                    self.serial_data_available.emit(line) # internal publishing
+
+
+        # def read_from_port(ser):
+        #     while ser.is_open:
+        #         try:
+        #             line = ser.readline().decode('utf-8').strip()
+        #             if line is not '': # filtering out empty reads
+        #                 fH.write(line+os.linesep) # external logging
+                        
+        #                 # publishing data
+        #                 self.serial_data_available.emit(line)
+
+        #         except:
+        #             try:
+        #                 print("failed read from serial!", line)
+        #             except:
+        #                 pass
+        #             break
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()
-        print("beginning to listen to serial port")
+        utils.printer("listening to FSM arduino on serial port %s" % self.config['connections']['FSM_arduino_port'],'msg')
     
     def stop(self):
         """ when session is finished """
@@ -433,7 +449,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
                 self.parent().send_raw(bytestr)
                 time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
         else:
-            print("Arduino is not connected")
+            utils.printer("Arduino is not connected",'error')
 
     def load_last_vars(self):
         """ try to get arduino variables from last run for the task 
@@ -451,8 +467,8 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             self.VariableEditWidget.set_entries(prev_vars)
            
         except KeyError:
+            utils.error("trying to use last vars, but animal has not been run on this task before.",'error')
             utils.debug_trace()
-            print("trying to use last vars, but animal has not been run on this task before.")
 
     def query(self):
         """ report back all variable values """
@@ -691,7 +707,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
                     decoded = self.code_map[code]
                     line = '\t'.join([decoded,line.split('\t')[1]])
                 except:
-                    print(line)
+                    utils.printer("Error dealing with line %s" % line, 'error')
                     pass
 
             # TODO deal with the history functionality
