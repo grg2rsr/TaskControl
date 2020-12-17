@@ -174,9 +174,9 @@ class SessionVis(QtWidgets.QWidget):
                 SDf = SessionDf.groupby(['successful']).get_group((True))
                 # SDf = SDf.reset_index()
                 x = SDf.index.values + 1
-                # y = np.cumsum(SDf['reward_collected'].values) / (SDf.index.values+1)
-                y = np.cumsum(SDf['reward_collected'].values) / (SDf.shape[0])
-                y_filt = SDf['reward_collected'].rolling(hist).mean().values
+                # y = np.cumsum(SDf['rew_collected'].values) / (SDf.index.values+1)
+                y = np.cumsum(SDf['rew_collected'].values) / (SDf.shape[0])
+                y_filt = SDf['rew_collected'].rolling(hist).mean().values
                 self.reward_collection_rate.set_data(x, y)
                 self.reward_collection_rate_filt.set_data(x, y_filt)
 
