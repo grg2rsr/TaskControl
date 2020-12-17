@@ -209,6 +209,7 @@ class ArduinoController(QtWidgets.QWidget):
         # setting the valve calibration factor
         try:
             self.VariableController.VariableEditWidget.set_entry('valve_ul_ms',self.config['box']['valve_ul_ms'])
+            utils.printer('setting valve calibration factor to %s' % self.config['box']['valve_ul_ms'],'msg')
         except:
             utils.printer("can't set valve calibration factor",'error')
         
@@ -223,7 +224,7 @@ class ArduinoController(QtWidgets.QWidget):
         fH = open(self.run_folder / 'platformio_build_log.txt','w')
         platformio_cmd = self.config['system']['platformio_cmd']
         cmd = ' '.join([platformio_cmd,'run','--target','upload'])
-        proc = subprocess.Popen(cmd,shell=True,stdout=fH,stderr=fH)
+        proc = subprocess.Popen(cmd,shell=True,stdout=fH) # ,stderr=fH)
         proc.communicate()
         fH.close()
 

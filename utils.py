@@ -4,6 +4,18 @@ import scipy as sp
 import pathlib
 from pathlib import Path
 
+"""
+ 
+  #######  ########        ## ########  ######  ########  ######  
+ ##     ## ##     ##       ## ##       ##    ##    ##    ##    ## 
+ ##     ## ##     ##       ## ##       ##          ##    ##       
+ ##     ## ########        ## ######   ##          ##     ######  
+ ##     ## ##     ## ##    ## ##       ##          ##          ## 
+ ##     ## ##     ## ##    ## ##       ##    ##    ##    ##    ## 
+  #######  ########   ######  ########  ######     ##     ######  
+ 
+"""
+
 class Animal(object):
     def __init__(self, folder):
         self.folder = Path(folder) # just in case
@@ -26,6 +38,18 @@ class Animal(object):
         except:
             return ''
 
+"""
+ 
+ ##     ## ######## ##       ########  ######## ########   ######  
+ ##     ## ##       ##       ##     ## ##       ##     ## ##    ## 
+ ##     ## ##       ##       ##     ## ##       ##     ## ##       
+ ######### ######   ##       ########  ######   ########   ######  
+ ##     ## ##       ##       ##        ##       ##   ##         ## 
+ ##     ## ##       ##       ##        ##       ##    ##  ##    ## 
+ ##     ## ######## ######## ##        ######## ##     ##  ######  
+ 
+"""
+
 def get_Animals(folder):
     """ checks each folder in folder """
     Animals = []
@@ -37,18 +61,8 @@ def get_Animals(folder):
                 Animals.append(Animal(path))
     return Animals
 
-# def select(neo_objs,value,key="label"):
-#     return [obj for obj in neo_objs if obj.annotations[key] == value]
-
-# def get_animals(folder):
-#     """ checks each folder in folder """
-#     animals = []
-#     animals_folder = pathlib.Path(folder)
-#     for subfolder in animals_folder.iterdir():
-#         if subfolder.is_dir():
-#             if os.path.exists(os.path.join(subfolder, 'animal_meta.csv')):
-#                 animals.append(os.path.basename(subfolder))
-#     return animals
+def select(objs,key,value):
+    return [obj for obj in objs if obj.__dict__[key] == value]
 
 def printer(s, mode):
     if mode == 'msg':
@@ -93,18 +107,6 @@ def get_sessions(folder):
     Df = Df.reset_index()
 
     return Df
-
-"""
- 
- ##     ## ######## #### ##       #### ######## ##    ## 
- ##     ##    ##     ##  ##        ##     ##     ##  ##  
- ##     ##    ##     ##  ##        ##     ##      ####   
- ##     ##    ##     ##  ##        ##     ##       ##    
- ##     ##    ##     ##  ##        ##     ##       ##    
- ##     ##    ##     ##  ##        ##     ##       ##    
-  #######     ##    #### ######## ####    ##       ##    
- 
-"""
 
 def debug_trace():
     """ Set a tracepoint in the Python debugger that works with Qt
