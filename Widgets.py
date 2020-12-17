@@ -13,8 +13,10 @@ import utils
 import behavior_analysis_utils as bhv
 
 from TaskVis_pg import TrialsVis
-# from TaskVis_pg import SessionVis
 from TaskVis_mpl import SessionVis
+
+from Popups import *
+from UtilityWidgets import *
 
 """
  
@@ -52,18 +54,6 @@ class SettingsWidget(QtWidgets.QWidget):
         FormLayout.setVerticalSpacing(10)
         FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
         self.setLayout(FormLayout)
-
-        # # animal selector
-        # animals = utils.get_animals(self.config['paths']['animals_folder'])
-        # self.animal = self.config['last']['animal']
-        # self.AnimalChoiceWidget = StringChoiceWidget(self, choices=animals)
-        # self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
-        # try:
-        #     self.AnimalChoiceWidget.set_value(self.animal)
-        # except:
-        #     # if animal is not in list
-        #     self.AnimalChoiceWidget.set_value(animals[0])
-        # FormLayout.addRow('Animal', self.AnimalChoiceWidget)
 
         # animal selector
         self.Animals = utils.get_Animals(self.config['paths']['animals_folder'])
@@ -231,7 +221,7 @@ class SettingsWidget(QtWidgets.QWidget):
         # TODO make the task changeable
 
         # animal popup
-        self.RunInfo = RunInfoWidget(self)
+        self.RunInfo = RunInfoPopup(self)
 
         utils.printer("RUN",'task')
         utils.printer("Task: %s" % self.task,'msg')
@@ -240,8 +230,6 @@ class SettingsWidget(QtWidgets.QWidget):
         # make folder structure
         date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
         self.run_folder = self.Animal.folder  / '_'.join([date_time,self.task])
-        # self.run_folder = Path(self.config['paths']['animals_folder']) / self.animal / '_'.join([date_time,self.task])
-        
         os.makedirs(self.run_folder,exist_ok=True)
 
         for Controller in self.Controllers:
@@ -287,9 +275,6 @@ class SettingsWidget(QtWidgets.QWidget):
         current_id = self.AnimalChoiceWidget.get_value().split(' - ')[0]
         self.config['current']['animal'] = current_id
         self.Animal, = [Animal for Animal in self.Animals if Animal.ID == current_id]
-
-        # meta_path = Path(self.config['paths']['animals_folder']) / self.animal / 'animal_meta.csv'
-        # self.animal_meta = pd.read_csv(meta_path)
 
         # displaying previous sessions info
         if hasattr(self,'AnimalInfoWidget'):
@@ -437,149 +422,16 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         except ValueError:
             pass
 
-"""
- 
- ########   #######  ########  ##     ## ########   ######  
- ##     ## ##     ## ##     ## ##     ## ##     ## ##    ## 
- ##     ## ##     ## ##     ## ##     ## ##     ## ##       
- ########  ##     ## ########  ##     ## ########   ######  
- ##        ##     ## ##        ##     ## ##              ## 
- ##        ##     ## ##        ##     ## ##        ##    ## 
- ##         #######  ##         #######  ##         ######  
- 
-"""
-
-class RunInfoWidget(QtWidgets.QDialog):
-    """ collects all that is left required manual input by the user upon run """
-    # TODO Implement this!!
-    # idea: also this logs stuff about the session
-    # after each run, a session_meta df is created containing
-    # animal id, task, date, start, stop, duration, ntrials
-
-    def __init__(self, parent):
-        super(RunInfoWidget, self).__init__(parent=parent)
-        self.setWindowFlags(QtCore.Qt.Window)
-        self.initUI()
-
-    def initUI(self):
-        self.FormLayout = QtWidgets.QFormLayout()
-        self.FormLayout.setVerticalSpacing(10)
-        self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
-
-        # Fields
-        self.WeigthEditWidget = ValueEdit(30, 'f4', self)
-        self.FormLayout.addRow("Weight (g)", self.WeigthEditWidget)
-
-        FormWidget = QtWidgets.QWidget()
-        FormWidget.setLayout(self.FormLayout)
-
-        Btn = QtWidgets.QPushButton()
-        Btn.setText('Done')
-        Btn.clicked.connect(self.done_btn_clicked)
-
-        Full_Layout = QtWidgets.QVBoxLayout()
-        Full_Layout.addWidget(FormWidget)
-        Full_Layout.addWidget(Btn)
-        self.setLayout(Full_Layout)
-
-        self.setWindowTitle("Run info")
-        self.exec()
-
-    def done_btn_clicked(self):
-        meta = self.parent().Animal.meta
-        weight = self.WeigthEditWidget.get_value()
-        if 'current_weight' not in meta['name'].values:
-            ix = meta.shape[0]
-            meta.loc[ix] = ['current_weight', weight]
-        else:
-            meta.loc[meta['name'] == 'current_weight','value'] = weight
-        self.accept()
-
-# class NewAnimalWidget(QtWidgets.QWidget):
-#         # think about completely deprecating this for now 
-#     def __init__(self, parent):
-#         super(NewAnimalWidget, self).__init__(parent=parent)
-#         self.setWindowFlags(QtCore.Qt.Window)
-#         self.initUI()
-
-#     def initUI(self):
-#         self.FormLayout = QtWidgets.QFormLayout()
-#         self.FormLayout.setVerticalSpacing(10)
-#         self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
-
-#         # read in template
-#         Df = pd.read_csv(os.path.join(self.parent().profiles[self.parent().user]['animals_folder'],'animal_meta_template.csv'))
-
-#         for i, row in Df.iterrows():
-#             self.FormLayout.addRow(row['name'], ValueEdit(str(row['value']), row['dtype'], self))
-
-#         # old code
-#         # self.FormLayout.addRow("ID", ValueEdit(0, 'i4', self))
-#         # self.FormLayout.addRow("Ear tag", ValueEdit('LF', 'U', self))
-#         # self.FormLayout.addRow("Genotype", ValueEdit('-cre', 'U', self))
-#         # self.FormLayout.addRow("Date of birth", ValueEdit('YYYY_MM_DD', 'U', self))
-#         # self.FormLayout.addRow("Initial weight", ValueEdit(30, 'f4', self))
-#         # self.FormLayout.addRow("Current weight", ValueEdit(30, 'f4', self))
-
-#         FormWidget = QtWidgets.QWidget()
-#         FormWidget.setLayout(self.FormLayout)
-
-#         Full_Layout = QtWidgets.QVBoxLayout()
-#         Full_Layout.addWidget(FormWidget)
-
-#         Btn = QtWidgets.QPushButton()
-#         Btn.setText('Done')
-#         Btn.clicked.connect(self.create_animal)
-
-#         Full_Layout.addWidget(Btn)
-#         self.setLayout(Full_Layout)
-#         self.setWindowTitle("New Animal")
-#         self.show()
-
-#     def get_entries(self):
-#         """ turn UI entries into a dataframe """
-#         # FIXME make sure that this is dtype correct!
-#         # TODO think about writing a general function that turns a FormLayout to a DataFrame and the other way around
-#         rows = []
-#         for i in range(self.FormLayout.rowCount()):
-#             label = self.FormLayout.itemAt(i, 0).widget()
-#             widget = self.FormLayout.itemAt(i, 1).widget()
-#             rows.append([label.text(), widget.get_value(), widget.get_value().dtype])
-
-#         Df = pd.DataFrame(rows, columns=['name', 'value', 'dtype'])
-#         return Df
-
-#     def create_animal(self):
-#         entries = self.get_entries()
-#         animal_meta = pd.Series(entries['value'])
-#         animal_meta.index = entries['name']
-#         animal_ID = str(animal_meta['ID'])
-
-#         # write data
-#         animal_folder = os.path.join(self.parent().profiles[self.parent().user]['animals_folder'],animal_ID)
-#         try:
-#             os.makedirs(animal_folder, exist_ok=False)
-#         except FileExistsError:
-#             Error = "Animal already exists!"
-#             ErrorW = ErrorWidget(Error, parent=self)
-
-#         entries.to_csv(os.path.join(animal_folder, 'animal_meta.csv'),index=None)
-
-#         # update parent
-#         self.parent().AnimalChoiceWidget.choices.append(animal_ID)
-#         self.parent().AnimalChoiceWidget.addItem(animal_ID)
-#         self.parent().AnimalChoiceWidget.set_value(animal_ID)
-#         self.close()
 
 """
  
- ##     ## ######## #### ##       #### ######## ##    ##    ##      ## #### ########   ######   ######## ########  ######  
- ##     ##    ##     ##  ##        ##     ##     ##  ##     ##  ##  ##  ##  ##     ## ##    ##  ##          ##    ##    ## 
- ##     ##    ##     ##  ##        ##     ##      ####      ##  ##  ##  ##  ##     ## ##        ##          ##    ##       
- ##     ##    ##     ##  ##        ##     ##       ##       ##  ##  ##  ##  ##     ## ##   #### ######      ##     ######  
- ##     ##    ##     ##  ##        ##     ##       ##       ##  ##  ##  ##  ##     ## ##    ##  ##          ##          ## 
- ##     ##    ##     ##  ##        ##     ##       ##       ##  ##  ##  ##  ##     ## ##    ##  ##          ##    ##    ## 
-  #######     ##    #### ######## ####    ##       ##        ###  ###  #### ########   ######   ########    ##     ######  
+  ######   #######  ##     ## ##    ## ######## ######## ########   ######  
+ ##    ## ##     ## ##     ## ###   ##    ##    ##       ##     ## ##    ## 
+ ##       ##     ## ##     ## ####  ##    ##    ##       ##     ## ##       
+ ##       ##     ## ##     ## ## ## ##    ##    ######   ########   ######  
+ ##       ##     ## ##     ## ##  ####    ##    ##       ##   ##         ## 
+ ##    ## ##     ## ##     ## ##   ###    ##    ##       ##    ##  ##    ## 
+  ######   #######   #######  ##    ##    ##    ######## ##     ##  ######  
  
 """
 
@@ -659,160 +511,3 @@ class WaterCounter(QtWidgets.QLabel):
 
     def get_value(self):
         return int(float(self.text())) # FIXME check this
-
-class StringChoiceWidget(QtWidgets.QComboBox):
-    """ A QComboBox with convenience setter and getter """
-
-    def __init__(self, parent, choices):
-        super(StringChoiceWidget, self).__init__(parent=parent)
-        self.choices = choices
-
-        for choice in self.choices:
-            self.addItem(choice)
-
-    def get_value(self):
-        return self.choices[self.currentIndex()]
-
-    def set_value(self, value):
-        try:
-            self.setCurrentIndex(self.choices.index(value))
-        except ValueError:
-            self.setCurrentIndex(0)
-
-
-class ValueEdit(QtWidgets.QLineEdit):
-    """ a QLineEdit that keeps track of the numpy dtype and returns accordingly """
-
-    def __init__(self, value, dtype, parent):
-        super(ValueEdit, self).__init__(parent=parent)
-        self.dtype = dtype
-        self.set_value(value)
-        self.editingFinished.connect(self.edit_finished)
-
-    def get_value(self):
-        self.value = sp.array(self.text(), dtype=self.dtype)
-        return self.value
-
-    def set_value(self, value):
-        self.value = sp.array(value, dtype=self.dtype)
-        self.setText(str(self.value))
-
-    def edit_finished(self):
-        self.set_value(self.get_value())
-
-class ValueEditFormLayout(QtWidgets.QFormLayout):
-    """ a QFormLayout consisting of ValueEdit rows, to be initialized with a pd.DataFrame 
-    with columns name and value, optional dtype (numpy letter codes) """
-
-    def __init__(self, parent, DataFrame):
-        super(ValueEditFormLayout,self).__init__(parent=parent)
-        self.Df = DataFrame # model
-
-        # if DataFrame does not contain a dtype column, set it to strings
-        # TODO figure out when is this actually needed
-        # utils.debug_trace()
-        if 'dtype' not in self.Df.columns:
-            maxlen = max([len(el) for el in self.Df['name']])
-            self.Df['dtype'] = 'U'+str(maxlen)
-
-        self.initUI()
-    
-    def initUI(self):
-        self.setVerticalSpacing(10)
-        self.setLabelAlignment(QtCore.Qt.AlignRight)
-
-        # init the view
-        for i, row in self.Df.iterrows():
-            self.addRow(row['name'], ValueEdit(row['value'], row['dtype'], self.parent()))
-
-    def set_entry(self, name, value):
-        """ controller function - update both view and model """
-        try:
-            # get index
-            ix = list(self.Df['name']).index(name)
-            
-            # update model 
-            dtype = self.itemAt(ix,1).widget().dtype
-            self.Df.loc[ix,'value'] = sp.array(value, dtype=dtype) 
-            
-            # update view
-            self.itemAt(ix,1).widget().set_value(value)
-
-        except ValueError:
-            utils.printer("ValueError on attempting to set %s to %s:" % (name, value), 'error')
-
-    def setEnabled(self, value):
-         for i in range(self.rowCount()):
-            widget = self.itemAt(i, 1).widget()
-            widget.setEnabled(value)
-
-    def set_entries(self, Df):
-        # test compatibility first
-        if not sp.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
-            utils.printer("can't set entries of variable Df bc they are not equal", 'error')
-            utils.debug_trace()
-        
-        # update the model
-        self.Df = Df
-
-        # update the view
-        for i, row in Df.iterrows():
-            self.set_entry(row['name'], row['value'])
-
-    def get_entry(self, name):
-        # controller function - returns a pd.Series
-        self.update_model()
-        ix = list(self.Df['name']).index(name)
-        return self.Df.loc[ix]
-
-    def get_entries(self):
-        self.update_model()
-        return self.Df
-
-    def update_model(self):
-        """ updates model based on UI entries """
-        for i in range(self.rowCount()):
-            label = self.itemAt(i, 0).widget()
-            widget = self.itemAt(i, 1).widget()
-            self.set_entry(label.text(), widget.get_value())
-
-class ErrorWidget(QtWidgets.QMessageBox):
-    # TODO implement me
-    def __init__(self, error_msg, parent=None):
-        super(ErrorWidget,self).__init__(parent=parent)
-        self.setText(error_msg)
-        self.setIcon(QtWidgets.QMessageBox.Critical)
-        self.setStandardButtons(QtWidgets.QMessageBox.Close)
-        self.buttonClicked.connect(self.crash)
-        self.show()
-
-    def crash(self):
-        # TODO log crash error msg
-        sys.exit()
-
-
-class PandasModel(QtCore.QAbstractTableModel):
-    """
-    Class to populate a table view with a pandas dataframe
-    source: https://stackoverflow.com/questions/31475965/fastest-way-to-populate-qtableview-from-pandas-data-frame
-    """
-    def __init__(self, data, parent=None):
-        QtCore.QAbstractTableModel.__init__(self, parent)
-        self._data = data
-
-    def rowCount(self, parent=None):
-        return len(self._data.values)
-
-    def columnCount(self, parent=None):
-        return self._data.columns.size
-
-    def data(self, index, role=QtCore.Qt.DisplayRole):
-        if index.isValid():
-            if role == QtCore.Qt.DisplayRole:
-                return str(self._data.values[index.row()][index.column()])
-        return None
-
-    def headerData(self, col, orientation, role):
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            return self._data.columns[col]
-        return None
