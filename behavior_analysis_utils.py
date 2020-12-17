@@ -646,6 +646,25 @@ def water_consumed(log_path):
 
 """
 
+def parse_bonsai_LoadCellData(csv_path, save=True, trig_len=1, ttol=0.2):
+    LoadCellDf = pd.read_csv(csv_path, names=['t','x','y'])
+
+    harp_sync = pd.read_csv(csv_path.parent / "bonsai_harp_sync.csv", names=['t']).values.flatten()
+    t_sync_high = harp_sync[::2]
+    t_sync_low = harp_sync[1::2]
+
+    dts = np.array(t_sync_low) - np.array(t_sync_high)
+    good_timestamps = ~(np.absolute(dts-trig_len)>ttol)
+    t_harp = np.array(t_sync_high)[good_timestamps]
+
+    if save:
+        # write to disk
+        # LoadCellDf.to_csv(harp_csv_path.parent / "loadcell_data.csv") # obsolete now
+        t_sync = pd.DataFrame(t_sync, columns=['t'])
+        t_sync.to_csv(csv_path.parent / "harp_sync.csv")
+
+    return LoadCellDf, t_harp
+
 def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     """ gets the loadcell data and the sync times from a harp csv log
     trig_len is time in ms of sync trig high, tol is deviation in ms
