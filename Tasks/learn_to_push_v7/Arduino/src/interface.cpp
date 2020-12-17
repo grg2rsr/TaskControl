@@ -2,13 +2,13 @@
 // http://forum.arduino.cc/index.php?topic=396450.0
 
 #include <Arduino.h>
-#include <string.h>
-
 #include "interface_variables.h"
 
-// this line limits total command length to 200 chars - adjust if necessary (very long var names)
-const byte numChars = 200;
+// this line limits total command length to 128 chars - adjust if necessary (very long var names)
+const byte numChars = 128;
 char receivedChars[numChars];
+char buf[numChars];
+
 boolean newData = false;
 bool verbose = true;
 bool run = false;
@@ -18,8 +18,13 @@ bool punish = false;
 
 int current_state = 0; // WATCH OUT this is ini state
 
-// HARDCODED trial type probabilites
-float p_interval[6] = {1,0.5,0,0,0.5,1}; // FIXME HARDCODE
+// fwd declare functions for logging
+unsigned long now();
+void log_bool(const char name[], bool value);
+void log_int(const char name[], int value);
+// void log_long(const char name[], long value);
+void log_ulong(const char name[], unsigned long value);
+void log_float(const char name[], float value);
 
 void getSerialData() {
     // check if command data is available and if yes read it
@@ -63,9 +68,8 @@ void processSerialData() {
     if (newData == true) {
         // echo back command if verbose
         if (verbose==true) {
-            Serial.print("<Arduino received: ");
-            Serial.print(receivedChars);
-            Serial.println(">");
+            snprintf(buf, sizeof(buf), "<Arduino received: %s>", receivedChars);
+            Serial.println(buf);
         }
 
         // get total length of message
@@ -86,106 +90,96 @@ void processSerialData() {
             char varname[len-4+1];
             strlcpy(varname, receivedChars+4, len-4+1);
 
-            // INSERT_GETTERS
+        // INSERT_GETTERS
 
-            if (strcmp(varname,"correct_choice_cue_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(correct_choice_cue_freq)+String(">"));
-            }
-    
-            if (strcmp(varname,"choice_dur")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(choice_dur)+String(">"));
-            }
-    
-            if (strcmp(varname,"ITI_dur_min")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(ITI_dur_min)+String(">"));
-            }
-    
-            if (strcmp(varname,"ITI_dur_max")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(ITI_dur_max)+String(">"));
-            }
-    
-            if (strcmp(varname,"min_fix_dur")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(min_fix_dur)+String(">"));
-            }
-    
-            if (strcmp(varname,"reward_magnitude")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(reward_magnitude)+String(">"));
-            }
-    
-            if (strcmp(varname,"valve_ul_ms")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(valve_ul_ms)+String(">"));
-            }
-    
-            if (strcmp(varname,"reward_available_dur")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(reward_available_dur)+String(">"));
-            }
-    
-            if (strcmp(varname,"X_thresh")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(X_thresh)+String(">"));
-            }
-    
-            if (strcmp(varname,"X_thresh_start")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(X_thresh_start)+String(">"));
-            }
-    
-            if (strcmp(varname,"X_thresh_target")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(X_thresh_target)+String(">"));
-            }
-    
-            if (strcmp(varname,"X_thresh_increment")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(X_thresh_increment)+String(">"));
-            }
-    
-            if (strcmp(varname,"X_thresh_decrement")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(X_thresh_decrement)+String(">"));
-            }
-    
-            if (strcmp(varname,"XY_fix_box")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(XY_fix_box)+String(">"));
-            }
-    
-            if (strcmp(varname,"correction_loops")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(correction_loops)+String(">"));
-            }
-    
-            if (strcmp(varname,"corr_loop_entry")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(corr_loop_entry)+String(">"));
-            }
-    
-            if (strcmp(varname,"corr_loop_exit")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(corr_loop_exit)+String(">"));
-            }
-    
-            if (strcmp(varname,"omit_rewards")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(omit_rewards)+String(">"));
-            }
-    
-            if (strcmp(varname,"p_instructed_trial")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(p_instructed_trial)+String(">"));
-            }
-    
-            if (strcmp(varname,"instructed_cue_speed")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(instructed_cue_speed)+String(">"));
-            }
-    
-            if (strcmp(varname,"fps")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(fps)+String(">"));
-            }
-    
-            if (strcmp(varname,"bias")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(bias)+String(">"));
-            }
-    
-            if (strcmp(varname,"contrast")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(contrast)+String(">"));
-            }
-    
-            if (strcmp(varname,"sigma")==0){
-                Serial.println(String("<VAR ")+String(varname)+String(" ")+String(sigma)+String(">"));
-            }
-                if (strcmp(varname,"current_state")==0){
-                Serial.println(String("<")+String(varname)+String(" ")+String(current_state)+String(">"));
-            }
+        if (strcmp(varname,"correct_choice_cue_freq")==0){
+            log_int("correct_choice_cue_freq", correct_choice_cue_freq);
+        }
+
+        if (strcmp(varname,"choice_dur")==0){
+            log_ulong("choice_dur", choice_dur);
+        }
+
+        if (strcmp(varname,"ITI_dur_min")==0){
+            log_ulong("ITI_dur_min", ITI_dur_min);
+        }
+
+        if (strcmp(varname,"ITI_dur_max")==0){
+            log_ulong("ITI_dur_max", ITI_dur_max);
+        }
+
+        if (strcmp(varname,"min_fix_dur")==0){
+            log_ulong("min_fix_dur", min_fix_dur);
+        }
+
+        if (strcmp(varname,"reward_magnitude")==0){
+            log_ulong("reward_magnitude", reward_magnitude);
+        }
+
+        if (strcmp(varname,"valve_ul_ms")==0){
+            log_float("valve_ul_ms", valve_ul_ms);
+        }
+
+        if (strcmp(varname,"reward_available_dur")==0){
+            log_ulong("reward_available_dur", reward_available_dur);
+        }
+
+        if (strcmp(varname,"X_thresh")==0){
+            log_float("X_thresh", X_thresh);
+        }
+
+        if (strcmp(varname,"X_thresh_start")==0){
+            log_float("X_thresh_start", X_thresh_start);
+        }
+
+        if (strcmp(varname,"X_thresh_target")==0){
+            log_float("X_thresh_target", X_thresh_target);
+        }
+
+        if (strcmp(varname,"X_thresh_increment")==0){
+            log_float("X_thresh_increment", X_thresh_increment);
+        }
+
+        if (strcmp(varname,"X_thresh_decrement")==0){
+            log_float("X_thresh_decrement", X_thresh_decrement);
+        }
+
+        if (strcmp(varname,"XY_fix_box")==0){
+            log_float("XY_fix_box", XY_fix_box);
+        }
+
+        if (strcmp(varname,"correction_loops")==0){
+            log_int("correction_loops", correction_loops);
+        }
+
+        if (strcmp(varname,"corr_loop_entry")==0){
+            log_int("corr_loop_entry", corr_loop_entry);
+        }
+
+        if (strcmp(varname,"corr_loop_exit")==0){
+            log_int("corr_loop_exit", corr_loop_exit);
+        }
+
+        if (strcmp(varname,"omit_rewards")==0){
+            log_int("omit_rewards", omit_rewards);
+        }
+
+        if (strcmp(varname,"fps")==0){
+            log_int("fps", fps);
+        }
+
+        if (strcmp(varname,"bias")==0){
+            log_float("bias", bias);
+        }
+
+        if (strcmp(varname,"contrast")==0){
+            log_float("contrast", contrast);
+        }
+
+        if (strcmp(varname,"sigma")==0){
+            log_float("sigma", sigma);
+        }
+
         }
 
         // SET
@@ -210,139 +204,126 @@ void processSerialData() {
             char varvalue[len-split+1];
             strlcpy(varvalue, line+split+1, len-split+1);
 
-            // for the state machine "force state" buttons
-            // if (strcmp(varname,"current_state")==0){
-            //     current_state = atoi(varvalue);
-            // }
-
             // INSERT_SETTERS
 
-            if (strcmp(varname,"correct_choice_cue_freq")==0){
-                correct_choice_cue_freq = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"correction_loops")==0){
-                correction_loops = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"corr_loop_entry")==0){
-                corr_loop_entry = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"corr_loop_exit")==0){
-                corr_loop_exit = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"omit_rewards")==0){
-                omit_rewards = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"fps")==0){
-                fps = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"choice_dur")==0){
-                choice_dur = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"ITI_dur_min")==0){
-                ITI_dur_min = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"ITI_dur_max")==0){
-                ITI_dur_max = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"min_fix_dur")==0){
-                min_fix_dur = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"reward_magnitude")==0){
-                reward_magnitude = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"reward_available_dur")==0){
-                reward_available_dur = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"valve_ul_ms")==0){
-                valve_ul_ms = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"X_thresh")==0){
-                X_thresh = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"X_thresh_start")==0){
-                X_thresh_start = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"X_thresh_target")==0){
-                X_thresh_target = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"X_thresh_increment")==0){
-                X_thresh_increment = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"X_thresh_decrement")==0){
-                X_thresh_decrement = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"XY_fix_box")==0){
-                XY_fix_box = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"p_instructed_trial")==0){
-                p_instructed_trial = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"instructed_cue_speed")==0){
-                instructed_cue_speed = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"bias")==0){
-                bias = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"contrast")==0){
-                contrast = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"sigma")==0){
-                sigma = atof(varvalue);
-            }
-    
+        if (strcmp(varname,"correct_choice_cue_freq")==0){
+            correct_choice_cue_freq = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"choice_dur")==0){
+            choice_dur = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"ITI_dur_min")==0){
+            ITI_dur_min = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"ITI_dur_max")==0){
+            ITI_dur_max = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"min_fix_dur")==0){
+            min_fix_dur = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"reward_magnitude")==0){
+            reward_magnitude = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"valve_ul_ms")==0){
+            valve_ul_ms = atof(varvalue);
+        }
+
+        if (strcmp(varname,"reward_available_dur")==0){
+            reward_available_dur = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"X_thresh")==0){
+            X_thresh = atof(varvalue);
+        }
+
+        if (strcmp(varname,"X_thresh_start")==0){
+            X_thresh_start = atof(varvalue);
+        }
+
+        if (strcmp(varname,"X_thresh_target")==0){
+            X_thresh_target = atof(varvalue);
+        }
+
+        if (strcmp(varname,"X_thresh_increment")==0){
+            X_thresh_increment = atof(varvalue);
+        }
+
+        if (strcmp(varname,"X_thresh_decrement")==0){
+            X_thresh_decrement = atof(varvalue);
+        }
+
+        if (strcmp(varname,"XY_fix_box")==0){
+            XY_fix_box = atof(varvalue);
+        }
+
+        if (strcmp(varname,"correction_loops")==0){
+            correction_loops = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"corr_loop_entry")==0){
+            corr_loop_entry = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"corr_loop_exit")==0){
+            corr_loop_exit = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"omit_rewards")==0){
+            omit_rewards = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"fps")==0){
+            fps = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"bias")==0){
+            bias = atof(varvalue);
+        }
+
+        if (strcmp(varname,"contrast")==0){
+            contrast = atof(varvalue);
+        }
+
+        if (strcmp(varname,"sigma")==0){
+            sigma = atof(varvalue);
+        }
+
         }
 
         // UPD - update trial probs - HARDCODED for now, n trials
         // format UPD 0 0.031 or similar
-        if (strcmp(mode,"UPD")==0){
+        // if (strcmp(mode,"UPD")==0){
             
-            char line[len-4+1];
-            strlcpy(line, receivedChars+4, len-4+1);
+        //     char line[len-4+1];
+        //     strlcpy(line, receivedChars+4, len-4+1);
 
-            // get index of space
-            len = sizeof(line)/sizeof(char);
-            unsigned int split = 0;
-            for (unsigned int i = 0; i < numChars; i++){
-                if (line[i] == ' '){
-                    split = i;
-                    break;
-                }
-            }
+        //     // get index of space
+        //     len = sizeof(line)/sizeof(char);
+        //     unsigned int split = 0;
+        //     for (unsigned int i = 0; i < numChars; i++){
+        //         if (line[i] == ' '){
+        //             split = i;
+        //             break;
+        //         }
+        //     }
 
-            // split by space
-            char varname[split+1];
-            strlcpy(varname, line, split+1);
+        //     // split by space
+        //     char varname[split+1];
+        //     strlcpy(varname, line, split+1);
 
-            char varvalue[len-split+1];
-            strlcpy(varvalue, line+split+1, len-split+1);
+        //     char varvalue[len-split+1];
+        //     strlcpy(varvalue, line+split+1, len-split+1);
 
-            int ix = atoi(varname);
-            float p = atof(varvalue);
-            p_interval[ix] = p;
-        }
+        //     int ix = atoi(varname);
+        //     float p = atof(varvalue);
+        //     p_interval[ix] = p;
+        // }
 
         // CMD
         if (strcmp(mode,"CMD")==0){

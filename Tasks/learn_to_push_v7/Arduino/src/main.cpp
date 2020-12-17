@@ -219,6 +219,7 @@ void led_blink_controller(){
 // LED feedback cursor
 float sep = (NUM_LEDS-1)/4; // 90 deg separation
 float cursor_pos = 0;
+float target_pos;
 // int fps = 10;
 
 // to be set in get_trial_type()
@@ -237,15 +238,30 @@ float vis_coupling = 2;
 float dX;
 int I_bg;
 
+// precalc
+// float V_left[NUM_LEDS];
+// float V_right[NUM_LEDS];
+
+void init_led(){
+    if (this_correct_side == left){
+        target_pos = 0;
+    }
+    if (this_correct_side == right){
+        target_pos = NUM_LEDS;
+    }
+}
+
 void update_led_cursor(){
     if (cursor_is_active == true){
         cursor_pos = map(X, -X_thresh * vis_coupling, X_thresh * vis_coupling, 0.0, NUM_LEDS*100.0)/100.0;
-        dX = absolute(center_led-cursor_pos);
+        dX = abs(cursor_pos-target_pos);
         for (int i = 0; i < NUM_LEDS; i++){
-            float left_brightness = left_cue_brightness * 255 * gaussian((float) i, cursor_pos - sep, sigma); // contrast to be mult into this
-            float right_brightness = right_cue_brightness * 255 * gaussian((float) i, cursor_pos + sep, sigma);
-            I_bg = (int) map(dX, 0, NUM_LEDS/2, 0, 255);
-            leds[i] = CHSV(160, 255, constrain(I_bg - constrain(left_brightness + right_brightness, 0, 255),0,255));
+            float left_brightness = 255 * left_cue_brightness * gaussian((float) i, cursor_pos - sep, sigma); // contrast to be mult into this
+            float right_brightness = 255 * right_cue_brightness * gaussian((float) i, cursor_pos + sep, sigma);
+            // I_bg = (int) map(dX, 0, NUM_LEDS/2, 0, 255);
+            I_bg = map(dX, 0, NUM_LEDS, 0, 255);
+            // leds[i] = CHSV(160, 255, left_brightness + right_brightness);
+            leds[i] = CHSV(160, 255, constrain(I_bg - (left_brightness + right_brightness),0,255));
         }
         FastLED.show();
     }
@@ -449,6 +465,23 @@ void move_X_thresh(float percent_change){
     log_float("X_thresh",X_thresh);
 }
 
+void log_choice(){ // remove this guy ... 
+    if (current_zone == right){
+        log_code(CHOICE_RIGHT_EVENT);
+        n_choices_right++;
+        // if (left_short == true){
+        //     log_code(CHOICE_LONG_EVENT);
+        // }
+    }
+    if (current_zone == left){
+        log_code(CHOICE_LEFT_EVENT);
+        n_choices_left++;
+        // if (left_short == true){
+        //     log_code(CHOICE_SHORT_EVENT);
+        // }
+    }
+}
+
 /*
 ########  ######  ##     ##
 ##       ##    ## ###   ###
@@ -517,6 +550,7 @@ void finite_state_machine() {
 
                 // cue
                 go_cue();
+                init_led();
                 cursor_is_active = true;
             }
 
@@ -678,6 +712,7 @@ void finite_state_machine() {
             break;
     }
 }
+
 
 /*
 ##     ##    ###    #### ##    ##
