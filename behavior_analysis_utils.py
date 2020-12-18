@@ -250,10 +250,6 @@ def parse_trial(TrialDf, Metrics):
     
 def parse_trials(TrialDfs, Metrics):
     """ helper to run parse_trial on multiple trials """
-
-    for Df in TrialDfs:
-        bhv.parse_trial(Df, Metrics)
-
     SessionDf = pd.concat([parse_trial(Df, Metrics) for Df in TrialDfs], axis=0)
     SessionDf = SessionDf.reset_index(drop=True)
   
@@ -668,15 +664,15 @@ def parse_bonsai_LoadCellData(csv_path, save=True, trig_len=1, ttol=0.2):
 
     dts = np.array(t_sync_low) - np.array(t_sync_high)
     good_timestamps = ~(np.absolute(dts-trig_len)>ttol)
-    t_harp = np.array(t_sync_high)[good_timestamps]
+    t_sync = np.array(t_sync_high)[good_timestamps]
 
+    t_sync = pd.DataFrame(t_sync, columns=['t'])
     if save:
         # write to disk
         # LoadCellDf.to_csv(harp_csv_path.parent / "loadcell_data.csv") # obsolete now
-        t_sync = pd.DataFrame(t_sync, columns=['t'])
         t_sync.to_csv(csv_path.parent / "harp_sync.csv")
 
-    return LoadCellDf, t_harp
+    return LoadCellDf, t_sync
 
 def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     """ gets the loadcell data and the sync times from a harp csv log
@@ -713,10 +709,10 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     LoadCellDf['t_original'] = LoadCellDf['t'] # keeps the original
     LoadCellDf['t'] = LoadCellDf['t'] * 1000
 
+    t_sync = pd.DataFrame(t_sync, columns=['t'])
     if save:
         # write to disk
         LoadCellDf.to_csv(harp_csv_path.parent / "loadcell_data.csv")
-        t_sync = pd.DataFrame(t_sync, columns=['t'])
         t_sync.to_csv(harp_csv_path.parent / "harp_sync.csv")
     
     return LoadCellDf, t_sync
