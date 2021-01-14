@@ -20,12 +20,19 @@ class TaskControlApp(QtWidgets.QApplication):
         # launch GUI
         self.Settings_Widget = SettingsWidget(self, self.config)
 
+        # hack - store default box settings
+        self.default_box_config = self.config['box']
+
         # on close - TODO check if obsolete with proper QT parent child structure
         self.setQuitOnLastWindowClosed(False)
         self.lastWindowClosed.connect(self.onLastClosed)
         self.exec_()
 
     def onLastClosed(self):
+        # restore box defaults
+        for key, value in self.default_box_config.items():
+            self.config['box'][key] = value
+
         # write current config to disk
         with open(self.config_path, 'w') as fH:
             self.config.write(fH)
