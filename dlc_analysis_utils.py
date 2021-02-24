@@ -64,15 +64,32 @@ def sync_arduino_w_dlc(log_path, video_sync_path):
     # offs = sp.where(sp.diff(SyncDf.GPIO) < -1)[0] # can be used to check correct length
 
     Camera_SyncEvent = SyncDf.iloc[ons+1] # one frame offset
-
+    
+    # check for unequal
+    if Arduino_SyncEvent.shape[0] != Camera_SyncEvent.shape[0]:
+        print('unequal sync pulses: Arduino: %i, Camera: %i' % (Arduino_SyncEvent.shape[0],Camera_SyncEvent.shape[0]))
+        t_arduino, t_camera, offset = bhv.cut_timestamps(Arduino_SyncEvent.t.values,Camera_SyncEvent.t.values,verbose=True, return_offset=True)
+        frames_index = Camera_SyncEvent.index.values[offset:offset+t_arduino.shape[0]]
+    else:
+        t_arduino = Arduino_SyncEvent.t.values
+        t_camera = Camera_SyncEvent.t.values
+        frames_index = Camera_SyncEvent.index.values
+        
+    
     # linear regressions linking arduino times to frames and vice versa
     from scipy import stats
-
+    
     # from arduino time to camera time
-    m, b = stats.linregress(Arduino_SyncEvent.t.values, Camera_SyncEvent.t.values)[:2]
+    m, b = stats.linregress(t_arduino, t_camera)[:2]
 
     # from camera time to camera frame
-    m2, b2 = stats.linregress(Camera_SyncEvent.t.values, Camera_SyncEvent.index.values)[:2]
+    m2, b2 = stats.linregress(t_camera, frames_index)[:2]
+
+#    # from arduino time to camera time
+#    m, b = stats.linregress(Arduino_SyncEvent.t.values, Camera_SyncEvent.t.values)[:2]
+#
+#    # from camera time to camera frame
+#    m2, b2 = stats.linregress(Camera_SyncEvent.t.values, Camera_SyncEvent.index.values)[:2]
 
     return m, b, m2, b2
 
