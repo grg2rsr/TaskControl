@@ -728,7 +728,7 @@ def get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT", save=True):
 
     return SyncEvent
 
-def cut_timestamps(t_arduino, t_harp, verbose=False):
+def cut_timestamps(t_arduino, t_harp, verbose=False, return_offset=False):
     """ finds offset between to unequal timestamp series and cuts
     the bigger to match the size of the smaller """
 
@@ -756,8 +756,11 @@ def cut_timestamps(t_arduino, t_harp, verbose=False):
     else:
         t_arduino = t_bigger
         t_harp = t_smaller
-    
-    return t_arduino, t_harp
+        
+    if return_offset == True:
+        return t_arduino, t_harp, offset
+    else:
+        return t_arduino, t_harp
 
 def sync_clocks(t_harp, t_arduino, log_path=None):
     """ linregress between two clocks - master clock is harp
