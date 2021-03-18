@@ -129,7 +129,7 @@ Setters = {'int': int_setter_template,
            'bool':bool_setter_template}
 
 
-def run(variables_path):
+def run(variables_path, template_fname="interface_template.cpp"):
     arduino_vars = parse_arduino_vars(variables_path)
 
     # generate lines for getters
@@ -147,7 +147,7 @@ def run(variables_path):
         all_setters.append(template)
 
     # read in template
-    with open(Path(__file__).with_name("interface_template.cpp"),'r') as fH:
+    with open(Path(__file__).with_name(template_fname),'r') as fH:
         lines = fH.readlines()
 
     # replace in include line

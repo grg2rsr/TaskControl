@@ -113,10 +113,10 @@ class SessionOverviewPlot(object):
 
     def update(self, SessionDf):
         # choices
-        x = SessionDf.loc[SessionDf['correct_zone'] == 4].index + 1
+        x = SessionDf.loc[SessionDf['correct_side'] == 4].index + 1 # previously correct zone
         y = np.zeros(x.shape[0]) - 0.1
         self.trials_left.set_data(x,y)
-        x = SessionDf.loc[SessionDf['correct_zone'] == 6].index + 1
+        x = SessionDf.loc[SessionDf['correct_side'] == 6].index + 1 # previously correct zone
         y = np.zeros(x.shape[0]) + 1.1
         self.trials_right.set_data(x,y)
 

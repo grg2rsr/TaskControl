@@ -60,10 +60,12 @@ class ArduinoController(QtWidgets.QWidget):
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
         # online analyzer
-        Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_omitted, bhv.reward_collection_RT,
-                   bhv.has_choice, bhv.choice_RT, bhv.get_choice,
-                   bhv.get_interval, bhv.get_outcome, bhv.get_bias,
-                   bhv.get_correct_zone, bhv.get_in_corr_loop) # HARDCODE
+        # Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_omitted, bhv.reward_collection_RT,
+        #            bhv.has_choice, bhv.choice_RT, bhv.get_choice,
+        #            bhv.get_interval, bhv.get_outcome, bhv.get_bias,
+        #            bhv.get_correct_zone, bhv.get_in_corr_loop) # HARDCODE
+
+        Metrics = (bhv.is_successful,)
                    
         self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
         # don't add him to children bc doesn't have a UI
@@ -178,7 +180,11 @@ class ArduinoController(QtWidgets.QWidget):
 
         # building interface
         utils.printer("generating interface.cpp",'task')
-        interface_generator.run(self.vars_path)
+        try: # catch this exception for downward compatibility
+            interface_template_fname = self.task_config['interface_template_fname']
+            interface_generator.run(self.vars_path, interface_template_fname)
+        except KeyError:
+            interface_generator.run(self.vars_path)
 
         # uploading code onto arduino
 
@@ -212,6 +218,15 @@ class ArduinoController(QtWidgets.QWidget):
             utils.printer('setting valve calibration factor to %s' % self.config['box']['valve_ul_ms'],'msg')
         except:
             utils.printer("can't set valve calibration factor",'error')
+
+        try:
+            self.VariableController.VariableEditWidget.set_entry('valve_ul_ms_left',self.config['box']['valve_ul_ms_left'])
+            self.VariableController.VariableEditWidget.set_entry('valve_ul_ms_right',self.config['box']['valve_ul_ms_right'])
+            utils.printer('setting left valve calibration factor to %s' % self.config['box']['valve_ul_ms_left'],'msg')
+            utils.printer('setting right valve calibration factor to %s' % self.config['box']['valve_ul_ms_right'],'msg')
+        except:
+            utils.printer("can't set valve calibration factors (left/right)",'error')
+               
         
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
