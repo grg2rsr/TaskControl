@@ -106,12 +106,20 @@ void processSerialData() {
             log_ulong("buzz_dur", buzz_dur);
         }
 
+        if (strcmp(varname,"trial_entry_buzz_dur")==0){
+            log_ulong("trial_entry_buzz_dur", trial_entry_buzz_dur);
+        }
+
         if (strcmp(varname,"buzz_left")==0){
             log_ulong("buzz_left", buzz_left);
         }
 
         if (strcmp(varname,"buzz_right")==0){
             log_ulong("buzz_right", buzz_right);
+        }
+
+        if (strcmp(varname,"buzz_lat")==0){
+            log_ulong("buzz_lat", buzz_lat);
         }
 
         if (strcmp(varname,"led_hsv")==0){
@@ -142,6 +150,10 @@ void processSerialData() {
             log_int("autodeliver_rewards", autodeliver_rewards);
         }
 
+        if (strcmp(varname,"left_short")==0){
+            log_int("left_short", left_short);
+        }
+
         if (strcmp(varname,"reward_magnitude")==0){
             log_ulong("reward_magnitude", reward_magnitude);
         }
@@ -154,6 +166,10 @@ void processSerialData() {
             log_float("valve_ul_ms_right", valve_ul_ms_right);
         }
 
+        if (strcmp(varname,"lateral_cues")==0){
+            log_int("lateral_cues", lateral_cues);
+        }
+
         if (strcmp(varname,"correction_loops")==0){
             log_int("correction_loops", correction_loops);
         }
@@ -164,6 +180,10 @@ void processSerialData() {
 
         if (strcmp(varname,"corr_loop_exit")==0){
             log_int("corr_loop_exit", corr_loop_exit);
+        }
+
+        if (strcmp(varname,"reach_block_dur")==0){
+            log_ulong("reach_block_dur", reach_block_dur);
         }
 
         if (strcmp(varname,"bias")==0){
@@ -212,12 +232,20 @@ void processSerialData() {
             buzz_dur = strtoul(varvalue,NULL,10);
         }
 
+        if (strcmp(varname,"trial_entry_buzz_dur")==0){
+            trial_entry_buzz_dur = strtoul(varvalue,NULL,10);
+        }
+
         if (strcmp(varname,"buzz_left")==0){
             buzz_left = strtoul(varvalue,NULL,10);
         }
 
         if (strcmp(varname,"buzz_right")==0){
             buzz_right = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"buzz_lat")==0){
+            buzz_lat = strtoul(varvalue,NULL,10);
         }
 
         if (strcmp(varname,"led_hsv")==0){
@@ -248,6 +276,10 @@ void processSerialData() {
             autodeliver_rewards = atoi(varvalue);
         }
 
+        if (strcmp(varname,"left_short")==0){
+            left_short = atoi(varvalue);
+        }
+
         if (strcmp(varname,"reward_magnitude")==0){
             reward_magnitude = strtoul(varvalue,NULL,10);
         }
@@ -260,6 +292,10 @@ void processSerialData() {
             valve_ul_ms_right = atof(varvalue);
         }
 
+        if (strcmp(varname,"lateral_cues")==0){
+            lateral_cues = atoi(varvalue);
+        }
+
         if (strcmp(varname,"correction_loops")==0){
             correction_loops = atoi(varvalue);
         }
@@ -270,6 +306,10 @@ void processSerialData() {
 
         if (strcmp(varname,"corr_loop_exit")==0){
             corr_loop_exit = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"reach_block_dur")==0){
+            reach_block_dur = strtoul(varvalue,NULL,10);
         }
 
         if (strcmp(varname,"bias")==0){

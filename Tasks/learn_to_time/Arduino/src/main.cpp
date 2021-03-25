@@ -21,7 +21,6 @@
 // int current_state = INI_STATE; // starting at this, aleady declared in interface.cpp
 int last_state = -1; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
-unsigned long sync_pulse_dur = 100;
 unsigned long t_state_entry = max_future;
 unsigned long this_ITI_dur;
 float r; // for random
@@ -69,36 +68,43 @@ void update_bias(){
  ######  ######## ##    ##  ######   #######  ##     ##  ######
 */
 
-bool reaching_left = false;
+bool is_reaching_left = false;
 bool reach_left = false;
 
-bool reaching_right = false;
+bool is_reaching_right = false;
 bool reach_right = false;
+
+bool is_reaching = false;
+unsigned long t_last_reach = max_future;
 
 void read_reaches(){
     // left
     reach_left = digitalRead(REACH_LEFT_PIN);
-    if (reaching_left == false && reach_left == true){
+    if (is_reaching_left == false && reach_left == true){
         log_code(REACH_LEFT_ON);
-        reaching_left = true;
+        is_reaching_left = true;
+        t_last_reach = now();
     }
 
-    if (reaching_left == true && reach_left == false){
+    if (is_reaching_left == true && reach_left == false){
         log_code(REACH_LEFT_OFF);
-        reaching_left = false;
+        is_reaching_left = false;
     }
 
     // right 
     reach_right = digitalRead(REACH_RIGHT_PIN);
-    if (reaching_right == false && reach_right == true){
+    if (is_reaching_right == false && reach_right == true){
         log_code(REACH_RIGHT_ON);
-        reaching_right = true;
+        is_reaching_right = true;
+        t_last_reach = now();
     }
 
-    if (reaching_right == true && reach_right == false){
+    if (is_reaching_right == true && reach_right == false){
         log_code(REACH_RIGHT_OFF);
-        reaching_right = false;
+        is_reaching_right = false;
     }
+
+    is_reaching = (is_reaching_left || is_reaching_right);
 }
 
 /*
@@ -167,21 +173,32 @@ Tone buzz_controller_left;
 Tone buzz_controller_right;
 
 void trial_entry_cue(){
-    buzz_controller_left.play(buzz_left, trial_entry_buzz_dur);
-    buzz_controller_right.play(buzz_left, trial_entry_buzz_dur);
+    buzz_controller_left.play(buzz_lat, trial_entry_buzz_dur);
+    buzz_controller_right.play(buzz_lat, trial_entry_buzz_dur);
+}
 
 void reward_left_cue(){
     switch_led_on[0] = true;
     // tone_controller_left.play(go_cue_freq, tone_dur);
-    buzz_controller_left.play(buzz_left, buzz_dur);
-    buzz_controller_right.play(buzz_left, buzz_dur);
+    if (lateral_cues == 1){
+        buzz_controller_left.play(buzz_lat, buzz_dur);
+    }
+    else{
+        buzz_controller_left.play(buzz_left, buzz_dur);
+        buzz_controller_right.play(buzz_left, buzz_dur);
+    }
 }
 
 void reward_right_cue(){
     switch_led_on[1] = true;
     // tone_controller_right.play(go_cue_freq, tone_dur);
-    buzz_controller_left.play(buzz_right, buzz_dur);
-    buzz_controller_right.play(buzz_right, buzz_dur);
+    if (lateral_cues == 1){
+        buzz_controller_right.play(buzz_lat, buzz_dur);
+    }
+    else{
+        buzz_controller_left.play(buzz_right, buzz_dur);
+        buzz_controller_right.play(buzz_right, buzz_dur);
+    }
 }
 
 void go_cue_left(){
@@ -208,35 +225,35 @@ void go_cue_right(){
 /*
 adapted from  https://arduino.stackexchange.com/questions/6715/audio-frequency-white-noise-generation-using-arduino-mini-pro
 */
-#define LFSR_INIT  0xfeedfaceUL
-#define LFSR_MASK  ((unsigned long)( 1UL<<31 | 1UL <<15 | 1UL <<2 | 1UL <<1  ))
+// #define LFSR_INIT  0xfeedfaceUL
+// #define LFSR_MASK  ((unsigned long)( 1UL<<31 | 1UL <<15 | 1UL <<2 | 1UL <<1  ))
 
-unsigned int generateNoise(){ 
-  // See https://en.wikipedia.org/wiki/Linear_feedback_shift_register#Galois_LFSRs
-   static unsigned long int lfsr = LFSR_INIT;
-   if(lfsr & 1) { lfsr =  (lfsr >>1) ^ LFSR_MASK ; return(1);}
-   else         { lfsr >>= 1;                      return(0);}
-}
+// unsigned int generateNoise(){ 
+//   // See https://en.wikipedia.org/wiki/Linear_feedback_shift_register#Galois_LFSRs
+//    static unsigned long int lfsr = LFSR_INIT;
+//    if(lfsr & 1) { lfsr =  (lfsr >>1) ^ LFSR_MASK ; return(1);}
+//    else         { lfsr >>= 1;                      return(0);}
+// }
 
-unsigned long error_cue_start = max_future;
-unsigned long error_cue_dur = tone_dur * 1000; // to save instructions - work in micros
-unsigned long lastClick = max_future;
+// unsigned long error_cue_start = max_future;
+// unsigned long error_cue_dur = tone_dur * 1000; // to save instructions - work in micros
+// unsigned long lastClick = max_future;
 
-void incorrect_choice_cue(){
-    // beep
-    // tone_controller.play(incorrect_choice_cue_freq, tone_dur);
+// void incorrect_choice_cue(){
+//     // beep
+//     // tone_controller.play(incorrect_choice_cue_freq, tone_dur);
 
-    // white noise - blocking arduino for tone_dur
-    error_cue_start = micros();
-    lastClick = micros();
-    while (micros() - error_cue_start < error_cue_dur){
-        if ((micros() - lastClick) > 2 ) { // Changing this value changes the frequency.
-            lastClick = micros();
-            digitalWrite (SPEAKER_LEFT_PIN, generateNoise());
-            digitalWrite (SPEAKER_RIGHT_PIN, generateNoise());
-        }
-    }
-}
+//     // white noise - blocking arduino for tone_dur
+//     error_cue_start = micros();
+//     lastClick = micros();
+//     while (micros() - error_cue_start < error_cue_dur){
+//         if ((micros() - lastClick) > 2 ) { // Changing this value changes the frequency.
+//             lastClick = micros();
+//             digitalWrite (SPEAKER_LEFT_PIN, generateNoise());
+//             digitalWrite (SPEAKER_RIGHT_PIN, generateNoise());
+//         }
+//     }
+// }
 
 /*
 ##     ##    ###    ##       ##     ## ########
@@ -329,19 +346,22 @@ void reward_valve_controller(){
 bool switch_sync_pin = false;
 bool sync_pin_is_on = false;
 unsigned long t_last_sync_pin_on = max_future;
-// unsigned long sync_pulse_dur = 50;
+unsigned long sync_pulse_dur = 100;
+
 
 void sync_pin_controller(){
     // switch on
     if (switch_sync_pin == true){
-        digitalWrite(SYNC_PIN, HIGH);
+        digitalWrite(CAM_SYNC_PIN, HIGH);
+        digitalWrite(LC_SYNC_PIN, HIGH);
         sync_pin_is_on = true;
         switch_sync_pin = false;
         t_last_sync_pin_on = now();
     }
     // switch off
     if (sync_pin_is_on == true && now() - t_last_sync_pin_on > sync_pulse_dur){
-        digitalWrite(SYNC_PIN, LOW);
+        digitalWrite(CAM_SYNC_PIN, LOW);
+        digitalWrite(LC_SYNC_PIN, LOW);
         sync_pin_is_on = false;
     }
 }
@@ -363,7 +383,7 @@ int left_error_counter = 0;
 int right_error_counter = 0;
 int succ_trial_counter = 0;
 bool corr_loop_reset_mode = true;
-int this_interval = 1500;
+unsigned long this_interval = 1500;
 
 /*
 resetting mode:
@@ -391,10 +411,10 @@ void get_trial_type(){
             this_correct_side = right;
             correct_side = right;
             if (left_short == 1){
-                this_interval = (int) random(1500,2800);
+                this_interval = random(1500,2800);
             }
             else{
-                this_interval = (int) random(200,1500);
+                this_interval = random(200,1500);
             }
 
             // left_cue_brightness = 1.0;
@@ -404,24 +424,24 @@ void get_trial_type(){
             this_correct_side = left;
             correct_side = left;
             if (left_short == 1){
-                this_interval = (int) random(200,1500);
+                this_interval = random(200,1500);
             }
             else{
-                this_interval = (int) random(1500,2800);
+                this_interval = random(1500,2800);
             }
 
             // right_cue_brightness = 1.0;
             // left_cue_brightness = right_cue_brightness - contrast * right_cue_brightness;
         }
     }
-    log_int("this_interval", this_interval);
+    log_ulong("this_interval", this_interval);
     log_int("correct_side", correct_side);
     log_int("in_corr_loop", (int) in_corr_loop);
 }
               
 
-void log_choice(){ // remove this guy ... 
-    if (reaching_left == true){
+void log_choice(){
+    if (is_reaching_left == true){
         log_code(CHOICE_LEFT_EVENT);
         n_choices_left++;
         if (left_short == 1){
@@ -431,7 +451,7 @@ void log_choice(){ // remove this guy ...
             log_code(CHOICE_LONG_EVENT);
         }
     }
-    if (reaching_right == true){
+    if (is_reaching_right == true){
         log_code(CHOICE_RIGHT_EVENT);
         n_choices_right++;
         if (left_short == 1){
@@ -477,10 +497,11 @@ void finite_state_machine() {
 
             if (current_state == last_state){
                 // the update loop
-                if (digitalRead(TRIAL_INIT_PIN) == true){
+                if (digitalRead(TRIAL_INIT_PIN) == true && now() - t_last_reach > reach_block_dur && is_reaching == false){
                     current_state = TRIAL_ENTRY_STATE;
                 }
             }
+            break;
 
         case TRIAL_ENTRY_STATE:
             // state entry
@@ -536,6 +557,7 @@ void finite_state_machine() {
                 current_state = CHOICE_STATE;
                 break;
             }
+            break;
 
         case CHOICE_STATE:
             // state entry
@@ -550,12 +572,12 @@ void finite_state_machine() {
             // exit conditions
 
             // choice was made
-            if (reaching_left == true || reaching_right == true) {
+            if (is_reaching == true) {
                 log_code(CHOICE_EVENT);
                 log_choice();
 
                 // correct choice
-                if ((correct_side == left && reaching_left) || (correct_side == right && reaching_right)){
+                if ((correct_side == left && is_reaching_left) || (correct_side == right && is_reaching_right)){
                     log_code(CHOICE_CORRECT_EVENT);
                     log_code(TRIAL_SUCCESSFUL_EVENT);
 
@@ -572,7 +594,7 @@ void finite_state_machine() {
                 }
 
                 // incorrect choice
-                if ((correct_side == left && reaching_right) || (correct_side == right && reaching_left)){
+                if ((correct_side == left && is_reaching_right) || (correct_side == right && is_reaching_left)){
                     log_code(CHOICE_INCORRECT_EVENT);
                     log_code(TRIAL_UNSUCCESSFUL_EVENT);
                     // incorrect_choice_cue();
@@ -687,7 +709,8 @@ void setup() {
     pinMode(REACH_RIGHT_PIN, INPUT);
     
     // TTL COM w camera
-    pinMode(SYNC_PIN,OUTPUT);
+    pinMode(CAM_SYNC_PIN,OUTPUT);
+    pinMode(LC_SYNC_PIN,OUTPUT);
 
     // ini speakers
     // tone_controller_left.begin(SPEAKER_LEFT_PIN);
