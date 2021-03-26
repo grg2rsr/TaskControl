@@ -45,7 +45,7 @@ unsigned int CHOICE_CORRECT_EVENT = 27;
 unsigned int REWARD_LEFT_EVENT = 31;
 unsigned int REWARD_RIGHT_EVENT = 32;
 unsigned int REWARD_SHORT_EVENT = 33;
-unsigned int REWARD_LONG_EVENT = 33;
+unsigned int REWARD_LONG_EVENT = 34;
 // unsigned int REWARD_AVAILABLE_EVENT = 30;
 // unsigned int REWARD_LEFT_AVAILABLE_EVENT = 31;
 // unsigned int REWARD_LEFT_COLLECTED_EVENT = 32;
@@ -54,8 +54,6 @@ unsigned int REWARD_LONG_EVENT = 33;
 // unsigned int REWARD_RIGHT_AVAILABLE_EVENT = 34;
 // unsigned int REWARD_RIGHT_COLLECTED_EVENT = 35;
 // unsigned int REWARD_RIGHT_MISSED_EVENT = 36;
-
-
 
 // choice related
 unsigned int CHOICE_EVENT = 40;
@@ -71,9 +69,9 @@ unsigned int CHOICE_SHORT_EVENT = 45;
 // unsigned int CUE_LED_ON = 52;
 // unsigned int CUE_LED_OFF = 53;
 unsigned int GO_CUE_LEFT_EVENT = 54;
-unsigned int GO_CUE_RIGHT_EVENT = 54;
-unsigned int GO_CUE_SHORT_EVENT = 55;
-unsigned int GO_CUE_LONG_EVENT = 56;
+unsigned int GO_CUE_RIGHT_EVENT = 55;
+unsigned int GO_CUE_SHORT_EVENT = 56;
+unsigned int GO_CUE_LONG_EVENT = 57;
 
 
 
