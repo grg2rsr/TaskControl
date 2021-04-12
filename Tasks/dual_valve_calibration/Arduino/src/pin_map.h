@@ -1,0 +1,2 @@
+const int REWARD_VALVE_LEFT_PIN = 5;
+const int REWARD_VALVE_RIGHT_PIN = 4;
