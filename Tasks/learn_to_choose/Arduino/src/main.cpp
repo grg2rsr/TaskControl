@@ -391,14 +391,14 @@ void get_trial_type(){
 void log_choice(){ // remove this guy ... 
     if (reaching_left == true){
         log_code(CHOICE_LEFT_EVENT);
-        n_choices_right++;
+        n_choices_left++;
         // if (left_short == true){
         //     log_code(CHOICE_LONG_EVENT);
         // }
     }
     if (reaching_right == true){
         log_code(CHOICE_RIGHT_EVENT);
-        n_choices_left++;
+        n_choices_right++;
         // if (left_short == true){
         //     log_code(CHOICE_SHORT_EVENT);
         // }
