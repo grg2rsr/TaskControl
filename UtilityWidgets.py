@@ -1,4 +1,5 @@
 from PyQt5 import QtGui, QtCore
+from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
 
 import sys
@@ -123,14 +124,43 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
             widget = self.itemAt(i, 1).widget()
             self.set_entry(label.text(), widget.get_value())
 
-class PandasModel(QtCore.QAbstractTableModel):
-    """
-    Class to populate a table view with a pandas dataframe
-    source: https://stackoverflow.com/questions/31475965/fastest-way-to-populate-qtableview-from-pandas-data-frame
-    """
+# class PandasModel(QtCore.QAbstractTableModel):
+#     """
+#     Class to populate a table view with a pandas dataframe
+#     source: https://stackoverflow.com/questions/31475965/fastest-way-to-populate-qtableview-from-pandas-data-frame
+#     """
+#     def __init__(self, data, parent=None):
+#         QtCore.QAbstractTableModel.__init__(self, parent)
+#         self._data = data
+
+#     def rowCount(self, parent=None):
+#         return len(self._data.values)
+
+#     def columnCount(self, parent=None):
+#         return self._data.columns.size
+
+#     def data(self, index, role=QtCore.Qt.DisplayRole):
+#         if index.isValid():
+#             if role == QtCore.Qt.DisplayRole:
+#                 return str(self._data.values[index.row()][index.column()])
+#         return None
+
+#     def headerData(self, col, orientation, role):
+#         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+#             return self._data.columns[col]
+#         return None
+
+class PandasModel(QtGui.QStandardItemModel):
+    """ modified from this post https://stackoverflow.com/a/63708391 """
+
     def __init__(self, data, parent=None):
-        QtCore.QAbstractTableModel.__init__(self, parent)
+        QtGui.QStandardItemModel.__init__(self, parent)
         self._data = data
+
+        for col in data.columns:
+            data_col = [QtGui.QStandardItem("{}".format(x)) for x in data[col].values]
+            self.appendColumn(data_col)
+        return
 
     def rowCount(self, parent=None):
         return len(self._data.values)
@@ -138,13 +168,28 @@ class PandasModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent=None):
         return self._data.columns.size
 
-    def data(self, index, role=QtCore.Qt.DisplayRole):
-        if index.isValid():
-            if role == QtCore.Qt.DisplayRole:
-                return str(self._data.values[index.row()][index.column()])
+    def headerData(self, x, orientation, role):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            return self._data.columns[x]
+        if orientation == Qt.Vertical and role == Qt.DisplayRole:
+            return self._data.index[x]
         return None
 
-    def headerData(self, col, orientation, role):
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            return self._data.columns[col]
-        return None
+    def setDf(self, Df):
+        for i in range(Df.shape[0]):
+            for j in range(Df.shape[1]):
+                index = QtCore.QModelIndex().sibling(i,j)
+                val = Df.iloc[i,j]
+                super().setData(index, val, 2)
+                
+    def setData(self,*args):
+        super().setData(*args)
+        self.dataChanged.emit(self.index(0,0), self.index(self._data.shape[0], self._data.shape[1]))
+        return True
+    # def set_data(self, Df):
+    #     self._data = Df
+    #     self.dataChanged.emit(self.index(0,0), self.index(Df.shape[0],Df.shape[1]))
+        # for i in range(Df.shape[0]):
+        #     for j in range(Df.shape[1]):
+        #         self.dataChanged.emit(self.index(i,j), self.index(i,j))
+

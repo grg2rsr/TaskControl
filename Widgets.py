@@ -4,6 +4,7 @@ import configparser
 from datetime import datetime
 
 import scipy as sp
+import numpy as np
 import pandas as pd
 
 from PyQt5 import QtGui, QtCore
@@ -17,6 +18,10 @@ from TaskVis_mpl import SessionVis
 
 from Popups import *
 from UtilityWidgets import *
+
+from ArduinoWidgets import ArduinoController
+from BonsaiWidgets import BonsaiController
+from LoadCellWidgets import LoadCellController
 
 """
  
@@ -130,7 +135,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # display number of trials
         # currently the updating is done within a Monitor!
-        self.TrialCounter = TrialCounter2(self)
+        self.TrialCounter = TrialCounter3(self)
         # FormLayout.addRow('completed/aborted/total',self.TrialCounter)
         FormLayout.addRow(self.TrialCounter)
 
@@ -236,6 +241,12 @@ class SettingsWidget(QtWidgets.QWidget):
             utils.printer("running controller: %s" % Controller.name,'msg')
             Controller.Run(self.run_folder)
 
+            # connect OnlineDataAnalyzer
+            if type(Controller) == ArduinoController:
+                self.TrialCounter.connect(self.ArduinoController.OnlineDataAnalyser)
+
+                
+
         self.running = True
 
         # start the timer
@@ -313,17 +324,15 @@ class SettingsWidget(QtWidgets.QWidget):
             for section in self.task_config.sections():
                 utils.printer("initializing %s" % section, 'msg')
                 if section == 'Arduino':
-                    from ArduinoWidgets import ArduinoController
+                    
                     self.ArduinoController = ArduinoController(self, self.config, self.task_config['Arduino'])
                     self.Controllers.append(self.ArduinoController)
 
                 if section == 'Bonsai':
-                    from BonsaiWidgets import BonsaiController
                     self.BonsaiController = BonsaiController(self, self.config, self.task_config['Bonsai'])
                     self.Controllers.append(self.BonsaiController)
 
                 if section == 'LoadCell':
-                    from LoadCellWidgets import LoadCellController
                     self.LoadCellController = LoadCellController(self, self.config, self.task_config['LoadCell'])
                     self.Controllers.append(self.LoadCellController)
 
@@ -363,7 +372,8 @@ class SettingsWidget(QtWidgets.QWidget):
 
             current_time = dt.seconds/60
             current_water = self.WaterCounter.get_value()
-            current_trials = self.TrialCounter.get_value('total')
+            # current_trials = self.TrialCounter.get_value('total')
+            current_trials = 1000 # FIXME
 
             if current_time >= max_time and max_time > 0:
                 self.Done()
@@ -494,6 +504,62 @@ class TrialCounter2(QtWidgets.QFormLayout):
 
     def get_value(self,label):
         return int(self.counters[label].text().split('\t')[0])
+
+class TrialCounter3(QtWidgets.QTableView):
+    """ """
+    def __init__(self, parent):
+        super(TrialCounter3, self).__init__(parent=parent)
+        self.initModel()
+        self.initUI()
+
+        self.Df.loc['correct','left'] += 1
+        # self.model.set_data(self.Df)
+        # self.model.set_data(self.Df)
+        # self.model._data = self.Df
+        self.model.setDf(self.Df)
+    
+        self.update()
+        print(self.model._data)
+
+    def initModel(self):
+        # init data
+        self.Df = pd.DataFrame(sp.zeros((4,4),dtype='int32'),columns=['left','right','sum','frac'],index=['correct','incorrect','missed','premature'])
+        self.Df['frac'] = self.Df['frac'].astype('float32')
+
+        self.model = PandasModel(self.Df)
+        self.setModel(self.model)
+        # self.model.set_data(self.Df)
+        self.model._data = self.Df
+        # self.model.dataChanged.connect(self.refresh)
+        
+    def initUI(self):
+        for i in range(self.Df.columns.shape[0]):
+            self.setColumnWidth(i, 40)
+        self.update()
+        pass
+
+    def connect(self, OnlineDataAnalyser):
+        # connect signals
+        self.OnlineDataAnalyser = OnlineDataAnalyser
+        OnlineDataAnalyser.trial_data_available.connect(self.on_data)
+    
+    def on_data(self, TrialDf, TrialMetricsDf):
+        side = bhv.get_correct_side(TrialDf).values[0]
+        outcome = bhv.get_outcome(TrialDf).values[0]
+        try:
+            self.Df.loc[outcome, side] += 1
+            self.Df['sum'] = self.Df['left'] + self.Df['right']
+            self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
+        except KeyError:
+            # print(side,outcome)
+            pass
+        # self.model.set_data(self.Df)
+        self.model._data = self.Df
+        self.update()
+
+    # def refresh(self, i, j):
+    #     print('refresh called on ',i,j)
+    #     self.update()
 
 class WaterCounter(QtWidgets.QLabel):
     """ """
