@@ -546,25 +546,10 @@ class OnlineDataAnalyser(QtCore.QObject):
             except:
                 decoded = None
 
-            # update counters
-            if decoded == 'CHOICE_CORRECT_EVENT':
-                self.TrialCounter.increment('correct')
-                self.TrialCounter.increment('total')
-
-            if decoded == 'CHOICE_INCORRECT_EVENT':
-                self.TrialCounter.increment('incorrect')
-                self.TrialCounter.increment('total')
-
-            if decoded == 'CHOICE_MISSED_EVENT':
-                self.TrialCounter.increment('missed')
-                self.TrialCounter.increment('total')
-            
-            if decoded == 'PREMATURE_CHOICE_EVENT':
-                self.TrialCounter.increment('premature')
-                self.TrialCounter.increment('total')
-
             # update water counter if reward was collected
-            if decoded == 'REWARD_COLLECTED_EVENT':
+            # if decoded == 'REWARD_COLLECTED_EVENT':
+            # TODO to be moved to the controller that has to take care of the emitted data
+            if decoded == 'REWARD_LEFT_VALVE_ON' or decoded == 'REWARD_RIGHT_VALVE_ON':
                 current_magnitude = self.parent.VariableController.VariableEditWidget.get_entry('reward_magnitude')['value']
                 self.WaterCounter.increment(current_magnitude)
 
