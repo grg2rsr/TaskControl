@@ -41,6 +41,11 @@
       <Expression xsi:type="scr:ExpressionTransform">
         <scr:Expression>it.getReal(0)</scr:Expression>
       </Expression>
+      <Expression xsi:type="Multiply">
+        <Operand xsi:type="DoubleProperty">
+          <Value>-1</Value>
+        </Operand>
+      </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="dsp:Buffer">
           <dsp:Count>10</dsp:Count>
@@ -56,7 +61,7 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="dsp:Buffer">
           <dsp:Count>1000</dsp:Count>
-          <dsp:Skip xsi:nil="true" />
+          <dsp:Skip>10</dsp:Skip>
         </Combinator>
       </Expression>
       <Expression xsi:type="Combinator">
@@ -70,11 +75,16 @@
       </Expression>
       <Expression xsi:type="Subtract" />
       <Expression xsi:type="scr:ExpressionTransform">
-        <scr:Expression>it &lt; -250</scr:Expression>
+        <scr:Expression>it &lt; -750</scr:Expression>
       </Expression>
       <Expression xsi:type="scr:ExpressionTransform">
         <scr:Expression>it.getReal(1)</scr:Expression>
       </Expression>
+      <Expression xsi:type="Multiply">
+        <Operand xsi:type="DoubleProperty">
+          <Value>1</Value>
+        </Operand>
+      </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="dsp:Buffer">
           <dsp:Count>10</dsp:Count>
@@ -90,7 +100,7 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="dsp:Buffer">
           <dsp:Count>1000</dsp:Count>
-          <dsp:Skip xsi:nil="true" />
+          <dsp:Skip>10</dsp:Skip>
         </Combinator>
       </Expression>
       <Expression xsi:type="Combinator">
@@ -104,7 +114,7 @@
       </Expression>
       <Expression xsi:type="Subtract" />
       <Expression xsi:type="scr:ExpressionTransform">
-        <scr:Expression>it &lt; -250</scr:Expression>
+        <scr:Expression>it &lt; -750</scr:Expression>
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="rx:Zip" />
@@ -163,54 +173,58 @@
           <ard:Pin>28</ard:Pin>
         </Combinator>
       </Expression>
-      <Expression xsi:type="Window">
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="WorkflowInput">
-              <Name>Source1</Name>
-            </Expression>
-            <Expression xsi:type="WorkflowOutput" />
-          </Nodes>
-          <Edges>
-            <Edge From="0" To="1" Label="Source1" />
-          </Edges>
-        </Workflow>
+      <Expression xsi:type="Disable">
+        <Builder xsi:type="Window">
+          <Workflow>
+            <Nodes>
+              <Expression xsi:type="WorkflowInput">
+                <Name>Source1</Name>
+              </Expression>
+              <Expression xsi:type="WorkflowOutput" />
+            </Nodes>
+            <Edges>
+              <Edge From="0" To="1" Label="Source1" />
+            </Edges>
+          </Workflow>
+        </Builder>
       </Expression>
-      <Expression xsi:type="SelectMany">
-        <Name>Running average</Name>
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="WorkflowInput">
-              <Name>Source1</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="dsp:Buffer">
-                <dsp:Count>1000</dsp:Count>
-                <dsp:Skip xsi:nil="true" />
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="dsp:Average" />
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>Val0</Selector>
-            </Expression>
-            <Expression xsi:type="WorkflowOutput" />
-          </Nodes>
-          <Edges>
-            <Edge From="0" To="1" Label="Source1" />
-            <Edge From="1" To="2" Label="Source1" />
-            <Edge From="2" To="3" Label="Source1" />
-            <Edge From="3" To="4" Label="Source1" />
-          </Edges>
-        </Workflow>
+      <Expression xsi:type="Disable">
+        <Builder xsi:type="SelectMany">
+          <Name>Running average</Name>
+          <Workflow>
+            <Nodes>
+              <Expression xsi:type="WorkflowInput">
+                <Name>Source1</Name>
+              </Expression>
+              <Expression xsi:type="Combinator">
+                <Combinator xsi:type="dsp:Buffer">
+                  <dsp:Count>1000</dsp:Count>
+                  <dsp:Skip xsi:nil="true" />
+                </Combinator>
+              </Expression>
+              <Expression xsi:type="Combinator">
+                <Combinator xsi:type="dsp:Average" />
+              </Expression>
+              <Expression xsi:type="MemberSelector">
+                <Selector>Val0</Selector>
+              </Expression>
+              <Expression xsi:type="WorkflowOutput" />
+            </Nodes>
+            <Edges>
+              <Edge From="0" To="1" Label="Source1" />
+              <Edge From="1" To="2" Label="Source1" />
+              <Edge From="2" To="3" Label="Source1" />
+              <Edge From="3" To="4" Label="Source1" />
+            </Edges>
+          </Workflow>
+        </Builder>
       </Expression>
       <Expression xsi:type="MemberSelector">
         <Selector>MessageBytes</Selector>
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="dsp:MatrixWriter">
-          <dsp:Path>C:\Users\User\TaskControl\Animals\123\2021-03-29_18-24-11_learn_to_time\bonsai_harp_log.bin</dsp:Path>
+          <dsp:Path>C:\Users\User\TaskControl\Animals\JJP-01977\2021-04-03_10-36-53_learn_to_time\bonsai_harp_log.bin</dsp:Path>
           <dsp:Suffix>None</dsp:Suffix>
           <dsp:Overwrite>true</dsp:Overwrite>
           <dsp:Layout>ColumnMajor</dsp:Layout>
@@ -235,7 +249,7 @@
         <Combinator xsi:type="rx:Zip" />
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-03-29_18-24-11_learn_to_time\bonsai_LoadCellData.csv</io:FileName>
+        <io:FileName>C:\Users\User\TaskControl\Animals\JJP-01977\2021-04-03_10-36-53_learn_to_time\bonsai_LoadCellData.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
@@ -257,7 +271,7 @@
         </Operand>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-03-29_18-24-11_learn_to_time\bonsai_harp_sync.csv</io:FileName>
+        <io:FileName>C:\Users\User\TaskControl\Animals\JJP-01977\2021-04-03_10-36-53_learn_to_time\bonsai_harp_sync.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
@@ -279,7 +293,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>C:\Users\User\TaskControl\Animals\123\2021-03-29_18-24-11_learn_to_time\bonsai_</Value>
+          <Value>C:\Users\User\TaskControl\Animals\JJP-01977\2021-04-03_10-36-53_learn_to_time\bonsai_</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">
@@ -301,10 +315,10 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="cv:Crop">
           <cv:RegionOfInterest>
-            <cv:X>379</cv:X>
+            <cv:X>397</cv:X>
             <cv:Y>389</cv:Y>
-            <cv:Width>10</cv:Width>
-            <cv:Height>14</cv:Height>
+            <cv:Width>15</cv:Width>
+            <cv:Height>19</cv:Height>
           </cv:RegionOfInterest>
         </Combinator>
       </Expression>
@@ -368,10 +382,10 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="cv:Crop">
           <cv:RegionOfInterest>
-            <cv:X>214</cv:X>
-            <cv:Y>386</cv:Y>
-            <cv:Width>12</cv:Width>
-            <cv:Height>18</cv:Height>
+            <cv:X>229</cv:X>
+            <cv:Y>385</cv:Y>
+            <cv:Width>16</cv:Width>
+            <cv:Height>20</cv:Height>
           </cv:RegionOfInterest>
         </Combinator>
       </Expression>
@@ -392,7 +406,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="cv:VideoWriter">
-          <cv:FileName>C:\Users\User\TaskControl\Animals\123\2021-03-29_18-24-11_learn_to_time\bonsai_video.avi</cv:FileName>
+          <cv:FileName>C:\Users\User\TaskControl\Animals\JJP-01977\2021-04-03_10-36-53_learn_to_time\bonsai_video.avi</cv:FileName>
           <cv:Suffix>None</cv:Suffix>
           <cv:Buffered>true</cv:Buffered>
           <cv:Overwrite>true</cv:Overwrite>
@@ -409,7 +423,7 @@
         <Selector>Metadata.embeddedFrameCounter,Metadata.embeddedTimeStamp,Metadata.embeddedGPIOPinState</Selector>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-03-29_18-24-11_learn_to_time\bonsai_frame_stamps.csv</io:FileName>
+        <io:FileName>C:\Users\User\TaskControl\Animals\JJP-01977\2021-04-03_10-36-53_learn_to_time\bonsai_frame_stamps.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
@@ -430,88 +444,90 @@
     </Nodes>
     <Edges>
       <Edge From="1" To="2" Label="Source1" />
-      <Edge From="1" To="39" Label="Source1" />
       <Edge From="1" To="41" Label="Source1" />
-      <Edge From="1" To="46" Label="Source1" />
+      <Edge From="1" To="43" Label="Source1" />
+      <Edge From="1" To="48" Label="Source1" />
       <Edge From="2" To="3" Label="Source1" />
-      <Edge From="2" To="13" Label="Source1" />
+      <Edge From="2" To="14" Label="Source1" />
       <Edge From="3" To="4" Label="Source1" />
-      <Edge From="3" To="44" Label="Source2" />
-      <Edge From="3" To="7" Label="Source1" />
       <Edge From="4" To="5" Label="Source1" />
+      <Edge From="4" To="46" Label="Source2" />
+      <Edge From="4" To="8" Label="Source1" />
       <Edge From="5" To="6" Label="Source1" />
-      <Edge From="6" To="10" Label="Source1" />
-      <Edge From="7" To="8" Label="Source1" />
+      <Edge From="6" To="7" Label="Source1" />
+      <Edge From="7" To="11" Label="Source1" />
       <Edge From="8" To="9" Label="Source1" />
-      <Edge From="9" To="10" Label="Source2" />
-      <Edge From="10" To="11" Label="Source1" />
+      <Edge From="9" To="10" Label="Source1" />
+      <Edge From="10" To="11" Label="Source2" />
       <Edge From="11" To="12" Label="Source1" />
-      <Edge From="12" To="23" Label="Source1" />
-      <Edge From="13" To="14" Label="Source1" />
-      <Edge From="13" To="44" Label="Source3" />
-      <Edge From="13" To="17" Label="Source1" />
-      <Edge From="13" To="37" Label="Source1" />
+      <Edge From="12" To="13" Label="Source1" />
+      <Edge From="13" To="25" Label="Source1" />
       <Edge From="14" To="15" Label="Source1" />
       <Edge From="15" To="16" Label="Source1" />
-      <Edge From="16" To="20" Label="Source1" />
+      <Edge From="15" To="46" Label="Source3" />
+      <Edge From="15" To="19" Label="Source1" />
+      <Edge From="15" To="39" Label="Source1" />
+      <Edge From="16" To="17" Label="Source1" />
       <Edge From="17" To="18" Label="Source1" />
-      <Edge From="18" To="19" Label="Source1" />
-      <Edge From="19" To="20" Label="Source2" />
+      <Edge From="18" To="22" Label="Source1" />
+      <Edge From="19" To="20" Label="Source1" />
       <Edge From="20" To="21" Label="Source1" />
-      <Edge From="21" To="22" Label="Source1" />
-      <Edge From="22" To="23" Label="Source2" />
+      <Edge From="21" To="22" Label="Source2" />
+      <Edge From="22" To="23" Label="Source1" />
       <Edge From="23" To="24" Label="Source1" />
-      <Edge From="24" To="36" Label="Source2" />
+      <Edge From="24" To="25" Label="Source2" />
       <Edge From="25" To="26" Label="Source1" />
-      <Edge From="26" To="27" Label="Source1" />
-      <Edge From="27" To="40" Label="Source2" />
+      <Edge From="26" To="38" Label="Source2" />
+      <Edge From="27" To="28" Label="Source1" />
       <Edge From="28" To="29" Label="Source1" />
-      <Edge From="29" To="30" Label="Source1" />
-      <Edge From="30" To="45" Label="Source2" />
+      <Edge From="29" To="42" Label="Source2" />
+      <Edge From="30" To="31" Label="Source1" />
       <Edge From="31" To="32" Label="Source1" />
-      <Edge From="32" To="33" Label="Source1" />
-      <Edge From="33" To="49" Label="Source1" />
+      <Edge From="32" To="47" Label="Source2" />
+      <Edge From="33" To="34" Label="Source1" />
       <Edge From="34" To="35" Label="Source1" />
-      <Edge From="35" To="36" Label="Source1" />
+      <Edge From="35" To="51" Label="Source1" />
+      <Edge From="36" To="37" Label="Source1" />
       <Edge From="37" To="38" Label="Source1" />
       <Edge From="39" To="40" Label="Source1" />
       <Edge From="41" To="42" Label="Source1" />
-      <Edge From="42" To="43" Label="Source1" />
       <Edge From="43" To="44" Label="Source1" />
       <Edge From="44" To="45" Label="Source1" />
+      <Edge From="45" To="46" Label="Source1" />
       <Edge From="46" To="47" Label="Source1" />
-      <Edge From="47" To="48" Label="Source1" />
-      <Edge From="48" To="49" Label="Source2" />
-      <Edge From="50" To="51" Label="Source1" />
+      <Edge From="48" To="49" Label="Source1" />
+      <Edge From="49" To="50" Label="Source1" />
+      <Edge From="50" To="51" Label="Source2" />
       <Edge From="52" To="53" Label="Source1" />
-      <Edge From="53" To="54" Label="Source1" />
+      <Edge From="54" To="55" Label="Source1" />
       <Edge From="55" To="56" Label="Source1" />
-      <Edge From="55" To="79" Label="Source1" />
-      <Edge From="56" To="57" Label="Source1" />
-      <Edge From="56" To="78" Label="Source1" />
       <Edge From="57" To="58" Label="Source1" />
-      <Edge From="57" To="73" Label="Source1" />
+      <Edge From="57" To="81" Label="Source1" />
       <Edge From="58" To="59" Label="Source1" />
+      <Edge From="58" To="80" Label="Source1" />
       <Edge From="59" To="60" Label="Source1" />
+      <Edge From="59" To="75" Label="Source1" />
       <Edge From="60" To="61" Label="Source1" />
-      <Edge From="61" To="72" Label="Source1" />
+      <Edge From="61" To="62" Label="Source1" />
       <Edge From="62" To="63" Label="Source1" />
-      <Edge From="63" To="64" Label="Source1" />
-      <Edge From="64" To="78" Label="Source2" />
+      <Edge From="63" To="74" Label="Source1" />
+      <Edge From="64" To="65" Label="Source1" />
       <Edge From="65" To="66" Label="Source1" />
-      <Edge From="66" To="67" Label="Source1" />
-      <Edge From="67" To="80" Label="Source1" />
+      <Edge From="66" To="80" Label="Source2" />
+      <Edge From="67" To="68" Label="Source1" />
       <Edge From="68" To="69" Label="Source1" />
-      <Edge From="69" To="77" Label="Source2" />
+      <Edge From="69" To="82" Label="Source1" />
       <Edge From="70" To="71" Label="Source1" />
-      <Edge From="71" To="72" Label="Source2" />
-      <Edge From="73" To="74" Label="Source1" />
-      <Edge From="74" To="75" Label="Source1" />
+      <Edge From="71" To="79" Label="Source2" />
+      <Edge From="72" To="73" Label="Source1" />
+      <Edge From="73" To="74" Label="Source2" />
       <Edge From="75" To="76" Label="Source1" />
       <Edge From="76" To="77" Label="Source1" />
-      <Edge From="79" To="80" Label="Source2" />
-      <Edge From="81" To="82" Label="Source1" />
-      <Edge From="82" To="83" Label="Source1" />
+      <Edge From="77" To="78" Label="Source1" />
+      <Edge From="78" To="79" Label="Source1" />
+      <Edge From="81" To="82" Label="Source2" />
+      <Edge From="83" To="84" Label="Source1" />
+      <Edge From="84" To="85" Label="Source1" />
     </Edges>
   </Workflow>
 </WorkflowBuilder>

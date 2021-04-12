@@ -37,7 +37,7 @@ int correct_side;
 
 // laterality related 
 int last_correct_side = left;
-int this_correct_side = right;
+// int this_correct_side = right;
 
 // bias related
 // float bias = 0.5; // exposed in interface_variables.h
@@ -405,9 +405,37 @@ within correction loop, any mistake restarts the counter from the beginning
 no resetting: intermediate mistakes allowed, corr loop is exited after 3 correct choices
 */
 
+unsigned long get_short_interval(){
+    return random(600, 1500-gap);
+}
+
+unsigned long get_long_interval(){
+    return random(1500+gap, 2400);
+}
+
+void set_interval(){
+    if (correct_side == right){
+        if (left_short == 0){ // right short
+            this_interval = get_short_interval();
+        }
+        else{
+            this_interval = get_long_interval();
+        }
+    }
+
+    if (correct_side == left){
+        if (left_short == 1){
+            this_interval = get_short_interval();
+        }
+        else {
+            this_interval = get_long_interval();
+        }
+    }
+}
+
 void get_trial_type(){
-    // determine if enter corr loop
     if (correction_loops == 1){
+        // determine if enter corr loop
         if (in_corr_loop == false && (left_error_counter >= corr_loop_entry || right_error_counter >= corr_loop_entry)){
             in_corr_loop = true;
         }
@@ -418,36 +446,23 @@ void get_trial_type(){
         }
     }
     
-    if (in_corr_loop == false){
+    // if not in corr loop, randomly choose new correct side
+    if (in_corr_loop == false){ 
         r = random(0,1000) / 1000.0;
         if (r > 0.5){
-            // 0 = left bias, 1 = right bias
-            this_correct_side = right;
             correct_side = right;
-            if (left_short == 1){
-                this_interval = random(1500+gap, 2400);
-            }
-            else{
-                this_interval = random(600, 1500-gap);
-            }
-
-            // left_cue_brightness = 1.0;
-            // right_cue_brightness = left_cue_brightness - contrast * left_cue_brightness;
         }
         else {
-            this_correct_side = left;
             correct_side = left;
-            if (left_short == 1){
-                this_interval = random(600, 1500-gap);
-            }
-            else{
-                this_interval = random(1500+gap, 2400);
-            }
-
-            // right_cue_brightness = 1.0;
-            // left_cue_brightness = right_cue_brightness - contrast * right_cue_brightness;
         }
     }
+    else{
+        // if in corr loop, this is not updated
+    }
+
+    // now is always called to update even in corr loop
+    set_interval();
+
     log_ulong("this_interval", this_interval);
     log_int("correct_side", correct_side);
     log_int("in_corr_loop", (int) in_corr_loop);
@@ -735,6 +750,9 @@ void setup() {
     // ini speakers
     // tone_controller_left.begin(SPEAKER_LEFT_PIN);
     // tone_controller_right.begin(SPEAKER_RIGHT_PIN);
+
+    pinMode(SPEAKER_LEFT_PIN, OUTPUT);
+    pinMode(SPEAKER_RIGHT_PIN, OUTPUT);
 
     // ini buzzers
     buzz_controller_left.begin(BUZZER_LEFT_PIN);

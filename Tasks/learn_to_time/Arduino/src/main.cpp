@@ -83,12 +83,12 @@ void read_reaches(){
     if (is_reaching_left == false && reach_left == true){
         log_code(REACH_LEFT_ON);
         is_reaching_left = true;
-        t_last_reach = now();
     }
 
     if (is_reaching_left == true && reach_left == false){
         log_code(REACH_LEFT_OFF);
         is_reaching_left = false;
+        t_last_reach = now();
     }
 
     // right 
@@ -96,12 +96,12 @@ void read_reaches(){
     if (is_reaching_right == false && reach_right == true){
         log_code(REACH_RIGHT_ON);
         is_reaching_right = true;
-        t_last_reach = now();
     }
 
     if (is_reaching_right == true && reach_right == false){
         log_code(REACH_RIGHT_OFF);
         is_reaching_right = false;
+        t_last_reach = now();
     }
 
     is_reaching = (is_reaching_left || is_reaching_right);
