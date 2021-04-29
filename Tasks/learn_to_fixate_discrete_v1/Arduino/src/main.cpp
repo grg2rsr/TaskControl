@@ -425,29 +425,35 @@ unsigned long this_interval = 1500;
 
 unsigned long short_intervals[2] = {600, 1000};
 unsigned long long_intervals[2] = {2000, 2400};
-float p_short_intervals[2] = {0.5, 0.5};
-float p_long_intervals[2] = {0.5, 0.5};
+// float p_short_intervals[2] = {0.5, 0.5};
+// float p_long_intervals[2] = {0.5, 0.5};
 int i;
 
 unsigned long get_short_interval(){
-    r = random(0,1000) / 1000.0;
-    if (r < p_short_intervals[0]){
-        return short_intervals[0];
-    }
-    else{
-        return short_intervals[1];
-    }
+    i = random(0,2);
+    return short_intervals[i];
 }
+//     r = random(0,1000) / 1000.0;
+//     if (r < p_short_intervals[0]){
+//         return short_intervals[0];
+//     }
+//     else{
+//         return short_intervals[1];
+//     }
+// }
 
 unsigned long get_long_interval(){
-    r = random(0,1000) / 1000.0;
-    if (r < p_long_intervals[0]){
-        return long_intervals[0];
-    }
-    else{
-        return long_intervals[1];
-    }
+    i = random(0,2);
+    return long_intervals[i];
 }
+//     r = random(0,1000) / 1000.0;
+//     if (r < p_long_intervals[0]){
+//         return long_intervals[0];
+//     }
+//     else{
+//         return long_intervals[1];
+//     }
+// }
 
 // unsigned long get_short_interval(){
 //     r = random(0,1000) / 1000.0;
@@ -507,7 +513,7 @@ void get_trial_type(){
     if (in_corr_loop == false){ 
         // update correct side
         r = random(0,1000) / 1000.0;
-        if (r > bias){ // 1 = right
+        if (r < bias){ // 1 = right - long
             correct_side = right;
         }
         else {
