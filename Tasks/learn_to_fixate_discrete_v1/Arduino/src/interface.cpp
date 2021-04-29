@@ -190,6 +190,10 @@ void processSerialData() {
             log_float("p_timing_trial", p_timing_trial);
         }
 
+        if (strcmp(varname,"bias")==0){
+            log_float("bias", bias);
+        }
+
         if (strcmp(varname,"gap")==0){
             log_ulong("gap", gap);
         }
@@ -314,6 +318,10 @@ void processSerialData() {
 
         if (strcmp(varname,"p_timing_trial")==0){
             p_timing_trial = atof(varvalue);
+        }
+
+        if (strcmp(varname,"bias")==0){
+            bias = atof(varvalue);
         }
 
         if (strcmp(varname,"gap")==0){
