@@ -10,7 +10,6 @@ import behavior_analysis_utils as bhv
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
 
-
 """
  
  ########     ###    ########   ######  ######## ########  
@@ -89,26 +88,6 @@ def parse_lines(lines, code_map=None, parse_var=False):
 
     return LogDf
 
-# def parse_lines_old(lines, code_map=None):
-#     """ parses a list of lines from arduino into a pd.DataFrame
-#     the old (more performant) function
-#     """
-#     valid_lines = [line.strip() for line in lines if '\t' in line]
-#     LogDf = pd.DataFrame([line.split('\t') for line in valid_lines], columns=['code', 't'])
-#     LogDf['t'] = LogDf['t'].astype('float')
-#     LogDf.reset_index(drop=True)
-
-#     # decode
-#     if code_map is not None:
-#         LogDf['name'] = [code_map[code] for code in LogDf['code']]
-
-#     # test for time wraparound
-#     if np.any(np.diff(LogDf['t']) < 0):
-#         reversal_ind = np.where(np.diff(LogDf['t']) < 0)[0][0]
-#         LogDf['t'].iloc[reversal_ind+1:] += LogDf['t'].iloc[reversal_ind]
-
-#     return LogDf
-
 """
  
  ######## ##     ## ######## ##    ## ########  ######  
@@ -141,6 +120,7 @@ def get_events(LogDf, event_names):
 def filter_bad_licks(LogDf, min_time=50, max_time=200, remove=False):
     """ 
     Process recorded LICK_ON and LICK_OFF into realistic licks and add them as an event to the LogDf
+    TODO generalize to filter event based on duration
     """
     LickSpan = get_spans_from_names(LogDf, 'LICK_ON', 'LICK_OFF')
 
@@ -289,42 +269,6 @@ def parse_sessions(SessionDfs, Metrics):
 
     return PerformanceDf
     
-def create_LogDf_LCDf_csv(fd_path, task_name):
-    """ 
-    Creates both LogDf and LCDf .csv files for each session and syncs arduino to harp timestamps
-    """
-
-    # obtaining the paths to each sessions folder
-    SessionsDf = utils.get_sessions(fd_path)
-    paths = []
-
-    for iter_path in SessionsDf.groupby('task').get_group(task_name)['path']:
-        if not os.path.isfile(iter_path + "\loadcell_data.csv") or not os.path.isfile( iter_path + "\LogDf.csv"):
-            paths.append(Path(iter_path))
-
-    for path in paths:
-        # infer data paths
-        log_path = path / "arduino_log.txt"
-        harp_csv_path = path.joinpath("bonsai_harp_log.csv")
-
-        # get arduino and LC timestamps
-        t_arduino = bhv.get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT", save=True)['t'].values
-        _ , t_harp = bhv.parse_harp_csv(harp_csv_path, save=True)
-        t_harp = t_harp['t'].values
-
-        # Check synching clock lenghts
-        if len(t_harp) == 0:
-            print("t_harp is empty")
-            continue
-        elif len(t_arduino) == 0:
-            print("t_arduino is empty")
-            continue
-        elif t_harp.shape[0] != t_arduino.shape[0]:
-            print("Unequal number of timestamps in: " + str(path))
-            t_arduino, t_harp = cut_timestamps(t_arduino, t_harp)
-
-        # sync datasets and store LogDf.csv
-        _,_ = bhv.sync_clocks(t_harp, t_arduino, log_path = log_path)
         
 
 """
@@ -358,290 +302,8 @@ def event_slice(Df, event_a, event_b, col='name', reset_index=True):
     ix_stop = Df[Df['name'] == event_b].index[0]
     return Df.loc[ix_start:ix_stop]
     
-
-"""
- 
- ##     ## ######## ######## ########  ####  ######   ######  
- ###   ### ##          ##    ##     ##  ##  ##    ## ##    ## 
- #### #### ##          ##    ##     ##  ##  ##       ##       
- ## ### ## ######      ##    ########   ##  ##        ######  
- ##     ## ##          ##    ##   ##    ##  ##             ## 
- ##     ## ##          ##    ##    ##   ##  ##    ## ##    ## 
- ##     ## ########    ##    ##     ## ####  ######   ######  
- 
-"""
-
-### Trial level metrics
-def has_choice(TrialDf):
-    var_name = 'has_choice'
-
-    if "CHOICE_EVENT" in TrialDf['name'].values:
-        var = True
-    else:
-        var = False    
- 
-    return pd.Series(var, name=var_name)
-
-def is_successful(TrialDf):
-    var_name = 'successful'
-
-    if "TRIAL_SUCCESSFUL_EVENT" in TrialDf['name'].values:
-        var = True
-    else:
-        var = False
- 
-    return pd.Series(var, name=var_name)
-
-def reward_collected(TrialDf):
-    var_name = 'rew_collected'
-
-    if is_successful(TrialDf).values[0]:
-        if "REWARD_COLLECTED_EVENT" in TrialDf['name'].values:
-            var = True
-        else:
-            var = False
-    else:
-        var = np.NaN
-
-    return pd.Series(var, name=var_name)
-
-def reward_omitted(TrialDf):
-    var_name = 'rew_omitted'
-
-    if is_successful(TrialDf).values[0]:
-        if "REWARD_OMITTED_EVENT" in TrialDf['name'].values:
-            var = True
-        else:
-            var = False
-    else:
-        var = np.NaN
-
-    return pd.Series(var, name=var_name)
-
-def reward_collection_RT(TrialDf):
-    var_name = 'rew_collected_rt'
-
-    if is_successful(TrialDf).values[0] == True and reward_collected(TrialDf).values[0] == True:
-        t_rew_col = TrialDf.groupby('name').get_group("REWARD_COLLECTED_EVENT").iloc[-1]['t']
-        t_rew_avail = TrialDf.groupby('name').get_group("REWARD_AVAILABLE_EVENT").iloc[-1]['t']
-        var = t_rew_col - t_rew_avail
-    else:
-        var = np.NaN
- 
-    return pd.Series(var, name=var_name)
-
-def choice_RT(TrialDf):
-    var_name = 'choice_rt'
-
-    if has_choice(TrialDf).values[0] == True:
-        try:
-            t_go_cue = TrialDf.groupby('name').get_group("GO_CUE_EVENT").iloc[-1]['t'] # this may break for final learn to time
-            t_choice = TrialDf.groupby('name').get_group("CHOICE_EVENT").iloc[-1]['t']
-            var = t_choice - t_go_cue
-        except KeyError:
-            # TODO debug when this is thrown
-            var = np.NaN
-    else:
-        var = np.NaN
- 
-    return pd.Series(var, name=var_name)
-
-def get_choice(TrialDf): # Diagonals are consider as X-axis choices, not Y-axis
-    var_name = "choice"
-
-    if has_choice(TrialDf).values[0] == True:
-        if (bhv.get_choice_zone(TrialDf).values[0] == (1,4,7)).any(): # if any is True
-            var = "left"
-        elif (bhv.get_choice_zone(TrialDf).values[0] == (3,6,9)).any():
-            var = "right"
-        elif get_choice_zone(TrialDf).values[0] == 8:
-            var = "up"
-        elif get_choice_zone(TrialDf).values[0] == 2:
-            var = "down"
-    else:
-        var = np.NaN
-
-    return pd.Series(var, name=var_name)
-
-def get_choice_zone(TrialDf):
-    var_name = "choice_zone"
-
-    if "CHOICE_EVENT" in TrialDf.name.values or "PREMATURE_CHOICE_EVENT" in TrialDf.name.values:
-        try:
-            current_zone_times = TrialDf[TrialDf['var'] == 'current_zone']['t'].values
-
-            if "CHOICE_EVENT" in TrialDf.name.values:
-                choice_time = TrialDf[TrialDf['name'] == 'CHOICE_EVENT']['t'].values
-            if "PREMATURE_CHOICE_EVENT" in TrialDf.name.values:
-                choice_time = TrialDf[TrialDf['name'] == 'PREMATURE_CHOICE_EVENT']['t'].values    
-
-            # Get zone cahnge nearest to choice event (no need if there is only 1 current_zone)
-            if len(current_zone_times)==1:
-                var = TrialDf[TrialDf['var'] == 'current_zone']['value'].values
-            else:
-                choice_zone_idx = (np.abs(current_zone_times - choice_time)).argmin() # get idx of closest
-                var = int(TrialDf[TrialDf['var'] == 'current_zone']['value'].values[choice_zone_idx])
-        except:
-            var = np.NaN
-
-    return pd.Series(var, name=var_name)
-
-def get_correct_zone(TrialDf):
-    var_name = "correct_zone"
-    try:
-        Df = TrialDf.groupby('var').get_group(var_name)
-        var = Df.iloc[0]['value']
-    except KeyError:
-        var = np.NaN
-
-    return pd.Series(var, name=var_name)
-
-def get_interval(TrialDf):
-    var_name = "this_interval"
-    try:
-        Df = TrialDf.groupby('var').get_group(var_name)
-        var = Df.iloc[0]['value']
-    except KeyError:
-        var = np.NaN
-
-    return pd.Series(var, name=var_name)
-
-def get_in_corr_loop(TrialDf):
-    var_name = "in_corr_loop"
-    try:
-        Df = TrialDf.groupby('var').get_group(var_name)
-        var = Df.iloc[0]['value'].astype('bool')
-    except KeyError:
-        var = np.NaN
-
-    return pd.Series(var, name=var_name)
-
-def get_instructed(TrialDf):
-    var_name = "instructed_trial"
-    try:
-        Df = TrialDf.groupby('var').get_group(var_name)
-        var = Df.iloc[0]['value'].astype('bool')
-    except KeyError:
-        var = np.NaN
-
-    return pd.Series(var, name=var_name)
-
-def get_x_thresh(TrialDf):
-    var_name = "X_thresh"
-    try:
-        Df = TrialDf.groupby('var').get_group(var_name)
-        var = Df.iloc[0]['value']
-    except KeyError:
-        var = np.NaN
-
-    return pd.Series(var, name=var_name)
-
-def get_bias(TrialDf):
-    var_name = "bias"
-    try:
-        Df = TrialDf.groupby('var').get_group(var_name)
-        var = Df.iloc[0]['value']
-    except KeyError:
-        var = np.NaN
-
-    return pd.Series(var, name=var_name)
-
-def get_start(TrialDf):
-    return pd.Series(TrialDf.iloc[0]['t'], name='t_on')
-
-def get_stop(TrialDf):
-    return pd.Series(TrialDf.iloc[-1]['t'], name='t_off')
-
-def get_outcome(TrialDf):
-    var_name = "outcome"
-
-    if "CHOICE_MISSED_EVENT" in TrialDf['name'].values:
-        var = "missed"
-    elif "CHOICE_INCORRECT_EVENT" in TrialDf['name'].values:
-        var = "incorrect"
-    elif "CHOICE_CORRECT_EVENT" in TrialDf['name'].values:
-        var = "correct"
-    elif "PREMATURE_CHOICE_EVENT" in TrialDf['name'].values:
-        var = "premature"
-    else:
-        var = np.NaN
-
-    return pd.Series(var, name = var_name)
-
-## Session level metrics
-
-def trial_engagement(SessionDf):
-    
-    missedDf = (SessionDf['outcome'] == 'missed').rolling(20).mean()
-    ys_diff = np.array(missedDf.diff(periods=10)) # derivative
-    ys = np.array(missedDf)
-
-    engaged = 0
-    # If there is less than 30% missed trials and not increasing or reverse
-    for (y_diff,y) in zip(ys_diff,ys):
-        if (y<0.40 and y_diff < 0.25) or (y>0.40 and y_diff < -0.25):
-            engaged = engaged + 1 
-    
-    engagement_ratio = engaged/len(SessionDf)
-
-    return round(engagement_ratio*100)
-
-def water_consumed(log_path):
-    """
-        Returns the total amount of rewards consumed even if reward magnitude changes across session 
-    """
-
-    # THIS FUNCTION IS CURRENTLY BROKEN #
-
-    reward_mag, water_consumed = 0 , 0
-    ts , updated_mags = [], []
-
-    LogDf = pd.read_csv(log_path.parent / "LogDf.csv")
-    with open(log_path, 'r') as fH:
-        lines = fH.readlines()
-    
-    # Seach all lines
-    for line in lines:
-
-        # to find when reward mag. is updated 
-        if line.startswith('<Arduino') and 'reward_magnitude' in line:
-            new_reward_mag = line[-4:-2]
-
-            # and if reward mag. differs from previous one
-            if new_reward_mag != reward_mag:
-                updated_mags.append(float(new_reward_mag)) # save it and
-
-                # go backwards in lines to search for timepoint of change
-                for j in range(0,-100,-1): # -30 is arbitrary, just making sure it searches back enough
-                    if lines[j].startswith('<VAR'):
-                        ts.append(float(lines[j].split(' ')[-1][:-3]))
-                        
-                        break
-                reward_mag = new_reward_mag
-
-    # In case the whole session uses the default reward mag. settings
-    if ts == []:
-        task_name = 'str'
-        default_rew_mag = 10
-        water_consumed = len(LogDf[LogDf['name'] == 'REWARD_COLLECTED_EVENT'])*default_rew_mag
-
-    # In case it only changes once
-    elif len(ts) == 1:
-        water_consumed = len(LogDf[LogDf['name'] == 'REWARD_COLLECTED_EVENT'])*updated_mags[-1]
-
-    # obtain number of rewards collected between timepoints and multiply by the corresponding reward magnitude
-    else:
-        for i,t in enumerate(ts):
-            print(t)
-            if i < len(ts):
-                print('what')
-                Df = bhv.time_slice(LogDf, ts, float(ts[i]))
-            else: # for the last timepoint
-                Df = bhv.time_slice(LogDf, t, LogDf['t'].iloc[-1])
-                aux = len(Df[Df['name'] == 'REWARD_COLLECTED_EVENT'])*updated_mags[i]
-                water_consumed += aux
-
-    return water_consumed 
+def groupby_dict(Df, Dict):
+    return Df.groupby(list(Dict.keys())).get_group(tuple(Dict.values()))
 
 """
 
@@ -678,6 +340,8 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     """ gets the loadcell data and the sync times from a harp csv log
     trig_len is time in ms of sync trig high, tol is deviation in ms
     check harp sampling time, seems to be 10 khz? """
+
+    # TODO check remove - deprecated?
 
     with open(harp_csv_path, 'r') as fH:
         lines = fH.readlines()
@@ -798,9 +462,13 @@ def log_reg(x, y, x_fit=None):
         x_fit = np.linspace(x.min(), x.max(), 100)
 
     cLR = LogisticRegression()
-    cLR.fit(x[:, np.newaxis], y)
+    try:
+        cLR.fit(x[:, np.newaxis], y)
+        y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
+    except ValueError:
+        y_fit = sp.zeros(x_fit.shape)
+        y_fit[:] = sp.nan
 
-    y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
     return y_fit
 
 def tolerant_mean(arrs):
@@ -808,180 +476,14 @@ def tolerant_mean(arrs):
 
     max_length = np.max([arr.shape[0] for arr in arrs]) # get largest array
 
+    # suggestion
+    # A = np.zeros((len(arrs),max_length))
+    # A[:] = np.NaN
+    # for i, arr in enumerate(arrs):
+    #     A[:arr.shape[0],i] = arr
+    # return np.nanmean(A,axis=0)
+
     arrs=[np.pad(arr, (0, max_length-arr.shape[0]), mode='constant', constant_values=np.nan) for arr in arrs] # pad every array until max_length to obtain square matrix
 
     return np.nanmean(arrs, axis = 0)
 
-
-"""
-########  ##        #######  ########    ##     ## ######## ##       ########  ######## ########   ######
-##     ## ##       ##     ##    ##       ##     ## ##       ##       ##     ## ##       ##     ## ##    ##
-##     ## ##       ##     ##    ##       ##     ## ##       ##       ##     ## ##       ##     ## ##
-########  ##       ##     ##    ##       ######### ######   ##       ########  ######   ########   ######
-##        ##       ##     ##    ##       ##     ## ##       ##       ##        ##       ##   ##         ##
-##        ##       ##     ##    ##       ##     ## ##       ##       ##        ##       ##    ##  ##    ##
-##        ########  #######     ##       ##     ## ######## ######## ##        ######## ##     ##  ######
-"""
-
-def get_events_window_aligned_on_event(LogDf, event_name, pre, post):
-
-    ts = bhv.get_events_from_name(LogDf, event_name)['t'].values
-    event_ts = []
-    for t in ts:
-        Df = bhv.time_slice(LogDf, t-pre, t+post)
-        event_t = np.array(Df.groupby('name').get_group(event_name)['t'])
-
-        event_ts.append(event_t)
-    return event_ts
-
-def get_events_window_between_events(TrialDfs, event_name, first_event, second_event):
-    " Returns list of np.arrays with event_name for all trials in a window between any two sequential(!) events"
-
-    licks = []
-    for TrialDf in TrialDfs:
-
-        t1 = float(TrialDf[TrialDf.name == first_event]['t'])
-        if second_event == 'last':
-            t2 = float(TrialDf['t'].iloc[-1])
-        else:
-            t2 = float(TrialDf[TrialDf.name == second_event]['t'])
-
-        trial = bhv.time_slice(TrialDf, t1, t2)
-        raw_lick_times = np.array(trial.groupby('name').get_group(event_name)['t'])
-        lick = raw_lick_times-t1
-
-        licks.append(lick)
-
-    return licks
-
-def triaL_to_choice_matrix(trial, choice_matrix):
-    " Counts the number of decisions made for up/down/left/right "
-
-    # top row
-    if trial.choice == "up": 
-        choice_matrix[0, 1] +=1
-
-    # middle row
-    if trial.choice == "left": 
-        choice_matrix[1, 0] +=1
-    if trial.choice == "right": 
-        choice_matrix[1, 2] +=1
-
-    # bottom row
-    if trial.choice == "down": 
-        choice_matrix[2, 1] +=1
-        
-    return choice_matrix  
-
-def truncate_pad_vector(arrs, pad_with = None, max_len = None):
-    " Truncate and pad an array with rows of different dimensions to max_len (defined either by user or input arrs)"
-    
-    # In case length is not defined by user
-    if max_len == None:
-        list_len = [len(arr) for arr in arrs]
-        max_len = max(list_len)
-
-    if pad_with == None:
-        pad_with = np.NaN
-    
-    trunc_pad_arr = np.empty((len(arrs), max_len)) 
-
-    for i, arr in enumerate(arrs):
-        if len(arr) < max_len:
-            trunc_pad_arr[i,:] = np.pad(arr, (0, max_len-arr.shape[0]), mode='constant',constant_values=(pad_with,))
-        elif len(arr) > max_len:
-            trunc_pad_arr[i,:] = np.array(arr[:max_len])
-
-    return trunc_pad_arr
-
-def get_FxFy_window_aligned_on_event(LoadCellDf, TrialDfs, align_event, pre, post):
-    """
-        Returns Fx/Fy/Fmag NUMPY ND.ARRAY for all trials aligned to an event in a window defined by [align-pre, align+post]"
-        Don't forget: we are using nd.arrays so, implicitly, we use advanced slicing which means [row, col] instead of [row][col]
-    """
-    Fx, Fy, Fmag = [],[],[]
-    for TrialDf in TrialDfs:
-        t_align = TrialDf.loc[TrialDf['name'] == align_event, 't'].values[0]
-        LCDf = bhv.time_slice(LoadCellDf, t_align-pre, t_align+post)
-
-        Fx.append(LCDf['x'].values)
-        Fy.append(LCDf['y'].values)
-        Fmag.append(np.sqrt(LCDf['x']**2 + LCDf['y']**2))
-
-    Fx = np.array(Fx).T
-    Fy = np.array(Fy).T
-    Fmag = np.array(Fmag).T
-
-    return Fx,Fy,Fmag
-
-def get_FxFy_window_between_events(LoadCellDf, TrialDfs, first_event, second_event, pad_with = None):
-    """
-        Returns Fx/Fy/Fmag NUMPY ND.ARRAY with dimensions (trials, max_array_len) for all trials in a window between any two sequential(!) events
-        Don't forget: we are using nd.arrays so, implicitly, we use advanced slicing which means [row, col] instead of [row][col]
-    """
-
-    Fx, Fy, Fmag = [],[],[] 
-    for i, TrialDf in enumerate(TrialDfs):
-        if not TrialDf.empty:
-            if first_event == 'first': # From start of trial
-                time_1st = float(TrialDf['t'].iloc[0])
-            else:
-                time_1st = float(TrialDf[TrialDf.name == first_event]['t'])
-
-            if second_event == 'last': # Until end of trial
-                time_2nd = float(TrialDf['t'].iloc[-1])
-            else:
-                time_2nd = float(TrialDf[TrialDf.name == second_event]['t'])
-
-            LCDf = bhv.time_slice(LoadCellDf, time_1st, time_2nd)
-            Fx.append(LCDf['x'].values)
-            Fy.append(LCDf['y'].values)
-            Fmag.append(np.sqrt(LCDf['x']**2 + LCDf['y']**2))
-
-    # Make sure we have numpy arrays with same length, pad with given input pad_with
-    Fx = bhv.truncate_pad_vector(Fx,pad_with)
-    Fy = bhv.truncate_pad_vector(Fy,pad_with)
-    Fmag = bhv.truncate_pad_vector(Fmag,pad_with)
-
-    return Fx,Fy,Fmag
-
-def filter_trials_by(SessionDf,TrialDfs, filter_pairs):
-    """
-        This function filters input TrialDfs given filter_pair tuple (or list of tuples)
-        Example: given filter_pairs [(outcome,correct) , (choice,left)] it will only output trials which are correct to left side 
-    """
-
-    if type(filter_pairs) is list: # in case its more than one pair
-        groupby_keys = [filter_pair[0] for filter_pair in filter_pairs]
-        getgroup_keys = tuple([filter_pair[1] for filter_pair in filter_pairs])
-    else:
-        groupby_keys = filter_pairs[0]
-        getgroup_keys = filter_pairs[1]
-
-    try:
-        SDf = SessionDf.groupby(groupby_keys).get_group(getgroup_keys)
-    except:
-        print('The are no trials with given input filter_pair combination')
-        raise KeyError
-
-    TrialDfs_filt = np.array(TrialDfs)[SDf.index.values.astype(int)]
-
-    return TrialDfs_filt
-
-def line_gradients(data, axes = None):
-
-    # Time-varying color code 
-    cm = plt.cm.get_cmap('Greys')
-    z = np.linspace(0, 1, num = len(data))
-
-    # Line gradients 
-    points = np.array(data).T.reshape(-1, 1, 2)
-    segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-    lc = LineCollection(segments, cmap=plt.get_cmap('Greys'), norm=plt.Normalize(0, 1))
-    lc.set_array(z)
-    lc.set_linewidth(0.5)
-    lc.set_alpha(0.5)
-    axes.add_collection(lc)
-
-    return axes
