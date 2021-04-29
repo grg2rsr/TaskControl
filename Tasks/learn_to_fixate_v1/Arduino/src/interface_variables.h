@@ -27,9 +27,9 @@ int correction_loops = 1;
 int corr_loop_entry = 3;
 int corr_loop_exit = 2;
 unsigned long reach_block_dur = 1000;
-unsigned long min_grasp_dur = 100;
+unsigned long min_grasp_dur = 20;
 int trial_autostart = 0;
-float p_timing_trial = 0.05;
+float p_timing_trial = 0.1;
 
 // float bias = 0.5;
 // float contrast = 1.0;

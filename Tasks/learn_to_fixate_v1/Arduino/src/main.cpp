@@ -201,23 +201,35 @@ void trial_entry_cue(){
 
 void reward_left_cue(){
     // tone_controller_left.play(go_cue_freq, tone_dur);
-    if (lateral_cues == 1 || timing_trial == true){
+    if (lateral_cues == 1){
         buzz_controller_left.play(buzz_center_freq, buzz_dur);
     }
     else{
-        buzz_controller_left.play(buzz_center_freq-buzz_freq_sep, buzz_dur);
-        buzz_controller_right.play(buzz_center_freq-buzz_freq_sep, buzz_dur);
+        if (timing_trial == false){
+            buzz_controller_left.play(buzz_center_freq-buzz_freq_sep, buzz_dur);
+            buzz_controller_right.play(buzz_center_freq-buzz_freq_sep, buzz_dur);
+        }
+        else{
+            buzz_controller_left.play(buzz_center_freq, buzz_dur);
+            buzz_controller_right.play(buzz_center_freq, buzz_dur);
+        }
     }
 }
 
 void reward_right_cue(){
     // tone_controller_right.play(go_cue_freq, tone_dur);
-    if (lateral_cues == 1 || timing_trial == true){
+    if (lateral_cues == 1){
         buzz_controller_right.play(buzz_center_freq, buzz_dur);
     }
     else{
-        buzz_controller_left.play(buzz_center_freq+buzz_freq_sep, buzz_dur);
-        buzz_controller_right.play(buzz_center_freq+buzz_freq_sep, buzz_dur);
+        if (timing_trial == false){
+            buzz_controller_left.play(buzz_center_freq+buzz_freq_sep, buzz_dur);
+            buzz_controller_right.play(buzz_center_freq+buzz_freq_sep, buzz_dur);
+        }
+        else{
+            buzz_controller_left.play(buzz_center_freq, buzz_dur);
+            buzz_controller_right.play(buzz_center_freq, buzz_dur);            
+        }
     }
 }
 
@@ -444,6 +456,7 @@ void get_trial_type(){
         // determine if enter corr loop
         if (in_corr_loop == false && (left_error_counter >= corr_loop_entry || right_error_counter >= corr_loop_entry)){
             in_corr_loop = true;
+            timing_trial = false;
         }
         
         // determine if exit corr loop
@@ -464,7 +477,7 @@ void get_trial_type(){
         }
         // update timing trial
         r = random(0,1000) / 1000.0;
-        if (r > p_timing_trial){
+        if (r < p_timing_trial){
             timing_trial = true;
         }
         else {
@@ -481,6 +494,7 @@ void get_trial_type(){
     log_ulong("this_interval", this_interval);
     log_int("correct_side", correct_side);
     log_int("in_corr_loop", (int) in_corr_loop);
+    log_int("timing_trial", (int) timing_trial);
 }
               
 
@@ -564,6 +578,7 @@ void finite_state_machine() {
 
                 // sync at trial entry
                 switch_sync_pin = true;
+                sync_pin_controller(); // and call sync controller for enhanced temp prec.
 
                 // bias related
                 // update_bias();
@@ -601,6 +616,7 @@ void finite_state_machine() {
             if (last_state == current_state){
                 if (is_reaching == true){
                     // premature choice
+                    log_code(CHOICE_EVENT);
                     log_code(PREMATURE_CHOICE_EVENT);
                     log_code(TRIAL_UNSUCCESSFUL_EVENT);
                     incorrect_choice_cue();
@@ -608,7 +624,6 @@ void finite_state_machine() {
                     current_state = TIMEOUT_STATE;
                     break;
                 }
-
             }
 
             if (now() - t_state_entry > this_interval){
