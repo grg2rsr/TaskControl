@@ -512,24 +512,26 @@ class TrialCounter3(QtWidgets.QTableView):
         self.initModel()
         self.initUI()
 
-        self.Df.loc['correct','left'] += 1
+        # self.Df.loc['correct','left'] += 1
         # self.model.set_data(self.Df)
         # self.model.set_data(self.Df)
         # self.model._data = self.Df
         self.model.setDf(self.Df)
     
         self.update()
-        print(self.model._data)
+        # print(self.model._data)
 
     def initModel(self):
         # init data
-        self.Df = pd.DataFrame(sp.zeros((4,4),dtype='int32'),columns=['left','right','sum','frac'],index=['correct','incorrect','missed','premature'])
+        self.Df = pd.DataFrame(sp.zeros((4,5),dtype='int32'),columns=['label','left','right','sum','frac'],index=['correct','incorrect','missed','premature'])
         self.Df['frac'] = self.Df['frac'].astype('float32')
+        self.Df['label'] = self.Df.index
 
         self.model = PandasModel(self.Df)
         self.setModel(self.model)
+        self.model.setDf(self.Df)
         # self.model.set_data(self.Df)
-        self.model._data = self.Df
+        # self.model._data = self.Df
         # self.model.dataChanged.connect(self.refresh)
         
     def initUI(self):
@@ -551,10 +553,10 @@ class TrialCounter3(QtWidgets.QTableView):
             self.Df['sum'] = self.Df['left'] + self.Df['right']
             self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
         except KeyError:
-            # print(side,outcome)
             pass
         # self.model.set_data(self.Df)
-        self.model._data = self.Df
+        # self.model._data = self.Df
+        self.model.setDf(self.Df)
         self.update()
 
     # def refresh(self, i, j):
