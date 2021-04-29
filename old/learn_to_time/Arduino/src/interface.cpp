@@ -2,24 +2,31 @@
 // http://forum.arduino.cc/index.php?topic=396450.0
 
 #include <Arduino.h>
-#include <string.h>
-
 #include "interface_variables.h"
 
-// this line limits total command length to 200 chars - adjust if necessary (very long var names)
-const byte numChars = 200;
+// this line limits total command length to 128 chars - adjust if necessary (very long var names)
+const byte numChars = 128;
 char receivedChars[numChars];
+char buf[numChars];
+
 boolean newData = false;
 bool verbose = true;
 bool run = false;
-bool deliver_reward = false;
-bool present_reward_cue = false;
+bool deliver_reward_left = false;
+bool deliver_reward_right = false;
+bool present_reward_left_cue = false;
+bool present_reward_right_cue = false;
 bool punish = false;
 
 int current_state = 0; // WATCH OUT this is ini state
 
-// HARDCODED trial type probabilites
-float p_interval[6] = {1,0.5,0,0,0.5,1}; // FIXME HARDCODE
+// fwd declare functions for logging
+unsigned long now();
+void log_bool(const char name[], bool value);
+void log_int(const char name[], int value);
+// void log_long(const char name[], long value);
+void log_ulong(const char name[], unsigned long value);
+void log_float(const char name[], float value);
 
 void getSerialData() {
     // check if command data is available and if yes read it
@@ -63,9 +70,8 @@ void processSerialData() {
     if (newData == true) {
         // echo back command if verbose
         if (verbose==true) {
-            Serial.print("<Arduino received: ");
-            Serial.print(receivedChars);
-            Serial.println(">");
+            snprintf(buf, sizeof(buf), "<Arduino received: %s>", receivedChars);
+            Serial.println(buf);
         }
 
         // get total length of message
@@ -86,78 +92,108 @@ void processSerialData() {
             char varname[len-4+1];
             strlcpy(varname, receivedChars+4, len-4+1);
 
-            // INSERT_GETTERS
+        // INSERT_GETTERS
 
-            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(incorrect_choice_cue_freq)+String(">"));
-            }
-    
-            if (strcmp(varname,"correct_choice_cue_freq")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(correct_choice_cue_freq)+String(">"));
-            }
-    
-            if (strcmp(varname,"choice_dur")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(choice_dur)+String(">"));
-            }
-    
-            if (strcmp(varname,"ITI_dur_min")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(ITI_dur_min)+String(">"));
-            }
-    
-            if (strcmp(varname,"ITI_dur_max")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(ITI_dur_max)+String(">"));
-            }
-    
-            if (strcmp(varname,"min_fix_dur")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(min_fix_dur)+String(">"));
-            }
-    
-            if (strcmp(varname,"reward_magnitude")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_magnitude)+String(">"));
-            }
-    
-            if (strcmp(varname,"valve_ul_ms")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(valve_ul_ms)+String(">"));
-            }
-    
-            if (strcmp(varname,"reward_available_dur")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(reward_available_dur)+String(">"));
-            }
-    
-            if (strcmp(varname,"interval_boundary")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(interval_boundary)+String(">"));
-            }
-    
-            if (strcmp(varname,"interval_gap")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(interval_gap)+String(">"));
-            }
-    
-            if (strcmp(varname,"difficulty")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(difficulty)+String(">"));
-            }
-    
-            if (strcmp(varname,"difficulty_incr")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(difficulty_incr)+String(">"));
-            }
-    
-            if (strcmp(varname,"difficulty_decr")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(difficulty_decr)+String(">"));
-            }
-    
-            if (strcmp(varname,"X_thresh")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(X_thresh)+String(">"));
-            }
-    
-            if (strcmp(varname,"Y_thresh")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(Y_thresh)+String(">"));
-            }
-    
-            if (strcmp(varname,"bias")==0){
-                Serial.println(String("<VAR ")+String(varname)+String("=")+String(bias)+String(">"));
-            }
-                if (strcmp(varname,"current_state")==0){
-                Serial.println(String("<")+String(varname)+String("=")+String(current_state)+String(">"));
-            }
+        if (strcmp(varname,"go_cue_freq")==0){
+            log_int("go_cue_freq", go_cue_freq);
+        }
+
+        if (strcmp(varname,"tone_dur")==0){
+            log_ulong("tone_dur", tone_dur);
+        }
+
+        if (strcmp(varname,"buzz_dur")==0){
+            log_ulong("buzz_dur", buzz_dur);
+        }
+
+        if (strcmp(varname,"trial_entry_buzz_dur")==0){
+            log_ulong("trial_entry_buzz_dur", trial_entry_buzz_dur);
+        }
+
+        if (strcmp(varname,"buzz_left")==0){
+            log_ulong("buzz_left", buzz_left);
+        }
+
+        if (strcmp(varname,"buzz_right")==0){
+            log_ulong("buzz_right", buzz_right);
+        }
+
+        if (strcmp(varname,"buzz_lat")==0){
+            log_ulong("buzz_lat", buzz_lat);
+        }
+
+        if (strcmp(varname,"led_hsv")==0){
+            log_int("led_hsv", led_hsv);
+        }
+
+        if (strcmp(varname,"led_brightness")==0){
+            log_int("led_brightness", led_brightness);
+        }
+
+        if (strcmp(varname,"ITI_dur_min")==0){
+            log_ulong("ITI_dur_min", ITI_dur_min);
+        }
+
+        if (strcmp(varname,"ITI_dur_max")==0){
+            log_ulong("ITI_dur_max", ITI_dur_max);
+        }
+
+        if (strcmp(varname,"timeout_dur")==0){
+            log_ulong("timeout_dur", timeout_dur);
+        }
+
+        if (strcmp(varname,"choice_dur")==0){
+            log_ulong("choice_dur", choice_dur);
+        }
+
+        if (strcmp(varname,"autodeliver_rewards")==0){
+            log_int("autodeliver_rewards", autodeliver_rewards);
+        }
+
+        if (strcmp(varname,"left_short")==0){
+            log_int("left_short", left_short);
+        }
+
+        if (strcmp(varname,"reward_magnitude")==0){
+            log_ulong("reward_magnitude", reward_magnitude);
+        }
+
+        if (strcmp(varname,"valve_ul_ms_left")==0){
+            log_float("valve_ul_ms_left", valve_ul_ms_left);
+        }
+
+        if (strcmp(varname,"valve_ul_ms_right")==0){
+            log_float("valve_ul_ms_right", valve_ul_ms_right);
+        }
+
+        if (strcmp(varname,"lateral_cues")==0){
+            log_int("lateral_cues", lateral_cues);
+        }
+
+        if (strcmp(varname,"correction_loops")==0){
+            log_int("correction_loops", correction_loops);
+        }
+
+        if (strcmp(varname,"corr_loop_entry")==0){
+            log_int("corr_loop_entry", corr_loop_entry);
+        }
+
+        if (strcmp(varname,"corr_loop_exit")==0){
+            log_int("corr_loop_exit", corr_loop_exit);
+        }
+
+        if (strcmp(varname,"reach_block_dur")==0){
+            log_ulong("reach_block_dur", reach_block_dur);
+        }
+
+        if (strcmp(varname,"bias")==0){
+            log_float("bias", bias);
+        }
+
+        if (strcmp(varname,"contrast")==0){
+            log_float("contrast", contrast);
+        }
+
         }
 
         // SET
@@ -182,111 +218,138 @@ void processSerialData() {
             char varvalue[len-split+1];
             strlcpy(varvalue, line+split+1, len-split+1);
 
-            // for the state machine "force state" buttons
-            // if (strcmp(varname,"current_state")==0){
-            //     current_state = atoi(varvalue);
-            // }
-
             // INSERT_SETTERS
 
-            if (strcmp(varname,"incorrect_choice_cue_freq")==0){
-                incorrect_choice_cue_freq = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"correct_choice_cue_freq")==0){
-                correct_choice_cue_freq = atoi(varvalue);
-            }
-    
-            if (strcmp(varname,"choice_dur")==0){
-                choice_dur = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"ITI_dur_min")==0){
-                ITI_dur_min = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"ITI_dur_max")==0){
-                ITI_dur_max = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"min_fix_dur")==0){
-                min_fix_dur = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"reward_magnitude")==0){
-                reward_magnitude = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"reward_available_dur")==0){
-                reward_available_dur = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"interval_boundary")==0){
-                interval_boundary = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"interval_gap")==0){
-                interval_gap = strtoul(varvalue,NULL,10);
-            }
-    
-            if (strcmp(varname,"valve_ul_ms")==0){
-                valve_ul_ms = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"difficulty")==0){
-                difficulty = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"difficulty_incr")==0){
-                difficulty_incr = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"difficulty_decr")==0){
-                difficulty_decr = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"X_thresh")==0){
-                X_thresh = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"Y_thresh")==0){
-                Y_thresh = atof(varvalue);
-            }
-    
-            if (strcmp(varname,"bias")==0){
-                bias = atof(varvalue);
-            }
-    
+        if (strcmp(varname,"go_cue_freq")==0){
+            go_cue_freq = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"tone_dur")==0){
+            tone_dur = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"buzz_dur")==0){
+            buzz_dur = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"trial_entry_buzz_dur")==0){
+            trial_entry_buzz_dur = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"buzz_left")==0){
+            buzz_left = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"buzz_right")==0){
+            buzz_right = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"buzz_lat")==0){
+            buzz_lat = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"led_hsv")==0){
+            led_hsv = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"led_brightness")==0){
+            led_brightness = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"ITI_dur_min")==0){
+            ITI_dur_min = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"ITI_dur_max")==0){
+            ITI_dur_max = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"timeout_dur")==0){
+            timeout_dur = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"choice_dur")==0){
+            choice_dur = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"autodeliver_rewards")==0){
+            autodeliver_rewards = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"left_short")==0){
+            left_short = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"reward_magnitude")==0){
+            reward_magnitude = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"valve_ul_ms_left")==0){
+            valve_ul_ms_left = atof(varvalue);
+        }
+
+        if (strcmp(varname,"valve_ul_ms_right")==0){
+            valve_ul_ms_right = atof(varvalue);
+        }
+
+        if (strcmp(varname,"lateral_cues")==0){
+            lateral_cues = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"correction_loops")==0){
+            correction_loops = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"corr_loop_entry")==0){
+            corr_loop_entry = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"corr_loop_exit")==0){
+            corr_loop_exit = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"reach_block_dur")==0){
+            reach_block_dur = strtoul(varvalue,NULL,10);
+        }
+
+        if (strcmp(varname,"bias")==0){
+            bias = atof(varvalue);
+        }
+
+        if (strcmp(varname,"contrast")==0){
+            contrast = atof(varvalue);
+        }
+
         }
 
         // UPD - update trial probs - HARDCODED for now, n trials
         // format UPD 0 0.031 or similar
-        if (strcmp(mode,"UPD")==0){
+        // if (strcmp(mode,"UPD")==0){
             
-            char line[len-4+1];
-            strlcpy(line, receivedChars+4, len-4+1);
+        //     char line[len-4+1];
+        //     strlcpy(line, receivedChars+4, len-4+1);
 
-            // get index of space
-            len = sizeof(line)/sizeof(char);
-            unsigned int split = 0;
-            for (unsigned int i = 0; i < numChars; i++){
-                if (line[i] == ' '){
-                    split = i;
-                    break;
-                }
-            }
+        //     // get index of space
+        //     len = sizeof(line)/sizeof(char);
+        //     unsigned int split = 0;
+        //     for (unsigned int i = 0; i < numChars; i++){
+        //         if (line[i] == ' '){
+        //             split = i;
+        //             break;
+        //         }
+        //     }
 
-            // split by space
-            char varname[split+1];
-            strlcpy(varname, line, split+1);
+        //     // split by space
+        //     char varname[split+1];
+        //     strlcpy(varname, line, split+1);
 
-            char varvalue[len-split+1];
-            strlcpy(varvalue, line+split+1, len-split+1);
+        //     char varvalue[len-split+1];
+        //     strlcpy(varvalue, line+split+1, len-split+1);
 
-            int ix = atoi(varname);
-            float p = atof(varvalue);
-            p_interval[ix] = p;
-        }
+        //     int ix = atoi(varname);
+        //     float p = atof(varvalue);
+        //     p_interval[ix] = p;
+        // }
 
         // CMD
         if (strcmp(mode,"CMD")==0){
@@ -307,8 +370,13 @@ void processSerialData() {
             }
 
             if (strcmp(CMD,"r")==0){
-                deliver_reward = true;
-                present_reward_cue = true;
+                deliver_reward_left = true;
+                present_reward_left_cue = true;
+            }
+
+            if (strcmp(CMD,"t")==0){
+                deliver_reward_right = true;
+                present_reward_right_cue = true;
             }
 
             if (strcmp(CMD,"p")==0){

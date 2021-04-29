@@ -1,69 +1,56 @@
-// basic outline of the reader taken from
-// http://forum.arduino.cc/index.php?topic=396450.0
-
 #include <Arduino.h>
 #include <string.h>
 
 float X;
 float Y;
+
 float x;
 float y;
 
-const byte numBytes = 8; // for two floats
-char receivedBytes[numBytes];
-boolean RawNewData = false;
+bool RawNewData = false;
+char start_marker = '[';
+char end_marker = ']';
 
+const byte recv_bytes_size = 8; // for two floats
+char recv_bytes[recv_bytes_size];
+
+int end_ix;
+int start_ix;
+int ix;
+int rc;
+bool is_receiving = false;
+
+char t;
 void flush(){
     while (Serial1.available() > 0){
-        char t = Serial1.read();
+        t = Serial1.read();
     }
 }
 
 void getRawData() {
-    // check if raw data is available and if yes read it
-    // all raw data bytes are flanked by []
-    // for future generalization: maybe include here a (data type)
-    // that then can be used o infer how many bytes to read, as in (i4)bbbb
 
-    // https://stackoverflow.com/questions/3991478/building-a-32-bit-float-out-of-its-4-composite-bytes
-
-    // also https://www.microchip.com/forums/m590535.aspx
-
-    static boolean RawRecvInProgress = false;
-    static int raw_ndx = 0;
-    char RawStartMarker = '[';
-    char RawEndMarker = ']';
-    int rc;
-
-    
-    // loop that reads the entire command
-    while (Serial1.available() > 0 && RawNewData == false) {
+    while (Serial1.available() > 0){
         rc = Serial1.read();
-        
-        // read until end marker
-        if (RawRecvInProgress == true) {
-            if (rc != RawEndMarker) {
-                if (raw_ndx > numBytes-1) { // this should be resistent to failed [ reads
-                    RawRecvInProgress = false;
-                    RawNewData = true;
-                    flush();
-                }
-                else {
-                    receivedBytes[raw_ndx] = rc;
-                    raw_ndx++;
-                }
+
+        if (is_receiving == true){
+            if (ix < recv_bytes_size){
+                recv_bytes[ix] = rc;
+                ix++;
             }
-            else if (rc == RawEndMarker){
-                RawRecvInProgress = false;
-                raw_ndx = 0;
-                RawNewData = true;
+            else{
+                if (rc == end_marker){
+                    // all is well
+                    RawNewData = true;
+                }
+                is_receiving = false;
+                ix = 0;
                 flush();
             }
         }
 
-        // enter reading if startmarker received
-        else if (rc == RawStartMarker) {
-            RawRecvInProgress = true;
+        if (rc == start_marker){
+            is_receiving = true;
+            ix = 0;
         }
     }
 }
@@ -73,6 +60,7 @@ typedef union {
     float f;
 } bfloat;
 
+int error_counter = 0;
 void processRawData() {
 
     if (RawNewData == true) {
@@ -83,33 +71,29 @@ void processRawData() {
 
         //Create instances of the union
         bfloat Xb;
-        Xb.b[0] = receivedBytes[0]; 
-        Xb.b[1] = receivedBytes[1]; 
-        Xb.b[2] = receivedBytes[2]; 
-        Xb.b[3] = receivedBytes[3]; 
+        Xb.b[0] = recv_bytes[0]; 
+        Xb.b[1] = recv_bytes[1]; 
+        Xb.b[2] = recv_bytes[2]; 
+        Xb.b[3] = recv_bytes[3]; 
 
         bfloat Yb;
-        Yb.b[0] = receivedBytes[4]; 
-        Yb.b[1] = receivedBytes[5]; 
-        Yb.b[2] = receivedBytes[6]; 
-        Yb.b[3] = receivedBytes[7];
+        Yb.b[0] = recv_bytes[4]; 
+        Yb.b[1] = recv_bytes[5]; 
+        Yb.b[2] = recv_bytes[6]; 
+        Yb.b[3] = recv_bytes[7];
 
-        // constrain
+        // store
         x = (float) Xb.f;
         y = (float) Yb.f;
-
-        if (x < 10000 && x > -10000){
+        
+        if (x < -10000 || x > 10000 || y < -10000 || y > 10000){
+            Serial.println("LC read out of bounds");
+            Serial.println(x);
+            Serial.println(y);
+        }
+        else{
             X = x;
-        }
-        else {
-            Serial.println(String("<MSG X out of bounds") + " "+String(micros()/1000.0)+">");
-        }
-
-        if (y < 10000 && y > -10000){
             Y = y;
-        }
-        else {
-            Serial.println(String("<MSG Y out of bounds") + " "+String(micros()/1000.0)+">");
         }
     }
     RawNewData = false;
