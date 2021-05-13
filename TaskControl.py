@@ -1,9 +1,9 @@
 import sys, os
 import configparser
 from pathlib import Path
-
 from PyQt5 import QtWidgets
-from Widgets import *
+from Widgets.Widgets import SettingsWidget
+from Utils import utils
 
 class TaskControlApp(QtWidgets.QApplication):
     def __init__(self, *args, config_path=None):
