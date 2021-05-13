@@ -6,7 +6,6 @@ from pathlib import Path
 import utils
 import datetime
 from tqdm import tqdm
-import behavior_analysis_utils as bhv
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
 
@@ -33,10 +32,10 @@ def get_LogDf_from_path(log_path):
     code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
     try:
-        LogDf = bhv.parse_arduino_log(log_path, code_map)
+        LogDf = parse_arduino_log(log_path, code_map)
     except ValueError:
         # Dealing with the earlier LogDfs not having X_tresh/Current_zone etc.
-        LogDf = bhv.parse_arduino_log(log_path, code_map, parse_var=False)
+        LogDf = parse_arduino_log(log_path, code_map, parse_var=False)
 
     return LogDf
 
