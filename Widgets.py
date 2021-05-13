@@ -12,6 +12,7 @@ from PyQt5 import QtWidgets
 
 import utils
 import behavior_analysis_utils as bhv
+import metrics as met
 
 from TaskVis_pg import TrialsVis
 from TaskVis_mpl import SessionVis
@@ -546,8 +547,8 @@ class TrialCounter3(QtWidgets.QTableView):
         OnlineDataAnalyser.trial_data_available.connect(self.on_data)
     
     def on_data(self, TrialDf, TrialMetricsDf):
-        side = bhv.get_correct_side(TrialDf).values[0]
-        outcome = bhv.get_outcome(TrialDf).values[0]
+        side = met.get_correct_side(TrialDf).values[0]
+        outcome = met.get_outcome(TrialDf).values[0]
         try:
             self.Df.loc[outcome, side] += 1
             self.Df['sum'] = self.Df['left'] + self.Df['right']

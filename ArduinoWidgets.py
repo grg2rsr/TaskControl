@@ -65,7 +65,7 @@ class ArduinoController(QtWidgets.QWidget):
         #            bhv.get_interval, bhv.get_outcome, bhv.get_bias,
         #            bhv.get_correct_zone, bhv.get_in_corr_loop) # HARDCODE
 
-        Metrics = (bhv.is_successful,)
+        Metrics = ()
                    
         self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
         # don't add him to children bc doesn't have a UI
