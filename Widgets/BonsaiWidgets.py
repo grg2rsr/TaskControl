@@ -3,7 +3,7 @@ from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 import subprocess
 from pathlib import Path
-import utils
+from Utils import utils
 
 class BonsaiController(QtWidgets.QWidget):
     """ a Widget without UI that launches a bonsai sketch """

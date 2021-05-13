@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from behavior_analysis_utils import event_slice
+from Utils.behavior_analysis_utils import event_slice
 
 """
  

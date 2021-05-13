@@ -3,10 +3,10 @@ from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
 
 import sys
-
 import pandas as pd
 import scipy as sp
-import utils
+
+from Utils import utils
 
 class StringChoiceWidget(QtWidgets.QComboBox):
     """ A QComboBox with convenience setter and getter """

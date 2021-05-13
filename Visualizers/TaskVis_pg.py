@@ -11,8 +11,8 @@ from scipy.special import expit
 import pandas as pd
 import seaborn as sns
 
-import behavior_analysis_utils as bhv
-import utils
+from Utils import behavior_analysis_utils as bhv
+from Utils import utils
 
 # """
 # matplotlib in qt5

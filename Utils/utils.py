@@ -3,6 +3,8 @@ import pandas as pd
 import scipy as sp 
 import pathlib
 from pathlib import Path
+from colorama import init, Fore
+init(autoreset=True)
 
 """
  
@@ -66,11 +68,11 @@ def select(objs,key,value):
 
 def printer(s, mode):
     if mode == 'msg':
-        print(s)
+        print(Fore.GREEN + s)
     if mode == 'task':
-        print("\n--- %s ---" % s)
+        print(Fore.CYAN + "\n--- %s ---" % s)
     if mode == 'error':
-        print("ERROR: %s" % s)
+        print(Fore.RED + "ERROR: %s" % s)
         
 def get_tasks(folder):
     """ gets all valid tasks """

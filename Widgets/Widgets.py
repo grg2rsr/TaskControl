@@ -10,19 +10,19 @@ import pandas as pd
 from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 
-import utils
-import behavior_analysis_utils as bhv
-import metrics as met
+from Utils import utils
+from Utils import behavior_analysis_utils as bhv
+from Utils import metrics
 
-from TaskVis_pg import TrialsVis
-from TaskVis_mpl import SessionVis
+from Visualizers.TaskVis_pg  import TrialsVis
+from Visualizers.TaskVis_mpl import SessionVis
 
-from Popups import *
-from UtilityWidgets import *
+from Widgets.Popups import *
+from Widgets.UtilityWidgets import *
 
-from ArduinoWidgets import ArduinoController
-from BonsaiWidgets import BonsaiController
-from LoadCellWidgets import LoadCellController
+from Widgets.ArduinoWidgets import ArduinoController
+from Widgets.BonsaiWidgets import BonsaiController
+# from LoadCellWidgets import LoadCellController
 
 """
  
@@ -333,9 +333,9 @@ class SettingsWidget(QtWidgets.QWidget):
                     self.BonsaiController = BonsaiController(self, self.config, self.task_config['Bonsai'])
                     self.Controllers.append(self.BonsaiController)
 
-                if section == 'LoadCell':
-                    self.LoadCellController = LoadCellController(self, self.config, self.task_config['LoadCell'])
-                    self.Controllers.append(self.LoadCellController)
+                # if section == 'LoadCell':
+                #     self.LoadCellController = LoadCellController(self, self.config, self.task_config['LoadCell'])
+                #     self.Controllers.append(self.LoadCellController)
 
                 # if section == 'Display':
                 #     self.DisplayController = HardwareWidgets.DisplayController(self)
@@ -547,8 +547,8 @@ class TrialCounter3(QtWidgets.QTableView):
         OnlineDataAnalyser.trial_data_available.connect(self.on_data)
     
     def on_data(self, TrialDf, TrialMetricsDf):
-        side = met.get_correct_side(TrialDf).values[0]
-        outcome = met.get_outcome(TrialDf).values[0]
+        side = metrics.get_correct_side(TrialDf).values[0]
+        outcome = metrics.get_outcome(TrialDf).values[0]
         try:
             self.Df.loc[outcome, side] += 1
             self.Df['sum'] = self.Df['left'] + self.Df['right']

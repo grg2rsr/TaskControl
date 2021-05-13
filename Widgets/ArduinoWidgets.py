@@ -12,11 +12,10 @@ import threading
 import pandas as pd
 import scipy as sp
 
-import Widgets
-import utils
-import interface_generator
-
-import behavior_analysis_utils as bhv
+from Widgets import Widgets
+from Utils import utils
+from scripts import interface_generator
+from Utils import behavior_analysis_utils as bhv
 
 """
  
@@ -181,9 +180,12 @@ class ArduinoController(QtWidgets.QWidget):
         # building interface
         utils.printer("generating interface.cpp",'task')
         try: # catch this exception for downward compatibility
+            utils.printer("generating interface from: %s" % self.vars_path,'msg')
+            utils.printer("using as template: %s" % self.task_config['interface_template_fname'],'msg')
             interface_template_fname = self.task_config['interface_template_fname']
             interface_generator.run(self.vars_path, interface_template_fname)
         except KeyError:
+            utils.printer("generating interface based on %s" % self.vars_path,'msg')
             interface_generator.run(self.vars_path)
 
         # uploading code onto arduino
@@ -213,12 +215,13 @@ class ArduinoController(QtWidgets.QWidget):
         shutil.copy(self.vars_path,self.vars_path.with_suffix('.default'))
 
         # setting the valve calibration factor
-        try:
-            self.VariableController.VariableEditWidget.set_entry('valve_ul_ms',self.config['box']['valve_ul_ms'])
-            utils.printer('setting valve calibration factor to %s' % self.config['box']['valve_ul_ms'],'msg')
-        except:
-            utils.printer("can't set valve calibration factor",'error')
+        # try:
+        #     self.VariableController.VariableEditWidget.set_entry('valve_ul_ms',self.config['box']['valve_ul_ms'])
+        #     utils.printer('setting valve calibration factor to %s' % self.config['box']['valve_ul_ms'],'msg')
+        # except:
+        #     utils.printer("can't set valve calibration factor",'error')
 
+        utils.printer("setting valve calibration factors",'task')
         try:
             self.VariableController.VariableEditWidget.set_entry('valve_ul_ms_left',self.config['box']['valve_ul_ms_left'])
             self.VariableController.VariableEditWidget.set_entry('valve_ul_ms_right',self.config['box']['valve_ul_ms_right'])
@@ -226,7 +229,6 @@ class ArduinoController(QtWidgets.QWidget):
             utils.printer('setting right valve calibration factor to %s' % self.config['box']['valve_ul_ms_right'],'msg')
         except:
             utils.printer("can't set valve calibration factors (left/right)",'error')
-               
         
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
@@ -248,6 +250,8 @@ class ArduinoController(QtWidgets.QWidget):
         # restoring original variables
         shutil.copy(self.vars_path.with_suffix('.default'),self.vars_path)
         os.remove(self.vars_path.with_suffix('.default'))
+
+        utils.printer("done",'msg')
 
     def log_task(self,folder):
         """ copy the entire arduino folder to the logging folder """

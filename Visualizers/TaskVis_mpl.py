@@ -15,9 +15,9 @@ import time
 
 import pandas as pd
 import seaborn as sns
-import utils
 
-import behavior_analysis_utils as bhv
+from Utils import utils
+from Utils import behavior_analysis_utils as bhv
 
 
 """
