@@ -397,8 +397,8 @@ unsigned long this_interval = 1500;
 
 unsigned long short_intervals[2] = {600, 1000};
 unsigned long long_intervals[2] = {2000, 2400};
-float p_short_intervals[2] = {0.5, 0.5};
-float p_long_intervals[2] = {0.5, 0.5};
+float p_short_intervals[2] = {1, 0};
+float p_long_intervals[2] = {0, 1};
 int i;
 
 unsigned long get_short_interval(){
@@ -584,7 +584,9 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 log_code(TRIAL_ENTRY_EVENT);
-                trial_entry_cue(); // which is first timing cue
+                if (present_init_cue == 1){
+                    trial_entry_cue(); // which is first timing cue
+                }
 
                 // sync at trial entry
                 switch_sync_pin = true;
@@ -687,26 +689,28 @@ void finite_state_machine() {
                 // incorrect choice
                 if ((correct_side == left && is_reaching_right) || (correct_side == right && is_reaching_left)){
                     log_code(CHOICE_INCORRECT_EVENT);
-                    log_code(TRIAL_UNSUCCESSFUL_EVENT);
-                    incorrect_choice_cue();
+                    if (allow_mistakes == 0){
+                        log_code(TRIAL_UNSUCCESSFUL_EVENT);
+                        incorrect_choice_cue();
 
-                    // update counters
-                    if (correct_side == left){
-                        left_error_counter += 1;
-                        right_error_counter = 0;
-                    }
-                    if (correct_side == right){
-                        right_error_counter += 1;
-                        left_error_counter = 0;
-                    }
-                    if (corr_loop_reset_mode == true){
-                        succ_trial_counter = 0;
-                    }
+                        // update counters
+                        if (correct_side == left){
+                            left_error_counter += 1;
+                            right_error_counter = 0;
+                        }
+                        if (correct_side == right){
+                            right_error_counter += 1;
+                            left_error_counter = 0;
+                        }
+                        if (corr_loop_reset_mode == true){
+                            succ_trial_counter = 0;
+                        }
 
-                    // current_state = TIMEOUT_STATE;
-                    // no timeouts in learn to chose
-                    current_state = ITI_STATE;
-                    break;
+                        // current_state = TIMEOUT_STATE;
+                        // no timeouts in learn to chose
+                        current_state = ITI_STATE;
+                        break;
+                    }
                 }
             }
                         

@@ -11,6 +11,8 @@ unsigned long ITI_dur_max = 11500;
 unsigned long timeout_dur = 6000;
 unsigned long choice_dur = 2000;
 
+int present_init_cue = 0;
+int allow_mistakes = 0;
 int autodeliver_rewards = 0;
 int left_short = 1;
 unsigned long reward_magnitude = 4;
