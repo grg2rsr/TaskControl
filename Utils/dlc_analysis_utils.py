@@ -4,6 +4,7 @@ import scipy as sp
 import numpy as np
 import pandas as pd
 import cv2
+import seaborn as sns
 from pathlib import Path
 import behavior_analysis_utils as bhv
 from copy import copy
@@ -47,6 +48,7 @@ def read_video(path):
  
 """
 
+# TODO remove: Obsolete
 def sync_arduino_w_dlc(log_path, video_sync_path):
     Arduino_SyncEvent = bhv.get_arduino_sync(log_path)
 
@@ -130,13 +132,18 @@ def plot_frame(Frame, axes=None, **im_kwargs):
     axes.imshow(Frame, **im_kwargs)
     return axes
 
-def plot_bodyparts(bodyparts, DlcDf, i , axes=None, **marker_kwargs):
+def plot_bodyparts(bodyparts, DlcDf, i, colors=None, axes=None, **marker_kwargs):
+    """ i = frame_ix """
     if axes is None:
         fig, axes = plt.subplots()
 
+    if colors is None:
+        c = sns.color_palette('viridis', n_colors=len(bodyparts))
+        colors = dict(zip(bodyparts,c))
+
     df = DlcDf.loc[i]
     for bp in bodyparts:
-        axes.plot(df[bp].x,df[bp].y,'o', **marker_kwargs)
+        axes.plot(df[bp].x, df[bp].y, 'o', color=colors[bp], **marker_kwargs)
 
     return axes
 
@@ -157,11 +164,15 @@ def plot_Skeleton(Skeleton, DlcDf, i, axes=None,**line_kwargs):
 
     return axes, lines
 
-def plot_trajectories(DlcDf, bodyparts, axes=None, p=0.99, **line_kwargs):
+def plot_trajectories(DlcDf, bodyparts, axes=None, colors=None, p=0.99, **line_kwargs):
     if axes is None:
         fig, axes = plt.subplots()
         axes.set_aspect('equal')
-    
+
+    if colors is None:
+        c = sns.color_palette('viridis', n_colors=len(bodyparts))
+        colors = dict(zip(bodyparts,c))
+
     defaults  = dict(lw=0.05, alpha=0.85)
     for k,v in defaults.items():
         line_kwargs.setdefault(k,v)
@@ -170,7 +181,7 @@ def plot_trajectories(DlcDf, bodyparts, axes=None, p=0.99, **line_kwargs):
         df = DlcDf[bp]
         ix = df.likelihood > p
         df = df.loc[ix]
-        axes.plot(df.x, df.y, **line_kwargs)
+        axes.plot(df.x, df.y, color=colors[bp], **line_kwargs)
 
     return axes
 

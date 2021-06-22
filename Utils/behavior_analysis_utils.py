@@ -22,7 +22,7 @@ from matplotlib.collections import LineCollection
 """
 
 def get_LogDf_from_path(log_path):
-    """ helper to infer taks name and get code_map """
+    """ helper to infer task name and get code_map """
     # infer
     task_name = '_'.join(log_path.parent.name.split('_')[2:])
     code_map_path = log_path.parent / task_name / "Arduino" / "src" / "event_codes.h"
@@ -31,11 +31,13 @@ def get_LogDf_from_path(log_path):
     CodesDf = utils.parse_code_map(code_map_path)
     code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
-    try:
-        LogDf = parse_arduino_log(log_path, code_map)
-    except ValueError:
-        # Dealing with the earlier LogDfs not having X_tresh/Current_zone etc.
-        LogDf = parse_arduino_log(log_path, code_map, parse_var=False)
+
+    LogDf = parse_arduino_log(log_path, code_map)
+    # try:
+    #     LogDf = parse_arduino_log(log_path, code_map)
+    # except ValueError:
+    #     # Dealing with the earlier LogDfs not having X_tresh/Current_zone etc.
+    #     LogDf = parse_arduino_log(log_path, code_map, parse_var=False)
 
     return LogDf
 
@@ -47,14 +49,30 @@ def parse_arduino_log(log_path, code_map=None, parse_var=True):
     """
     with open(log_path, 'r') as fH:
         lines = fH.readlines()
+        
+    lines = [line.strip() for line in lines]
+    lines = [line for line in lines if line != '']
+
+    # test for validity
+    valid_lines = []
+    invalid_lines = []
+    for line in lines:
+        if len(line.split('\t')) == 2 or line.startswith('<'):
+            valid_lines.append(line)
+        else:
+            invalid_lines.append(line)
+            print(len(invalid_lines))
 
     return parse_lines(lines, code_map=code_map, parse_var=parse_var)
 
-def correct_wraparound(Df):
+# TODO merge this one with the CAM reader one
+def correct_wraparound(Df, col='t'):
     """ tests and corrects for time wraparound on column t """
+    from copy import copy
+    _Df = copy(Df)
     if np.any(np.diff(Df['t']) < 0):
         reversal_ind = np.where(np.diff(Df['t']) < 0)[0][0]
-        Df['t'].iloc[reversal_ind+1:] += Df['t'].iloc[reversal_ind]
+        Df['t'].iloc[reversal_ind+1:] += _Df['t'].iloc[reversal_ind]
     return Df
 
 def parse_lines(lines, code_map=None, parse_var=False):
@@ -116,6 +134,7 @@ def get_events(LogDf, event_names):
  
     return EventsDict
 
+# removal / generalize
 def filter_bad_licks(LogDf, min_time=50, max_time=200, remove=False):
     """ 
     Process recorded LICK_ON and LICK_OFF into realistic licks and add them as an event to the LogDf
@@ -135,6 +154,25 @@ def filter_bad_licks(LogDf, min_time=50, max_time=200, remove=False):
     if remove is True:
         # TODO
         pass
+
+    return LogDf
+
+def filter_spans_to_event(LogDf, on_name, off_name, t_min=50, t_max=200, name=None):
+    """ 
+    creates an Event in the LogDf based on min / max duration of Spans
+    """
+    Spans = get_spans_from_names(LogDf, on_name, off_name)
+    bad_inds = np.logical_or(Spans['dt'] < t_min , Spans['dt'] > t_max)
+    Spans = Spans.loc[~bad_inds]
+
+    if name is None:
+        name = on_name.split('_ON')[0] + '_EVENT'
+
+    # Add event to LogDf
+    Event = pd.DataFrame(np.stack([['NA']*Spans.shape[0], Spans['t_on'].values, [name]*Spans.shape[0]]).T, columns=['code', 't', 'name'])
+    Event['t'] = Event['t'].astype('float')
+    LogDf = LogDf.append(Event)
+    LogDf.sort_values('t')
 
     return LogDf
 
@@ -285,7 +323,7 @@ def parse_sessions(SessionDfs, Metrics):
 def time_slice(Df, t_min, t_max, col='t', reset_index=True, mode='inclusive'):
     """ helper to slice a dataframe along time (defined by col) """
     vals = Df[col].values
-    if mode=='exclusive':
+    if mode == 'exclusive':
         binds = np.logical_and(vals > t_min, vals < t_max)
     if mode is 'inclusive':
         binds = np.logical_and(vals >= t_min, vals <= t_max)
@@ -316,25 +354,31 @@ def groupby_dict(Df, Dict):
 
 """
 
-def parse_bonsai_LoadCellData(csv_path, save=True, trig_len=1, ttol=0.2):
+# SPLIT / REMOVE
+def parse_bonsai_LoadCellData(csv_path):
     LoadCellDf = pd.read_csv(csv_path, names=['t','x','y'])
+    return LoadCellDf
 
-    harp_sync = pd.read_csv(csv_path.parent / "bonsai_harp_sync.csv", names=['t']).values.flatten()
-    t_sync_high = harp_sync[::2]
-    t_sync_low = harp_sync[1::2]
+# def parse_bonsai_LoadCellData(csv_path, save=True, trig_len=1, ttol=0.2):
+#     LoadCellDf = pd.read_csv(csv_path, names=['t','x','y'])
 
-    dts = np.array(t_sync_low) - np.array(t_sync_high)
-    good_timestamps = ~(np.absolute(dts-trig_len)>ttol)
-    t_sync = np.array(t_sync_high)[good_timestamps]
+#     harp_sync = pd.read_csv(csv_path.parent / "bonsai_harp_sync.csv", names=['t']).values.flatten()
+#     t_sync_high = harp_sync[::2]
+#     t_sync_low = harp_sync[1::2]
 
-    t_sync = pd.DataFrame(t_sync, columns=['t'])
-    if save:
-        # write to disk
-        # LoadCellDf.to_csv(harp_csv_path.parent / "loadcell_data.csv") # obsolete now
-        t_sync.to_csv(csv_path.parent / "harp_sync.csv")
+#     dts = np.array(t_sync_low) - np.array(t_sync_high)
+#     good_timestamps = ~(np.absolute(dts-trig_len)>ttol)
+#     t_sync = np.array(t_sync_high)[good_timestamps]
 
-    return LoadCellDf, t_sync
+#     t_sync = pd.DataFrame(t_sync, columns=['t'])
+#     if save:
+#         # write to disk
+#         # LoadCellDf.to_csv(harp_csv_path.parent / "loadcell_data.csv") # obsolete now
+#         t_sync.to_csv(csv_path.parent / "harp_sync.csv")
 
+#     return LoadCellDf, t_sync
+
+# obsolete but keep
 def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     """ gets the loadcell data and the sync times from a harp csv log
     trig_len is time in ms of sync trig high, tol is deviation in ms
@@ -380,17 +424,19 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     
     return LoadCellDf, t_sync
 
+# REMOVE
 def get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT", save=True):
     """ extracts arduino sync times from an arduino log """ 
 
-    LogDf = bhv.get_LogDf_from_path(log_path)
-    SyncEvent = bhv.get_events_from_name(LogDf, sync_event_name)
+    LogDf = get_LogDf_from_path(log_path)
+    SyncEvent = get_events_from_name(LogDf, sync_event_name)
 
     if save:
         SyncEvent.to_csv(log_path.parent / "arduino_sync.csv")
 
     return SyncEvent
 
+# MOVE TO SYNC
 def cut_timestamps(t_arduino, t_harp, verbose=False, return_offset=False):
     """ finds offset between to unequal timestamp series and cuts
     the bigger to match the size of the smaller """
@@ -425,6 +471,7 @@ def cut_timestamps(t_arduino, t_harp, verbose=False, return_offset=False):
     else:
         return t_arduino, t_harp
 
+# REMOVE
 def sync_clocks(t_harp, t_arduino, log_path=None):
     """ linregress between two clocks - master clock is harp
     if LogDf is given, save the corrected clock to it"""
