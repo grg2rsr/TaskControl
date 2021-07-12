@@ -73,6 +73,9 @@ bool is_reaching = false;
 unsigned long t_last_reach_on = max_future;
 unsigned long t_last_reach_off = max_future;
 
+void go_cue_left(); // fwd declare
+void go_cue_right(); // fwd declare
+
 void read_reaches(){
     // left
     reach_left = digitalRead(REACH_LEFT_PIN);
@@ -103,6 +106,15 @@ void read_reaches(){
     }
 
     is_reaching = (is_reaching_left || is_reaching_right);
+
+    if (cue_on_reach == 1){
+        if (is_reaching_left == true){
+            go_cue_left();
+        }
+        if (is_reaching_right == true){
+            go_cue_right();
+        }
+    }
 }
 
 /*
@@ -177,6 +189,8 @@ void lights_off(){
 // buzzer
 Tone buzz_controller;
 // Tone buzz_controller_right;
+unsigned long t_last_cue = max_future;
+unsigned long t_cue_block = 250; // ms
 
 void trial_available_cue(){
     lights_off();
@@ -207,25 +221,31 @@ void reward_right_cue(){
 }
 
 void go_cue_left(){
-    log_code(GO_CUE_LEFT_EVENT);
-    if (left_short == 1){
-        log_code(GO_CUE_SHORT_EVENT);
+    if (now() - t_last_cue > t_cue_block){
+        log_code(GO_CUE_LEFT_EVENT);
+        if (left_short == 1){
+            log_code(GO_CUE_SHORT_EVENT);
+        }
+        else{
+            log_code(GO_CUE_LONG_EVENT);
+        }
+        reward_left_cue();
+        t_last_cue = now();
     }
-    else{
-        log_code(GO_CUE_LONG_EVENT);
-    }
-    reward_left_cue();
 }
 
 void go_cue_right(){
-    log_code(GO_CUE_RIGHT_EVENT);
-    if (left_short == 1){
-        log_code(GO_CUE_LONG_EVENT);
+    if (now() - t_last_cue > t_cue_block){
+        log_code(GO_CUE_RIGHT_EVENT);
+        if (left_short == 1){
+            log_code(GO_CUE_LONG_EVENT);
+        }
+        else{
+            log_code(GO_CUE_SHORT_EVENT);
+        }
+        reward_right_cue();
+        t_last_cue = now();
     }
-    else{
-        log_code(GO_CUE_SHORT_EVENT);
-    }
-    reward_right_cue();
 }
 /*
 adapted from  https://arduino.stackexchange.com/questions/6715/audio-frequency-white-noise-generation-using-arduino-mini-pro
@@ -387,6 +407,11 @@ int left_error_counter = 0;
 int right_error_counter = 0;
 int succ_trial_counter = 0;
 bool corr_loop_reset_mode = true;
+int trial_counter = 0;
+int miss_counter = 0;
+bool in_jackpot_mode = false;
+bool last_trial_rewarded = false;
+
 /*
 resetting mode:
 within correction loop, any mistake restarts the counter from the beginning
@@ -498,6 +523,23 @@ void get_trial_type(){
         // if in corr loop, this is not updated
     }
 
+    // switches off autodeliver rewards after warmup
+    if (trial_counter > n_warmup_trials){
+        autodeliver_rewards = 0;
+    }
+
+    // jackpot trial after n misses
+    if (miss_counter >= n_max_miss_trials && in_jackpot_mode == false){
+        autodeliver_rewards = 1;
+        in_jackpot_mode = true;
+    }
+    if (in_jackpot_mode == true && last_trial_rewarded){
+        autodeliver_rewards = 0;
+        miss_counter = 0;
+        in_jackpot_mode = false;
+    }
+
+
     // now is always called to update even in corr loop
     set_interval();
 
@@ -505,6 +547,11 @@ void get_trial_type(){
     log_int("correct_side", correct_side);
     log_int("in_corr_loop", (int) in_corr_loop);
     log_int("timing_trial", (int) timing_trial);
+    log_int("autodeliver_rewards", (int) autodeliver_rewards);
+    log_int("trial_counter", trial_counter);
+    log_int("miss_counter", miss_counter);
+
+    trial_counter++;
 }
               
 
@@ -604,7 +651,6 @@ void finite_state_machine() {
 
                 // determine the type of trial:
                 get_trial_type(); // updates this_correct_side
-
             }
 
             // update
@@ -647,8 +693,15 @@ void finite_state_machine() {
                 if (correct_side == right){
                     go_cue_right();
                 }
-                current_state = CHOICE_STATE;
-                break;
+                
+                if (autodeliver_rewards == 1){ // skip everything if automatically deliver rewards
+                    current_state = REWARD_STATE;
+                    break;
+                }
+                else{ // the normal way
+                    current_state = CHOICE_STATE;
+                    break;
+                }
             }
             break;
 
@@ -673,6 +726,16 @@ void finite_state_machine() {
                 if ((correct_side == left && is_reaching_left) || (correct_side == right && is_reaching_right)){
                     log_code(CHOICE_CORRECT_EVENT);
                     log_code(TRIAL_SUCCESSFUL_EVENT);
+
+                    // play cue?
+                    if (cue_on_rewarded_reach == 1){
+                        if (correct_side == left){
+                            go_cue_left();
+                        }
+                        if (correct_side == right){
+                            go_cue_right();
+                        }
+                    }
 
                     succ_trial_counter += 1;
                     if (correct_side == left){
@@ -709,6 +772,7 @@ void finite_state_machine() {
                         // current_state = TIMEOUT_STATE;
                         // no timeouts in learn to chose
                         current_state = ITI_STATE;
+                        delay(100);
                         break;
                     }
                 }
@@ -718,6 +782,7 @@ void finite_state_machine() {
             if (now() - t_state_entry > choice_dur){
                 log_code(CHOICE_MISSED_EVENT);
                 log_code(TRIAL_UNSUCCESSFUL_EVENT);
+                miss_counter++;
 
                 // cue
                 // incorrect_choice_cue();
@@ -745,8 +810,19 @@ void finite_state_machine() {
             if (true) {
                 // transit to ITI after certain time
                 current_state = ITI_STATE;
+                miss_counter = 0;
             }
             break;
+
+        // case COLLECT_STATE:
+        // // state entry
+        // if (current_state != last_state){
+        //     state_entry_common();            
+        // }
+
+        // if (is_reaching){
+        //     if (correct_side == left){
+        // }
 
         case TIMEOUT_STATE:
             // state entry
