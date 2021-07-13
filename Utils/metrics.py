@@ -94,10 +94,10 @@ def get_outcome(TrialDf):
 
     if "CHOICE_MISSED_EVENT" in TrialDf['name'].values:
         var = "missed"
-    elif "CHOICE_INCORRECT_EVENT" in TrialDf['name'].values:
-        var = "incorrect"
     elif "CHOICE_CORRECT_EVENT" in TrialDf['name'].values:
         var = "correct"
+    elif "CHOICE_INCORRECT_EVENT" in TrialDf['name'].values:
+        var = "incorrect"
     elif "PREMATURE_CHOICE_EVENT" in TrialDf['name'].values:
         var = "premature"
     else:
