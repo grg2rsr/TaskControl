@@ -46,13 +46,13 @@ unsigned int REWARD_LEFT_EVENT = 31;
 unsigned int REWARD_RIGHT_EVENT = 32;
 unsigned int REWARD_SHORT_EVENT = 33;
 unsigned int REWARD_LONG_EVENT = 34;
+unsigned int REWARD_LEFT_COLLECTED_EVENT = 35;
+unsigned int REWARD_RIGHT_COLLECTED_EVENT = 36;
 // unsigned int REWARD_AVAILABLE_EVENT = 30;
 // unsigned int REWARD_LEFT_AVAILABLE_EVENT = 31;
-// unsigned int REWARD_LEFT_COLLECTED_EVENT = 32;
 // unsigned int REWARD_LEFT_MISSED_EVENT = 33;
 
 // unsigned int REWARD_RIGHT_AVAILABLE_EVENT = 34;
-// unsigned int REWARD_RIGHT_COLLECTED_EVENT = 35;
 // unsigned int REWARD_RIGHT_MISSED_EVENT = 36;
 
 // choice related
