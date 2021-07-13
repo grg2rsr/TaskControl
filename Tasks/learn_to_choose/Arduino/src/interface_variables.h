@@ -23,7 +23,8 @@ float valve_ul_ms_left = 0.01;
 float valve_ul_ms_right = 0.01;
 
 int n_warmup_trials = 10;
-int n_max_miss_trials = 10;
+int n_max_miss_trials_min = 5;
+int n_max_miss_trials_max = 15;
 int correction_loops = 1;
 int corr_loop_entry = 3;
 int corr_loop_exit = 2;
