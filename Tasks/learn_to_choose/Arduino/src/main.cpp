@@ -88,12 +88,6 @@ void read_reaches(){
         log_code(REACH_LEFT_ON);
         is_reaching_left = true;
         t_last_reach_on = now();
-
-        // reward collected
-        if (reward_left_available == true){
-            log_code(REWARD_LEFT_COLLECTED_EVENT);
-            reward_left_available = false;
-        }
     }
 
     // reach off
@@ -101,6 +95,12 @@ void read_reaches(){
         log_code(REACH_LEFT_OFF);
         is_reaching_left = false;
         t_last_reach_off = now();
+
+        // reward collected
+        if (reward_left_available == true){
+            log_code(REWARD_LEFT_COLLECTED_EVENT);
+            reward_left_available = false;
+        }
     }
 
     // right 
@@ -110,12 +110,6 @@ void read_reaches(){
         log_code(REACH_RIGHT_ON);
         is_reaching_right = true;
         t_last_reach_on = now();
-
-        // reward collected
-        if (reward_right_available == true){
-            log_code(REWARD_RIGHT_COLLECTED_EVENT);
-            reward_right_available = false;
-        }
     }
 
     // reach off
@@ -123,6 +117,12 @@ void read_reaches(){
         log_code(REACH_RIGHT_OFF);
         is_reaching_right = false;
         t_last_reach_off = now();
+
+        // reward collected
+        if (reward_right_available == true){
+            log_code(REWARD_RIGHT_COLLECTED_EVENT);
+            reward_right_available = false;
+        }
     }
 
     is_reaching = (is_reaching_left || is_reaching_right);
@@ -564,7 +564,7 @@ void get_trial_type(){
         in_jackpot_mode = false;
         n_max_miss_trials = random(n_max_miss_trials_min, n_max_miss_trials_max);
     }
-    
+
     // jackpot trial after n misses
     if (miss_counter > n_max_miss_trials && in_jackpot_mode == false){
         autodeliver_rewards = 1;
