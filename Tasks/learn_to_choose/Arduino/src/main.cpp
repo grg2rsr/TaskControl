@@ -811,7 +811,7 @@ void finite_state_machine() {
                         break;
                     }
                     else{
-                        delay(100);
+                        delay(250);
                     }
                 }
             }
