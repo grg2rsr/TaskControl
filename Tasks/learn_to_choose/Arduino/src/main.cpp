@@ -788,28 +788,30 @@ void finite_state_machine() {
                 // incorrect choice
                 if ((correct_side == left && is_reaching_right) || (correct_side == right && is_reaching_left)){
                     log_code(CHOICE_INCORRECT_EVENT);
+                    log_code(TRIAL_UNSUCCESSFUL_EVENT);
+                    incorrect_choice_cue();
+
+                    // update counters
+                    if (correct_side == left){
+                        left_error_counter += 1;
+                        right_error_counter = 0;
+                    }
+                    if (correct_side == right){
+                        right_error_counter += 1;
+                        left_error_counter = 0;
+                    }
+                    if (corr_loop_reset_mode == true){
+                        succ_trial_counter = 0;
+                    }
+
                     if (allow_mistakes == 0){
-                        log_code(TRIAL_UNSUCCESSFUL_EVENT);
-                        incorrect_choice_cue();
-
-                        // update counters
-                        if (correct_side == left){
-                            left_error_counter += 1;
-                            right_error_counter = 0;
-                        }
-                        if (correct_side == right){
-                            right_error_counter += 1;
-                            left_error_counter = 0;
-                        }
-                        if (corr_loop_reset_mode == true){
-                            succ_trial_counter = 0;
-                        }
-
                         // current_state = TIMEOUT_STATE;
                         // no timeouts in learn to chose
                         current_state = ITI_STATE;
-                        delay(100);
                         break;
+                    }
+                    else{
+                        delay(100);
                     }
                 }
             }
