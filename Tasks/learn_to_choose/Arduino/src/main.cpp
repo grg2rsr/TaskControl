@@ -47,11 +47,6 @@ bool timing_trial = false;
 int n_choices_left = 1;
 int n_choices_right = 1;
 
-// void update_bias(){
-//     // 0 = left bias, 1 = right bias
-//     bias = (float) n_choices_right / (n_choices_left + n_choices_right);
-// }
-
 
 /*
  ######  ######## ##    ##  ######   #######  ########   ######
@@ -333,18 +328,19 @@ void reward_valve_controller(){
     
     // left
     if (reward_valve_left_is_closed == true && deliver_reward_left == true) {
+        // present cue? (this is necessary for keeping the keyboard reward functionality)
+        if (present_reward_left_cue == true){
+            reward_left_cue();
+            present_reward_left_cue = false;
+            delay(kamin_block_protect_dur);
+        }
+
         digitalWrite(REWARD_LEFT_VALVE_PIN, HIGH);
         log_code(REWARD_LEFT_VALVE_ON);
         reward_valve_left_is_closed = false;
         reward_valve_left_dur = ul2time(reward_magnitude, valve_ul_ms_left);
         t_reward_valve_left_open = now();
         deliver_reward_left = false;
-        
-        // present cue? (this is necessary for keeping the keyboard reward functionality)
-        if (present_reward_left_cue == true){
-            reward_left_cue();
-            present_reward_left_cue = false;
-        }
     }
 
     if (reward_valve_left_is_closed == false && now() - t_reward_valve_left_open > reward_valve_left_dur) {
@@ -355,18 +351,19 @@ void reward_valve_controller(){
 
     // right
     if (reward_valve_right_is_closed == true && deliver_reward_right == true) {
+        // present cue? (this is necessary for keeping the keyboard reward functionality)
+        if (present_reward_right_cue == true){
+            reward_right_cue();
+            present_reward_right_cue = false;
+            delay(kamin_block_protect_dur);
+        }
+
         digitalWrite(REWARD_RIGHT_VALVE_PIN, HIGH);
         log_code(REWARD_RIGHT_VALVE_ON);
         reward_valve_right_is_closed = false;
         reward_valve_right_dur = ul2time(reward_magnitude, valve_ul_ms_right);
         t_reward_valve_right_open = now();
         deliver_reward_right = false;
-        
-        // present cue? (this is necessary for keeping the keyboard reward functionality)
-        if (present_reward_right_cue == true){
-            reward_right_cue();
-            present_reward_right_cue = false;
-        }
     }
 
     if (reward_valve_right_is_closed == false && now() - t_reward_valve_right_open > reward_valve_right_dur) {
@@ -571,10 +568,6 @@ void get_trial_type(){
         in_jackpot_mode = true;
     }
     
-
-
-
-
     // now is always called to update even in corr loop
     set_interval(); // this will produce different intervals in a correction loop
 
@@ -731,6 +724,7 @@ void finite_state_machine() {
                 }
                 
                 if (autodeliver_rewards == 1){ // skip everything if automatically deliver rewards
+                    delay(kamin_block_protect_dur);
                     current_state = REWARD_STATE;
                     break;
                 }
