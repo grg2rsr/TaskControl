@@ -24,6 +24,7 @@ unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long t_state_entry = max_future;
 unsigned long this_ITI_dur;
 unsigned long this_pause;
+unsigned long this_kamin_block_protect_dur;
 
 // for random
 float r;
@@ -352,10 +353,11 @@ void reward_valve_controller(){
         if (present_reward_left_cue == true){
             reward_left_cue();
             present_reward_left_cue = false;
+            this_kamin_block_protect_dur = random(kamin_block_protect_dur_min, kamin_block_protect_dur_max);
         }
 
         if (autodeliver_rewards == 1){
-            if (now() - t_present_left_cue > kamin_block_protect_dur){
+            if (now() - t_present_left_cue > this_kamin_block_protect_dur){
                 open_left_reward_valve();
             }
         }
@@ -375,10 +377,11 @@ void reward_valve_controller(){
         if (present_reward_right_cue == true){
             reward_right_cue();
             present_reward_right_cue = false;
+            this_kamin_block_protect_dur = random(kamin_block_protect_dur_min, kamin_block_protect_dur_max);
         }
 
         if (autodeliver_rewards == 1){
-            if (now() - t_present_right_cue > kamin_block_protect_dur){
+            if (now() - t_present_right_cue > this_kamin_block_protect_dur){
                 open_right_reward_valve();
             }
         }
@@ -776,15 +779,6 @@ void finite_state_machine() {
                 if (correct_side == right){
                     go_cue_right();
                 }
-                
-                // if (autodeliver_rewards == 1){ // skip everything if automatically deliver rewards
-                //     current_state = REWARD_STATE;
-                //     break;
-                // }
-                // else{ // the normal way
-                //     current_state = CHOICE_STATE;
-                //     break;
-                // }
 
                 current_state = CHOICE_STATE;
                 break;
@@ -795,16 +789,18 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
-
+                // set this once on state entry
                 if (autodeliver_rewards == 1){
-                    this_pause = random(kamin_block_protect_dur_min, kamin_block_protect_dur_max);
+                    this_kamin_block_protect_dur = random(kamin_block_protect_dur_min, kamin_block_protect_dur_max);
                 }
             }
 
             // update
             if (last_state == current_state){
-                if (autodeliver_rewards == 1 && now() - t_state_entry > this_pause){
-                    // go to reward state?
+                if (autodeliver_rewards == 1 && now() - t_state_entry > this_kamin_block_protect_dur){
+                    current_state = REWARD_STATE;
+                    log_code(REWARD_AUTODELIVERED_EVENT);
+                    break;
                 }
             }
 
@@ -830,15 +826,15 @@ void finite_state_machine() {
                     log_code(CHOICE_CORRECT_EVENT);
                     log_code(TRIAL_SUCCESSFUL_EVENT);
 
-                    // play cue?
-                    if (cue_on_rewarded_reach == 1){
-                        if (correct_side == left){
-                            go_cue_left();
-                        }
-                        if (correct_side == right){
-                            go_cue_right();
-                        }
-                    }
+                    // // play cue?
+                    // if (cue_on_rewarded_reach == 1){
+                    //     if (correct_side == left){
+                    //         go_cue_left();
+                    //     }
+                    //     if (correct_side == right){
+                    //         go_cue_right();
+                    //     }
+                    // }
 
                     succ_trial_counter += 1;
                     if (correct_side == left){
@@ -891,7 +887,7 @@ void finite_state_machine() {
 
             break;
 
-        case REWARD_AVAILABLE_STATE:
+        case REWARD_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
@@ -910,33 +906,21 @@ void finite_state_machine() {
             // exit condition
             // any is collected
             if (correct_side == left && is_reaching_left || correct_side == right && is_reaching_right) {
-                current_state = REWARD_COLLECTED_STATE;
+                log_code(REWARD_COLLECTED_EVENT);
+                if (autodeliver_rewards == 1){
+                    update_miss_frac(0); // successfully collected rewards should be counted as non-misses
+                }
+                current_state = ITI_STATE;
                 break;
             }
             if (now() - t_state_entry > reward_available_dur){
                 log_code(REWARD_NOT_COLLECTED_EVENT);
-                current_stat = ITI_STATE;
-                break;
-            }
-            break;
-
-        case REWARD_COLLECTED_STATE:
-            // state entry
-            if (current_state != last_state){
-                state_entry_common();
-                if (correct_side == left){
-
+                if (autodeliver_rewards == 1){
+                    update_miss_frac(1); // missed rewards should be counted as misses
                 }
-                else{
-
-                }
-            }
-
-            // exit condition
-            if (true) {
-                // transit to ITI after certain time
                 current_state = ITI_STATE;
-                // miss_counter = 0;
+
+                break;
             }
             break;
 

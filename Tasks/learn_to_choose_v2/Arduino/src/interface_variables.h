@@ -13,8 +13,8 @@ unsigned long ITI_dur_min = 8500;
 unsigned long ITI_dur_max = 11500;
 unsigned long timeout_dur = 6000;
 unsigned long choice_dur = 3000;
+unsigned long reward_available_dur = 5000;
 
-int cue_on_rewarded_reach = 0;
 int present_init_cue = 0;
 
 int prob_bias_corr = 0;
