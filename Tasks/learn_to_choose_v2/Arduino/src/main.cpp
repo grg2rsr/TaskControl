@@ -23,6 +23,7 @@ int last_state = -1; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long t_state_entry = max_future;
 unsigned long this_ITI_dur;
+unsigned long this_pause;
 
 // for random
 float r;
@@ -203,6 +204,10 @@ void trial_entry_cue(){
     buzz_controller.play(buzz_center_freq, trial_entry_buzz_dur);
 }
 
+// fwd declare necessary
+unsigned long t_present_left_cue = max_future;
+unsigned long t_present_right_cue = max_future;
+
 void reward_left_cue(){
     // tone_controller_left.play(go_cue_freq, tone_dur);
     t_present_left_cue = now();
@@ -273,7 +278,7 @@ void incorrect_choice_cue(){
     while (micros() - error_cue_start < error_cue_dur){
         if ((micros() - lastClick) > 2 ) { // Changing this value changes the frequency.
             lastClick = micros();
-            digitalWrite (SPEAKER_PIN, generateNoise());
+            digitalWrite(SPEAKER_PIN, generateNoise());
         }
     }
 }
@@ -297,7 +302,6 @@ bool reward_valve_left_is_open = false;
 // bool deliver_reward_left = false; // already forward declared in interface.cpp
 unsigned long t_reward_valve_left_open = max_future;
 unsigned long reward_valve_left_dur;
-unsigned long t_present_left_cue = max_future;
 
 void open_left_reward_valve(){
     tone_controller.play(tone_freq, tone_dur);
@@ -320,7 +324,6 @@ bool reward_valve_right_is_open = false;
 // bool deliver_reward_right = false; // already forward declared in interface.cpp
 unsigned long t_reward_valve_right_open = max_future;
 unsigned long reward_valve_right_dur;
-unsigned long t_present_right_cue = max_future;
 
 void open_right_reward_valve(){
     tone_controller.play(tone_freq, tone_dur);
@@ -434,7 +437,7 @@ void sync_pin_controller(){
 */
 
 // running bias calculation as a mechanism to combat bias
-int n_choice_hist = 10;
+const int n_choice_hist = 10;
 int past_choices[n_choice_hist] = {0,1,0,1,0,1,0,1,0,1};
 float bias = 0.5;
 
@@ -447,15 +450,15 @@ void update_bias(int choice){ // choice 0 is left, right is 1
     past_choices[0] = choice;
 
     // average
-    int sum = 0;
+    float sum = 0;
     for (int i = 0; i < n_choice_hist; i++){
-        sum = sum + past_choices[i]
+        sum = sum + past_choices[i];
     }
     bias = sum / n_choice_hist;
 }
 
 // running misses calculation as a mechanism to combat disengagement
-int past_misses[n_choice_hist] = {0,0,0,0,0,0,0,0,0,0}
+int past_misses[n_choice_hist] = {0,0,0,0,0,0,0,0,0,0};
 float miss_frac = 0.0;
 
 void update_miss_frac(int miss){
@@ -467,11 +470,11 @@ void update_miss_frac(int miss){
     past_misses[0] = miss; // misses are 1 all other trials are 0
 
     // average
-    int sum = 0;
+    float sum = 0.0;
     for (int i = 0; i < n_choice_hist; i++){
-        sum = sum + past_misses[i]
+        sum = sum + past_misses[i];
     }
-    miss_frac = sum / past_misses;
+    miss_frac = sum / n_choice_hist;
 }
 
 int trial_counter = 0;
@@ -619,11 +622,13 @@ void get_trial_type(){
     }
 
     // if animal is disengaged, turn autodeliver on
-    if (miss_frac > miss_frac_thresh){
-        autodeliver_rewards = 1;
-    }
-    else {
-        autodeliver_rewards = 0;
+    if (in_warmup == false){
+        if (miss_frac > miss_frac_thresh){
+            autodeliver_rewards = 1;
+        }
+        else {
+            autodeliver_rewards = 0;
+        }
     }
     
     // now is always called to update even in corr loop
@@ -772,15 +777,17 @@ void finite_state_machine() {
                     go_cue_right();
                 }
                 
-                if (autodeliver_rewards == 1){ // skip everything if automatically deliver rewards
-                    delay(kamin_block_protect_dur);
-                    current_state = REWARD_STATE;
-                    break;
-                }
-                else{ // the normal way
-                    current_state = CHOICE_STATE;
-                    break;
-                }
+                // if (autodeliver_rewards == 1){ // skip everything if automatically deliver rewards
+                //     current_state = REWARD_STATE;
+                //     break;
+                // }
+                // else{ // the normal way
+                //     current_state = CHOICE_STATE;
+                //     break;
+                // }
+
+                current_state = CHOICE_STATE;
+                break;
             }
             break;
 
@@ -788,11 +795,18 @@ void finite_state_machine() {
             // state entry
             if (current_state != last_state){
                 state_entry_common();
+
+                if (autodeliver_rewards == 1){
+                    this_pause = random(kamin_block_protect_dur_min, kamin_block_protect_dur_max);
+                }
             }
 
             // update
-            // if (last_state == current_state){
-            // }
+            if (last_state == current_state){
+                if (autodeliver_rewards == 1 && now() - t_state_entry > this_pause){
+                    // go to reward state?
+                }
+            }
 
             // exit conditions
 
@@ -807,10 +821,9 @@ void finite_state_machine() {
                 }
                 if (is_reaching_right){
                     update_bias(1);
-                
                 }
                 // update miss buffer
-                update_miss_frac(1);
+                update_miss_frac(0);
 
                 // correct choice
                 if ((correct_side == left && is_reaching_left) || (correct_side == right && is_reaching_right)){
@@ -868,7 +881,7 @@ void finite_state_machine() {
                 log_code(CHOICE_MISSED_EVENT);
                 log_code(TRIAL_UNSUCCESSFUL_EVENT);
                 // miss_counter++;
-                update_miss_frac(0);
+                update_miss_frac(1);
 
                 // cue
                 // incorrect_choice_cue();
@@ -878,7 +891,7 @@ void finite_state_machine() {
 
             break;
 
-        case REWARD_STATE:
+        case REWARD_AVAILABLE_STATE:
             // state entry
             if (current_state != last_state){
                 state_entry_common();
@@ -891,6 +904,31 @@ void finite_state_machine() {
                     log_code(REWARD_RIGHT_EVENT);
                     deliver_reward_right = true;
                     reward_right_available = true;
+                }
+            }
+
+            // exit condition
+            // any is collected
+            if (correct_side == left && is_reaching_left || correct_side == right && is_reaching_right) {
+                current_state = REWARD_COLLECTED_STATE;
+                break;
+            }
+            if (now() - t_state_entry > reward_available_dur){
+                log_code(REWARD_NOT_COLLECTED_EVENT);
+                current_stat = ITI_STATE;
+                break;
+            }
+            break;
+
+        case REWARD_COLLECTED_STATE:
+            // state entry
+            if (current_state != last_state){
+                state_entry_common();
+                if (correct_side == left){
+
+                }
+                else{
+
                 }
             }
 
@@ -924,7 +962,7 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 this_ITI_dur = (unsigned long) random(ITI_dur_min, ITI_dur_max);
-                rand_dur = random(1000,2000);
+                rand_dur = random(1000,2000); // FIXME expose this somewhere
                 call_block = false;
             }
 

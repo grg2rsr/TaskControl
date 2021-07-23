@@ -1,7 +1,8 @@
 unsigned long tone_dur = 50;
 unsigned long tone_freq = 12000;
 unsigned long buzz_dur = 200;
-unsigned long kamin_block_protect_dur = 250;
+unsigned long kamin_block_protect_dur_min = 250;
+unsigned long kamin_block_protect_dur_max = 1500;
 unsigned long trial_entry_buzz_dur = 5;
 unsigned long buzz_center_freq = 235;
 unsigned long buzz_freq_sep = 35;

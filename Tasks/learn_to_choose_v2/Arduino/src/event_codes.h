@@ -16,7 +16,6 @@ const unsigned int CHOICE_STATE = 4;
 const unsigned int REWARD_STATE = 5;
 const unsigned int ITI_STATE = 6;
 const unsigned int TIMEOUT_STATE = 7;
-const unsigned int PAUSE_STATE = 8;
 
 // SPANS
 unsigned int REACH_LEFT_ON = 10;
