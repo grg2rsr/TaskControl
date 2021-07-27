@@ -168,19 +168,23 @@ unsigned long led_on_dur = 50;
 
 // access functions
 void lights_on(){
-    log_code(LED_ON);
-    for (int i = 0; i < NUM_LEDS; i++){
-        leds[i] = CHSV(led_hsv,255,led_brightness);
+    if (LED_enabled){
+        log_code(LED_ON);
+        for (int i = 0; i < NUM_LEDS; i++){
+            leds[i] = CHSV(led_hsv,255,led_brightness);
+        }
+        FastLED.show();
     }
-    FastLED.show();
 }
 
 void lights_off(){
-    log_code(LED_OFF);
-    for (int i = 0; i < NUM_LEDS; i++){
-        leds[i] = CRGB::Black;
+    if (LED_enabled){
+        log_code(LED_OFF);
+        for (int i = 0; i < NUM_LEDS; i++){
+            leds[i] = CRGB::Black;
+        }
+        FastLED.show();
     }
-    FastLED.show();
 }
 
 /*
