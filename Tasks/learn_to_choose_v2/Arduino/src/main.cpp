@@ -168,6 +168,7 @@ unsigned long led_on_dur = 50;
 
 // access functions
 void lights_on(){
+    log_code(LED_ON);
     for (int i = 0; i < NUM_LEDS; i++){
         leds[i] = CHSV(led_hsv,255,led_brightness);
     }
@@ -175,6 +176,7 @@ void lights_on(){
 }
 
 void lights_off(){
+    log_code(LED_OFF);
     for (int i = 0; i < NUM_LEDS; i++){
         leds[i] = CRGB::Black;
     }
@@ -644,9 +646,15 @@ void get_trial_type(){
     log_float("bias", bias);
     log_int("timing_trial", (int) timing_trial);
     log_int("autodeliver_rewards", (int) autodeliver_rewards);
-    // log_int("miss_counter", miss_counter);
     log_float("miss_frac", miss_frac);
-    log_int("in_jackpot_mode", (int) in_jackpot_mode);
+    // log_int("miss_counter", miss_counter);
+    // log_int("in_jackpot_mode", (int) in_jackpot_mode);
+
+    // for debugging
+    // for (int i = 0; i < n_choice_hist; i++){
+    //     Serial.print(past_misses[i]);
+    // }
+    // Serial.print('\n');
 
     trial_counter++;
 }
@@ -866,9 +874,13 @@ void finite_state_machine() {
                     if (corr_loop_reset_mode == true){
                         succ_trial_counter = 0;
                     }
-
-                    current_state = ITI_STATE;
-                    break;
+                    if (allow_mistakes == 0){
+                        current_state = ITI_STATE;
+                        break;
+                    }
+                    else{
+                        delay(100);
+                    }
                 }
             }
                         
@@ -880,7 +892,7 @@ void finite_state_machine() {
                 update_miss_frac(1);
 
                 // cue
-                // incorrect_choice_cue();
+                incorrect_choice_cue();
                 current_state = ITI_STATE;
                 break;
             }
@@ -895,17 +907,19 @@ void finite_state_machine() {
                     log_code(REWARD_LEFT_EVENT);
                     deliver_reward_left = true;
                     reward_left_available = true;
+                    reward_right_available = false;
                 }
                 else{
                     log_code(REWARD_RIGHT_EVENT);
                     deliver_reward_right = true;
                     reward_right_available = true;
+                    reward_left_available = false;
                 }
             }
 
             // exit condition
             // any is collected
-            if (correct_side == left && is_reaching_left || correct_side == right && is_reaching_right) {
+            if ( (correct_side == left && is_reaching_left) || (correct_side == right && is_reaching_right) ) {
                 log_code(REWARD_COLLECTED_EVENT);
                 if (autodeliver_rewards == 1){
                     update_miss_frac(0); // successfully collected rewards should be counted as non-misses
@@ -917,6 +931,12 @@ void finite_state_machine() {
                 log_code(REWARD_NOT_COLLECTED_EVENT);
                 if (autodeliver_rewards == 1){
                     update_miss_frac(1); // missed rewards should be counted as misses
+                }
+                if (correct_side == left){
+                    log_code(REWARD_LEFT_NOT_COLLECTED_EVENT);
+                }
+                if (correct_side == right){
+                    log_code(REWARD_RIGHT_NOT_COLLECTED_EVENT);
                 }
                 current_state = ITI_STATE;
 

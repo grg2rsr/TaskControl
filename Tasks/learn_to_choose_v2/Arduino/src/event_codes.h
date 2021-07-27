@@ -7,7 +7,7 @@
 // _ON _OFF are for events that have a start and a stop (spans)
 // _EVENT are for actual events (time stamps)
 
-// STATES
+// FSM STATES
 const unsigned int INI_STATE = 0;
 const unsigned int TRIAL_AVAILABLE_STATE = 1;
 const unsigned int TRIAL_ENTRY_STATE = 2;
@@ -17,12 +17,13 @@ const unsigned int REWARD_STATE = 5;
 const unsigned int ITI_STATE = 6;
 const unsigned int TIMEOUT_STATE = 7;
 
-// SPANS
+// REACHES
 unsigned int REACH_LEFT_ON = 10;
 unsigned int REACH_LEFT_OFF = 11;
 unsigned int REACH_RIGHT_ON = 12;
 unsigned int REACH_RIGHT_OFF = 13;
 
+// VALVES
 unsigned int REWARD_LEFT_VALVE_ON = 14;
 unsigned int REWARD_LEFT_VALVE_OFF = 15;
 unsigned int REWARD_RIGHT_VALVE_ON = 16;
@@ -46,9 +47,13 @@ unsigned int REWARD_LEFT_EVENT = 31;
 unsigned int REWARD_RIGHT_EVENT = 32;
 unsigned int REWARD_SHORT_EVENT = 33;
 unsigned int REWARD_LONG_EVENT = 34;
-unsigned int REWARD_COLLECTED_EVENT = 35;
-unsigned int REWARD_AUTODELIVERED_EVENT = 36;
-unsigned int REWARD_NOT_COLLECTED_EVENT = 37;
+unsigned int REWARD_AUTODELIVERED_EVENT = 35;
+unsigned int REWARD_COLLECTED_EVENT = 36;
+unsigned int REWARD_LEFT_COLLECTED_EVENT = 37;
+unsigned int REWARD_RIGHT_COLLECTED_EVENT = 38;
+unsigned int REWARD_NOT_COLLECTED_EVENT = 39;
+unsigned int REWARD_LEFT_NOT_COLLECTED_EVENT = 301;
+unsigned int REWARD_RIGHT_NOT_COLLECTED_EVENT = 302;
 
 // choice related
 unsigned int CHOICE_EVENT = 40;
@@ -61,8 +66,8 @@ unsigned int CHOICE_SHORT_EVENT = 45;
 // stim and cue stuff
 // unsigned int FIRST_TIMING_CUE_EVENT = 50;
 // unsigned int SECOND_TIMING_CUE_EVENT = 51;
-// unsigned int CUE_LED_ON = 52;
-// unsigned int CUE_LED_OFF = 53;
+unsigned int LED_ON = 52;
+unsigned int LED_OFF = 53;
 unsigned int GO_CUE_LEFT_EVENT = 54;
 unsigned int GO_CUE_RIGHT_EVENT = 55;
 unsigned int GO_CUE_SHORT_EVENT = 56;
