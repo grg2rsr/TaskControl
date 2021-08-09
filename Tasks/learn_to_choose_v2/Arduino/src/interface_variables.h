@@ -16,6 +16,7 @@ unsigned long choice_dur = 3000;
 unsigned long reward_available_dur = 5000;
 
 int present_init_cue = 0;
+int LED_enabled = 1;
 int allow_mistakes = 1;
 int prob_bias_corr = 0;
 int correction_loops = 1;
