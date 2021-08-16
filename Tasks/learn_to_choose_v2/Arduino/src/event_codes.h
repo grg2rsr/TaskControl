@@ -62,6 +62,7 @@ unsigned int CHOICE_LEFT_EVENT = 42;
 unsigned int CHOICE_RIGHT_EVENT = 43;
 unsigned int CHOICE_LONG_EVENT = 44;
 unsigned int CHOICE_SHORT_EVENT = 45;
+unsigned int ANTICIPATORY_REACH_EVENT = 46;
 
 // stim and cue stuff
 // unsigned int FIRST_TIMING_CUE_EVENT = 50;

@@ -363,6 +363,15 @@ void reward_valve_controller(){
         }
 
         if (autodeliver_rewards == 1){
+            // rewarding predictive reach
+            if (reward_predictive_reaches == 1){
+                if (is_reaching_left && (now() - t_last_reach_on > min_grasp_dur)){
+                    log_code(ANTICIPATORY_REACH_EVENT);
+                    open_left_reward_valve();
+                }
+            }
+
+            // kamin block time is up
             if (now() - t_present_left_cue > this_kamin_block_protect_dur){
                 open_left_reward_valve();
             }
@@ -387,6 +396,15 @@ void reward_valve_controller(){
         }
 
         if (autodeliver_rewards == 1){
+            // rewarding predictive reach
+            if (reward_predictive_reaches == 1){
+                if (is_reaching_right && (now() - t_last_reach_on > min_grasp_dur)){
+                    log_code(ANTICIPATORY_REACH_EVENT);
+                    open_right_reward_valve();
+                }
+            }
+
+            // kamin block time is up
             if (now() - t_present_right_cue > this_kamin_block_protect_dur){
                 open_right_reward_valve();
             }

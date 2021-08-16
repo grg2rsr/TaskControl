@@ -24,6 +24,7 @@ int corr_loop_entry = 3;
 int corr_loop_exit = 2;
 int trial_autostart = 1;
 int autodeliver_rewards = 1;
+int reward_predictive_reaches = 1;
 
 float miss_frac_thresh = 0.7;
 int n_warmup_trials = 10;
