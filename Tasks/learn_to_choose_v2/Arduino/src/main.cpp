@@ -746,7 +746,9 @@ void finite_state_machine() {
                     }
                 }
                 else{
-                    current_state = TRIAL_ENTRY_STATE;
+                    if (now() - t_last_reach_off > reach_block_dur && is_reaching == false){
+                        current_state = TRIAL_ENTRY_STATE;
+                    }
                     break;
                 }
             }
