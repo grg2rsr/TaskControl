@@ -21,12 +21,20 @@ class BonsaiController(QtWidgets.QWidget):
         task = self.config['current']['task']
         task_folder = Path(self.config['paths']['tasks_folder']) / task
         save_path = folder / 'bonsai_' # this needs to be fixed in bonsai # FIXME TODO
+        
        
         # constructing the bonsai exe string
         parameters = "-p:save_path=\""+str(save_path)+"\""
 
         # com port for firmata
         parameters = parameters + " -p:com_port="+self.config['connections']['firmata_arduino_port']
+
+        # getting other manually set params
+        with open(task_folder / "Bonsai" / "interface_variables.ini",'r') as fH:
+            params = fH.readlines()
+            params = [p.strip() for p in params]
+        for line in params:
+            parameters = parameters + " -p:%s" % line
 
         # com port for harp
         # parameters = parameters + " -p:harp_com_port="+self.config['connections']['harp_port']
@@ -36,7 +44,7 @@ class BonsaiController(QtWidgets.QWidget):
 
         command = ' '.join([str(bonsai_exe),str(bonsai_workflow),"--start",parameters,"&"])
 
-        # utils.printer("bonsai command: %s " % command, 'msg')
+        utils.printer("bonsai command: %s " % command, 'msg')
         log = open(save_path.with_name('bonsai_log.txt') ,'w')
         theproc = subprocess.Popen(command, shell = True, stdout=log, stderr=log)
         # theproc.communicate() # this hangs shell on windows machines, TODO check if this is true for linux
