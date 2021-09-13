@@ -561,8 +561,12 @@ class OnlineDataAnalyser(QtCore.QObject):
             if decoded == "TRIAL_ENTRY_EVENT": # HARDCODE
 
                 # parse lines
-                TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map, parse_var=True)
-                TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
+                TrialMetricsDf = None
+                try:
+                    TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map, parse_var=True)
+                    TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
+                except ValueError:  # important TODO - investigate this! this was added with cue on reach and no mistakes
+                    pass 
                 
                 if TrialMetricsDf is not None:
                     if self.SessionDf is None: # on first
