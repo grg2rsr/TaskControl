@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<WorkflowBuilder Version="2.6.0"
+<WorkflowBuilder Version="2.5.1"
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xmlns:osc="clr-namespace:Bonsai.Osc;assembly=Bonsai.Osc"
                  xmlns:harp="clr-namespace:Bonsai.Harp;assembly=Bonsai.Harp"
@@ -37,7 +37,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="DoubleProperty">
-          <Value>550</Value>
+          <Value>503</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="PropertyMapping">
@@ -89,13 +89,13 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="harp:Device">
+          <harp:PortName>COM5</harp:PortName>
           <harp:DeviceState>Active</harp:DeviceState>
           <harp:DumpRegisters>true</harp:DumpRegisters>
           <harp:LedState>On</harp:LedState>
           <harp:VisualIndicators>On</harp:VisualIndicators>
           <harp:Heartbeat>Disable</harp:Heartbeat>
           <harp:IgnoreErrors>false</harp:IgnoreErrors>
-          <harp:PortName />
         </Combinator>
       </Expression>
       <Expression xsi:type="p1:LoadCellsEvent">
@@ -175,7 +175,7 @@
       <Expression xsi:type="Subtract" />
       <Expression xsi:type="GreaterThan">
         <Operand xsi:type="DoubleProperty">
-          <Value>0</Value>
+          <Value>503</Value>
         </Operand>
       </Expression>
       <Expression xsi:type="PropertyMapping">
@@ -185,7 +185,7 @@
       </Expression>
       <Expression xsi:type="GreaterThan">
         <Operand xsi:type="DoubleProperty">
-          <Value>0</Value>
+          <Value>503</Value>
         </Operand>
       </Expression>
       <Expression xsi:type="Combinator">
@@ -194,7 +194,7 @@
       <Expression xsi:type="LogicalAnd" />
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="ard:DigitalOutput">
-          <ard:PortName>COM4</ard:PortName>
+          <ard:PortName>COM3</ard:PortName>
           <ard:Pin>28</ard:Pin>
         </Combinator>
       </Expression>
@@ -249,7 +249,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="dsp:MatrixWriter">
-          <dsp:Path>C:\Users\User\TaskControl\Animals\123\2021-09-13_14-37-13_learn_to_choose_v2\bonsai_harp_log.bin</dsp:Path>
+          <dsp:Path>C:\Users\User\TaskControl\Animals\123\2021-09-13_15-52-54_learn_to_choose_v2\bonsai_harp_log.bin</dsp:Path>
           <dsp:Suffix>None</dsp:Suffix>
           <dsp:Overwrite>true</dsp:Overwrite>
           <dsp:Layout>ColumnMajor</dsp:Layout>
@@ -274,7 +274,7 @@
         <Combinator xsi:type="rx:Zip" />
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-13_14-37-13_learn_to_choose_v2\bonsai_LoadCellData.csv</io:FileName>
+        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-13_15-52-54_learn_to_choose_v2\bonsai_LoadCellData.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
@@ -296,7 +296,7 @@
         </Operand>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-13_14-37-13_learn_to_choose_v2\bonsai_harp_sync.csv</io:FileName>
+        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-13_15-52-54_learn_to_choose_v2\bonsai_harp_sync.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
@@ -318,7 +318,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>C:\Users\User\TaskControl\Animals\123\2021-09-13_14-37-13_learn_to_choose_v2\bonsai_</Value>
+          <Value>C:\Users\User\TaskControl\Animals\123\2021-09-13_15-52-54_learn_to_choose_v2\bonsai_</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">
@@ -353,8 +353,10 @@
       <Expression xsi:type="MemberSelector">
         <Selector>Val0</Selector>
       </Expression>
-      <Expression xsi:type="scr:ExpressionTransform">
-        <scr:Expression>it &gt; 60</scr:Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="DoubleProperty">
+          <Value>0</Value>
+        </Combinator>
       </Expression>
       <Expression xsi:type="SubscribeSubject">
         <Name>base_name</Name>
@@ -398,9 +400,32 @@
           <Property Name="PortName" />
         </PropertyMappings>
       </Expression>
+      <Expression xsi:type="ExternalizedMapping">
+        <Property Name="Value" DisplayName="reach_thresh" />
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="DoubleProperty">
+          <Value>66</Value>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="PropertyMapping">
+        <PropertyMappings>
+          <Property Name="Value" />
+        </PropertyMappings>
+      </Expression>
+      <Expression xsi:type="PropertyMapping">
+        <PropertyMappings>
+          <Property Name="Value" />
+        </PropertyMappings>
+      </Expression>
+      <Expression xsi:type="GreaterThan">
+        <Operand xsi:type="DoubleProperty">
+          <Value>66</Value>
+        </Operand>
+      </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="ard:DigitalOutput">
-          <ard:PortName>COM4</ard:PortName>
+          <ard:PortName>COM3</ard:PortName>
           <ard:Pin>51</ard:Pin>
         </Combinator>
       </Expression>
@@ -420,18 +445,25 @@
       <Expression xsi:type="MemberSelector">
         <Selector>Val0</Selector>
       </Expression>
-      <Expression xsi:type="scr:ExpressionTransform">
-        <scr:Expression>it &gt; 60</scr:Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="DoubleProperty">
+          <Value>0</Value>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="GreaterThan">
+        <Operand xsi:type="DoubleProperty">
+          <Value>60</Value>
+        </Operand>
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="ard:DigitalOutput">
-          <ard:PortName>COM4</ard:PortName>
+          <ard:PortName>COM3</ard:PortName>
           <ard:Pin>50</ard:Pin>
         </Combinator>
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="cv:VideoWriter">
-          <cv:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-13_14-37-13_learn_to_choose_v2\bonsai_video.avi</cv:FileName>
+          <cv:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-13_15-52-54_learn_to_choose_v2\bonsai_video.avi</cv:FileName>
           <cv:Suffix>None</cv:Suffix>
           <cv:Buffered>true</cv:Buffered>
           <cv:Overwrite>true</cv:Overwrite>
@@ -448,7 +480,7 @@
         <Selector>Metadata.embeddedFrameCounter,Metadata.embeddedTimeStamp,Metadata.embeddedGPIOPinState</Selector>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-13_14-37-13_learn_to_choose_v2\bonsai_frame_stamps.csv</io:FileName>
+        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-13_15-52-54_learn_to_choose_v2\bonsai_frame_stamps.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
@@ -459,7 +491,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>COM4</Value>
+          <Value>COM3</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">
@@ -533,32 +565,39 @@
       <Edge From="59" To="60" Label="Source1" />
       <Edge From="60" To="61" Label="Source1" />
       <Edge From="62" To="63" Label="Source1" />
-      <Edge From="62" To="86" Label="Source1" />
+      <Edge From="62" To="92" Label="Source1" />
       <Edge From="63" To="64" Label="Source1" />
-      <Edge From="63" To="85" Label="Source1" />
+      <Edge From="63" To="91" Label="Source1" />
       <Edge From="64" To="65" Label="Source1" />
-      <Edge From="64" To="80" Label="Source1" />
+      <Edge From="64" To="85" Label="Source1" />
       <Edge From="65" To="66" Label="Source1" />
       <Edge From="66" To="67" Label="Source1" />
       <Edge From="67" To="68" Label="Source1" />
-      <Edge From="68" To="79" Label="Source1" />
+      <Edge From="68" To="83" Label="Source1" />
       <Edge From="69" To="70" Label="Source1" />
       <Edge From="70" To="71" Label="Source1" />
-      <Edge From="71" To="85" Label="Source2" />
+      <Edge From="71" To="91" Label="Source2" />
       <Edge From="72" To="73" Label="Source1" />
       <Edge From="73" To="74" Label="Source1" />
-      <Edge From="74" To="87" Label="Source1" />
+      <Edge From="74" To="93" Label="Source1" />
       <Edge From="75" To="76" Label="Source1" />
-      <Edge From="76" To="84" Label="Source2" />
+      <Edge From="76" To="90" Label="Source2" />
       <Edge From="77" To="78" Label="Source1" />
-      <Edge From="78" To="79" Label="Source2" />
+      <Edge From="78" To="84" Label="Source2" />
+      <Edge From="79" To="80" Label="Source1" />
       <Edge From="80" To="81" Label="Source1" />
-      <Edge From="81" To="82" Label="Source1" />
-      <Edge From="82" To="83" Label="Source1" />
+      <Edge From="80" To="82" Label="Source1" />
+      <Edge From="81" To="89" Label="Source2" />
+      <Edge From="82" To="83" Label="Source2" />
       <Edge From="83" To="84" Label="Source1" />
-      <Edge From="86" To="87" Label="Source2" />
+      <Edge From="85" To="86" Label="Source1" />
+      <Edge From="86" To="87" Label="Source1" />
+      <Edge From="87" To="88" Label="Source1" />
       <Edge From="88" To="89" Label="Source1" />
       <Edge From="89" To="90" Label="Source1" />
+      <Edge From="92" To="93" Label="Source2" />
+      <Edge From="94" To="95" Label="Source1" />
+      <Edge From="95" To="96" Label="Source1" />
     </Edges>
   </Workflow>
 </WorkflowBuilder>
