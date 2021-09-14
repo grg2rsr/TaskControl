@@ -64,6 +64,7 @@ class ArduinoController(QtWidgets.QWidget):
         #            bhv.get_interval, bhv.get_outcome, bhv.get_bias,
         #            bhv.get_correct_zone, bhv.get_in_corr_loop) # HARDCODE
 
+        # TODO make this an external thing
         Metrics = ()
                    
         self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
@@ -221,6 +222,7 @@ class ArduinoController(QtWidgets.QWidget):
         # except:
         #     utils.printer("can't set valve calibration factor",'error')
 
+        # TODO fix task specific
         utils.printer("setting valve calibration factors",'task')
         try:
             self.VariableController.VariableEditWidget.set_entry('valve_ul_ms_left',self.config['box']['valve_ul_ms_left'])
@@ -553,12 +555,12 @@ class OnlineDataAnalyser(QtCore.QObject):
             # update water counter if reward was collected
             # if decoded == 'REWARD_COLLECTED_EVENT':
             # TODO to be moved to the controller that has to take care of the emitted data
-            if decoded == 'REWARD_LEFT_VALVE_ON' or decoded == 'REWARD_RIGHT_VALVE_ON':
+            if decoded == 'REWARD_LEFT_VALVE_ON' or decoded == 'REWARD_RIGHT_VALVE_ON': # or decoded = 'REWARD_VALVE_ON
                 current_magnitude = self.parent.VariableController.VariableEditWidget.get_entry('reward_magnitude')['value']
                 self.WaterCounter.increment(current_magnitude)
 
             # the event that separates the stream of data into chunks of trials
-            if decoded == "TRIAL_ENTRY_EVENT": # HARDCODE
+            if decoded == "TRIAL_ENTRY_EVENT": # TODO externalize
 
                 # parse lines
                 TrialMetricsDf = None
