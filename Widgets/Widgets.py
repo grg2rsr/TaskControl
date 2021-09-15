@@ -17,8 +17,8 @@ from Utils import metrics
 from Visualizers.TaskVis_pg  import TrialsVis
 from Visualizers.TaskVis_mpl import SessionVis
 
-from Widgets.Popups import *
-from Widgets.UtilityWidgets import *
+from Widgets.Popups import RunInfoPopup
+from Widgets.UtilityWidgets import StringChoiceWidget, ValueEditFormLayout, PandasModel
 
 from Widgets.ArduinoWidgets import ArduinoController
 from Widgets.BonsaiWidgets import BonsaiController
@@ -142,7 +142,8 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # display amount of water consumed
         self.WaterCounter = WaterCounter(self)
-        FormLayout.addRow('consumed water (µl)', self.WaterCounter)
+        # FormLayout.addRow('consumed water (µl)', self.WaterCounter)
+        FormLayout.addRow(self.WaterCounter)
 
         # sep
         line = QtWidgets.QFrame(self)
@@ -224,7 +225,8 @@ class SettingsWidget(QtWidgets.QWidget):
         self.DoneBtn.setEnabled(True)
         self.plot_trial_btn.setEnabled(True)
         self.plot_session_btn.setEnabled(True)
-        # TODO make the task changeable
+        self.TaskChoiceWidget.setEnabled(False)
+        self.AnimalChoiceWidget.setEnabled(False)
 
         # animal popup
         self.RunInfo = RunInfoPopup(self)
@@ -246,8 +248,6 @@ class SettingsWidget(QtWidgets.QWidget):
             if type(Controller) == ArduinoController:
                 self.TrialCounter.connect(self.ArduinoController.OnlineDataAnalyser)
 
-                
-
         self.running = True
 
         # start the timer
@@ -265,7 +265,8 @@ class SettingsWidget(QtWidgets.QWidget):
         self.RunBtn.setEnabled(True)
         self.plot_session_btn.setEnabled(False)
         self.plot_trial_btn.setEnabled(False)
-        # TODO make the task unchangeable
+        self.TaskChoiceWidget.setEnabled(True)
+        self.AnimalChoiceWidget.setEnabled(True)
 
         # save the current animal metadata (includes weight)
         out_path = self.run_folder / "animal_meta.csv"
@@ -564,7 +565,7 @@ class TrialCounter3(QtWidgets.QTableView):
     #     print('refresh called on ',i,j)
     #     self.update()
 
-class WaterCounter(QtWidgets.QLabel):
+class WaterCounter_old(QtWidgets.QLabel):
     """ """
     def __init__(self, parent):
         super(WaterCounter, self).__init__(parent=parent)
@@ -579,4 +580,30 @@ class WaterCounter(QtWidgets.QLabel):
         self.setText(str(new_amount))
 
     def get_value(self):
-        return int(float(self.text())) # FIXME check this
+        return int(float(self.text()))
+
+class WaterCounter(QtWidgets.QWidget):
+    """ with a reset button """
+    def __init__(self, parent):
+        super(WaterCounter, self).__init__(parent=parent)
+        self.Layout = QtWidgets.QHBoxLayout()
+        self.Labela = QtWidgets.QLabel('consumed water (µl)')
+        self.Label = QtWidgets.QLabel()
+        self.reset_btn = QtWidgets.QPushButton('reset')
+        self.reset_btn.clicked.connect(self.reset)
+        self.Layout.addWidget(self.Labela, alignment=QtCore.Qt.AlignVCenter)
+        self.Layout.addWidget(self.Label, alignment=QtCore.Qt.AlignVCenter)
+        self.Layout.addWidget(self.reset_btn, alignment=QtCore.Qt.AlignVCenter)
+        self.setLayout(self.Layout)
+        self.reset()
+    
+    def reset(self):
+        self.Label.setText("0")
+
+    def increment(self, amount):
+        current_amount = int(float(self.Label.text()))
+        new_amount = current_amount + amount
+        self.Label.setText(str(new_amount))
+
+    def get_value(self):
+        return int(float(self.Label.text())) # FIXME check this
