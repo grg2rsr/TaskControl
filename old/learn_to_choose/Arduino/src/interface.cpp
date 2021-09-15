@@ -138,6 +138,22 @@ void processSerialData() {
             log_ulong("choice_dur", choice_dur);
         }
 
+        if (strcmp(varname,"cue_on_rewarded_reach")==0){
+            log_int("cue_on_rewarded_reach", cue_on_rewarded_reach);
+        }
+
+        if (strcmp(varname,"cue_on_reach")==0){
+            log_int("cue_on_reach", cue_on_reach);
+        }
+
+        if (strcmp(varname,"present_init_cue")==0){
+            log_int("present_init_cue", present_init_cue);
+        }
+
+        if (strcmp(varname,"allow_mistakes")==0){
+            log_int("allow_mistakes", allow_mistakes);
+        }
+
         if (strcmp(varname,"autodeliver_rewards")==0){
             log_int("autodeliver_rewards", autodeliver_rewards);
         }
@@ -156,6 +172,18 @@ void processSerialData() {
 
         if (strcmp(varname,"valve_ul_ms_right")==0){
             log_float("valve_ul_ms_right", valve_ul_ms_right);
+        }
+
+        if (strcmp(varname,"n_warmup_trials")==0){
+            log_int("n_warmup_trials", n_warmup_trials);
+        }
+
+        if (strcmp(varname,"n_max_miss_trials_min")==0){
+            log_int("n_max_miss_trials_min", n_max_miss_trials_min);
+        }
+
+        if (strcmp(varname,"n_max_miss_trials_max")==0){
+            log_int("n_max_miss_trials_max", n_max_miss_trials_max);
         }
 
         if (strcmp(varname,"correction_loops")==0){
@@ -264,6 +292,22 @@ void processSerialData() {
             choice_dur = strtoul(varvalue,NULL,10);
         }
 
+        if (strcmp(varname,"cue_on_rewarded_reach")==0){
+            cue_on_rewarded_reach = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"cue_on_reach")==0){
+            cue_on_reach = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"present_init_cue")==0){
+            present_init_cue = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"allow_mistakes")==0){
+            allow_mistakes = atoi(varvalue);
+        }
+
         if (strcmp(varname,"autodeliver_rewards")==0){
             autodeliver_rewards = atoi(varvalue);
         }
@@ -282,6 +326,18 @@ void processSerialData() {
 
         if (strcmp(varname,"valve_ul_ms_right")==0){
             valve_ul_ms_right = atof(varvalue);
+        }
+
+        if (strcmp(varname,"n_warmup_trials")==0){
+            n_warmup_trials = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"n_max_miss_trials_min")==0){
+            n_max_miss_trials_min = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"n_max_miss_trials_max")==0){
+            n_max_miss_trials_max = atoi(varvalue);
         }
 
         if (strcmp(varname,"correction_loops")==0){

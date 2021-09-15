@@ -423,14 +423,14 @@ no resetting: intermediate mistakes allowed, corr loop is exited after 3 correct
 
 unsigned long this_interval = 1500;
 
-unsigned long short_intervals[2] = {600, 1000};
-unsigned long long_intervals[2] = {2000, 2400};
+unsigned long short_intervals[1] = {600};
+unsigned long long_intervals[1] = {2400};
 // float p_short_intervals[2] = {0.5, 0.5};
 // float p_long_intervals[2] = {0.5, 0.5};
 int i;
 
 unsigned long get_short_interval(){
-    i = random(0,2);
+    i = random(0,1);
     return short_intervals[i];
 }
 //     r = random(0,1000) / 1000.0;
@@ -443,7 +443,7 @@ unsigned long get_short_interval(){
 // }
 
 unsigned long get_long_interval(){
-    i = random(0,2);
+    i = random(0,1);
     return long_intervals[i];
 }
 //     r = random(0,1000) / 1000.0;
