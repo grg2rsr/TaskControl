@@ -94,6 +94,10 @@ void processSerialData() {
 
         // INSERT_GETTERS
 
+        if (strcmp(varname,"go_cue_freq")==0){
+            log_int("go_cue_freq", go_cue_freq);
+        }
+
         if (strcmp(varname,"tone_dur")==0){
             log_ulong("tone_dur", tone_dur);
         }
@@ -102,16 +106,8 @@ void processSerialData() {
             log_ulong("buzz_dur", buzz_dur);
         }
 
-        if (strcmp(varname,"trial_entry_buzz_dur")==0){
-            log_ulong("trial_entry_buzz_dur", trial_entry_buzz_dur);
-        }
-
-        if (strcmp(varname,"buzz_center_freq")==0){
-            log_ulong("buzz_center_freq", buzz_center_freq);
-        }
-
-        if (strcmp(varname,"buzz_freq_sep")==0){
-            log_ulong("buzz_freq_sep", buzz_freq_sep);
+        if (strcmp(varname,"buzz_f")==0){
+            log_ulong("buzz_f", buzz_f);
         }
 
         if (strcmp(varname,"led_hsv")==0){
@@ -142,10 +138,6 @@ void processSerialData() {
             log_int("autodeliver_rewards", autodeliver_rewards);
         }
 
-        if (strcmp(varname,"left_short")==0){
-            log_int("left_short", left_short);
-        }
-
         if (strcmp(varname,"reward_magnitude")==0){
             log_ulong("reward_magnitude", reward_magnitude);
         }
@@ -170,28 +162,12 @@ void processSerialData() {
             log_int("corr_loop_exit", corr_loop_exit);
         }
 
-        if (strcmp(varname,"reach_block_dur")==0){
-            log_ulong("reach_block_dur", reach_block_dur);
-        }
-
-        if (strcmp(varname,"min_grasp_dur")==0){
-            log_ulong("min_grasp_dur", min_grasp_dur);
-        }
-
-        if (strcmp(varname,"trial_autostart")==0){
-            log_int("trial_autostart", trial_autostart);
-        }
-
-        if (strcmp(varname,"p_timing_trial")==0){
-            log_float("p_timing_trial", p_timing_trial);
-        }
-
         if (strcmp(varname,"bias")==0){
             log_float("bias", bias);
         }
 
-        if (strcmp(varname,"gap")==0){
-            log_ulong("gap", gap);
+        if (strcmp(varname,"contrast")==0){
+            log_float("contrast", contrast);
         }
 
         }
@@ -220,6 +196,10 @@ void processSerialData() {
 
             // INSERT_SETTERS
 
+        if (strcmp(varname,"go_cue_freq")==0){
+            go_cue_freq = atoi(varvalue);
+        }
+
         if (strcmp(varname,"tone_dur")==0){
             tone_dur = strtoul(varvalue,NULL,10);
         }
@@ -228,16 +208,8 @@ void processSerialData() {
             buzz_dur = strtoul(varvalue,NULL,10);
         }
 
-        if (strcmp(varname,"trial_entry_buzz_dur")==0){
-            trial_entry_buzz_dur = strtoul(varvalue,NULL,10);
-        }
-
-        if (strcmp(varname,"buzz_center_freq")==0){
-            buzz_center_freq = strtoul(varvalue,NULL,10);
-        }
-
-        if (strcmp(varname,"buzz_freq_sep")==0){
-            buzz_freq_sep = strtoul(varvalue,NULL,10);
+        if (strcmp(varname,"buzz_f")==0){
+            buzz_f = strtoul(varvalue,NULL,10);
         }
 
         if (strcmp(varname,"led_hsv")==0){
@@ -268,10 +240,6 @@ void processSerialData() {
             autodeliver_rewards = atoi(varvalue);
         }
 
-        if (strcmp(varname,"left_short")==0){
-            left_short = atoi(varvalue);
-        }
-
         if (strcmp(varname,"reward_magnitude")==0){
             reward_magnitude = strtoul(varvalue,NULL,10);
         }
@@ -296,28 +264,12 @@ void processSerialData() {
             corr_loop_exit = atoi(varvalue);
         }
 
-        if (strcmp(varname,"reach_block_dur")==0){
-            reach_block_dur = strtoul(varvalue,NULL,10);
-        }
-
-        if (strcmp(varname,"min_grasp_dur")==0){
-            min_grasp_dur = strtoul(varvalue,NULL,10);
-        }
-
-        if (strcmp(varname,"trial_autostart")==0){
-            trial_autostart = atoi(varvalue);
-        }
-
-        if (strcmp(varname,"p_timing_trial")==0){
-            p_timing_trial = atof(varvalue);
-        }
-
         if (strcmp(varname,"bias")==0){
             bias = atof(varvalue);
         }
 
-        if (strcmp(varname,"gap")==0){
-            gap = strtoul(varvalue,NULL,10);
+        if (strcmp(varname,"contrast")==0){
+            contrast = atof(varvalue);
         }
 
         }
