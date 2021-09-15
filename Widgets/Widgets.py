@@ -2,6 +2,7 @@ import sys, os
 from pathlib import Path
 import configparser
 from datetime import datetime
+import importlib
 
 import scipy as sp
 import numpy as np
@@ -107,17 +108,11 @@ class SettingsWidget(QtWidgets.QWidget):
         self.DoneBtn.setEnabled(False)
 
         # plot buttons
-        self.plot_trial_btn = QtWidgets.QPushButton(self)
-        self.plot_trial_btn.clicked.connect(self.plot_trial)
-        self.plot_trial_btn.setText('plot trial overview')
-        FormLayout.addRow(self.plot_trial_btn)
-        self.plot_trial_btn.setEnabled(False)
-
-        self.plot_session_btn = QtWidgets.QPushButton(self)
-        self.plot_session_btn.clicked.connect(self.plot_session)
-        self.plot_session_btn.setText('plot session overview')
-        FormLayout.addRow(self.plot_session_btn)
-        self.plot_session_btn.setEnabled(False)
+        self.online_vis_btn = QtWidgets.QPushButton(self)
+        self.online_vis_btn.clicked.connect(self.start_online_vis)
+        self.online_vis_btn.setText('online visualization')
+        FormLayout.addRow(self.online_vis_btn)
+        self.online_vis_btn.setEnabled(False)
 
         # sep
         line = QtWidgets.QFrame(self)
@@ -192,11 +187,18 @@ class SettingsWidget(QtWidgets.QWidget):
 
         self.layout()
 
-    def plot_trial(self):
-        self.TrialsVisWidget = TrialsVis(self, self.ArduinoController.OnlineDataAnalyser)
-
-    def plot_session(self):
-        self.SessionVisWidget = SessionVis(self, self.ArduinoController.OnlineDataAnalyser)
+    def start_online_vis(self):
+        # needs to 
+        # cwd = os.getcwd()
+        # os.chdir(self.task_folder)
+        # plotters =[p.strip() for p in self.task_config['Visualization']['plotters'].split(',')]
+        # utils.debug_trace()
+        # module_name = self.task_config['Visualization']['visualizers']
+        # mod = importlib.import_module(module_name)
+        # # get registered plotters (how?)
+        # # start them and connect them
+        # os.chdir(cwd)
+        pass
 
     def closeEvent(self,event):
         """ reimplementation of closeEvent """
@@ -223,8 +225,7 @@ class SettingsWidget(QtWidgets.QWidget):
         # UI related
         self.RunBtn.setEnabled(False)
         self.DoneBtn.setEnabled(True)
-        self.plot_trial_btn.setEnabled(True)
-        self.plot_session_btn.setEnabled(True)
+        self.online_vis_btn.setEnabled(True)
         self.TaskChoiceWidget.setEnabled(False)
         self.AnimalChoiceWidget.setEnabled(False)
 
@@ -263,8 +264,7 @@ class SettingsWidget(QtWidgets.QWidget):
         # UI
         self.DoneBtn.setEnabled(False)
         self.RunBtn.setEnabled(True)
-        self.plot_session_btn.setEnabled(False)
-        self.plot_trial_btn.setEnabled(False)
+        self.online_vis_btn.setEnabled(False)
         self.TaskChoiceWidget.setEnabled(True)
         self.AnimalChoiceWidget.setEnabled(True)
 
