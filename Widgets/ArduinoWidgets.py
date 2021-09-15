@@ -213,22 +213,15 @@ class ArduinoController(QtWidgets.QWidget):
         shutil.copy(self.vars_path,self.vars_path.with_suffix('.default'))
 
         # setting the valve calibration factor
-        # try:
-        #     self.VariableController.VariableEditWidget.set_entry('valve_ul_ms',self.config['box']['valve_ul_ms'])
-        #     utils.printer('setting valve calibration factor to %s' % self.config['box']['valve_ul_ms'],'msg')
-        # except:
-        #     utils.printer("can't set valve calibration factor",'error')
-
-        # TODO fix task specific
         utils.printer("setting valve calibration factors",'task')
-        try:
-            self.VariableController.VariableEditWidget.set_entry('valve_ul_ms_left',self.config['box']['valve_ul_ms_left'])
-            self.VariableController.VariableEditWidget.set_entry('valve_ul_ms_right',self.config['box']['valve_ul_ms_right'])
-            utils.printer('setting left valve calibration factor to %s' % self.config['box']['valve_ul_ms_left'],'msg')
-            utils.printer('setting right valve calibration factor to %s' % self.config['box']['valve_ul_ms_right'],'msg')
-        except:
-            utils.printer("can't set valve calibration factors (left/right)",'error')
-        
+        valves = [key for key in dict(self.config['box']).keys() if key.startswith('valve_')]
+        for valve in valves:
+            try:
+                utils.printer('setting calibration factor of valve: %s = %s' % (valve, self.config['box'][valve]),'msg')
+                self.VariableController.VariableEditWidget.set_entry(valve,self.config['box'][valve])
+            except:
+                utils.printer("can't set valve calibration factors of valve %s" % valve,'error')
+
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
 
@@ -678,9 +671,10 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.lines = []
         self.code_map = code_map
         self.code_map_inv = dict(zip(code_map.values(), code_map.keys()))
-        try:
-            self.filter = ["<VAR current_zone", self.code_map_inv['LICK_ON']+'\t', self.code_map_inv['LICK_OFF']+'\t']
-        except KeyError:
+        
+        if 'display_event_filter' in dict(parent.task_config).keys():
+            self.filter = [event.strip() for event in parent.task_config['display_event_filter'].split(',')]
+        else:
             self.filter = []
 
         # connect to parent signals
@@ -704,10 +698,6 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.layout()
 
     def update(self,line):
-        # TODO filter out high freq events like lick and zone
-        # w checkbox - LICK does not work bc not decoded EASY TODO
-
-        # if not line.startswith('<VAR current_zone') or not line.startswith():
         if not True in [line.startswith(f) for f in self.filter]:
             if not line.startswith('<'):
                 try:
@@ -722,11 +712,10 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             history_len = 100 # FIXME expose this property? or remove it. for now for debugging
 
             if len(self.lines) < history_len:
-                    self.lines.append(line)
+                self.lines.append(line)
             else:
-                if not line.startswith('LICK'):
-                    self.lines.append(line)
-                    self.lines = self.lines[1:]
+                self.lines.append(line)
+                self.lines = self.lines[1:]
 
             # print lines in window
             sb = self.TextBrowser.verticalScrollBar()
