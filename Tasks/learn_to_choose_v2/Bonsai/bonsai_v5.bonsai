@@ -37,7 +37,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="DoubleProperty">
-          <Value>550</Value>
+          <Value>500</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="PropertyMapping">
@@ -139,7 +139,7 @@
       <Expression xsi:type="Subtract" />
       <Expression xsi:type="GreaterThan">
         <Operand xsi:type="DoubleProperty">
-          <Value>550</Value>
+          <Value>500</Value>
         </Operand>
       </Expression>
       <Expression xsi:type="scr:ExpressionTransform">
@@ -180,7 +180,7 @@
       <Expression xsi:type="Subtract" />
       <Expression xsi:type="GreaterThan">
         <Operand xsi:type="DoubleProperty">
-          <Value>550</Value>
+          <Value>500</Value>
         </Operand>
       </Expression>
       <Expression xsi:type="Combinator">
@@ -244,7 +244,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="dsp:MatrixWriter">
-          <dsp:Path>C:\Users\User\TaskControl\Animals\123\2021-09-15_14-20-41_learn_to_choose_v2\bonsai_harp_log.bin</dsp:Path>
+          <dsp:Path>C:\Users\User\TaskControl\Animals\123\2021-09-15_16-16-18_learn_to_choose_v2\bonsai_harp_log.bin</dsp:Path>
           <dsp:Suffix>None</dsp:Suffix>
           <dsp:Overwrite>true</dsp:Overwrite>
           <dsp:Layout>ColumnMajor</dsp:Layout>
@@ -269,7 +269,7 @@
         <Combinator xsi:type="rx:Zip" />
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-15_14-20-41_learn_to_choose_v2\bonsai_LoadCellData.csv</io:FileName>
+        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-15_16-16-18_learn_to_choose_v2\bonsai_LoadCellData.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
@@ -291,7 +291,7 @@
         </Operand>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-15_14-20-41_learn_to_choose_v2\bonsai_harp_sync.csv</io:FileName>
+        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-15_16-16-18_learn_to_choose_v2\bonsai_harp_sync.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
@@ -313,7 +313,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="StringProperty">
-          <Value>C:\Users\User\TaskControl\Animals\123\2021-09-15_14-20-41_learn_to_choose_v2\bonsai_</Value>
+          <Value>C:\Users\User\TaskControl\Animals\123\2021-09-15_16-16-18_learn_to_choose_v2\bonsai_</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="ReplaySubject">
@@ -395,7 +395,7 @@
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="DoubleProperty">
-          <Value>65</Value>
+          <Value>60</Value>
         </Combinator>
       </Expression>
       <Expression xsi:type="PropertyMapping">
@@ -405,7 +405,7 @@
       </Expression>
       <Expression xsi:type="GreaterThan">
         <Operand xsi:type="DoubleProperty">
-          <Value>65</Value>
+          <Value>60</Value>
         </Operand>
       </Expression>
       <Expression xsi:type="Combinator">
@@ -432,7 +432,7 @@
       </Expression>
       <Expression xsi:type="GreaterThan">
         <Operand xsi:type="DoubleProperty">
-          <Value>65</Value>
+          <Value>60</Value>
         </Operand>
       </Expression>
       <Expression xsi:type="Combinator">
@@ -441,14 +441,17 @@
           <ard:Pin>50</ard:Pin>
         </Combinator>
       </Expression>
+      <Expression xsi:type="ExternalizedMapping">
+        <Property Name="FrameRate" DisplayName="frame_rate" />
+      </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="cv:VideoWriter">
-          <cv:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-15_14-20-41_learn_to_choose_v2\bonsai_video.avi</cv:FileName>
+          <cv:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-15_16-16-18_learn_to_choose_v2\bonsai_video.avi</cv:FileName>
           <cv:Suffix>None</cv:Suffix>
           <cv:Buffered>true</cv:Buffered>
-          <cv:Overwrite>true</cv:Overwrite>
+          <cv:Overwrite>false</cv:Overwrite>
           <cv:FourCC>FMP4</cv:FourCC>
-          <cv:FrameRate>200</cv:FrameRate>
+          <cv:FrameRate>20</cv:FrameRate>
           <cv:FrameSize>
             <cv:Width>0</cv:Width>
             <cv:Height>0</cv:Height>
@@ -460,7 +463,7 @@
         <Selector>Metadata.embeddedFrameCounter,Metadata.embeddedTimeStamp,Metadata.embeddedGPIOPinState</Selector>
       </Expression>
       <Expression xsi:type="io:CsvWriter">
-        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-15_14-20-41_learn_to_choose_v2\bonsai_frame_stamps.csv</io:FileName>
+        <io:FileName>C:\Users\User\TaskControl\Animals\123\2021-09-15_16-16-18_learn_to_choose_v2\bonsai_frame_stamps.csv</io:FileName>
         <io:Append>false</io:Append>
         <io:Overwrite>true</io:Overwrite>
         <io:Suffix>None</io:Suffix>
@@ -544,9 +547,9 @@
       <Edge From="58" To="59" Label="Source1" />
       <Edge From="59" To="60" Label="Source1" />
       <Edge From="61" To="62" Label="Source1" />
-      <Edge From="61" To="88" Label="Source1" />
+      <Edge From="61" To="89" Label="Source1" />
       <Edge From="62" To="63" Label="Source1" />
-      <Edge From="62" To="87" Label="Source1" />
+      <Edge From="62" To="88" Label="Source1" />
       <Edge From="63" To="64" Label="Source1" />
       <Edge From="63" To="82" Label="Source1" />
       <Edge From="64" To="65" Label="Source1" />
@@ -554,10 +557,10 @@
       <Edge From="66" To="80" Label="Source1" />
       <Edge From="67" To="68" Label="Source1" />
       <Edge From="68" To="69" Label="Source1" />
-      <Edge From="69" To="87" Label="Source2" />
+      <Edge From="69" To="88" Label="Source2" />
       <Edge From="70" To="71" Label="Source1" />
       <Edge From="71" To="72" Label="Source1" />
-      <Edge From="72" To="89" Label="Source1" />
+      <Edge From="72" To="90" Label="Source1" />
       <Edge From="73" To="74" Label="Source1" />
       <Edge From="74" To="86" Label="Source2" />
       <Edge From="75" To="76" Label="Source1" />
@@ -571,9 +574,10 @@
       <Edge From="83" To="84" Label="Source1" />
       <Edge From="84" To="85" Label="Source1" />
       <Edge From="85" To="86" Label="Source1" />
-      <Edge From="88" To="89" Label="Source2" />
-      <Edge From="90" To="91" Label="Source1" />
+      <Edge From="87" To="88" Label="Source3" />
+      <Edge From="89" To="90" Label="Source2" />
       <Edge From="91" To="92" Label="Source1" />
+      <Edge From="92" To="93" Label="Source1" />
     </Edges>
   </Workflow>
 </WorkflowBuilder>
