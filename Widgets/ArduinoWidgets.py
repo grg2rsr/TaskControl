@@ -2,6 +2,7 @@ import sys, os
 from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 import configparser
+import importlib
 
 from pathlib import Path
 import subprocess
@@ -58,18 +59,14 @@ class ArduinoController(QtWidgets.QWidget):
         CodesDf = utils.parse_code_map(path)
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
-        # online analyzer
-        # Metrics = (bhv.is_successful, bhv.reward_collected, bhv.reward_omitted, bhv.reward_collection_RT,
-        #            bhv.has_choice, bhv.choice_RT, bhv.get_choice,
-        #            bhv.get_interval, bhv.get_outcome, bhv.get_bias,
-        #            bhv.get_correct_zone, bhv.get_in_corr_loop) # HARDCODE
-
-        # TODO make this an external thing
-        Metrics = ()
-                   
-        self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, Metrics)
-        # don't add him to children bc doesn't have a UI
-
+        # set up online data analyzer if defined in task_config
+        if 'online_metrics' in dict(self.task_config).keys():
+            metrics = [m.strip() for m in self.task_config['online_metrics'].split(',')]
+            mod = importlib.import_module('Utils.metrics')
+            metrics = [getattr(mod, metric) for metric in metrics]
+            event = self.task_config['new_trial_event']
+            self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, metrics, new_trial_event=event)
+            
         # open serial monitor
         self.SerialMonitor = SerialMonitorWidget(self, code_map=self.code_map)
         self.Children.append(self.SerialMonitor)
@@ -312,7 +309,8 @@ class ArduinoController(QtWidgets.QWidget):
         self.connection = self.connect()      
 
         # start up the online data analyzer
-        self.OnlineDataAnalyser.run()
+        if hasattr(self, 'OnlineDataAnalyser'):
+            self.OnlineDataAnalyser.run()
 
         # external logging
         fH = open(self.run_folder / 'arduino_log.txt','w')
@@ -523,20 +521,22 @@ class OnlineDataAnalyser(QtCore.QObject):
     """ listens to serial port, analyzes arduino data as it comes in """
     trial_data_available = QtCore.pyqtSignal(pd.DataFrame,pd.DataFrame)
 
-    def __init__(self, parent, CodesDf, Metrics):
+    def __init__(self, parent, CodesDf, Metrics, new_trial_event):
         super(OnlineDataAnalyser, self).__init__(parent=parent)
+        self.parent = parent
         self.CodesDf = CodesDf
-        self.Metrics = Metrics
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
+        self.Metrics = Metrics
+        self.new_trial_event = new_trial_event
+        self.reward_events = [event.strip() for event in self.parent.task_config['reward_event'].split(',')]
         
         self.lines = []
         self.SessionDf = None
 
-        self.parent = parent
     
     def run(self):
         # needed like this because of init order
-        self.TrialCounter = self.parent.parent().TrialCounter
+        # self.TrialCounter = self.parent.parent().TrialCounter
         self.WaterCounter = self.parent.parent().WaterCounter
         self.parent.serial_data_available.connect(self.update)
 
@@ -553,14 +553,12 @@ class OnlineDataAnalyser(QtCore.QObject):
                 decoded = None
 
             # update water counter if reward was collected
-            # if decoded == 'REWARD_COLLECTED_EVENT':
-            # TODO to be moved to the controller that has to take care of the emitted data
-            if decoded == 'REWARD_LEFT_VALVE_ON' or decoded == 'REWARD_RIGHT_VALVE_ON': # or decoded = 'REWARD_VALVE_ON
+            if any([decoded == reward_event for reward_event in self.reward_events]):
                 current_magnitude = self.parent.VariableController.VariableEditWidget.get_entry('reward_magnitude')['value']
                 self.WaterCounter.increment(current_magnitude)
 
             # the event that separates the stream of data into chunks of trials
-            if decoded == "TRIAL_ENTRY_EVENT": # TODO externalize
+            if decoded == self.new_trial_event:
 
                 # parse lines
                 TrialMetricsDf = None
