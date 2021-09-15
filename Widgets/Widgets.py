@@ -247,7 +247,8 @@ class SettingsWidget(QtWidgets.QWidget):
 
             # connect OnlineDataAnalyzer
             if type(Controller) == ArduinoController:
-                self.TrialCounter.connect(self.ArduinoController.OnlineDataAnalyser)
+                if hasattr(self.ArduinoController,'OnlineDataAnalyser'):
+                    self.TrialCounter.connect(self.ArduinoController.OnlineDataAnalyser)
 
         self.running = True
 
