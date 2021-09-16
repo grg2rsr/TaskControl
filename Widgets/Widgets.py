@@ -2,6 +2,7 @@ import sys, os
 from pathlib import Path
 import configparser
 from datetime import datetime
+import importlib
 
 import scipy as sp
 import numpy as np
@@ -17,8 +18,8 @@ from Utils import metrics
 from Visualizers.TaskVis_pg  import TrialsVis
 from Visualizers.TaskVis_mpl import SessionVis
 
-from Widgets.Popups import *
-from Widgets.UtilityWidgets import *
+from Widgets.Popups import RunInfoPopup
+from Widgets.UtilityWidgets import StringChoiceWidget, ValueEditFormLayout, PandasModel
 
 from Widgets.ArduinoWidgets import ArduinoController
 from Widgets.BonsaiWidgets import BonsaiController
@@ -107,17 +108,11 @@ class SettingsWidget(QtWidgets.QWidget):
         self.DoneBtn.setEnabled(False)
 
         # plot buttons
-        self.plot_trial_btn = QtWidgets.QPushButton(self)
-        self.plot_trial_btn.clicked.connect(self.plot_trial)
-        self.plot_trial_btn.setText('plot trial overview')
-        FormLayout.addRow(self.plot_trial_btn)
-        self.plot_trial_btn.setEnabled(False)
-
-        self.plot_session_btn = QtWidgets.QPushButton(self)
-        self.plot_session_btn.clicked.connect(self.plot_session)
-        self.plot_session_btn.setText('plot session overview')
-        FormLayout.addRow(self.plot_session_btn)
-        self.plot_session_btn.setEnabled(False)
+        self.online_vis_btn = QtWidgets.QPushButton(self)
+        self.online_vis_btn.clicked.connect(self.start_online_vis)
+        self.online_vis_btn.setText('online visualization')
+        FormLayout.addRow(self.online_vis_btn)
+        self.online_vis_btn.setEnabled(False)
 
         # sep
         line = QtWidgets.QFrame(self)
@@ -142,7 +137,8 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # display amount of water consumed
         self.WaterCounter = WaterCounter(self)
-        FormLayout.addRow('consumed water (µl)', self.WaterCounter)
+        # FormLayout.addRow('consumed water (µl)', self.WaterCounter)
+        FormLayout.addRow(self.WaterCounter)
 
         # sep
         line = QtWidgets.QFrame(self)
@@ -191,11 +187,18 @@ class SettingsWidget(QtWidgets.QWidget):
 
         self.layout()
 
-    def plot_trial(self):
-        self.TrialsVisWidget = TrialsVis(self, self.ArduinoController.OnlineDataAnalyser)
-
-    def plot_session(self):
-        self.SessionVisWidget = SessionVis(self, self.ArduinoController.OnlineDataAnalyser)
+    def start_online_vis(self):
+        # needs to 
+        # cwd = os.getcwd()
+        # os.chdir(self.task_folder)
+        # plotters =[p.strip() for p in self.task_config['Visualization']['plotters'].split(',')]
+        # utils.debug_trace()
+        # module_name = self.task_config['Visualization']['visualizers']
+        # mod = importlib.import_module(module_name)
+        # # get registered plotters (how?)
+        # # start them and connect them
+        # os.chdir(cwd)
+        pass
 
     def closeEvent(self,event):
         """ reimplementation of closeEvent """
@@ -222,9 +225,9 @@ class SettingsWidget(QtWidgets.QWidget):
         # UI related
         self.RunBtn.setEnabled(False)
         self.DoneBtn.setEnabled(True)
-        self.plot_trial_btn.setEnabled(True)
-        self.plot_session_btn.setEnabled(True)
-        # TODO make the task changeable
+        self.online_vis_btn.setEnabled(True)
+        self.TaskChoiceWidget.setEnabled(False)
+        self.AnimalChoiceWidget.setEnabled(False)
 
         # animal popup
         self.RunInfo = RunInfoPopup(self)
@@ -244,9 +247,8 @@ class SettingsWidget(QtWidgets.QWidget):
 
             # connect OnlineDataAnalyzer
             if type(Controller) == ArduinoController:
-                self.TrialCounter.connect(self.ArduinoController.OnlineDataAnalyser)
-
-                
+                if hasattr(self.ArduinoController,'OnlineDataAnalyser'):
+                    self.TrialCounter.connect(self.ArduinoController.OnlineDataAnalyser)
 
         self.running = True
 
@@ -263,9 +265,9 @@ class SettingsWidget(QtWidgets.QWidget):
         # UI
         self.DoneBtn.setEnabled(False)
         self.RunBtn.setEnabled(True)
-        self.plot_session_btn.setEnabled(False)
-        self.plot_trial_btn.setEnabled(False)
-        # TODO make the task unchangeable
+        self.online_vis_btn.setEnabled(False)
+        self.TaskChoiceWidget.setEnabled(True)
+        self.AnimalChoiceWidget.setEnabled(True)
 
         # save the current animal metadata (includes weight)
         out_path = self.run_folder / "animal_meta.csv"
@@ -564,7 +566,7 @@ class TrialCounter3(QtWidgets.QTableView):
     #     print('refresh called on ',i,j)
     #     self.update()
 
-class WaterCounter(QtWidgets.QLabel):
+class WaterCounter_old(QtWidgets.QLabel):
     """ """
     def __init__(self, parent):
         super(WaterCounter, self).__init__(parent=parent)
@@ -579,4 +581,30 @@ class WaterCounter(QtWidgets.QLabel):
         self.setText(str(new_amount))
 
     def get_value(self):
-        return int(float(self.text())) # FIXME check this
+        return int(float(self.text()))
+
+class WaterCounter(QtWidgets.QWidget):
+    """ with a reset button """
+    def __init__(self, parent):
+        super(WaterCounter, self).__init__(parent=parent)
+        self.Layout = QtWidgets.QHBoxLayout()
+        self.Labela = QtWidgets.QLabel('consumed water (µl)')
+        self.Label = QtWidgets.QLabel()
+        self.reset_btn = QtWidgets.QPushButton('reset')
+        self.reset_btn.clicked.connect(self.reset)
+        self.Layout.addWidget(self.Labela, alignment=QtCore.Qt.AlignVCenter)
+        self.Layout.addWidget(self.Label, alignment=QtCore.Qt.AlignVCenter)
+        self.Layout.addWidget(self.reset_btn, alignment=QtCore.Qt.AlignVCenter)
+        self.setLayout(self.Layout)
+        self.reset()
+    
+    def reset(self):
+        self.Label.setText("0")
+
+    def increment(self, amount):
+        current_amount = int(float(self.Label.text()))
+        new_amount = current_amount + amount
+        self.Label.setText(str(new_amount))
+
+    def get_value(self):
+        return int(float(self.Label.text())) # FIXME check this

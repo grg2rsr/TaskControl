@@ -1,6 +1,6 @@
 from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
-from Widgets.UtilityWidgets import *
+from Widgets.UtilityWidgets import ValueEdit
 
 class RunInfoPopup(QtWidgets.QDialog):
     """ collects all that is left required manual input by the user upon run """
