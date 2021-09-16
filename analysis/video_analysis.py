@@ -37,7 +37,8 @@ colors = dict(success="#72E043",
 # folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-01975/2021-04-29_11-16-15_learn_to_fixate_discrete_v1")
 # folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-01975/2021-04-27_10-39-35_learn_to_fixate_discrete_v1")
 # folder = Path("/media/georg/data/reaching_dlc/JJP-01642/2021-02-19_21-13-04_learn_to_reach")
-folder = Path("/media/georg/data/reaching/2021-06-21_11-00-51_learn_to_choose")  # the first session of hope
+# folder = Path("/media/georg/data/reaching/2021-06-21_11-00-51_learn_to_choose")  # the first session of hope
+folder = Path("//media/georg/data/reaching/2021-06-22_12-53-07_learn_to_choose") # hope 2
 os.chdir(folder)
 
 ### DeepLabCut data
@@ -236,8 +237,8 @@ dlc.plot_trajectories(DlcDfSlice, bodyparts, axes=axes, colors=bp_cols, lw=1, p=
 
 # %% plot all of the selected trial type
 # trial selection
-# SDf = bhv.groupby_dict(SessionDf, dict(correct_side='right'))
-SDf = SessionDf.groupby('correct_side').get_group('right')
+SDf = bhv.groupby_dict(SessionDf, dict(correct_side='left',outcome='incorrect'))
+# SDf = SessionDf.groupby('correct_side').get_group('right')
 
 # plot some random frame
 fig, axes = plt.subplots()
@@ -284,7 +285,7 @@ for i in tqdm(SDf.index):
 # %% display video of trial
 
 # trial selection
-SDf = bhv.groupby_dict(SessionDf, dict(outcome='correct', correct_side='left'))
+SDf = bhv.groupby_dict(SessionDf, dict(outcome='correct', correct_side='right'))
 
 TrialDf = TrialDfs[SDf.index[0]]
 
@@ -294,8 +295,8 @@ t_on = Df.iloc[0]['t'] - 250
 t_off = Df.iloc[-1]['t'] + 2000
 
 # %% 
-Df = TrialDfs[341]
-# Df = TrialDfs[0]
+# Df = TrialDfs[341]
+Df = TrialDfs[141]
 t_on = Df.iloc[0]['t'] - 50
 t_off = Df.iloc[-1]['t'] + 100
 

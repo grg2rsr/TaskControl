@@ -21,7 +21,7 @@ from matplotlib.collections import LineCollection
  
 """
 
-def get_LogDf_from_path(log_path):
+def get_LogDf_from_path(log_path, return_check=False):
     """ helper to infer task name and get code_map """
     # infer
     task_name = '_'.join(log_path.parent.name.split('_')[2:])
@@ -32,7 +32,7 @@ def get_LogDf_from_path(log_path):
     code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
 
-    LogDf = parse_arduino_log(log_path, code_map)
+    LogDf = parse_arduino_log(log_path, code_map, return_check=return_check)
     # try:
     #     LogDf = parse_arduino_log(log_path, code_map)
     # except ValueError:
@@ -41,7 +41,7 @@ def get_LogDf_from_path(log_path):
 
     return LogDf
 
-def parse_arduino_log(log_path, code_map=None, parse_var=True):
+def parse_arduino_log(log_path, code_map=None, parse_var=True, return_check=False):
     """ create a DataFrame representation of an arduino log. If a code map is passed 
     a corresponding decoded column will be created
 
@@ -56,14 +56,25 @@ def parse_arduino_log(log_path, code_map=None, parse_var=True):
     # test for validity
     valid_lines = []
     invalid_lines = []
-    for line in lines:
+    for i, line in enumerate(lines):
         if len(line.split('\t')) == 2 or line.startswith('<'):
             valid_lines.append(line)
         else:
             invalid_lines.append(line)
-            print(len(invalid_lines))
+            print(i, line)
 
-    return parse_lines(lines, code_map=code_map, parse_var=parse_var)
+    if len(invalid_lines) == 0:
+        all_good = True
+    else:
+        all_good = False
+
+    if return_check == True:
+        if all_good == True:
+            return parse_lines(valid_lines, code_map=code_map, parse_var=parse_var)
+        else:
+            return None
+    else:
+        return parse_lines(valid_lines, code_map=code_map, parse_var=parse_var)
 
 # TODO merge this one with the CAM reader one
 def correct_wraparound(Df, col='t'):
@@ -338,7 +349,14 @@ def event_slice(Df, event_a, event_b, col='name', reset_index=True):
     ix_start = Df[Df['name'] == event_a].index[0]
     ix_stop = Df[Df['name'] == event_b].index[0]
     return Df.loc[ix_start:ix_stop]
-    
+
+def event_based_time_slice(Df, event, pre, post, col='name',on='t'):
+    Dfs = []
+    times = Df.groupby(col).get_group(event)[on].values
+    for t in times:
+        Dfs.append(time_slice(Df, t+pre, t+post))
+    return Dfs
+
 def groupby_dict(Df, Dict):
     return Df.groupby(list(Dict.keys())).get_group(tuple(Dict.values()))
 
