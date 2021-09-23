@@ -1,11 +1,11 @@
 unsigned long tone_dur = 50;
 unsigned long tone_freq = 12000;
-unsigned long ITI_dur_min = 8500;
-unsigned long ITI_dur_max = 11500;
+unsigned long ITI_dur_min = 5000;
+unsigned long ITI_dur_max = 7000;
 unsigned long reach_block_dur = 1000;
-unsigned long reward_magnitude = 4;
-unsigned long reward_available_dur = 2000;
+unsigned long reward_magnitude = 7;
+unsigned long reward_available_dur = 30000;
 float valve_ul_ms = 0.01;
-unsigned long min_grasp_dur = 50;
+unsigned long min_grasp_dur = 20;
 int autodeliver_rewards = 1;
-int cue_reward_available = 1;
+int cue_reward_available = 0;

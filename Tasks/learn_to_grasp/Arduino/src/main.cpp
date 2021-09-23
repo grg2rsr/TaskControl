@@ -67,7 +67,7 @@ void read_reaches(){
     }
 
     // grasp
-    if (is_reaching && now() - t_last_reach_on > min_grasp_dur){
+    if (is_reaching && now() - t_last_reach_on > min_grasp_dur && is_grasping == false){
         log_code(GRASP_ON);
         is_grasping = true;
     }
