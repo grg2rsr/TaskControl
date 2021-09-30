@@ -244,7 +244,7 @@ void reward_left_cue(){
     // tone_controller_left.play(go_cue_freq, tone_dur);
     t_present_left_cue = now();
     if (timing_trial == false){
-        buzz_controller.play(buzz_center_freq-buzz_freq_sep, buzz_dur);
+        buzz_controller.play(buzz_low_freq, buzz_dur);
     }
     else{
         buzz_controller.play(buzz_center_freq, buzz_dur);
@@ -255,7 +255,7 @@ void reward_right_cue(){
     // tone_controller_right.play(go_cue_freq, tone_dur);
     t_present_right_cue = now();
     if (timing_trial == false){
-        buzz_controller.play(buzz_center_freq+buzz_freq_sep, buzz_dur);
+        buzz_controller.play(buzz_high_freq, buzz_dur);
     }
     else{
         buzz_controller.play(buzz_center_freq, buzz_dur);
