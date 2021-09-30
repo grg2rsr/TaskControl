@@ -129,6 +129,12 @@ class SettingsWidget(QtWidgets.QWidget):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.time_handler)
 
+        # counters
+        # if 'counters' in dict(self.task_config['Visualization']).keys():
+        #     counters = [c.strip() for c in self.task_config['Visualization']['counters'].split(',')]
+        #     self.Counters = Counters(self, counters)
+        #     self.Children.append(self.Counters)
+
         # display number of trials
         # currently the updating is done within a Monitor!
         self.TrialCounter = TrialCounter3(self)
@@ -153,8 +159,7 @@ class SettingsWidget(QtWidgets.QWidget):
         
         FormLayout.addRow("self terminate", self.selfTerminateCheckBox)
         Df = pd.DataFrame([['after (min) ',  45,   'int32'],
-                           ['after (ul) ',   500, 'int32'],
-                           ['after #trials ',0,    'int32']],
+                           ['after (ul) ',   500, 'int32']],
                            columns=['name','value','dtype'])
 
         self.selfTerminateEdit = ValueEditFormLayout(self, DataFrame=Df)
@@ -246,6 +251,7 @@ class SettingsWidget(QtWidgets.QWidget):
             Controller.Run(self.run_folder)
 
             # connect OnlineDataAnalyzer
+            # TODO FIXME 
             if type(Controller) == ArduinoController:
                 if hasattr(self.ArduinoController,'OnlineDataAnalyser'):
                     self.TrialCounter.connect(self.ArduinoController.OnlineDataAnalyser)
@@ -272,7 +278,6 @@ class SettingsWidget(QtWidgets.QWidget):
         # save the current animal metadata (includes weight)
         out_path = self.run_folder / "animal_meta.csv"
         self.Animal.meta.to_csv(out_path)
-
         self.timer.stop()
 
         # Flags
@@ -371,7 +376,6 @@ class SettingsWidget(QtWidgets.QWidget):
         if self.selfTerminateCheckBox.checkState() == 2: # if true
             max_time = self.selfTerminateEdit.get_entry('after (min) ')['value']
             max_water = self.selfTerminateEdit.get_entry('after (ul) ')['value']
-            max_trials = self.selfTerminateEdit.get_entry('after #trials ')['value']
 
             current_time = dt.seconds/60
             current_water = self.WaterCounter.get_value()
@@ -381,8 +385,6 @@ class SettingsWidget(QtWidgets.QWidget):
             if current_time >= max_time and max_time > 0:
                 self.Done()
             if current_water >= max_water and max_water > 0:
-                self.Done()
-            if current_trials >= max_trials and max_trials > 0:
                 self.Done()
 
 """
@@ -422,7 +424,7 @@ class AnimalInfoWidget(QtWidgets.QWidget):
     def layout(self):
         big_gap = int(self.config['ui']['big_gap'])
         self.resize(self.parent().width(),self.sizeHint().height())
-        utils.tile_Widgets([self.parent(),self], how='vertically', gap=big_gap)
+        utils.tile_Widgets([self.parent()]+self.parent().Children, how='vertically', gap=big_gap)
 
     def update(self):
         try:
@@ -448,65 +450,113 @@ class AnimalInfoWidget(QtWidgets.QWidget):
  
 """
 
-class TrialCounter(QtWidgets.QLabel):
-    """ """
+def import_from(module, name):
+    module = __import__(module, fromlist=[name])
+    return getattr(module, name)
+
+class Counters(QtWidgets.QWidget):
+    def __init__(self, parent, counters):
+        super(Counters, self).__init__(parent=parent)
+        self.setWindowFlags(QtCore.Qt.Window)
+        self.Layout = QtWidgets.QVBoxLayout()
+        for counter in counters:
+            C = import_from('.'.join(['Tasks',parent.task,'counters']), counter)
+            self.Layout.addWidget(C(self))
+        self.show()
+        self.layout()
+
+    def layout(self):
+        big_gap = int(self.parent().config['ui']['big_gap'])
+        self.resize(self.parent().width(),self.sizeHint().height())
+        utils.tile_Widgets([self.parent()]+self.parent().Children, how='vertically', gap=big_gap)
+
+# class OutcomeCounter(QtWidgets.QTableView):
+#     """ """
+#     def __init__(self, parent, outcomes=None):
+#         super(OutcomeCounter, self).__init__(parent=parent)
+#         self.outcomes = outcomes
+#         self.initModel()
+#         self.initUI()
+#         self.model.setDf(self.Df)
+#         self.update()
+
+#     def initModel(self):
+#         # init data
+#         self.Df = pd.DataFrame(sp.zeros((4,5),dtype='int32'),columns=['label','left','right','sum','frac'],index=['correct','incorrect','missed','premature'])
+#         self.Df['frac'] = self.Df['frac'].astype('float32')
+#         self.Df['label'] = self.Df.index
+
+#         self.model = PandasModel(self.Df)
+#         self.setModel(self.model)
+#         self.model.setDf(self.Df)
+
+#     def initUI(self):
+#         for i in range(self.Df.columns.shape[0]):
+#             self.setColumnWidth(i, 40)
+#         self.update()
+#         pass
+
+#     def connect(self, OnlineDataAnalyser):
+#         # connect signals
+#         self.OnlineDataAnalyser = OnlineDataAnalyser
+#         OnlineDataAnalyser.trial_data_available.connect(self.on_data)
+    
+#     def on_data(self, TrialDf, TrialMetricsDf):
+#         side = metrics.get_correct_side(TrialDf).values[0]
+#         outcome = metrics.get_outcome(TrialDf).values[0]
+#         try:
+#             self.Df.loc[outcome, side] += 1
+#             self.Df['sum'] = self.Df['left'] + self.Df['right']
+#             self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
+#         except KeyError:
+#             pass
+
+#         self.model.setDf(self.Df)
+#         self.update()
+
+# class WaterCounter_old(QtWidgets.QLabel):
+#     """ """
+#     def __init__(self, parent):
+#         super(WaterCounter, self).__init__(parent=parent)
+#         self.reset()
+
+#     def reset(self):
+#         self.setText("0")
+
+#     def increment(self, amount):
+#         current_amount = int(float(self.text()))
+#         new_amount = current_amount + amount
+#         self.setText(str(new_amount))
+
+#     def get_value(self):
+#         return int(float(self.text()))
+
+class WaterCounter(QtWidgets.QWidget):
+    """ with a reset button """
     def __init__(self, parent):
-        super(TrialCounter, self).__init__(parent=parent)
-        self.reset()
-
-    def reset(self):
-        self.setText("0/0/0\t--")
-
-    def increment(self,successful=False):
-        vals = [int(v) for v in self.text().split('\t')[0].split('/')]
-        if successful:
-            vals[0] += 1
-            vals[2] += 1
-        else:
-            vals[1] += 1
-            vals[2] += 1
-
-        new_frac = sp.around(vals[0]/vals[2],2)
-        self.setText('/'.join([str(v) for v in vals]) + '\t' + str(new_frac))
-
-class TrialCounter2(QtWidgets.QFormLayout):
-    """ """
-    def __init__(self, parent):
-        super(TrialCounter2, self).__init__(parent=parent)
-        # self.categories = ['correct','incorrect','missed','premature','total']
-        self.counters = dict(correct=QtWidgets.QLabel(''),
-                             incorrect=QtWidgets.QLabel(''),
-                             missed=QtWidgets.QLabel(''),
-                             premature=QtWidgets.QLabel(''),
-                             total=QtWidgets.QLabel(''))
-
-        self.initUI()
+        super(WaterCounter, self).__init__(parent=parent)
+        self.Layout = QtWidgets.QHBoxLayout()
+        self.Labela = QtWidgets.QLabel('consumed water (µl)')
+        self.Label = QtWidgets.QLabel()
+        self.reset_btn = QtWidgets.QPushButton('reset')
+        self.reset_btn.clicked.connect(self.reset)
+        self.Layout.addWidget(self.Labela, alignment=QtCore.Qt.AlignVCenter)
+        self.Layout.addWidget(self.Label, alignment=QtCore.Qt.AlignVCenter)
+        self.Layout.addWidget(self.reset_btn, alignment=QtCore.Qt.AlignVCenter)
+        self.setLayout(self.Layout)
         self.reset()
     
-    def initUI(self):
-        # FormLayout = QtWidgets.QFormLayout(self)
-        # self.setVerticalSpacing(10)
-        self.setHorizontalSpacing(10)
-        self.setLabelAlignment(QtCore.Qt.AlignRight)
-
-        for category in ['correct','incorrect','missed','premature','total']:
-            self.addRow(category, self.counters[category])
-
-        # self.setLayout(FormLayout)
-       
     def reset(self):
-        for label, counter in self.counters.items():
-            counter.setText('0\t0')
+        self.Label.setText("0")
 
-    def increment(self,label):
-        count = self.get_value(label)
-        nTrials = self.get_value('total') + 1
-        new_count = count + 1
-        new_frac = sp.around((count+1)/nTrials, 2)
-        self.counters[label].setText(str(new_count) + '\t' + str(new_frac))
+    def increment(self, amount):
+        current_amount = int(float(self.Label.text()))
+        new_amount = current_amount + amount
+        self.Label.setText(str(new_amount))
 
-    def get_value(self,label):
-        return int(self.counters[label].text().split('\t')[0])
+    def get_value(self):
+        return int(float(self.Label.text())) # FIXME check this
+
 
 class TrialCounter3(QtWidgets.QTableView):
     """ """
@@ -562,49 +612,9 @@ class TrialCounter3(QtWidgets.QTableView):
         self.model.setDf(self.Df)
         self.update()
 
+    def reset(self):
+        pass
+
     # def refresh(self, i, j):
     #     print('refresh called on ',i,j)
     #     self.update()
-
-class WaterCounter_old(QtWidgets.QLabel):
-    """ """
-    def __init__(self, parent):
-        super(WaterCounter, self).__init__(parent=parent)
-        self.reset()
-
-    def reset(self):
-        self.setText("0")
-
-    def increment(self, amount):
-        current_amount = int(float(self.text()))
-        new_amount = current_amount + amount
-        self.setText(str(new_amount))
-
-    def get_value(self):
-        return int(float(self.text()))
-
-class WaterCounter(QtWidgets.QWidget):
-    """ with a reset button """
-    def __init__(self, parent):
-        super(WaterCounter, self).__init__(parent=parent)
-        self.Layout = QtWidgets.QHBoxLayout()
-        self.Labela = QtWidgets.QLabel('consumed water (µl)')
-        self.Label = QtWidgets.QLabel()
-        self.reset_btn = QtWidgets.QPushButton('reset')
-        self.reset_btn.clicked.connect(self.reset)
-        self.Layout.addWidget(self.Labela, alignment=QtCore.Qt.AlignVCenter)
-        self.Layout.addWidget(self.Label, alignment=QtCore.Qt.AlignVCenter)
-        self.Layout.addWidget(self.reset_btn, alignment=QtCore.Qt.AlignVCenter)
-        self.setLayout(self.Layout)
-        self.reset()
-    
-    def reset(self):
-        self.Label.setText("0")
-
-    def increment(self, amount):
-        current_amount = int(float(self.Label.text()))
-        new_amount = current_amount + amount
-        self.Label.setText(str(new_amount))
-
-    def get_value(self):
-        return int(float(self.Label.text())) # FIXME check this
