@@ -71,6 +71,7 @@ bool is_reaching_right = false;
 bool reach_right = false;
 
 bool is_reaching = false;
+bool is_grasping = false;
 unsigned long t_last_reach_on = max_future;
 unsigned long t_last_reach_off = max_future;
 
@@ -87,6 +88,12 @@ void read_reaches(){
         t_last_reach_on = now();
     }
 
+    // grasp
+    if (is_reaching_left && now() - t_last_reach_on > min_grasp_dur && is_grasping == false){
+        log_code(GRASP_LEFT_ON);
+        is_grasping = true;
+    }
+
     // reach off
     if (is_reaching_left == true && reach_left == false){
         log_code(REACH_LEFT_OFF);
@@ -97,6 +104,12 @@ void read_reaches(){
         if (reward_left_available == true){
             log_code(REWARD_LEFT_COLLECTED_EVENT);
             reward_left_available = false;
+        }
+
+        // grasp off
+        if (is_grasping){
+            log_code(GRASP_LEFT_OFF);
+            is_grasping = false;
         }
     }
 
@@ -109,6 +122,12 @@ void read_reaches(){
         t_last_reach_on = now();
     }
 
+    // grasp on
+    if (is_reaching_right && now() - t_last_reach_on > min_grasp_dur && is_grasping == false){
+        log_code(GRASP_RIGHT_ON);
+        is_grasping = true;
+    }
+
     // reach off
     if (is_reaching_right == true && reach_right == false){
         log_code(REACH_RIGHT_OFF);
@@ -119,6 +138,12 @@ void read_reaches(){
         if (reward_right_available == true){
             log_code(REWARD_RIGHT_COLLECTED_EVENT);
             reward_right_available = false;
+        }
+
+        // grasp off
+        if (is_grasping){
+            log_code(GRASP_RIGHT_OFF);
+            is_grasping = false;
         }
     }
 
@@ -669,6 +694,7 @@ void get_trial_type(){
     log_int("timing_trial", (int) timing_trial);
     log_int("autodeliver_rewards", (int) autodeliver_rewards);
     log_float("miss_frac", miss_frac);
+    log_ulong("min_grasp_dur", min_grasp_dur);
     // log_int("miss_counter", miss_counter);
     // log_int("in_jackpot_mode", (int) in_jackpot_mode);
 
@@ -840,6 +866,7 @@ void finite_state_machine() {
 
             // choice was made
             if (is_reaching == true && now() - t_last_reach_on > min_grasp_dur) {
+                // TODO can be replaced by (is_grasping)
                 log_code(CHOICE_EVENT);
                 log_choice();
 

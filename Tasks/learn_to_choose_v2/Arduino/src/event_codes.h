@@ -23,6 +23,12 @@ unsigned int REACH_LEFT_OFF = 11;
 unsigned int REACH_RIGHT_ON = 12;
 unsigned int REACH_RIGHT_OFF = 13;
 
+// REACHES
+unsigned int GRASP_LEFT_ON = 100;
+unsigned int GRASP_LEFT_OFF = 110;
+unsigned int GRASP_RIGHT_ON = 120;
+unsigned int GRASP_RIGHT_OFF = 130;
+
 // VALVES
 unsigned int REWARD_LEFT_VALVE_ON = 14;
 unsigned int REWARD_LEFT_VALVE_OFF = 15;
