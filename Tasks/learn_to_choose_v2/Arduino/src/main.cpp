@@ -668,13 +668,16 @@ void get_trial_type(){
     }
 
     // switches off autodeliver rewards after warmup
-    if (trial_counter > n_warmup_trials && in_warmup == true){
-        autodeliver_rewards = 0;
-        in_warmup = false;
+    if (trial_counter <= n_warmup_trials && use_warmup){
+        autodeliver_rewards = 1;
+        // turn it off once on last
+        if (trial_counter == n_warmup_trials){
+            autodeliver_rewards = 0;
+        }
     }
 
     // if animal is disengaged, turn autodeliver on
-    if (in_warmup == false){
+    if (use_jackpot){
         if (miss_frac > miss_frac_thresh){
             autodeliver_rewards = 1;
         }
@@ -929,7 +932,7 @@ void finite_state_machine() {
                         current_state = ITI_STATE;
                         break;
                     }
-                    else{
+                    else{ // this is for on allow mistakes, if they hold wrong spout
                         delay(100);
                     }
                 }
@@ -943,11 +946,12 @@ void finite_state_machine() {
                 update_miss_frac(1);
 
                 // cue
-                incorrect_choice_cue();
+                if (use_incorrect_cue_on_miss){
+                    incorrect_choice_cue();
+                }
                 current_state = ITI_STATE;
                 break;
             }
-
             break;
 
         case REWARD_STATE:
