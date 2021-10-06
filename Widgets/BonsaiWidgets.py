@@ -53,6 +53,9 @@ class BonsaiController(QtWidgets.QWidget):
 
     pass
 
+    def position(self):
+        pass
+
     def closeEvent(self, event):
         """ """
         self.close()

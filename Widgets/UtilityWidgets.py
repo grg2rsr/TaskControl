@@ -5,6 +5,7 @@ from PyQt5 import QtWidgets
 import sys
 import pandas as pd
 import scipy as sp
+import numpy as np
 
 from Utils import utils
 
@@ -38,11 +39,11 @@ class ValueEdit(QtWidgets.QLineEdit):
         self.editingFinished.connect(self.edit_finished)
 
     def get_value(self):
-        self.value = sp.array(self.text(), dtype=self.dtype)
+        self.value = np.array(self.text(), dtype=self.dtype)
         return self.value
 
     def set_value(self, value):
-        self.value = sp.array(value, dtype=self.dtype)
+        self.value = np.array(value, dtype=self.dtype)
         self.setText(str(self.value))
 
     def edit_finished(self):
@@ -52,8 +53,8 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
     """ a QFormLayout consisting of ValueEdit rows, to be initialized with a pd.DataFrame 
     with columns name and value, optional dtype (numpy letter codes) """
 
-    def __init__(self, parent, DataFrame):
-        super(ValueEditFormLayout,self).__init__(parent=parent)
+    def __init__(self, parent, DataFrame=None):
+        super(ValueEditFormLayout, self).__init__(parent=parent)
         self.Df = DataFrame # model
 
         # if DataFrame does not contain a dtype column, set it to strings
@@ -81,7 +82,7 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
             
             # update model 
             dtype = self.itemAt(ix,1).widget().dtype
-            self.Df.loc[ix,'value'] = sp.array(value, dtype=dtype) 
+            self.Df.loc[ix,'value'] = np.array(value, dtype=dtype) 
             
             # update view
             self.itemAt(ix,1).widget().set_value(value)
@@ -96,7 +97,7 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
 
     def set_entries(self, Df):
         # test compatibility first
-        if not sp.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
+        if not np.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
             utils.printer("can't set entries of variable Df bc they are not equal", 'error')
             utils.debug_trace()
         
@@ -123,6 +124,34 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
             label = self.itemAt(i, 0).widget()
             widget = self.itemAt(i, 1).widget()
             self.set_entry(label.text(), widget.get_value())
+
+class TerminateEdit(QtWidgets.QWidget):
+    def __init__(self, parent, DataFrame=None):
+        super(TerminateEdit, self).__init__(parent=parent)
+
+        self.FormLayout = QtWidgets.QFormLayout(self)
+        self.FormLayout.setVerticalSpacing(10)
+        self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
+
+        # self terminate
+        self.selfTerminateCheckBox = QtWidgets.QCheckBox()
+        self.selfTerminateCheckBox.setChecked(True)
+        self.is_enabled = True
+        self.selfTerminateCheckBox.stateChanged.connect(self.TerminateCheckBoxToggle)
+        self.FormLayout.addRow("self terminate", self.selfTerminateCheckBox)
+
+        self.selfTerminateEdit = ValueEditFormLayout(self.parent(), DataFrame=DataFrame)
+        self.FormLayout.addRow(self.selfTerminateEdit)
+        self.selfTerminateEdit.setEnabled(False)
+    
+    def TerminateCheckBoxToggle(self, state):
+        if state == 0:
+            self.selfTerminateEdit.setEnabled(True)
+            self.is_enabled = False
+
+        if state == 2:
+            self.selfTerminateEdit.setEnabled(False)
+            self.is_enabled = True
 
 class PandasModel(QtCore.QAbstractTableModel):
     """

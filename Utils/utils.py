@@ -40,6 +40,9 @@ class Animal(object):
         except:
             return ''
 
+    def __repr__(self):
+        return self.display()
+
 """
  
  ##     ## ######## ##       ########  ######## ########   ######  

@@ -55,17 +55,14 @@ class ArduinoController(QtWidgets.QWidget):
         self.VariableController = ArduinoVariablesWidget(self, Df)
         self.Children.append(self.VariableController)
 
-        path = self.task_folder / 'Arduino' / 'src' / 'event_codes.h'
-        CodesDf = utils.parse_code_map(path)
+        events_path = self.task_folder / 'Arduino' / 'src' / 'event_codes.h'
+        CodesDf = utils.parse_code_map(events_path)
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
         # set up online data analyzer if defined in task_config
-        if 'online_metrics' in dict(self.task_config).keys():
-            metrics = [m.strip() for m in self.task_config['online_metrics'].split(',')]
-            mod = importlib.import_module('Utils.metrics')
-            metrics = [getattr(mod, metric) for metric in metrics]
-            event = self.task_config['new_trial_event']
-            self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, metrics, new_trial_event=event)
+        if 'OnlineAnalysis' in dict(self.parent().task_config).keys():
+            online_config = self.parent().task_config['OnlineAnalysis']
+            self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, config=online_config)
             
         # open serial monitor
         self.SerialMonitor = SerialMonitorWidget(self, code_map=self.code_map)
@@ -121,13 +118,13 @@ class ArduinoController(QtWidgets.QWidget):
         self.setWindowTitle("Arduino controller")
 
         self.show()
-        self.layout()
+        self.position()
 
     def keyPressEvent(self, event):
         """ reimplementation to send single keystrokes """
         self.send("CMD " + event.text())
 
-    def layout(self):
+    def position(self):
         """ position children to myself """
         gap = int(self.config['ui']['big_gap'])
         utils.tile_Widgets([self] + self.Children, how="vertically", gap=gap)
@@ -325,24 +322,6 @@ class ArduinoController(QtWidgets.QWidget):
                     fH.write(line+os.linesep) # external logging
                     self.serial_data_available.emit(line) # internal publishing
 
-
-        # def read_from_port(ser):
-        #     while ser.is_open:
-        #         try:
-        #             line = ser.readline().decode('utf-8').strip()
-        #             if line is not '': # filtering out empty reads
-        #                 fH.write(line+os.linesep) # external logging
-                        
-        #                 # publishing data
-        #                 self.serial_data_available.emit(line)
-
-        #         except:
-        #             try:
-        #                 print("failed read from serial!", line)
-        #             except:
-        #                 pass
-        #             break
-
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()
         utils.printer("listening to FSM arduino on serial port %s" % self.config['connections']['FSM_arduino_port'],'msg')
@@ -513,15 +492,24 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 class OnlineDataAnalyser(QtCore.QObject):
     """ listens to serial port, analyzes arduino data as it comes in """
     trial_data_available = QtCore.pyqtSignal(pd.DataFrame,pd.DataFrame)
+    decoded_data_available = QtCore.pyqtSignal(str)
 
-    def __init__(self, parent, CodesDf, Metrics, new_trial_event):
+    def __init__(self, parent, CodesDf, config=None):
         super(OnlineDataAnalyser, self).__init__(parent=parent)
         self.parent = parent
-        self.CodesDf = CodesDf
+        self.config = config
+        
+        self.CodesDf = CodesDf # required, path could be set in online analysis
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
-        self.Metrics = Metrics
-        self.new_trial_event = new_trial_event
-        self.reward_events = [event.strip() for event in self.parent.task_config['reward_event'].split(',')]
+
+        # get metrics
+        metrics = [m.strip() for m in self.config['online_metrics'].split(',')]
+        mod = importlib.import_module('Utils.metrics')
+        self.Metrics = [getattr(mod, metric) for metric in metrics]
+
+        # events
+        self.new_trial_event = self.config['new_trial_event']
+        self.reward_events = [event.strip() for event in config['reward_event'].split(',')]
         
         self.lines = []
         self.SessionDf = None
@@ -529,27 +517,29 @@ class OnlineDataAnalyser(QtCore.QObject):
     
     def run(self):
         # needed like this because of init order
-        # self.TrialCounter = self.parent.parent().TrialCounter
-        self.WaterCounter = self.parent.parent().WaterCounter
         self.parent.serial_data_available.connect(self.update)
 
-    def update(self,line):
-        self.lines.append(line)
-
-        # if normally decodeable
+    def decode(self, line):
+        decoded = None
         if not line.startswith('<'):
             try:
                 code, t = line.split('\t')
                 t = float(t)
                 decoded = self.code_map[code]
+
+                # publish
+                self.decoded_data_available.emit('\t'.join([code,t]))
+
             except:
-                decoded = None
+                pass
+        return decoded
 
-            # update water counter if reward was collected
-            if any([decoded == reward_event for reward_event in self.reward_events]):
-                current_magnitude = self.parent.VariableController.VariableEditWidget.get_entry('reward_magnitude')['value']
-                self.WaterCounter.increment(current_magnitude)
+    def update(self,line):
+        self.lines.append(line)
 
+        decoded = self.decode(line)
+
+        if decoded is not None:
             # the event that separates the stream of data into chunks of trials
             if decoded == self.new_trial_event:
 
@@ -559,6 +549,8 @@ class OnlineDataAnalyser(QtCore.QObject):
                     TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map, parse_var=True)
                     TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
                 except ValueError:  # important TODO - investigate this! this was added with cue on reach and no mistakes
+                    utils.printer('failed parse of lines into TrialDf','error')
+                    # utils.debug_trace()
                     pass 
                 
                 if TrialMetricsDf is not None:
@@ -695,7 +687,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.setLayout(self.Layout)
         self.setWindowTitle("Arduino monitor")
         self.show()
-        self.layout()
+        # self.position()
 
     def update(self,line):
         if not True in [line.startswith(f) for f in self.filter]:
