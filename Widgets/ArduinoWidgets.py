@@ -385,7 +385,6 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.ScrollWidget = QtWidgets.QWidget()
 
         # scroll widget has the layout etc
-        # utils.debug_trace()
         self.VariableEditWidget = Widgets.ValueEditFormLayout(self, DataFrame=self.Df)
 
         # note: the order of this seems to be of utmost importance ... 

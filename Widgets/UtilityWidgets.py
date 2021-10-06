@@ -227,7 +227,55 @@ class PandasModel(QtCore.QAbstractTableModel):
     # def set_data(self, Df):
     #     self._data = Df
     #     self.dataChanged.emit(self.index(0,0), self.index(Df.shape[0],Df.shape[1]))
-        # for i in range(Df.shape[0]):
+        # for i in range(   Df.shape[0]):
         #     for j in range(Df.shape[1]):
         #         self.dataChanged.emit(self.index(i,j), self.index(i,j))
 
+class ArrayModel(QtCore.QAbstractTableModel):
+    """
+    adapted from source
+    source: https://stackoverflow.com/questions/31475965/fastest-way-to-populate-qtableview-from-pandas-data-frame
+
+    also check here: https://www.pythonguis.com/faq/editing-pyqt-tableview/
+    """
+    def __init__(self, array, row_labels, col_labels, parent=None):
+        # super(ArrayModel).__init__(self, parent) # this doesn't work 
+        QtCore.QAbstractTableModel.__init__(self, parent) # this does. No idea why
+        # self.set_data(array, row_labels, col_labels)
+        self.array = array
+        self.row_labels = row_labels
+        self.col_labels = col_labels
+
+    # def set_data(self, array, row_labels, col_labels):
+
+    # def setData(self,*args):
+    #     super().setData(*args)
+    #     return True
+
+    def setData(self, index, value, role):
+        if role == QtCore.EditRole:
+            try:
+                value = int(value)
+            except ValueError:
+                return False
+            self.array[index.row(), index.column()] = value
+            self.dataChanged.emit(self.index(0,0), self.index(self.array.shape[0], self.array.shape[1]))
+            return True
+        return False
+
+    def rowCount(self, parent=None):
+        return len(self.row_labels)
+
+    def columnCount(self, parent=None):
+        return len(self.col_labels)
+
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        if index.isValid():
+            if role == QtCore.Qt.DisplayRole:
+                return str(self.array[index.row(),index.column()])
+        return None
+
+    # def headerData(self, col, orientation, role):
+    #     if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+    #         return self._data.columns[col]
+    #     return None

@@ -10,61 +10,119 @@ import pandas as pd
 
 from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
-from Widgets.UtilityWidgets import TerminateEdit, StringChoiceWidget, ValueEditFormLayout, PandasModel
+from Widgets.UtilityWidgets import TerminateEdit, StringChoiceWidget, ValueEditFormLayout, ArrayModel, PandasModel
 from Utils import utils
+from Utils import metrics
 
-""" new approach of the counters - 
-they need to be connected to the new data availability """
-
-class OutcomeCounter(QtWidgets.QTableView):
+class OutcomeCounter(QtWidgets.QWidget):
     """ """
-    def __init__(self, parent, outcomes=None):
+    def __init__(self, parent, outcomes=None, split_by=None):
         super(OutcomeCounter, self).__init__(parent=parent)
         self.outcomes = outcomes
-        self.initModel()
-        self.initUI()
-        self.model.setDf(self.Df)
-        self.update()
+        self.TableView = QtWidgets.QTableView(self)
 
-    def initModel(self):
+        # to be removed hardcodes
+        self.outcomes = ['correct','incorrect','missed','premature']
+        self.split_by = ['left','right']
+        
         # init data
-        self.Df = pd.DataFrame(sp.zeros((4,5),dtype='int32'),columns=['label','left','right','sum','frac'],index=['correct','incorrect','missed','premature'])
-        self.Df['frac'] = self.Df['frac'].astype('float32')
-        self.Df['label'] = self.Df.index
+        self.data = np.zeros((len(self.outcomes), len(self.split_by)+2))
+        self.row_labels = self.outcomes
+        self.col_labels = self.split_by + ['sum','%']
 
-        self.model = PandasModel(self.Df)
-        self.setModel(self.model)
-        self.model.setDf(self.Df)
+        self.Model = ArrayModel(self.data,  self.row_labels, self.col_labels)
+        self.TableView.setModel(self.Model)
 
-    def initUI(self):
-        for i in range(self.Df.columns.shape[0]):
-            self.setColumnWidth(i, 40)
-        self.update()
-        pass
+        # self.initModel()
+        # self.initUI()
+        # self.model.setDf(self.Df)
+        # self.update()
+
+    # def initModel(self):
+
+    # def initUI(self):
+    #     for i,label in enumerate(self.row_labels):
+    #         self.addRow()
+
+    #     pass
 
     def start(self):
+        pass
+
+    def stop(self):
         pass
 
     def reset(self):
         pass
 
-    def connect(self, OnlineDataAnalyser):
-        # connect signals
-        self.OnlineDataAnalyser = OnlineDataAnalyser
-        OnlineDataAnalyser.trial_data_available.connect(self.on_data)
+    # def connect(self, OnlineDataAnalyser):
+    #     # connect signals
+    #     self.OnlineDataAnalyser = OnlineDataAnalyser
+    #     OnlineDataAnalyser.trial_data_available.connect(self.on_data)
     
-    def on_data(self, TrialDf, TrialMetricsDf):
-        side = metrics.get_correct_side(TrialDf).values[0]
-        outcome = metrics.get_outcome(TrialDf).values[0]
-        try:
-            self.Df.loc[outcome, side] += 1
-            self.Df['sum'] = self.Df['left'] + self.Df['right']
-            self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
-        except KeyError:
-            pass
+    # def on_data(self, TrialDf, TrialMetricsDf):
+    #     side = metrics.get_correct_side(TrialDf).values[0]
+    #     outcome = metrics.get_outcome(TrialDf).values[0]
+    #     try:
+    #         self.Df.loc[outcome, side] += 1
+    #         self.Df['sum'] = self.Df['left'] + self.Df['right']
+    #         self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
+    #     except KeyError:
+    #         pass
 
-        self.model.setDf(self.Df)
-        self.update()
+    #     self.model.setDf(self.Df)
+    #     self.update()
+
+# class OutcomeCounter(QtWidgets.QTableView):
+#     """ """
+#     def __init__(self, parent, outcomes=None):
+#         super(OutcomeCounter, self).__init__(parent=parent)
+#         self.outcomes = outcomes
+#         self.initModel()
+#         self.initUI()
+#         self.model.setDf(self.Df)
+#         self.update()
+
+#     def initModel(self):
+#         # init data
+#         self.Df = pd.DataFrame(np.zeros((4,5),dtype='int32'),columns=['label','left','right','sum','frac'],index=['correct','incorrect','missed','premature'])
+#         self.Df['frac'] = self.Df['frac'].astype('float32')
+#         self.Df['label'] = self.Df.index
+
+#         self.model = PandasModel(self.Df)
+#         self.setModel(self.model)
+#         self.model.setDf(self.Df)
+
+#     def initUI(self):
+#         for i in range(self.Df.columns.shape[0]):
+#             self.setColumnWidth(i, 40)
+#         self.update()
+#         pass
+
+#     def start(self):
+#         pass
+
+#     def reset(self):
+#         pass
+
+#     def connect(self, OnlineDataAnalyser):
+#         # connect signals
+#         self.OnlineDataAnalyser = OnlineDataAnalyser
+#         OnlineDataAnalyser.trial_data_available.connect(self.on_data)
+    
+#     def on_data(self, TrialDf, TrialMetricsDf):
+#         side = metrics.get_correct_side(TrialDf).values[0]
+#         outcome = metrics.get_outcome(TrialDf).values[0]
+#         try:
+#             self.Df.loc[outcome, side] += 1
+#             self.Df['sum'] = self.Df['left'] + self.Df['right']
+#             self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
+#         except KeyError:
+#             pass
+
+#         self.model.setDf(self.Df)
+#         self.update()
+
 
 class WaterCounter(QtWidgets.QWidget):
     """ with a reset button """
@@ -117,8 +175,9 @@ class WaterCounter(QtWidgets.QWidget):
             current_magnitude = self.parent.ArduinoController.VariableController.VariableEditWidget.get_entry('reward_magnitude')['value']
             self.increment(current_magnitude)
 
+
 class Timer(QtWidgets.QWidget):
-    """ with a reset button """
+    """ a clock """
     def __init__(self, parent):
         super(Timer, self).__init__(parent=parent)
         self.Layout = QtWidgets.QVBoxLayout(self)
@@ -169,7 +228,9 @@ class Timer(QtWidgets.QWidget):
             if current_time >= max_time and max_time > 0:
                 self.parent().Done()
 
-class EventCounter(QtWidgets.QWidget):
+
+class EventCounter(QtWidgets.QScrollArea):
+    """ simply counts all arduino events """
     def __init__(self, parent):
         super(EventCounter, self).__init__(parent=parent)
         self.events = parent.parent().ArduinoController.code_map.values()
@@ -186,18 +247,14 @@ class EventCounter(QtWidgets.QWidget):
         
         for i in range(len(self.events)):
             widget = self.FormLayout.itemAt(i, 1).widget()
-            widget.setEnabled(False)
+            widget.setEnabled(True)
 
         # contains a scroll area which contains the scroll widget
-        self.ScrollArea = QtWidgets.QScrollArea(self)
         self.ScrollWidget = QtWidgets.QWidget(self)
 
         # note: the order of this seems to be of utmost importance ... 
         self.ScrollWidget.setLayout(self.FormLayout)
-        self.ScrollWidget.setMinimumSize(QtCore.QSize(200,200))
-        self.ScrollArea.setWidget(self.ScrollWidget)
-        # self.ScrollArea.setWidgetResizable(True)
-        # self.ScrollWidget.setSizePolicy()
+        self.setWidget(self.ScrollWidget)
         
     def connect(self, OnlineDataAnalyser):
         # connect signals
@@ -213,3 +270,12 @@ class EventCounter(QtWidgets.QWidget):
         widget = self.FormLayout.itemAt(i, 1).widget()
         widget.set_value(str(self.model[event]))
         
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
+    def reset(self):
+        for k in self.model.keys():
+            self.model[k] = 0
