@@ -117,18 +117,15 @@ class ArduinoController(QtWidgets.QWidget):
         self.setLayout(Full_Layout)
         self.setWindowTitle("Arduino controller")
 
+        # settings
+        self.settings = QtCore.QSettings('TaskControl', 'ArduinoController')
+        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
-        self.position()
 
     def keyPressEvent(self, event):
         """ reimplementation to send single keystrokes """
         self.send("CMD " + event.text())
-
-    def position(self):
-        """ position children to myself """
-        gap = int(self.config['ui']['big_gap'])
-        utils.tile_Widgets([self] + self.Children, how="vertically", gap=gap)
-        utils.scale_Widgets([self] + self.Children, how="vertical", mode="min")
 
     def send(self,command):
         """ sends string command interface to arduino, interface compatible """
@@ -300,6 +297,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         # start up the online data analyzer
         if hasattr(self, 'OnlineDataAnalyser'):
+            utils.printer("starting online data analyser",'msg')
             self.OnlineDataAnalyser.run()
 
         # external logging
@@ -325,6 +323,9 @@ class ArduinoController(QtWidgets.QWidget):
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()
         utils.printer("listening to FSM arduino on serial port %s" % self.config['connections']['FSM_arduino_port'],'msg')
+
+        # Hardcode - start timer
+        self.parent().Counters[0].start()
     
     def stop(self):
         """ when session is finished """
@@ -350,10 +351,16 @@ class ArduinoController(QtWidgets.QWidget):
             if target.exists(): # bc close event is also triggered on task_changed
                 self.VariableController.write_variables(target)
 
+        # Write window size and position to config file
+        self.settings.setValue("size", self.size())
+        self.settings.setValue("pos", self.pos())
+
         # take care of the kids
         for Child in self.Children:
             Child.close()
         self.close()
+
+
 
 """
  
@@ -408,6 +415,9 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
         self.setWindowTitle("Arduino variables")
         
+        self.settings = QtCore.QSettings('TaskControl', 'ArduinoVariablesController')
+        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
 
     def write_variables(self, path):
@@ -476,6 +486,13 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             if name in self.VariableEditWidget.Df['name'].values:
                 self.VariableEditWidget.set_entry(name, value) # the lineedit should take care of the correct dtype
 
+    def closeEvent(self,event):
+        """ reimplementation of closeEvent """
+        # Write window size and position to config file
+        self.settings.setValue("size", self.size())
+        self.settings.setValue("pos", self.pos())
+
+
 """
  
   #######  ##    ## ##       #### ##    ## ########       ###    ##    ##    ###    ##       ##    ##  ######  ####  ######  
@@ -527,7 +544,8 @@ class OnlineDataAnalyser(QtCore.QObject):
                 decoded = self.code_map[code]
 
                 # publish
-                self.decoded_data_available.emit('\t'.join([code,t]))
+                to_send = '\t'.join([decoded,str(t)])
+                self.decoded_data_available.emit(to_send)
 
             except:
                 pass
@@ -564,6 +582,8 @@ class OnlineDataAnalyser(QtCore.QObject):
 
                     # restart lines with current line
                     self.lines = [line]
+
+
 
 # """
  
@@ -685,8 +705,11 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         # all
         self.setLayout(self.Layout)
         self.setWindowTitle("Arduino monitor")
+
+        self.settings = QtCore.QSettings('TaskControl', 'SerialMonitor')
+        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
-        # self.position()
 
     def update(self,line):
         if not True in [line.startswith(f) for f in self.filter]:
@@ -721,6 +744,12 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             #    sb.setValue(sb.maximum())
             # else:
             #     sb.setValue(sb_prev_value)
+
+    def closeEvent(self,event):
+        """ reimplementation of closeEvent """
+        # Write window size and position to config file
+        self.settings.setValue("size", self.size())
+        self.settings.setValue("pos", self.pos())
 
 
 class StateMachineMonitorWidget(QtWidgets.QWidget):
@@ -772,6 +801,9 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         self.setLayout(self.Layout)
         self.setWindowTitle("State Machine Monitor")
 
+        self.settings = QtCore.QSettings('TaskControl', 'StateMachineMonitor')
+        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
 
     def update(self,line):
@@ -814,3 +846,9 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
             
         except:
             pass
+
+    def closeEvent(self,event):
+        """ reimplementation of closeEvent """
+        # Write window size and position to config file
+        self.settings.setValue("size", self.size())
+        self.settings.setValue("pos", self.pos())

@@ -49,14 +49,28 @@ class SettingsWidget(QtWidgets.QWidget):
         self.config = config # a configparser dict
         self.Controllers = [] # a list of all controllers
         self.Children = [] # a list of all UI windows
+        self.Counters = []
         self.main = main # ref to the main
 
         # flags
         self.running = False
 
+        # Initial window size/pos last saved. Use default values for first time
+        # self.settings = QtCore.QSettings('SettingsWidget.ini', QtCore.QSettings.IniFormat)
+
+        # Settings
+        self.settings = QtCore.QSettings('TaskControl','SettingsWidget')
+        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
+
         self.initUI()
 
     def initUI(self):
+
+        # positioning and deco
+        self.setWindowTitle("Settings")
+        self.show()
+        
         FormLayout = QtWidgets.QFormLayout(self)
         FormLayout.setVerticalSpacing(10)
         FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
@@ -113,64 +127,11 @@ class SettingsWidget(QtWidgets.QWidget):
         self.online_vis_btn.setText('online visualization')
         FormLayout.addRow(self.online_vis_btn)
         self.online_vis_btn.setEnabled(False)
-
-        # # sep
-        # line = QtWidgets.QFrame(self)
-        # line.setFrameShape(QtWidgets.QFrame.HLine)
-        # line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        # FormLayout.addRow(line)
-
-        # display timer
-        # self.TimeLabel = QtWidgets.QLCDNumber()
-        # self.TimeLabel.setDigitCount(8)
-        # self.TimeLabel.display('00:00:00')
-        # FormLayout.addRow('time in session', self.TimeLabel)
-        # self.TimeLabel.setSegmentStyle(QtWidgets.QLCDNumber.Flat)
-        # self.timer = QtCore.QTimer()
-        # self.timer.timeout.connect(self.time_handler)
-
-        # # display number of trials
-        # # currently the updating is done within a Monitor!
-        # self.TrialCounter = TrialCounter3(self)
-        # # FormLayout.addRow('completed/aborted/total',self.TrialCounter)
-        # FormLayout.addRow(self.TrialCounter)
-
-        # # display amount of water consumed
-        # self.WaterCounter = WaterCounter(self)
-        # # FormLayout.addRow('consumed water (µl)', self.WaterCounter)
-        # FormLayout.addRow(self.WaterCounter)
-
-        # sep
-        line = QtWidgets.QFrame(self)
-        line.setFrameShape(QtWidgets.QFrame.HLine)
-        line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        FormLayout.addRow(line)
-
-        # # self terminate
-        # self.selfTerminateCheckBox = QtWidgets.QCheckBox()
-        # self.selfTerminateCheckBox.setChecked(True)
-        # self.selfTerminateCheckBox.stateChanged.connect(self.TerminateCheckBoxToggle)
-        
-        # FormLayout.addRow("self terminate", self.selfTerminateCheckBox)
-        # Df = pd.DataFrame([['after (min) ',  45,   'int32'],
-        #                    ['after (ul) ',   500, 'int32']],
-        #                    columns=['name','value','dtype'])
-
-        # self.selfTerminateEdit = ValueEditFormLayout(self, DataFrame=Df)
-        # FormLayout.addRow(self.selfTerminateEdit)
-        # self.selfTerminateEdit.setEnabled(False)
-
-        # positioning and deco
-        self.setWindowTitle("Settings")
-        self.move(10, 10) # some corner of the screen ... 
-        
+       
         # calling animal changed again to trigger correct positioning
         self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
         self.AnimalChoiceWidget.set_value(self.Animal.display())
                 
-        # TODO
-        # test if they can't be called wo the check and move above lines 
-        # up to the corresponding point 
 
         # enforce function calls if first animal
         self.animal_changed()
@@ -179,19 +140,15 @@ class SettingsWidget(QtWidgets.QWidget):
         if tasks.index(self.task) == 0: # enforce function call if first task
             self.task_changed()
 
-        self.show()
-
-        for Child in self.Children:
-            Child.position()
-
-        self.position()
-
     def init_counters(self):
         if 'OnlineAnalysis' in dict(self.task_config).keys():
             if 'counters' in dict(self.task_config['OnlineAnalysis']).keys():
                 counters = [c.strip() for c in self.task_config['OnlineAnalysis']['counters'].split(',')]
-                self.Counters = CountersWidget(self, counters)
-                self.Children.append(self.Counters)
+                for counter in counters:
+                    mod = importlib.import_module('Visualizers.Counters')
+                    C = getattr(mod, counter)
+                    self.Counters.append(C(self))
+                    utils.printer("initializing counter: %s" % counter, 'msg')
 
     def start_online_vis(self):
         # needs to 
@@ -212,8 +169,15 @@ class SettingsWidget(QtWidgets.QWidget):
         for Controller in self.Controllers:
             Controller.close()
 
+        for Counter in self.Counters:
+            Counter.close()
+
         for Child in self.Children:
             Child.close()
+
+        # Write window size and position to config file
+        self.settings.setValue("size", self.size())
+        self.settings.setValue("pos", self.pos())
 
         # store current to last
         for key, value in self.config['current'].items():
@@ -253,16 +217,15 @@ class SettingsWidget(QtWidgets.QWidget):
 
             # connect OnlineDataAnalyzer
             # TODO FIXME 
-            if type(Controller) == ArduinoController:
-                if hasattr(self.ArduinoController,'OnlineDataAnalyser'):
-                    self.TrialCounter.connect(self.ArduinoController.OnlineDataAnalyser)
+            # if type(Controller) == ArduinoController:
+            #     if hasattr(self.ArduinoController,'OnlineDataAnalyser'):
+            #         self.TrialCounter.connect(self.ArduinoController.OnlineDataAnalyser)
 
         self.running = True
         
         # reset and start the counters
         for Counter in self.Counters:
-            Counter.reset()
-            Counter.start()
+            Counter.init()
 
     def Done(self):
         """ finishing the session """
@@ -286,7 +249,6 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # stop and take down controllers
         for Controller in self.Controllers:
-            Controller.stop()
             Controller.close()
 
         self.task_changed() # this reinitialized all controllers
@@ -296,16 +258,14 @@ class SettingsWidget(QtWidgets.QWidget):
         self.config['current']['animal'] = current_id
         self.Animal, = [Animal for Animal in self.Animals if Animal.ID == current_id]
 
-        # displaying previous sessions info
-        if hasattr(self,'AnimalInfoWidget'):
-            self.AnimalInfoWidget.close()
-            self.Children.remove(self.AnimalInfoWidget)
+        # TODO make a button to display this
+        # # displaying previous sessions info
+        # if hasattr(self,'AnimalInfoWidget'):
+        #     self.AnimalInfoWidget.close()
+        #     self.Children.remove(self.AnimalInfoWidget)
 
-        self.AnimalInfoWidget = AnimalInfoWidget(self, self.config, self.Animal)
-        self.Children.append(self.AnimalInfoWidget)
-
-        for Child in self.Children:
-            Child.position()
+        # self.AnimalInfoWidget = AnimalInfoWidget(self, self.config, self.Animal)
+        # self.Children.append(self.AnimalInfoWidget)
 
         utils.printer("Animal: %s" % self.Animal.display(),'msg')
 
@@ -330,13 +290,12 @@ class SettingsWidget(QtWidgets.QWidget):
             for Controller in self.Controllers:
                 Controller.stop()
                 Controller.close()
-                self.Controllers = []
+                self.Controllers.remove(Controller)
 
-            # take down counters
-            if hasattr(self,'Counters'):
-                self.Counters.close()
-                if self.Counters in self.Children:
-                    self.Children.remove(self.Counters)
+            for Counter in self.Counters:
+                Counter.stop()
+                Counter.close()
+                self.Counters.remove(Counter)
             
             # run each controller present in task config
             for section in self.task_config.sections():
@@ -361,24 +320,35 @@ class SettingsWidget(QtWidgets.QWidget):
             # after controllers, reinit counter
             self.init_counters()
 
-            # pos on screen
-            for Child in self.Children:
-                Child.position()
+            # positioning
+            self.position_widgets()
 
-            self.position()
+    def position_widgets(self):
+        print(self.size())
+        # policy = QtCore.Q
+        self.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed,
+                                                 QtWidgets.QSizePolicy.Fixed))
+        # position controllers
+        # gap = int(self.config['ui']['small_gap'])
+        # utils.tile_Widgets([self] + self.Controllers, how="horizontally", gap=gap)
+        # for Controller in self.Controllers:
+        #     Controller.position()
 
-    def position(self):
-        # positioning on screen
-        gap = int(self.config['ui']['small_gap'])
-        utils.tile_Widgets([self] + self.Controllers, how="horizontally", gap=gap)
-        for Controller in self.Controllers:
-            Controller.position()
+        # position counters
+        # gap = int(self.config['ui']['small_gap'])
+        # utils.scale_Widgets([self] + self.Counters, how="vertical", mode='min')
+        # utils.tile_Widgets([self] + self.Counters, how="vertically", gap=gap)
 
-        for Child in self.Children:
-            try:
-                Child.position()
-            except:
-                pass
+
+        # def position(self):
+        #     # positioning on screen
+        #     gap = int(self.config['ui']['small_gap'])
+
+        #     # controllers
+        #     utils.tile_Widgets([self] + self.Controllers, how="horizontally", gap=gap)
+        #     for Controller in self.Controllers:
+        #         Controller.position()
+        pass
 
 """
  
@@ -401,6 +371,10 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         self.Animal = Animal
         self.initUI()
 
+        self.settings = QtCore.QSettings('TaskControl', 'AnimalInfoWidget')
+        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
+
     def initUI(self):
         # self.TextBrowser = QtWidgets.QTextBrowser(self)
         self.Table = QtWidgets.QTableView(self)
@@ -412,12 +386,12 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         self.setWindowTitle(self.Animal.display())
         self.update()
         self.show()
-        self.position()
+        # self.position()
 
-    def position(self):
-        big_gap = int(self.config['ui']['big_gap'])
-        self.resize(self.parent().width(),self.sizeHint().height())
-        utils.tile_Widgets([self.parent()]+self.parent().Children, how='vertically', gap=big_gap)
+    # def position(self):
+    #     big_gap = int(self.config['ui']['big_gap'])
+    #     self.resize(self.parent().width(),self.sizeHint().height())
+        # utils.tile_Widgets([self.parent()]+self.parent().Children, how='vertically', gap=big_gap)
 
     def update(self):
         try:
@@ -443,213 +417,35 @@ class AnimalInfoWidget(QtWidgets.QWidget):
  
 """
 
-# move to utils?
-def import_from(module, name):
-    module = __import__(module, fromlist=[name])
-    return getattr(module, name)
+# # move to utils?
+# def import_from(module, name):
+#     module = __import__(module, fromlist=[name])
+#     return getattr(module, name)
 
-class CountersWidget(QtWidgets.QWidget):
-    def __init__(self, parent, counters):
-        super(CountersWidget, self).__init__(parent=parent)
-        self.setWindowFlags(QtCore.Qt.Window)
-        self.setWindowTitle("Counters")
-        self.Layout = QtWidgets.QVBoxLayout(self)
-        for counter in counters:
-            # C = import_from('.'.join(['Tasks',parent.task,'counters']), counter)
-            mod = importlib.import_module('Visualizers.Counters')
-            C = getattr(mod, counter)
-            self.Layout.addWidget(C(self))
-            utils.printer("initializing counter: %s" % counter, 'msg')
+# class CountersWidget(QtWidgets.QWidget):
+#     def __init__(self, parent, counters):
+#         super(CountersWidget, self).__init__(parent=parent)
+#         self.setWindowFlags(QtCore.Qt.Window)
+#         self.setWindowTitle("Counters")
+#         self.Layout = QtWidgets.QVBoxLayout(self)
+#         for counter in counters:
+#             # C = import_from('.'.join(['Tasks',parent.task,'counters']), counter)
+#             mod = importlib.import_module('Visualizers.Counters')
+#             C = getattr(mod, counter)
+#             self.Layout.addWidget(C(self))
+#             utils.printer("initializing counter: %s" % counter, 'msg')
 
-            # deco - split by line
-            line = QtWidgets.QFrame(self)
-            line.setFrameShape(QtWidgets.QFrame.HLine)
-            line.setFrameShadow(QtWidgets.QFrame.Sunken)
-            self.Layout.addWidget(line)
+#             # deco - split by line
+#             line = QtWidgets.QFrame(self)
+#             line.setFrameShape(QtWidgets.QFrame.HLine)
+#             line.setFrameShadow(QtWidgets.QFrame.Sunken)
+#             self.Layout.addWidget(line)
 
-        self.setLayout(self.Layout)
-        self.position()
-        self.show()
+#         self.setLayout(self.Layout)
+#         self.position()
+#         self.show()
 
-    def position(self):
-        big_gap = int(self.parent().config['ui']['big_gap'])
-        self.resize(self.parent().width(),self.sizeHint().height())
-        utils.tile_Widgets([self.parent()]+self.parent().Children, how='vertically', gap=big_gap)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# class OutcomeCounter(QtWidgets.QTableView):
-#     """ """
-#     def __init__(self, parent, outcomes=None):
-#         super(OutcomeCounter, self).__init__(parent=parent)
-#         self.outcomes = outcomes
-#         self.initModel()
-#         self.initUI()
-#         self.model.setDf(self.Df)
-#         self.update()
-
-#     def initModel(self):
-#         # init data
-#         self.Df = pd.DataFrame(sp.zeros((4,5),dtype='int32'),columns=['label','left','right','sum','frac'],index=['correct','incorrect','missed','premature'])
-#         self.Df['frac'] = self.Df['frac'].astype('float32')
-#         self.Df['label'] = self.Df.index
-
-#         self.model = PandasModel(self.Df)
-#         self.setModel(self.model)
-#         self.model.setDf(self.Df)
-
-#     def initUI(self):
-#         for i in range(self.Df.columns.shape[0]):
-#             self.setColumnWidth(i, 40)
-#         self.update()
-#         pass
-
-#     def connect(self, OnlineDataAnalyser):
-#         # connect signals
-#         self.OnlineDataAnalyser = OnlineDataAnalyser
-#         OnlineDataAnalyser.trial_data_available.connect(self.on_data)
-    
-#     def on_data(self, TrialDf, TrialMetricsDf):
-#         side = metrics.get_correct_side(TrialDf).values[0]
-#         outcome = metrics.get_outcome(TrialDf).values[0]
-#         try:
-#             self.Df.loc[outcome, side] += 1
-#             self.Df['sum'] = self.Df['left'] + self.Df['right']
-#             self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
-#         except KeyError:
-#             pass
-
-#         self.model.setDf(self.Df)
-#         self.update()
-
-# class WaterCounter_old(QtWidgets.QLabel):
-#     """ """
-#     def __init__(self, parent):
-#         super(WaterCounter, self).__init__(parent=parent)
-#         self.reset()
-
-#     def reset(self):
-#         self.setText("0")
-
-#     def increment(self, amount):
-#         current_amount = int(float(self.text()))
-#         new_amount = current_amount + amount
-#         self.setText(str(new_amount))
-
-#     def get_value(self):
-#         return int(float(self.text()))
-
-class WaterCounter(QtWidgets.QWidget):
-    """ with a reset button """
-    def __init__(self, parent):
-        super(WaterCounter, self).__init__(parent=parent)
-        self.Layout = QtWidgets.QHBoxLayout()
-        self.Labela = QtWidgets.QLabel('consumed water (µl)')
-        self.Label = QtWidgets.QLabel()
-        self.reset_btn = QtWidgets.QPushButton('reset')
-        self.reset_btn.clicked.connect(self.reset)
-        self.Layout.addWidget(self.Labela, alignment=QtCore.Qt.AlignVCenter)
-        self.Layout.addWidget(self.Label, alignment=QtCore.Qt.AlignVCenter)
-        self.Layout.addWidget(self.reset_btn, alignment=QtCore.Qt.AlignVCenter)
-        self.setLayout(self.Layout)
-        self.reset()
-    
-    def reset(self):
-        self.Label.setText("0")
-
-    def increment(self, amount):
-        current_amount = int(float(self.Label.text()))
-        new_amount = current_amount + amount
-        self.Label.setText(str(new_amount))
-
-    def get_value(self):
-        return int(float(self.Label.text())) # FIXME check this
-
-
-class TrialCounter3(QtWidgets.QTableView):
-    """ """
-    def __init__(self, parent):
-        super(TrialCounter3, self).__init__(parent=parent)
-        self.initModel()
-        self.initUI()
-
-        # self.Df.loc['correct','left'] += 1
-        # self.model.set_data(self.Df)
-        # self.model.set_data(self.Df)
-        # self.model._data = self.Df
-        self.model.setDf(self.Df)
-    
-        self.update()
-        # print(self.model._data)
-
-    def initModel(self):
-        # init data
-        self.Df = pd.DataFrame(sp.zeros((4,5),dtype='int32'),columns=['label','left','right','sum','frac'],index=['correct','incorrect','missed','premature'])
-        self.Df['frac'] = self.Df['frac'].astype('float32')
-        self.Df['label'] = self.Df.index
-
-        self.model = PandasModel(self.Df)
-        self.setModel(self.model)
-        self.model.setDf(self.Df)
-        # self.model.set_data(self.Df)
-        # self.model._data = self.Df
-        # self.model.dataChanged.connect(self.refresh)
-        
-    def initUI(self):
-        for i in range(self.Df.columns.shape[0]):
-            self.setColumnWidth(i, 40)
-        self.update()
-        pass
-
-    def connect(self, OnlineDataAnalyser):
-        # connect signals
-        self.OnlineDataAnalyser = OnlineDataAnalyser
-        OnlineDataAnalyser.trial_data_available.connect(self.on_data)
-    
-    def on_data(self, TrialDf, TrialMetricsDf):
-        side = metrics.get_correct_side(TrialDf).values[0]
-        outcome = metrics.get_outcome(TrialDf).values[0]
-        try:
-            self.Df.loc[outcome, side] += 1
-            self.Df['sum'] = self.Df['left'] + self.Df['right']
-            self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
-        except KeyError:
-            pass
-        # self.model.set_data(self.Df)
-        # self.model._data = self.Df
-        self.model.setDf(self.Df)
-        self.update()
-
-    def reset(self):
-        pass
-
-    # def refresh(self, i, j):
-    #     print('refresh called on ',i,j)
-    #     self.update()
+#     def position(self):
+#         big_gap = int(self.parent().config['ui']['big_gap'])
+#         self.resize(self.parent().width(),self.sizeHint().height())
+#         utils.tile_Widgets([self.parent()]+self.parent().Children, how='vertically', gap=big_gap)

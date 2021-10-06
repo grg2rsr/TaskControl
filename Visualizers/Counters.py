@@ -14,10 +14,21 @@ from Widgets.UtilityWidgets import TerminateEdit, StringChoiceWidget, ValueEditF
 from Utils import utils
 from Utils import metrics
 
+"""
+ #######  ##     ## ########  ######   #######  ##     ## ########  ######   #######  ##     ## ##    ## ######## ######## ########
+##     ## ##     ##    ##    ##    ## ##     ## ###   ### ##       ##    ## ##     ## ##     ## ###   ##    ##    ##       ##     ##
+##     ## ##     ##    ##    ##       ##     ## #### #### ##       ##       ##     ## ##     ## ####  ##    ##    ##       ##     ##
+##     ## ##     ##    ##    ##       ##     ## ## ### ## ######   ##       ##     ## ##     ## ## ## ##    ##    ######   ########
+##     ## ##     ##    ##    ##       ##     ## ##     ## ##       ##       ##     ## ##     ## ##  ####    ##    ##       ##   ##
+##     ## ##     ##    ##    ##    ## ##     ## ##     ## ##       ##    ## ##     ## ##     ## ##   ###    ##    ##       ##    ##
+ #######   #######     ##     ######   #######  ##     ## ########  ######   #######   #######  ##    ##    ##    ######## ##     ##
+"""
+
 class OutcomeCounter(QtWidgets.QWidget):
     """ """
     def __init__(self, parent, outcomes=None, split_by=None):
         super(OutcomeCounter, self).__init__(parent=parent)
+        self.setWindowFlags(QtCore.Qt.Window)
         self.outcomes = outcomes
         self.TableView = QtWidgets.QTableView(self)
 
@@ -33,18 +44,30 @@ class OutcomeCounter(QtWidgets.QWidget):
         self.Model = ArrayModel(self.data,  self.row_labels, self.col_labels)
         self.TableView.setModel(self.Model)
 
-        # self.initModel()
-        # self.initUI()
+        # settings
+        self.settings = QtCore.QSettings('TaskControl', 'OutcomeCounter')
+        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
+
+        self.show()
+
+    def init(self):
+        self.OnlineDataAnalyser = self.parent().ArduinoController.OnlineDataAnalyser
+        self.OnlineDataAnalyser.trial_data_available.connect(self.on_data)
+    
+    def on_data(self, TrialDf, TrialMetricsDf):
+        # side = metrics.get_correct_side(TrialDf).values[0]
+        # outcome = metrics.get_outcome(TrialDf).values[0]
+        # try:
+        #     self.Df.loc[outcome, side] += 1
+        #     self.Df['sum'] = self.Df['left'] + self.Df['right']
+        #     self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
+        # except KeyError:
+        #     pass
+
         # self.model.setDf(self.Df)
         # self.update()
-
-    # def initModel(self):
-
-    # def initUI(self):
-    #     for i,label in enumerate(self.row_labels):
-    #         self.addRow()
-
-    #     pass
+        pass
 
     def start(self):
         pass
@@ -55,79 +78,27 @@ class OutcomeCounter(QtWidgets.QWidget):
     def reset(self):
         pass
 
-    # def connect(self, OnlineDataAnalyser):
-    #     # connect signals
-    #     self.OnlineDataAnalyser = OnlineDataAnalyser
-    #     OnlineDataAnalyser.trial_data_available.connect(self.on_data)
-    
-    # def on_data(self, TrialDf, TrialMetricsDf):
-    #     side = metrics.get_correct_side(TrialDf).values[0]
-    #     outcome = metrics.get_outcome(TrialDf).values[0]
-    #     try:
-    #         self.Df.loc[outcome, side] += 1
-    #         self.Df['sum'] = self.Df['left'] + self.Df['right']
-    #         self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
-    #     except KeyError:
-    #         pass
+    def closeEvent(self,event):
+        """ reimplementation of closeEvent """
+        # Write window size and position to config file
+        self.settings.setValue("size", self.size())
+        self.settings.setValue("pos", self.pos())
 
-    #     self.model.setDf(self.Df)
-    #     self.update()
-
-# class OutcomeCounter(QtWidgets.QTableView):
-#     """ """
-#     def __init__(self, parent, outcomes=None):
-#         super(OutcomeCounter, self).__init__(parent=parent)
-#         self.outcomes = outcomes
-#         self.initModel()
-#         self.initUI()
-#         self.model.setDf(self.Df)
-#         self.update()
-
-#     def initModel(self):
-#         # init data
-#         self.Df = pd.DataFrame(np.zeros((4,5),dtype='int32'),columns=['label','left','right','sum','frac'],index=['correct','incorrect','missed','premature'])
-#         self.Df['frac'] = self.Df['frac'].astype('float32')
-#         self.Df['label'] = self.Df.index
-
-#         self.model = PandasModel(self.Df)
-#         self.setModel(self.model)
-#         self.model.setDf(self.Df)
-
-#     def initUI(self):
-#         for i in range(self.Df.columns.shape[0]):
-#             self.setColumnWidth(i, 40)
-#         self.update()
-#         pass
-
-#     def start(self):
-#         pass
-
-#     def reset(self):
-#         pass
-
-#     def connect(self, OnlineDataAnalyser):
-#         # connect signals
-#         self.OnlineDataAnalyser = OnlineDataAnalyser
-#         OnlineDataAnalyser.trial_data_available.connect(self.on_data)
-    
-#     def on_data(self, TrialDf, TrialMetricsDf):
-#         side = metrics.get_correct_side(TrialDf).values[0]
-#         outcome = metrics.get_outcome(TrialDf).values[0]
-#         try:
-#             self.Df.loc[outcome, side] += 1
-#             self.Df['sum'] = self.Df['left'] + self.Df['right']
-#             self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
-#         except KeyError:
-#             pass
-
-#         self.model.setDf(self.Df)
-#         self.update()
-
+"""
+##      ##    ###    ######## ######## ########
+##  ##  ##   ## ##      ##    ##       ##     ##
+##  ##  ##  ##   ##     ##    ##       ##     ##
+##  ##  ## ##     ##    ##    ######   ########
+##  ##  ## #########    ##    ##       ##   ##
+##  ##  ## ##     ##    ##    ##       ##    ##
+ ###  ###  ##     ##    ##    ######## ##     ##
+"""
 
 class WaterCounter(QtWidgets.QWidget):
     """ with a reset button """
     def __init__(self, parent):
         super(WaterCounter, self).__init__(parent=parent)
+        self.setWindowFlags(QtCore.Qt.Window)
         self.Layout = QtWidgets.QVBoxLayout(self)
         Row = QtWidgets.QHBoxLayout(self)
         self.Label = QtGui.QLabel("consumed water (µl): ")
@@ -136,6 +107,8 @@ class WaterCounter(QtWidgets.QWidget):
         Row.addWidget(self.Value)
         self.Layout.addLayout(Row)
 
+        self.reward_events = [p.strip() for p in self.parent().task_config['OnlineAnalysis']['reward_event'].split(',')]
+        
         # self terminate
         Df = pd.DataFrame([['after (ul) ',  1000,   'int32']],
                            columns=['name','value','dtype'])
@@ -149,7 +122,23 @@ class WaterCounter(QtWidgets.QWidget):
         self.Layout.addWidget(self.reset_btn, alignment=QtCore.Qt.AlignVCenter)
         self.current_amount = 0
         
+        # settings
+        self.settings = QtCore.QSettings('TaskControl', 'WaterCounter')
+        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
+
+        self.show()
         self.reset()
+
+    def init(self):
+        self.OnlineDataAnalyser = self.parent().ArduinoController.OnlineDataAnalyser
+        self.OnlineDataAnalyser.decoded_data_available.connect(self.on_data)
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
     
     def reset(self):
         self.Value.setText("0")
@@ -157,29 +146,40 @@ class WaterCounter(QtWidgets.QWidget):
     def increment(self, amount):
         self.current_amount = self.current_amount + amount
         self.Value.setText(str(self.current_amount))
-        max_amount = self.Terminator.get_entry('after (ul) ')
+        max_amount = self.Terminator.selfTerminateEdit.get_entry('after (ul) ').value
         
         # check for self terminate
         if self.Terminator.is_enabled:
             if self.current_amount > max_amount:
                 self.parent().Done()
-
-    def connect(self, OnlineDataAnalyser):
-        # connect signals
-        self.OnlineDataAnalyser = OnlineDataAnalyser
-        OnlineDataAnalyser.decoded_data_available.connect(self.on_data)
     
     def on_data(self, line):
         event, time = line.split('\t')
         if any([event == reward_event for reward_event in self.reward_events]):
-            current_magnitude = self.parent.ArduinoController.VariableController.VariableEditWidget.get_entry('reward_magnitude')['value']
+            current_magnitude = self.parent().ArduinoController.VariableController.VariableEditWidget.get_entry('reward_magnitude')['value']
             self.increment(current_magnitude)
 
+    def closeEvent(self,event):
+        """ reimplementation of closeEvent """
+        # Write window size and position to config file
+        self.settings.setValue("size", self.size())
+        self.settings.setValue("pos", self.pos())
+
+"""
+######## #### ##     ## ######## ########
+   ##     ##  ###   ### ##       ##     ##
+   ##     ##  #### #### ##       ##     ##
+   ##     ##  ## ### ## ######   ########
+   ##     ##  ##     ## ##       ##   ##
+   ##     ##  ##     ## ##       ##    ##
+   ##    #### ##     ## ######## ##     ##
+"""
 
 class Timer(QtWidgets.QWidget):
     """ a clock """
     def __init__(self, parent):
         super(Timer, self).__init__(parent=parent)
+        self.setWindowFlags(QtCore.Qt.Window)
         self.Layout = QtWidgets.QVBoxLayout(self)
 
         # a label
@@ -202,6 +202,15 @@ class Timer(QtWidgets.QWidget):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.time_handler)
 
+        # settings
+        self.settings = QtCore.QSettings('TaskControl', 'Timer')
+        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
+        self.show()
+
+    def init(self):
+        pass
+
     def start(self):
         # start the timer
         self.t_start = datetime.now()
@@ -223,17 +232,33 @@ class Timer(QtWidgets.QWidget):
 
         # check if self-terminate
         if self.Terminator.is_enabled:
-            max_time = self.Terminator.get_entry('after (min) ')['value']
+            max_time = self.Terminator.selfTerminateEdit.get_entry('after (min) ')['value']
             current_time = dt.seconds/60
             if current_time >= max_time and max_time > 0:
                 self.parent().Done()
 
+    def closeEvent(self,event):
+        """ reimplementation of closeEvent """
+        # Write window size and position to config file
+        self.settings.setValue("size", self.size())
+        self.settings.setValue("pos", self.pos())
+
+"""
+######## ##     ## ######## ##    ## ########  ######   #######  ##     ## ##    ## ######## ######## ########
+##       ##     ## ##       ###   ##    ##    ##    ## ##     ## ##     ## ###   ##    ##    ##       ##     ##
+##       ##     ## ##       ####  ##    ##    ##       ##     ## ##     ## ####  ##    ##    ##       ##     ##
+######   ##     ## ######   ## ## ##    ##    ##       ##     ## ##     ## ## ## ##    ##    ######   ########
+##        ##   ##  ##       ##  ####    ##    ##       ##     ## ##     ## ##  ####    ##    ##       ##   ##
+##         ## ##   ##       ##   ###    ##    ##    ## ##     ## ##     ## ##   ###    ##    ##       ##    ##
+########    ###    ######## ##    ##    ##     ######   #######   #######  ##    ##    ##    ######## ##     ##
+"""
 
 class EventCounter(QtWidgets.QScrollArea):
     """ simply counts all arduino events """
     def __init__(self, parent):
         super(EventCounter, self).__init__(parent=parent)
-        self.events = parent.parent().ArduinoController.code_map.values()
+        self.setWindowFlags(QtCore.Qt.Window)
+        self.events = parent.ArduinoController.code_map.values()
 
         # filter out stuff
         self.events = [event for event in self.events if not event.endswith('_STATE')]
@@ -256,20 +281,26 @@ class EventCounter(QtWidgets.QScrollArea):
         self.ScrollWidget.setLayout(self.FormLayout)
         self.setWidget(self.ScrollWidget)
         
-    def connect(self, OnlineDataAnalyser):
-        # connect signals
-        self.OnlineDataAnalyser = OnlineDataAnalyser
-        OnlineDataAnalyser.decoded_data_available.connect(self.on_data)
+        # settings
+        self.settings = QtCore.QSettings('TaskControl', 'EventCounter')
+        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
+        self.show()
     
     def on_data(self, line):
         event, time = line.split('\t')
-        self.model[event] += 1
+        if event in self.events:
+            self.model[event] += 1
 
-        # update
-        i = self.events.index(event)
-        widget = self.FormLayout.itemAt(i, 1).widget()
-        widget.set_value(str(self.model[event]))
-        
+            # update
+            i = self.events.index(event)
+            widget = self.FormLayout.itemAt(i, 1).widget()
+            widget.setText(str(self.model[event]))
+
+    def init(self):
+        self.OnlineDataAnalyser = self.parent().ArduinoController.OnlineDataAnalyser
+        self.OnlineDataAnalyser.decoded_data_available.connect(self.on_data)
+
     def start(self):
         pass
 
@@ -279,3 +310,9 @@ class EventCounter(QtWidgets.QScrollArea):
     def reset(self):
         for k in self.model.keys():
             self.model[k] = 0
+        
+    def closeEvent(self,event):
+        """ reimplementation of closeEvent """
+        # Write window size and position to config file
+        self.settings.setValue("size", self.size())
+        self.settings.setValue("pos", self.pos())
