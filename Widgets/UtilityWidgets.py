@@ -241,6 +241,7 @@ class ArrayModel(QtCore.QAbstractTableModel):
     def __init__(self, array, row_labels, col_labels, parent=None):
         # super(ArrayModel).__init__(self, parent) # this doesn't work 
         QtCore.QAbstractTableModel.__init__(self, parent) # this does. No idea why
+
         # self.set_data(array, row_labels, col_labels)
         self.array = array
         self.row_labels = row_labels
@@ -249,15 +250,15 @@ class ArrayModel(QtCore.QAbstractTableModel):
     # def set_data(self, array, row_labels, col_labels):
 
     # def setData(self,*args):
-    #     super().setData(*args)
+    #     super().setData(*args) # ??
     #     return True
 
     def setData(self, index, value, role):
         if role == QtCore.EditRole:
-            try:
-                value = int(value)
-            except ValueError:
-                return False
+            # try:
+            #     value = int(value)
+            # except ValueError:
+            #     return False
             self.array[index.row(), index.column()] = value
             self.dataChanged.emit(self.index(0,0), self.index(self.array.shape[0], self.array.shape[1]))
             return True
@@ -275,7 +276,7 @@ class ArrayModel(QtCore.QAbstractTableModel):
                 return str(self.array[index.row(),index.column()])
         return None
 
-    # def headerData(self, col, orientation, role):
-    #     if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-    #         return self._data.columns[col]
-    #     return None
+    def headerData(self, col, orientation, role):
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+            return self.col_labels[col]
+        return None

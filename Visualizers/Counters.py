@@ -29,20 +29,29 @@ class OutcomeCounter(QtWidgets.QWidget):
     def __init__(self, parent, outcomes=None, split_by=None):
         super(OutcomeCounter, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
-        self.outcomes = outcomes
         self.TableView = QtWidgets.QTableView(self)
+        self.Layout = QtWidgets.QVBoxLayout(self)
+        self.Layout.addWidget(QtWidgets.QLabel("Outcome Counter"))
+        self.Layout.addWidget(self.TableView)
 
         # to be removed hardcodes
+        self.outcomes = outcomes
         self.outcomes = ['correct','incorrect','missed','premature']
         self.split_by = ['left','right']
         
         # init data
-        self.data = np.zeros((len(self.outcomes), len(self.split_by)+2))
+        self.data = np.zeros((len(self.outcomes), len(self.split_by)+3), dtype='object')
         self.row_labels = self.outcomes
-        self.col_labels = self.split_by + ['sum','%']
+        self.col_labels = [''] + self.split_by + ['∑','%']
 
         self.Model = ArrayModel(self.data,  self.row_labels, self.col_labels)
         self.TableView.setModel(self.Model)
+
+        # putting text
+        self.data[:,0] = self.row_labels
+        self.TableView.setColumnWidth(1,100)
+        for i in range(1,len(self.col_labels)):
+            self.TableView.setColumnWidth(i,50)
 
         # settings
         self.settings = QtCore.QSettings('TaskControl', 'OutcomeCounter')
@@ -56,8 +65,22 @@ class OutcomeCounter(QtWidgets.QWidget):
         self.OnlineDataAnalyser.trial_data_available.connect(self.on_data)
     
     def on_data(self, TrialDf, TrialMetricsDf):
-        # side = metrics.get_correct_side(TrialDf).values[0]
-        # outcome = metrics.get_outcome(TrialDf).values[0]
+        side = metrics.get_correct_side(TrialDf).values[0]
+        outcome = metrics.get_outcome(TrialDf).values[0]
+        i = self.row_lables.index(outcome)
+        j = self.col_labels.index(side)
+        
+        # update internal data
+        self.data[i,j] += 1
+        self.data[i,3] = np.sum(self.data[i,1:3])
+        self.data[i,4] = np.sum(self.data[i,1:3]) / np.sum(self.data[:,1:3])
+
+        # update model
+        for i in range(len(self.outcomes)):
+            for j in range(len(1, self.row_labels)):
+                index = QtCore.QModelIndex(i,j)
+                self.Model.setData(index, self.data[i,j], QtCore.EditRole)
+
         # try:
         #     self.Df.loc[outcome, side] += 1
         #     self.Df['sum'] = self.Df['left'] + self.Df['right']
@@ -67,7 +90,7 @@ class OutcomeCounter(QtWidgets.QWidget):
 
         # self.model.setDf(self.Df)
         # self.update()
-        pass
+        # pass
 
     def start(self):
         pass

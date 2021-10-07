@@ -48,7 +48,6 @@ class SettingsWidget(QtWidgets.QWidget):
         super(SettingsWidget, self).__init__()
         self.config = config # a configparser dict
         self.Controllers = [] # a list of all controllers
-        self.Children = [] # a list of all UI windows
         self.Counters = []
         self.main = main # ref to the main
 
@@ -172,9 +171,6 @@ class SettingsWidget(QtWidgets.QWidget):
         for Counter in self.Counters:
             Counter.close()
 
-        for Child in self.Children:
-            Child.close()
-
         # Write window size and position to config file
         self.settings.setValue("size", self.size())
         self.settings.setValue("pos", self.pos())
@@ -258,7 +254,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.config['current']['animal'] = current_id
         self.Animal, = [Animal for Animal in self.Animals if Animal.ID == current_id]
 
-        # TODO make a button to display this
+        # TODO bring back via a button
         # # displaying previous sessions info
         # if hasattr(self,'AnimalInfoWidget'):
         #     self.AnimalInfoWidget.close()
