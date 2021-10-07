@@ -92,14 +92,14 @@ def get_interval(TrialDf):
 def get_outcome(TrialDf):
     var_name = "outcome"
 
-    if "CHOICE_MISSED_EVENT" in TrialDf['name'].values:
-        var = "missed"
+    if "PREMATURE_CHOICE_EVENT" in TrialDf['name'].values:
+        var = "premature"
     elif "CHOICE_CORRECT_EVENT" in TrialDf['name'].values:
         var = "correct"
     elif "CHOICE_INCORRECT_EVENT" in TrialDf['name'].values:
         var = "incorrect"
-    elif "PREMATURE_CHOICE_EVENT" in TrialDf['name'].values:
-        var = "premature"
+    elif "CHOICE_MISSED_EVENT" in TrialDf['name'].values:
+        var = "missed"
     else:
         var = np.NaN
 

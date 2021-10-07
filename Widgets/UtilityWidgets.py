@@ -253,6 +253,9 @@ class ArrayModel(QtCore.QAbstractTableModel):
     #     super().setData(*args) # ??
     #     return True
 
+    def update(self):
+        self.dataChanged.emit(self.index(0,0), self.index(self.array.shape[0], self.array.shape[1]))
+
     def setData(self, index, value, role):
         if role == QtCore.EditRole:
             # try:

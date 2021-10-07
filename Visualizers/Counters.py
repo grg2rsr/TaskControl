@@ -67,30 +67,17 @@ class OutcomeCounter(QtWidgets.QWidget):
     def on_data(self, TrialDf, TrialMetricsDf):
         side = metrics.get_correct_side(TrialDf).values[0]
         outcome = metrics.get_outcome(TrialDf).values[0]
-        i = self.row_lables.index(outcome)
-        j = self.col_labels.index(side)
-        
-        # update internal data
-        self.data[i,j] += 1
-        self.data[i,3] = np.sum(self.data[i,1:3])
-        self.data[i,4] = np.sum(self.data[i,1:3]) / np.sum(self.data[:,1:3])
+        if not (pd.isna(side) or pd.isna(outcome)):
+            i = self.row_labels.index(outcome)
+            j = self.col_labels.index(side)
 
-        # update model
-        for i in range(len(self.outcomes)):
-            for j in range(len(1, self.row_labels)):
-                index = QtCore.QModelIndex(i,j)
-                self.Model.setData(index, self.data[i,j], QtCore.EditRole)
+            # update internal data
+            self.data[i,j] += 1
+            self.data[i,3] = np.sum(self.data[i,1:3])
+            self.data[i,4] = np.sum(self.data[i,1:3]) / np.sum(self.data[:,1:3])
 
-        # try:
-        #     self.Df.loc[outcome, side] += 1
-        #     self.Df['sum'] = self.Df['left'] + self.Df['right']
-        #     self.Df['frac'] = self.Df['sum'] / self.Df.sum()['sum']
-        # except KeyError:
-        #     pass
-
-        # self.model.setDf(self.Df)
-        # self.update()
-        # pass
+            # update model
+            self.Model.update()
 
     def start(self):
         pass
@@ -288,7 +275,7 @@ class EventCounter(QtWidgets.QScrollArea):
         self.FormLayout = QtWidgets.QFormLayout(self)
 
         # internal model
-        self.model = dict(zip(self.events,np.zeros(len(self.events))))
+        self.Model = dict(zip(self.events,np.zeros(len(self.events))))
         
         for i,event in enumerate(self.events):
             self.FormLayout.addRow(event,QtWidgets.QLabel('0'))
@@ -313,12 +300,12 @@ class EventCounter(QtWidgets.QScrollArea):
     def on_data(self, line):
         event, time = line.split('\t')
         if event in self.events:
-            self.model[event] += 1
+            self.Model[event] += 1
 
             # update
             i = self.events.index(event)
             widget = self.FormLayout.itemAt(i, 1).widget()
-            widget.setText(str(self.model[event]))
+            widget.setText(str(self.Model[event]))
 
     def init(self):
         self.OnlineDataAnalyser = self.parent().ArduinoController.OnlineDataAnalyser
@@ -331,8 +318,8 @@ class EventCounter(QtWidgets.QScrollArea):
         pass
 
     def reset(self):
-        for k in self.model.keys():
-            self.model[k] = 0
+        for k in self.Model.keys():
+            self.Model[k] = 0
         
     def closeEvent(self,event):
         """ reimplementation of closeEvent """
