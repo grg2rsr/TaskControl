@@ -184,7 +184,9 @@ class SettingsWidget(QtWidgets.QWidget):
         initialize folder structure
         runs all controllers
         """
-
+        # flags
+        self.running = True
+        
         # UI related
         self.RunBtn.setEnabled(False)
         self.DoneBtn.setEnabled(True)
@@ -202,20 +204,21 @@ class SettingsWidget(QtWidgets.QWidget):
         # make folder structure
         date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
         self.run_folder = self.Animal.folder  / '_'.join([date_time,self.task])
-        os.makedirs(self.run_folder,exist_ok=True)
+        os.makedirs(self.run_folder, exist_ok=True)
 
         for Controller in self.Controllers:
             utils.printer("running controller: %s" % Controller.name,'msg')
             Controller.Run(self.run_folder)
 
-        self.running = True
-        
         # reset and start the counters
         for Counter in self.Counters:
             Counter.init()
 
     def Done(self):
         """ finishing the session """
+        # Flags
+        self.running = False
+
         # UI
         self.DoneBtn.setEnabled(False)
         self.RunBtn.setEnabled(True)
@@ -230,9 +233,6 @@ class SettingsWidget(QtWidgets.QWidget):
         # stop the counters
         for Counter in self.Counters:
             Counter.stop()
-
-        # Flags
-        self.running = False
 
         # stop and take down controllers
         for Controller in self.Controllers:
@@ -263,11 +263,11 @@ class SettingsWidget(QtWidgets.QWidget):
             return None
 
         else:
-            # get task
+            # update current task
             self.config['current']['task'] = self.TaskChoiceWidget.get_value()
             self.task = self.config['current']['task']
             self.task_folder = Path(self.config['paths']['tasks_folder']) / self.task
-            utils.printer("Currently selected Task: %s" % self.task, 'msg')
+            utils.printer("selected Task: %s" % self.task, 'msg')
 
             # parse task config file
             self.task_config = configparser.ConfigParser()
@@ -277,12 +277,12 @@ class SettingsWidget(QtWidgets.QWidget):
             for Controller in self.Controllers:
                 Controller.stop()
                 Controller.close()
-                self.Controllers.remove(Controller)
+            self.Controllers = []
 
             for Counter in self.Counters:
                 Counter.stop()
                 Counter.close()
-                self.Counters.remove(Counter)
+            self.Counters = []
             
             # run each controller present in task config
             for section in self.task_config.sections():

@@ -91,6 +91,8 @@ def printer(s, mode='msg'):
         print(Fore.CYAN + "\n--- %s ---" % s)
     if mode == 'error':
         print(Fore.RED + "ERROR: %s" % s)
+    if mode == 'debug':
+        print(Fore.MAGENTA + "DEBUG: %s" % s)
         
 def get_tasks(folder):
     """ gets all valid tasks """

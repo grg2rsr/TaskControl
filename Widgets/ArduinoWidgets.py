@@ -400,8 +400,8 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.VariableEditWidget = Widgets.ValueEditFormLayout(self, DataFrame=self.Df)
 
         # note: the order of this seems to be of utmost importance ... 
-        self.ScrollWidget.setLayout(self.VariableEditWidget)
-        self.ScrollArea.setWidget(self.ScrollWidget)
+        # self.ScrollWidget.setLayout(self.VariableEditWidget)
+        self.ScrollArea.setWidget(self.VariableEditWidget)
 
         self.Layout = QtWidgets.QVBoxLayout(self)
         self.Layout.addWidget(self.ScrollArea)
@@ -424,6 +424,40 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
+
+    # def initUI(self):
+    #     # contains a scroll area which contains the scroll widget
+    #     self.ScrollArea = QtWidgets.QScrollArea()
+    #     self.ScrollWidget = QtWidgets.QWidget()
+
+    #     # scroll widget has the layout etc
+    #     self.VariableEditWidget = Widgets.ValueEditFormLayout(self, DataFrame=self.Df)
+
+    #     # note: the order of this seems to be of utmost importance ... 
+    #     self.ScrollWidget.setLayout(self.VariableEditWidget)
+    #     self.ScrollArea.setWidget(self.ScrollWidget)
+
+    #     self.Layout = QtWidgets.QVBoxLayout(self)
+    #     self.Layout.addWidget(self.ScrollArea)
+
+    #     SendBtn = QtWidgets.QPushButton(self)
+    #     SendBtn.setText('Send')
+    #     SendBtn.clicked.connect(self.send_variables)
+    #     self.Layout.addWidget(SendBtn)
+
+    #     LastVarsBtn = QtWidgets.QPushButton(self)
+    #     LastVarsBtn.setText('use variables from last session')
+    #     LastVarsBtn.clicked.connect(self.load_last_vars)
+    #     self.Layout.addWidget(LastVarsBtn)
+
+    #     self.setLayout(self.Layout)
+
+    #     self.setWindowTitle("Arduino variables")
+        
+    #     self.settings = QtCore.QSettings('TaskControl', 'ArduinoVariablesController')
+    #     self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+    #     self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
+    #     self.show()
 
     def write_variables(self, path):
         """ writes current arduino variables to the path """

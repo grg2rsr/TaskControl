@@ -14,8 +14,11 @@ class BonsaiController(QtWidgets.QWidget):
         self.config = config
         self.task_config = task_config
 
+        utils.printer("init bonsai controller","debug")
+
     def Run(self, folder):
         """ folder is the logging folder """
+        utils.printer("running bonsai controller","debug")
 
         # animal = self.config['current']['animal']
         task = self.config['current']['task']
@@ -60,8 +63,10 @@ class BonsaiController(QtWidgets.QWidget):
 
     def closeEvent(self, event):
         """ """
+        utils.printer("closing bonsai controller","debug")
         self.close()
 
     def stop(self):
         """ """
+        utils.printer("stopping bonsai controller","debug")
         pass
