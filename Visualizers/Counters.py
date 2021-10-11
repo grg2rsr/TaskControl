@@ -229,21 +229,22 @@ class Timer(QtWidgets.QWidget):
         # start the timer
         self.t_start = datetime.now()
         self.timer.start(1000)
-        pass
 
     def stop(self):
         self.timer.stop()
-        pass
 
     def reset(self):
         self.t_start = datetime.now() # possibly necessary?
         self.LCDclock.display('00:00:00')
-        pass
 
     def time_handler(self):
         # called every second by QTimer
         dt = datetime.now() - self.t_start
-        self.LCDclock.display(str(dt).split('.')[0])
+        time_str = str(dt).split('.')[0]
+        if len(time_str.split(':')[0]) == 1:
+            time_str = '0' + time_str
+        self.LCDclock.display(time_str)
+
 
         # check if self-terminate
         if self.Terminator.is_enabled:
