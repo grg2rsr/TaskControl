@@ -558,13 +558,23 @@ class OnlineDataAnalyser(QtCore.QObject):
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
         # get metrics
-        metrics = [m.strip() for m in self.config['online_metrics'].split(',')]
-        mod = importlib.import_module('Utils.metrics')
-        self.Metrics = [getattr(mod, metric) for metric in metrics]
+        try:
+            metrics = [m.strip() for m in self.config['online_metrics'].split(',')]
+            mod = importlib.import_module('Utils.metrics')
+            self.Metrics = [getattr(mod, metric) for metric in metrics]
+        except KeyError:
+            self.Metrics = None
 
         # events
-        self.new_trial_event = self.config['new_trial_event']
-        self.reward_events = [event.strip() for event in config['reward_event'].split(',')]
+        try:
+            self.new_trial_event = self.config['new_trial_event']
+        except KeyError:
+            self.new_trial_event = None
+        
+        try:
+            self.reward_events = [event.strip() for event in config['reward_event'].split(',')]
+        except KeyError:
+            self.reward_events = None
         
         self.lines = []
         self.SessionDf = None
