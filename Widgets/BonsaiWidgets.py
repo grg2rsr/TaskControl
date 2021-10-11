@@ -34,11 +34,13 @@ class BonsaiController(QtWidgets.QWidget):
             parameters = parameters + " -p:LC_com_port="+self.config['connections']['harp_loadcell_port']
 
         # getting other manually set params
-        with open(task_folder / "Bonsai" / "interface_variables.ini",'r') as fH:
-            params = fH.readlines()
-            params = [p.strip() for p in params]
-        for line in params:
-            parameters = parameters + " -p:%s" % line
+        variables_path = task_folder / "Bonsai" / "interface_variables.ini"
+        if variables_path.exists():
+            with open(variables_path,'r') as fH:
+                params = fH.readlines()
+                params = [p.strip() for p in params]
+            for line in params:
+                parameters = parameters + " -p:%s" % line
 
         bonsai_exe = Path(self.config['system']['bonsai_cmd'])
         bonsai_workflow = task_folder / 'Bonsai' / self.task_config['workflow_fname']
