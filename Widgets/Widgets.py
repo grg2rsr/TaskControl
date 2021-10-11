@@ -54,10 +54,7 @@ class SettingsWidget(QtWidgets.QWidget):
         # flags
         self.running = False
 
-        # Initial window size/pos last saved. Use default values for first time
-        # self.settings = QtCore.QSettings('SettingsWidget.ini', QtCore.QSettings.IniFormat)
-
-        # Settings
+        # Settings - to store window positions
         self.settings = QtCore.QSettings('TaskControl','SettingsWidget')
         self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
@@ -187,7 +184,9 @@ class SettingsWidget(QtWidgets.QWidget):
         initialize folder structure
         runs all controllers
         """
-
+        # flags
+        self.running = True
+        
         # UI related
         self.RunBtn.setEnabled(False)
         self.DoneBtn.setEnabled(True)
@@ -205,26 +204,21 @@ class SettingsWidget(QtWidgets.QWidget):
         # make folder structure
         date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
         self.run_folder = self.Animal.folder  / '_'.join([date_time,self.task])
-        os.makedirs(self.run_folder,exist_ok=True)
+        os.makedirs(self.run_folder, exist_ok=True)
 
         for Controller in self.Controllers:
             utils.printer("running controller: %s" % Controller.name,'msg')
             Controller.Run(self.run_folder)
 
-            # connect OnlineDataAnalyzer
-            # TODO FIXME 
-            # if type(Controller) == ArduinoController:
-            #     if hasattr(self.ArduinoController,'OnlineDataAnalyser'):
-            #         self.TrialCounter.connect(self.ArduinoController.OnlineDataAnalyser)
-
-        self.running = True
-        
         # reset and start the counters
         for Counter in self.Counters:
             Counter.init()
 
     def Done(self):
         """ finishing the session """
+        # Flags
+        self.running = False
+
         # UI
         self.DoneBtn.setEnabled(False)
         self.RunBtn.setEnabled(True)
@@ -239,9 +233,6 @@ class SettingsWidget(QtWidgets.QWidget):
         # stop the counters
         for Counter in self.Counters:
             Counter.stop()
-
-        # Flags
-        self.running = False
 
         # stop and take down controllers
         for Controller in self.Controllers:
@@ -272,11 +263,11 @@ class SettingsWidget(QtWidgets.QWidget):
             return None
 
         else:
-            # get task
+            # update current task
             self.config['current']['task'] = self.TaskChoiceWidget.get_value()
             self.task = self.config['current']['task']
             self.task_folder = Path(self.config['paths']['tasks_folder']) / self.task
-            utils.printer("Currently selected Task: %s" % self.task, 'msg')
+            utils.printer("selected Task: %s" % self.task, 'msg')
 
             # parse task config file
             self.task_config = configparser.ConfigParser()
@@ -286,12 +277,12 @@ class SettingsWidget(QtWidgets.QWidget):
             for Controller in self.Controllers:
                 Controller.stop()
                 Controller.close()
-                self.Controllers.remove(Controller)
+            self.Controllers = []
 
             for Counter in self.Counters:
                 Counter.stop()
                 Counter.close()
-                self.Counters.remove(Counter)
+            self.Counters = []
             
             # run each controller present in task config
             for section in self.task_config.sections():
@@ -317,34 +308,34 @@ class SettingsWidget(QtWidgets.QWidget):
             self.init_counters()
 
             # positioning
-            self.position_widgets()
+            # self.position_widgets()
 
-    def position_widgets(self):
-        print(self.size())
-        # policy = QtCore.Q
-        self.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed,
-                                                 QtWidgets.QSizePolicy.Fixed))
-        # position controllers
-        # gap = int(self.config['ui']['small_gap'])
-        # utils.tile_Widgets([self] + self.Controllers, how="horizontally", gap=gap)
-        # for Controller in self.Controllers:
-        #     Controller.position()
+    # def position_widgets(self):
+    #     print(self.size())
+    #     # policy = QtCore.Q
+    #     self.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed,
+    #                                              QtWidgets.QSizePolicy.Fixed))
+    #     # position controllers
+    #     # gap = int(self.config['ui']['small_gap'])
+    #     # utils.tile_Widgets([self] + self.Controllers, how="horizontally", gap=gap)
+    #     # for Controller in self.Controllers:
+    #     #     Controller.position()
 
-        # position counters
-        # gap = int(self.config['ui']['small_gap'])
-        # utils.scale_Widgets([self] + self.Counters, how="vertical", mode='min')
-        # utils.tile_Widgets([self] + self.Counters, how="vertically", gap=gap)
+    #     # position counters
+    #     # gap = int(self.config['ui']['small_gap'])
+    #     # utils.scale_Widgets([self] + self.Counters, how="vertical", mode='min')
+    #     # utils.tile_Widgets([self] + self.Counters, how="vertically", gap=gap)
 
 
-        # def position(self):
-        #     # positioning on screen
-        #     gap = int(self.config['ui']['small_gap'])
+    #     # def position(self):
+    #     #     # positioning on screen
+    #     #     gap = int(self.config['ui']['small_gap'])
 
-        #     # controllers
-        #     utils.tile_Widgets([self] + self.Controllers, how="horizontally", gap=gap)
-        #     for Controller in self.Controllers:
-        #         Controller.position()
-        pass
+    #     #     # controllers
+    #     #     utils.tile_Widgets([self] + self.Controllers, how="horizontally", gap=gap)
+    #     #     for Controller in self.Controllers:
+    #     #         Controller.position()
+    #     pass
 
 """
  
@@ -359,7 +350,7 @@ class SettingsWidget(QtWidgets.QWidget):
 """
 
 class AnimalInfoWidget(QtWidgets.QWidget):
-    """ displays some interesing info about the animal: list of previous sessions """
+    """ displays some info about the animal: list of previous sessions """
     def __init__(self, parent, config, Animal):
         super(AnimalInfoWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
@@ -368,80 +359,27 @@ class AnimalInfoWidget(QtWidgets.QWidget):
         self.initUI()
 
         self.settings = QtCore.QSettings('TaskControl', 'AnimalInfoWidget')
+
+        # FIXME change those
         self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
 
     def initUI(self):
-        # self.TextBrowser = QtWidgets.QTextBrowser(self)
         self.Table = QtWidgets.QTableView(self)
         self.Layout = QtWidgets.QHBoxLayout(self)
-        # self.Layout.addWidget(self.TextBrowser)
         self.Layout.addWidget(self.Table)
         self.setLayout(self.Layout)
 
         self.setWindowTitle(self.Animal.display())
         self.update()
         self.show()
-        # self.position()
-
-    # def position(self):
-    #     big_gap = int(self.config['ui']['big_gap'])
-    #     self.resize(self.parent().width(),self.sizeHint().height())
-        # utils.tile_Widgets([self.parent()]+self.parent().Children, how='vertically', gap=big_gap)
 
     def update(self):
         try:
             sessions_df = utils.get_sessions(self.Animal.folder)
-            # lines = sessions_df['task'].to_list()
             lines = sessions_df['task'].tolist()
             lines = '\n'.join(lines)
             model = PandasModel(sessions_df[['date','time','task']])
             self.Table.setModel(model)
         except ValueError:
             pass
-
-
-"""
- 
-  ######   #######  ##     ## ##    ## ######## ######## ########   ######  
- ##    ## ##     ## ##     ## ###   ##    ##    ##       ##     ## ##    ## 
- ##       ##     ## ##     ## ####  ##    ##    ##       ##     ## ##       
- ##       ##     ## ##     ## ## ## ##    ##    ######   ########   ######  
- ##       ##     ## ##     ## ##  ####    ##    ##       ##   ##         ## 
- ##    ## ##     ## ##     ## ##   ###    ##    ##       ##    ##  ##    ## 
-  ######   #######   #######  ##    ##    ##    ######## ##     ##  ######  
- 
-"""
-
-# # move to utils?
-# def import_from(module, name):
-#     module = __import__(module, fromlist=[name])
-#     return getattr(module, name)
-
-# class CountersWidget(QtWidgets.QWidget):
-#     def __init__(self, parent, counters):
-#         super(CountersWidget, self).__init__(parent=parent)
-#         self.setWindowFlags(QtCore.Qt.Window)
-#         self.setWindowTitle("Counters")
-#         self.Layout = QtWidgets.QVBoxLayout(self)
-#         for counter in counters:
-#             # C = import_from('.'.join(['Tasks',parent.task,'counters']), counter)
-#             mod = importlib.import_module('Visualizers.Counters')
-#             C = getattr(mod, counter)
-#             self.Layout.addWidget(C(self))
-#             utils.printer("initializing counter: %s" % counter, 'msg')
-
-#             # deco - split by line
-#             line = QtWidgets.QFrame(self)
-#             line.setFrameShape(QtWidgets.QFrame.HLine)
-#             line.setFrameShadow(QtWidgets.QFrame.Sunken)
-#             self.Layout.addWidget(line)
-
-#         self.setLayout(self.Layout)
-#         self.position()
-#         self.show()
-
-#     def position(self):
-#         big_gap = int(self.parent().config['ui']['big_gap'])
-#         self.resize(self.parent().width(),self.sizeHint().height())
-#         utils.tile_Widgets([self.parent()]+self.parent().Children, how='vertically', gap=big_gap)

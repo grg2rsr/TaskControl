@@ -324,15 +324,20 @@ class ArduinoController(QtWidgets.QWidget):
         self.thread.start()
         utils.printer("listening to FSM arduino on serial port %s" % self.config['connections']['FSM_arduino_port'],'msg')
 
-        # Hardcode - start timer
-        self.parent().Counters[0].start()
+        # potentially this ... 
+        # FIXME remove hardcode, check for type?
+        for counter in self.parent().Counters:
+            if hasattr(counter,'timer'):
+                counter.start()
+
+        # FIXME start timer
+        # self.parent().Counters[0].start()
     
     def stop(self):
-        """ when session is finished """
+        """ halts the FSM """
         self.send('CMD HALT')
         self.RunBtn.setText('RUN')
         self.RunBtn.setStyleSheet("background-color: green")
-    pass
 
     def closeEvent(self, event):
         # if serial connection is open, reset arduino and close it
@@ -395,8 +400,8 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.VariableEditWidget = Widgets.ValueEditFormLayout(self, DataFrame=self.Df)
 
         # note: the order of this seems to be of utmost importance ... 
-        self.ScrollWidget.setLayout(self.VariableEditWidget)
-        self.ScrollArea.setWidget(self.ScrollWidget)
+        # self.ScrollWidget.setLayout(self.VariableEditWidget)
+        self.ScrollArea.setWidget(self.VariableEditWidget)
 
         self.Layout = QtWidgets.QVBoxLayout(self)
         self.Layout.addWidget(self.ScrollArea)
@@ -419,6 +424,40 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
+
+    # def initUI(self):
+    #     # contains a scroll area which contains the scroll widget
+    #     self.ScrollArea = QtWidgets.QScrollArea()
+    #     self.ScrollWidget = QtWidgets.QWidget()
+
+    #     # scroll widget has the layout etc
+    #     self.VariableEditWidget = Widgets.ValueEditFormLayout(self, DataFrame=self.Df)
+
+    #     # note: the order of this seems to be of utmost importance ... 
+    #     self.ScrollWidget.setLayout(self.VariableEditWidget)
+    #     self.ScrollArea.setWidget(self.ScrollWidget)
+
+    #     self.Layout = QtWidgets.QVBoxLayout(self)
+    #     self.Layout.addWidget(self.ScrollArea)
+
+    #     SendBtn = QtWidgets.QPushButton(self)
+    #     SendBtn.setText('Send')
+    #     SendBtn.clicked.connect(self.send_variables)
+    #     self.Layout.addWidget(SendBtn)
+
+    #     LastVarsBtn = QtWidgets.QPushButton(self)
+    #     LastVarsBtn.setText('use variables from last session')
+    #     LastVarsBtn.clicked.connect(self.load_last_vars)
+    #     self.Layout.addWidget(LastVarsBtn)
+
+    #     self.setLayout(self.Layout)
+
+    #     self.setWindowTitle("Arduino variables")
+        
+    #     self.settings = QtCore.QSettings('TaskControl', 'ArduinoVariablesController')
+    #     self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+    #     self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
+    #     self.show()
 
     def write_variables(self, path):
         """ writes current arduino variables to the path """

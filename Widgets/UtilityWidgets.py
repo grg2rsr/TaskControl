@@ -49,7 +49,7 @@ class ValueEdit(QtWidgets.QLineEdit):
     def edit_finished(self):
         self.set_value(self.get_value())
 
-class ValueEditFormLayout(QtWidgets.QFormLayout):
+class ValueEditFormLayout(QtWidgets.QWidget):
     """ a QFormLayout consisting of ValueEdit rows, to be initialized with a pd.DataFrame 
     with columns name and value, optional dtype (numpy letter codes) """
 
@@ -59,7 +59,6 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
 
         # if DataFrame does not contain a dtype column, set it to strings
         # TODO figure out when is this actually needed
-        # utils.debug_trace()
         if 'dtype' not in self.Df.columns:
             maxlen = max([len(el) for el in self.Df['name']])
             self.Df['dtype'] = 'U'+str(maxlen)
@@ -67,12 +66,14 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
         self.initUI()
     
     def initUI(self):
-        self.setVerticalSpacing(10)
-        self.setLabelAlignment(QtCore.Qt.AlignRight)
+        self.FormLayout = QtWidgets.QFormLayout(self)
+        self.FormLayout.setVerticalSpacing(10)
+        self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
+        # self.Layout = self.FormLayout
 
         # init the view
         for i, row in self.Df.iterrows():
-            self.addRow(row['name'], ValueEdit(row['value'], row['dtype'], self.parent()))
+            self.FormLayout.addRow(row['name'], ValueEdit(row['value'], row['dtype'], self.parent()))
 
     def set_entry(self, name, value):
         """ controller function - update both view and model """
@@ -81,18 +82,18 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
             ix = list(self.Df['name']).index(name)
             
             # update model 
-            dtype = self.itemAt(ix,1).widget().dtype
+            dtype = self.FormLayout.itemAt(ix,1).widget().dtype
             self.Df.loc[ix,'value'] = np.array(value, dtype=dtype) 
             
             # update view
-            self.itemAt(ix,1).widget().set_value(value)
+            self.FormLayout.itemAt(ix,1).widget().set_value(value)
 
         except ValueError:
             utils.printer("ValueError on attempting to set %s to %s:" % (name, value), 'error')
 
     def setEnabled(self, value):
-         for i in range(self.rowCount()):
-            widget = self.itemAt(i, 1).widget()
+         for i in range(self.FormLayout.rowCount()):
+            widget = self.FormLayout.itemAt(i, 1).widget()
             widget.setEnabled(value)
 
     def set_entries(self, Df):
@@ -106,7 +107,7 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
 
         # update the view
         for i, row in Df.iterrows():
-            self.set_entry(row['name'], row['value'])
+            self.FormLayout.set_entry(row['name'], row['value'])
 
     def get_entry(self, name):
         # controller function - returns a pd.Series
@@ -120,15 +121,90 @@ class ValueEditFormLayout(QtWidgets.QFormLayout):
 
     def update_model(self):
         """ updates model based on UI entries """
-        for i in range(self.rowCount()):
-            label = self.itemAt(i, 0).widget()
-            widget = self.itemAt(i, 1).widget()
+        for i in range(self.FormLayout.rowCount()):
+            label = self.FormLayout.itemAt(i, 0).widget()
+            widget = self.FormLayout.itemAt(i, 1).widget()
             self.set_entry(label.text(), widget.get_value())
+
+# class ValueEditFormLayout(QtWidgets.QFormLayout):
+#     """ a QFormLayout consisting of ValueEdit rows, to be initialized with a pd.DataFrame 
+#     with columns name and value, optional dtype (numpy letter codes) """
+
+#     def __init__(self, parent, DataFrame=None):
+#         super(ValueEditFormLayout, self).__init__(parent=parent)
+#         self.Df = DataFrame # model
+
+#         # if DataFrame does not contain a dtype column, set it to strings
+#         # TODO figure out when is this actually needed
+#         # utils.debug_trace()
+#         if 'dtype' not in self.Df.columns:
+#             maxlen = max([len(el) for el in self.Df['name']])
+#             self.Df['dtype'] = 'U'+str(maxlen)
+
+#         self.initUI()
+    
+#     def initUI(self):
+#         self.setVerticalSpacing(10)
+#         self.setLabelAlignment(QtCore.Qt.AlignRight)
+
+#         # init the view
+#         for i, row in self.Df.iterrows():
+#             self.addRow(row['name'], ValueEdit(row['value'], row['dtype'], self.parent()))
+
+#     def set_entry(self, name, value):
+#         """ controller function - update both view and model """
+#         try:
+#             # get index
+#             ix = list(self.Df['name']).index(name)
+            
+#             # update model 
+#             dtype = self.itemAt(ix,1).widget().dtype
+#             self.Df.loc[ix,'value'] = np.array(value, dtype=dtype) 
+            
+#             # update view
+#             self.itemAt(ix,1).widget().set_value(value)
+
+#         except ValueError:
+#             utils.printer("ValueError on attempting to set %s to %s:" % (name, value), 'error')
+
+#     def setEnabled(self, value):
+#          for i in range(self.rowCount()):
+#             widget = self.itemAt(i, 1).widget()
+#             widget.setEnabled(value)
+
+#     def set_entries(self, Df):
+#         # test compatibility first
+#         if not np.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
+#             utils.printer("can't set entries of variable Df bc they are not equal", 'error')
+#             utils.debug_trace()
+        
+#         # update the model
+#         self.Df = Df
+
+#         # update the view
+#         for i, row in Df.iterrows():
+#             self.set_entry(row['name'], row['value'])
+
+#     def get_entry(self, name):
+#         # controller function - returns a pd.Series
+#         self.update_model()
+#         ix = list(self.Df['name']).index(name)
+#         return self.Df.loc[ix]
+
+#     def get_entries(self):
+#         self.update_model()
+#         return self.Df
+
+#     def update_model(self):
+#         """ updates model based on UI entries """
+#         for i in range(self.rowCount()):
+#             label = self.itemAt(i, 0).widget()
+#             widget = self.itemAt(i, 1).widget()
+#             self.set_entry(label.text(), widget.get_value())
 
 class TerminateEdit(QtWidgets.QWidget):
     def __init__(self, parent, DataFrame=None):
         super(TerminateEdit, self).__init__(parent=parent)
-
         self.FormLayout = QtWidgets.QFormLayout(self)
         self.FormLayout.setVerticalSpacing(10)
         self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)

@@ -14,8 +14,11 @@ class BonsaiController(QtWidgets.QWidget):
         self.config = config
         self.task_config = task_config
 
+        utils.printer("init bonsai controller","debug")
+
     def Run(self, folder):
         """ folder is the logging folder """
+        utils.printer("running bonsai controller","debug")
 
         # animal = self.config['current']['animal']
         task = self.config['current']['task']
@@ -34,11 +37,13 @@ class BonsaiController(QtWidgets.QWidget):
             parameters = parameters + " -p:LC_com_port="+self.config['connections']['harp_loadcell_port']
 
         # getting other manually set params
-        with open(task_folder / "Bonsai" / "interface_variables.ini",'r') as fH:
-            params = fH.readlines()
-            params = [p.strip() for p in params]
-        for line in params:
-            parameters = parameters + " -p:%s" % line
+        variables_path = task_folder / "Bonsai" / "interface_variables.ini"
+        if variables_path.exists():
+            with open(variables_path,'r') as fH:
+                params = fH.readlines()
+                params = [p.strip() for p in params]
+            for line in params:
+                parameters = parameters + " -p:%s" % line
 
         bonsai_exe = Path(self.config['system']['bonsai_cmd'])
         bonsai_workflow = task_folder / 'Bonsai' / self.task_config['workflow_fname']
@@ -58,8 +63,10 @@ class BonsaiController(QtWidgets.QWidget):
 
     def closeEvent(self, event):
         """ """
+        utils.printer("closing bonsai controller","debug")
         self.close()
 
     def stop(self):
         """ """
+        utils.printer("stopping bonsai controller","debug")
         pass

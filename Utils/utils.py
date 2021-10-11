@@ -43,6 +43,21 @@ class Animal(object):
     def __repr__(self):
         return self.display()
 
+class Session(object):
+    def __init__(self, folder):
+        self.Animal = Animal(folder.parent)
+        self.folder = Path(folder)
+        self.task = '_'.join(folder.stem.split('_')[2:])
+        self.date = folder.stem.split('_')[0]
+        self.SessionsDf = get_sessions(folder.parent)
+        self.total_days = self.SessionsDf.shape[0]
+        self.task_days = self.SessionsDf.groupby('task').get_group(self.task).shape[0]
+        self.day = list(self.SessionsDf['date'].values).index(self.date) + 1
+
+    def __repr__(self):
+        return ' - '.join([self.Animal.ID, self.Animal.Nickname, self.date, self.task, 'day: %s' % self.day])
+
+
 """
  
  ##     ## ######## ##       ########  ######## ########   ######  
@@ -69,13 +84,15 @@ def get_Animals(folder):
 def select(objs,key,value):
     return [obj for obj in objs if obj.__dict__[key] == value]
 
-def printer(s, mode):
+def printer(s, mode='msg'):
     if mode == 'msg':
         print(Fore.GREEN + s)
     if mode == 'task':
         print(Fore.CYAN + "\n--- %s ---" % s)
     if mode == 'error':
         print(Fore.RED + "ERROR: %s" % s)
+    if mode == 'debug':
+        print(Fore.MAGENTA + "DEBUG: %s" % s)
         
 def get_tasks(folder):
     """ gets all valid tasks """
