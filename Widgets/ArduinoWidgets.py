@@ -324,15 +324,20 @@ class ArduinoController(QtWidgets.QWidget):
         self.thread.start()
         utils.printer("listening to FSM arduino on serial port %s" % self.config['connections']['FSM_arduino_port'],'msg')
 
-        # Hardcode - start timer
-        self.parent().Counters[0].start()
+        # potentially this ... 
+        # FIXME remove hardcode, check for type?
+        for counter in self.parent().Counters:
+            if hasattr(counter,'timer'):
+                counter.start()
+
+        # FIXME start timer
+        # self.parent().Counters[0].start()
     
     def stop(self):
-        """ when session is finished """
+        """ halts the FSM """
         self.send('CMD HALT')
         self.RunBtn.setText('RUN')
         self.RunBtn.setStyleSheet("background-color: green")
-    pass
 
     def closeEvent(self, event):
         # if serial connection is open, reset arduino and close it

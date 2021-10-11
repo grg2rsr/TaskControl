@@ -105,14 +105,18 @@ class OutcomeCounter(QtWidgets.QWidget):
 """
 
 class WaterCounter(QtWidgets.QWidget):
-    """ with a reset button """
+    """ """
     def __init__(self, parent):
         super(WaterCounter, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
         self.Layout = QtWidgets.QVBoxLayout(self)
-        Row = QtWidgets.QHBoxLayout(self)
+
+        # internal value and display
+        self.current_amount = 0
+        self.Value = QtGui.QLabel(str(self.current_amount))
         self.Label = QtGui.QLabel("consumed water (µl): ")
-        self.Value = QtGui.QLabel("0")
+
+        Row = QtWidgets.QHBoxLayout(self)
         Row.addWidget(self.Label)
         Row.addWidget(self.Value)
         self.Layout.addLayout(Row)
@@ -130,8 +134,7 @@ class WaterCounter(QtWidgets.QWidget):
         self.reset_btn = QtWidgets.QPushButton('reset')
         self.reset_btn.clicked.connect(self.reset)
         self.Layout.addWidget(self.reset_btn, alignment=QtCore.Qt.AlignVCenter)
-        self.current_amount = 0
-        
+                
         # settings
         self.settings = QtCore.QSettings('TaskControl', 'WaterCounter')
         self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
@@ -149,9 +152,10 @@ class WaterCounter(QtWidgets.QWidget):
 
     def stop(self):
         pass
-    
+   
     def reset(self):
-        self.Value.setText("0")
+        self.current_amount = 0
+        self.Value.setText(str(self.current_amount))
 
     def increment(self, amount):
         self.current_amount = self.current_amount + amount
@@ -232,6 +236,7 @@ class Timer(QtWidgets.QWidget):
         pass
 
     def reset(self):
+        self.t_start = datetime.now() # possibly necessary?
         self.LCDclock.display('00:00:00')
         pass
 
