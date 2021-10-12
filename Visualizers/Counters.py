@@ -311,7 +311,7 @@ class EventCounter(QtWidgets.QScrollArea):
             # update
             i = self.events.index(event)
             widget = self.FormLayout.itemAt(i, 1).widget()
-            widget.setText(str(self.Model[event]))
+            widget.setText(str(int(self.Model[event])))
 
     def init(self):
         self.OnlineDataAnalyser = self.parent().ArduinoController.OnlineDataAnalyser
