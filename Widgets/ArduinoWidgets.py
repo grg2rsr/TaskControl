@@ -292,6 +292,12 @@ class ArduinoController(QtWidgets.QWidget):
         else:
             utils.printer("reusing previously uploaded sketch",'msg')
 
+        # last vars
+        if self.VariableController.LastVarsCheckBox.checkState() == 2: # true when checked
+            self.VariableController.load_last_vars()
+            utils.printer("reusing variables from last session",'msg')
+
+
         # connect to serial port
         self.connection = self.connect()      
 
@@ -411,10 +417,16 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         SendBtn.clicked.connect(self.send_variables)
         self.Layout.addWidget(SendBtn)
 
+        # last variables functionality
         LastVarsBtn = QtWidgets.QPushButton(self)
         LastVarsBtn.setText('use variables from last session')
         LastVarsBtn.clicked.connect(self.load_last_vars)
-        self.Layout.addWidget(LastVarsBtn)
+        self.LastVarsCheckBox = QtWidgets.QCheckBox('automatic')
+        self.LastVarsCheckBox.setChecked(True)
+        LastVars = QtWidgets.QHBoxLayout(self)
+        LastVars.addWidget(LastVarsBtn)
+        LastVars.addWidget(self.LastVarsCheckBox)
+        self.Layout.addLayout(LastVars)
 
         self.setLayout(self.Layout)
 
@@ -424,40 +436,6 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
-
-    # def initUI(self):
-    #     # contains a scroll area which contains the scroll widget
-    #     self.ScrollArea = QtWidgets.QScrollArea()
-    #     self.ScrollWidget = QtWidgets.QWidget()
-
-    #     # scroll widget has the layout etc
-    #     self.VariableEditWidget = Widgets.ValueEditFormLayout(self, DataFrame=self.Df)
-
-    #     # note: the order of this seems to be of utmost importance ... 
-    #     self.ScrollWidget.setLayout(self.VariableEditWidget)
-    #     self.ScrollArea.setWidget(self.ScrollWidget)
-
-    #     self.Layout = QtWidgets.QVBoxLayout(self)
-    #     self.Layout.addWidget(self.ScrollArea)
-
-    #     SendBtn = QtWidgets.QPushButton(self)
-    #     SendBtn.setText('Send')
-    #     SendBtn.clicked.connect(self.send_variables)
-    #     self.Layout.addWidget(SendBtn)
-
-    #     LastVarsBtn = QtWidgets.QPushButton(self)
-    #     LastVarsBtn.setText('use variables from last session')
-    #     LastVarsBtn.clicked.connect(self.load_last_vars)
-    #     self.Layout.addWidget(LastVarsBtn)
-
-    #     self.setLayout(self.Layout)
-
-    #     self.setWindowTitle("Arduino variables")
-        
-    #     self.settings = QtCore.QSettings('TaskControl', 'ArduinoVariablesController')
-    #     self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
-    #     self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
-    #     self.show()
 
     def write_variables(self, path):
         """ writes current arduino variables to the path """
@@ -500,15 +478,32 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
         try:
             previous_sessions = SessionsDf.groupby('task').get_group(config['current']['task'])
-            prev_session_path = Path(previous_sessions.iloc[-1]['path'])
-            prev_vars_path = prev_session_path / config['current']['task'] / "Arduino" / "src" / "interface_variables.h"
-            prev_vars = utils.parse_arduino_vars(prev_vars_path)
-            self.VariableEditWidget.set_entries(prev_vars)
-           
         except KeyError:
-            utils.error("trying to use last vars, but animal has not been run on this task before.",'error')
-            utils.debug_trace()
+            utils.printer("trying to use last vars, but animal has not been run on this task before.",'error')
+            return None
 
+        # to allow for this functionalty while task is running
+        if self.parent().parent().running:
+            ix = -2
+        else:
+            ix = -1
+
+        prev_session_path = Path(previous_sessions.iloc[ix]['path'])
+        prev_vars_path = prev_session_path / config['current']['task'] / "Arduino" / "src" / "interface_variables.h"
+        if prev_vars_path.exists():
+            prev_vars = utils.parse_arduino_vars(prev_vars_path)
+            return prev_vars
+        else:
+            utils.printer("found variables from last session, but can't set them", "error")
+            return None
+
+    def use_vars(self, Df):
+        # check if possible
+        if not np.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
+            utils.printer("unequal variable names between last session and this session")
+        else:
+            self.VariableEditWidget.set_entries(Df)
+                   
     def query(self):
         """ report back all variable values """
         for name in self.Df['name'].values:
@@ -516,8 +511,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             time.sleep(0.05)
 
     def on_serial(self, line):
-        """ if the var is in the interface variables, set it """
-
+        """ this is for updating the UI when arduino has changed a var (and reports it) """
         if line.startswith('<VAR'):
             line_split = line[1:-1].split(' ')
             name = line_split[1]

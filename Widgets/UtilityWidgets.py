@@ -58,7 +58,6 @@ class ValueEditFormLayout(QtWidgets.QWidget):
         self.Df = DataFrame # model
 
         # if DataFrame does not contain a dtype column, set it to strings
-        # TODO figure out when is this actually needed
         if 'dtype' not in self.Df.columns:
             maxlen = max([len(el) for el in self.Df['name']])
             self.Df['dtype'] = 'U'+str(maxlen)
@@ -69,7 +68,6 @@ class ValueEditFormLayout(QtWidgets.QWidget):
         self.FormLayout = QtWidgets.QFormLayout(self)
         self.FormLayout.setVerticalSpacing(10)
         self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
-        # self.Layout = self.FormLayout
 
         # init the view
         for i, row in self.Df.iterrows():
@@ -77,37 +75,46 @@ class ValueEditFormLayout(QtWidgets.QWidget):
 
     def set_entry(self, name, value):
         """ controller function - update both view and model """
-        try:
+        if name not in list(self.Df['name']):
+            utils.printer("trying to set variable %s, but is not part of model" % name, "error")
+
+        else:
             # get index
             ix = list(self.Df['name']).index(name)
             
             # update model 
-            dtype = self.FormLayout.itemAt(ix,1).widget().dtype
-            self.Df.loc[ix,'value'] = np.array(value, dtype=dtype) 
+            # dtype = self.FormLayout.itemAt(ix,1).widget().dtype
+            dtype = self.Df.loc[ix,'dtype'] # dtype is part of the model
+            self.Df.loc[ix,'value'] = np.array(value, dtype=dtype) # explicit cast
             
             # update view
             self.FormLayout.itemAt(ix,1).widget().set_value(value)
 
-        except ValueError:
-            utils.printer("ValueError on attempting to set %s to %s:" % (name, value), 'error')
+    # def set_entry(self, name, value):
+    #     """ controller function - update both view and model """
+    #     try:
+    #         # get index
+    #         ix = list(self.Df['name']).index(name)
+            
+    #         # update model 
+    #         dtype = self.FormLayout.itemAt(ix,1).widget().dtype
+    #         self.Df.loc[ix,'value'] = np.array(value, dtype=dtype) 
+            
+    #         # update view
+    #         self.FormLayout.itemAt(ix,1).widget().set_value(value)
 
-    def setEnabled(self, value):
-         for i in range(self.FormLayout.rowCount()):
-            widget = self.FormLayout.itemAt(i, 1).widget()
-            widget.setEnabled(value)
+    #     except ValueError:
+    #         utils.printer("ValueError on attempting to set %s to %s:" % (name, value), 'error')
+
 
     def set_entries(self, Df):
-        # test compatibility first
-        if not np.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
-            utils.printer("can't set entries of variable Df bc they are not equal", 'error')
-            utils.debug_trace()
-        
+        """ make sure elsewhere that this is only called with valid Dfs? """
         # update the model
         self.Df = Df
 
         # update the view
         for i, row in Df.iterrows():
-            self.FormLayout.set_entry(row['name'], row['value'])
+            self.set_entry(row['name'], row['value'])
 
     def get_entry(self, name):
         # controller function - returns a pd.Series
@@ -125,6 +132,11 @@ class ValueEditFormLayout(QtWidgets.QWidget):
             label = self.FormLayout.itemAt(i, 0).widget()
             widget = self.FormLayout.itemAt(i, 1).widget()
             self.set_entry(label.text(), widget.get_value())
+
+    def setEnabled(self, value):
+         for i in range(self.FormLayout.rowCount()):
+            widget = self.FormLayout.itemAt(i, 1).widget()
+            widget.setEnabled(value)
 
 # class ValueEditFormLayout(QtWidgets.QFormLayout):
 #     """ a QFormLayout consisting of ValueEdit rows, to be initialized with a pd.DataFrame 
