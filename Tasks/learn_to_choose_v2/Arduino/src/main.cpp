@@ -647,7 +647,7 @@ void get_trial_type(){
         }
         // if using correction loops always draw random
         else{
-            if (r > 0.5){ // 1 = right
+            if (r > p_left){ // 1 = right
                 correct_side = right;
             }
             else {
