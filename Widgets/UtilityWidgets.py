@@ -76,7 +76,8 @@ class ValueEditFormLayout(QtWidgets.QWidget):
     def set_entry(self, name, value):
         """ controller function - update both view and model """
         if name not in list(self.Df['name']):
-            utils.printer("trying to set variable %s, but is not part of model" % name, "error")
+            utils.printer("trying to set variable %s, but is not part of model" % name, "warning")
+            # self.Df.loc[name,'value'] = value
 
         else:
             # get index

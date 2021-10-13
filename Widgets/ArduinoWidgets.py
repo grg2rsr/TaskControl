@@ -12,6 +12,7 @@ import time
 import threading
 import pandas as pd
 import scipy as sp
+import numpy as np
 
 from Widgets import Widgets
 from Utils import utils
@@ -294,7 +295,8 @@ class ArduinoController(QtWidgets.QWidget):
 
         # last vars
         if self.VariableController.LastVarsCheckBox.checkState() == 2: # true when checked
-            self.VariableController.load_last_vars()
+            last_vars = self.VariableController.load_last_vars()
+            self.VariableController.use_vars(last_vars)
             utils.printer("reusing variables from last session",'msg')
 
 
@@ -500,9 +502,23 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
     def use_vars(self, Df):
         # check if possible
         if not np.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
-            utils.printer("unequal variable names between last session and this session")
+            utils.printer("unequal variable names between last session and this session",'error')
         else:
             self.VariableEditWidget.set_entries(Df)
+
+        # present_vars = list(self.Df['name'].values)
+        # requested_vars = list(Df['name'].values)
+        # ix = [present_vars.index(var) for var in requested_vars if var in present_vars]
+        # Df = Df.iloc[ix]
+        # pd.merge(self.Df,Df,how='inner', on='name')
+
+        # # make an attempt here - slice Df into only those that are overlapping
+        # valid_names = [name for name in Df['name'] if name in self.Df['name']]
+        # # make name index, and loc
+        # try:
+        #     self.VariableEditWidget.set_entries(Df)
+        # except:
+        #     utils.debug_trace()
                    
     def query(self):
         """ report back all variable values """
