@@ -10,3 +10,5 @@ old
 Animals
 configs/config.ini
 *.bonsai.layout
+*src/interface.cpp
+TaskControl.py
