@@ -696,13 +696,13 @@ void get_trial_type(){
         }
 
         // test if turning it back on
-        if (correct_side == left){
+        if (correct_side == right){
             if (bias < lateral_autodeliver_thresh){
                 autodeliver_trial = true;
                 autodeliver_rewards = 1;
             }
         }
-        if (correct_side == right){
+        if (correct_side == left){
             if (bias > 1-lateral_autodeliver_thresh){
                 autodeliver_trial = true;
                 autodeliver_rewards = 1;
