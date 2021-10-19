@@ -125,10 +125,9 @@ class SettingsWidget(QtWidgets.QWidget):
         self.online_vis_btn.setEnabled(False)
        
         # calling animal changed again to trigger correct positioning
-        self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
-        self.AnimalChoiceWidget.set_value(self.Animal.display())
+        # self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
+        # self.AnimalChoiceWidget.set_value(self.Animal.display())
                 
-
         # enforce function calls if first animal
         self.animal_changed()
         # if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
@@ -197,17 +196,17 @@ class SettingsWidget(QtWidgets.QWidget):
         # animal popup
         self.RunInfo = RunInfoPopup(self)
 
-        utils.printer("RUN",'task')
-        utils.printer("Task: %s" % self.task,'msg')
+        utils.printer("RUN", 'task')
+        utils.printer("Task: %s" % self.task, 'msg')
         utils.printer("Animal: %s - body weight: %s%%" % (self.Animal.display(), self.Animal.weight_ratio()),'msg')
-        
+
         # make folder structure
         date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
-        self.run_folder = self.Animal.folder  / '_'.join([date_time,self.task])
+        self.run_folder = self.Animal.folder  / '_'.join([date_time, self.task])
         os.makedirs(self.run_folder, exist_ok=True)
 
         for Controller in self.Controllers:
-            utils.printer("running controller: %s" % Controller.name,'msg')
+            utils.printer("running controller: %s" % Controller.name, 'msg')
             Controller.Run(self.run_folder)
 
         # reset and start the counters
