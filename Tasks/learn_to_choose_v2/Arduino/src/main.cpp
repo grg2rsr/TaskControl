@@ -536,6 +536,8 @@ int left_error_counter = 0;
 int right_error_counter = 0;
 int succ_trial_counter = 0;
 
+bool autodeliver_trial = false;
+
 // int miss_counter = 0;
 bool in_warmup = true;
 bool in_jackpot_mode = false;
@@ -683,6 +685,28 @@ void get_trial_type(){
         }
         else {
             autodeliver_rewards = 0;
+        }
+    }
+
+    if (use_lateral_autodeliver){
+        // if previous trial was an autodeliver trial turn it off
+        if (autodeliver_trial){
+            autodeliver_trial = false;
+            autodeliver_rewards = 0;
+        }
+
+        // test if turning it back on
+        if (correct_side == right){
+            if (bias < lateral_autodeliver_thresh){
+                autodeliver_trial = true;
+                autodeliver_rewards = 1;
+            }
+        }
+        if (correct_side == left){
+            if (bias > 1-lateral_autodeliver_thresh){
+                autodeliver_trial = true;
+                autodeliver_rewards = 1;
+            }
         }
     }
     

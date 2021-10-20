@@ -19,6 +19,9 @@ from Utils import utils
 from scripts import interface_generator
 from Utils import behavior_analysis_utils as bhv
 
+from Widgets.UtilityWidgets import ValueEditFormLayout
+
+
 """
  
   ######   #######  ##    ## ######## ########   #######  ##       ##       ######## ########  
@@ -128,9 +131,9 @@ class ArduinoController(QtWidgets.QWidget):
         """ reimplementation to send single keystrokes """
         self.send("CMD " + event.text())
 
-    def send(self,command):
+    def send(self, command):
         """ sends string command interface to arduino, interface compatible """
-        if hasattr(self,'connection'):
+        if hasattr(self, 'connection'):
             cmd = '<'+command+'>'
             bytestr = str.encode(cmd)
             if self.connection.is_open:
@@ -138,9 +141,9 @@ class ArduinoController(QtWidgets.QWidget):
         else:
             utils.printer("Arduino is not connected", 'error')
 
-    def send_raw(self,bytestr):
+    def send_raw(self, bytestr):
         """ sends bytestring """
-        if hasattr(self,'connection'):
+        if hasattr(self, 'connection'):
             if self.connection.is_open:
                 self.connection.write(bytestr)
         else:
@@ -149,7 +152,7 @@ class ArduinoController(QtWidgets.QWidget):
     def run_btn_clicked(self):
         if self.RunBtn.isChecked():
             # on startup, poll all vars
-            self.VariableController.query()
+            # self.VariableController.query()
 
             # after being activated
             self.send('CMD RUN')
@@ -171,14 +174,14 @@ class ArduinoController(QtWidgets.QWidget):
         which is in turn specified in the task_config.ini """
 
         # building interface
-        utils.printer("generating interface.cpp",'task')
+        utils.printer("generating interface.cpp", 'task')
         try: # catch this exception for downward compatibility
-            utils.printer("generating interface from: %s" % self.vars_path,'msg')
-            utils.printer("using as template: %s" % self.task_config['interface_template_fname'],'msg')
+            utils.printer("generating interface from: %s" % self.vars_path, 'msg')
+            utils.printer("using as template: %s" % self.task_config['interface_template_fname'], 'msg')
             interface_template_fname = self.task_config['interface_template_fname']
             interface_generator.run(self.vars_path, interface_template_fname)
         except KeyError:
-            utils.printer("generating interface based on %s" % self.vars_path,'msg')
+            utils.printer("generating interface based on %s" % self.vars_path, 'msg')
             interface_generator.run(self.vars_path)
 
         # uploading code onto arduino
@@ -193,7 +196,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         for section in pio_config.sections():
             if section.split(":")[0] == "env":
-                pio_config.set(section,"upload_port",upload_port)
+                pio_config.set(section, "upload_port", upload_port)
 
         # write it
         with open(self.pio_config_path, 'w') as fH:
@@ -205,53 +208,53 @@ class ArduinoController(QtWidgets.QWidget):
         # functionality ... 
 
         # backing up original values
-        shutil.copy(self.vars_path,self.vars_path.with_suffix('.default'))
+        shutil.copy(self.vars_path, self.vars_path.with_suffix('.default'))
 
         # setting the valve calibration factor
-        utils.printer("setting valve calibration factors",'task')
+        utils.printer("setting valve calibration factors", 'task')
         valves = [key for key in dict(self.config['box']).keys() if key.startswith('valve_')]
         for valve in valves:
             try:
-                utils.printer('setting calibration factor of valve: %s = %s' % (valve, self.config['box'][valve]),'msg')
-                self.VariableController.VariableEditWidget.set_entry(valve,self.config['box'][valve])
+                utils.printer('setting calibration factor of valve: %s = %s' % (valve, self.config['box'][valve]), 'msg')
+                self.VariableController.VariableEditWidget.set_entry(valve, self.config['box'][valve])
             except:
-                utils.printer("can't set valve calibration factors of valve %s" % valve,'error')
+                utils.printer("can't set valve calibration factors of valve %s" % valve, 'error')
 
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
 
         # upload
-        utils.printer("uploading code on arduino",'task')
+        utils.printer("uploading code on arduino", 'task')
         prev_dir = Path.cwd()
 
         os.chdir(self.task_folder / 'Arduino')
-        fH = open(self.run_folder / 'platformio_build_log.txt','w')
+        fH = open(self.run_folder / 'platformio_build_log.txt', 'w')
         platformio_cmd = self.config['system']['platformio_cmd']
-        cmd = ' '.join([platformio_cmd,'run','--target','upload'])
-        proc = subprocess.Popen(cmd,shell=True,stdout=fH) # ,stderr=fH)
+        cmd = ' '.join([platformio_cmd, 'run', '--target', 'upload'])
+        proc = subprocess.Popen(cmd, shell=True, stdout=fH) # ,stderr=fH)
         proc.communicate()
         fH.close()
 
         os.chdir(prev_dir)
 
         # restoring original variables
-        shutil.copy(self.vars_path.with_suffix('.default'),self.vars_path)
+        shutil.copy(self.vars_path.with_suffix('.default'), self.vars_path)
         os.remove(self.vars_path.with_suffix('.default'))
 
-        utils.printer("done",'msg')
+        utils.printer("done", 'msg')
 
-    def log_task(self,folder):
+    def log_task(self, folder):
         """ copy the entire arduino folder to the logging folder """
-        utils.printer("logging arduino code",'task')
+        utils.printer("logging arduino code", 'task')
         src = self.task_folder
         target = folder / self.config['current']['task']
-        shutil.copytree(src,target)
+        shutil.copytree(src, target)
 
-    def reset_arduino(self,connection):
+    def reset_arduino(self, connection):
         """ taken from https://stackoverflow.com/questions/21073086/wait-on-arduino-auto-reset-using-pyserial """
         connection.setDTR(False) # reset
         time.sleep(1) # sleep timeout length to drop all data
-        connection.flushInput() # 
+        connection.flushInput()
         connection.setDTR(True)
         
     def connect(self):
@@ -259,8 +262,8 @@ class ArduinoController(QtWidgets.QWidget):
         com_port = self.config['connections']['FSM_arduino_port']
         baud_rate = self.config['connections']['arduino_baud_rate']
         try:
-            utils.printer("initializing serial port: " + com_port,'message')
-            # ser = serial.Serial(port=com_port, baudrate=baud_rate,timeout=2)
+            utils.printer("initializing serial port: " + com_port, 'message')
+            # ser = serial.Serial(port=com_port, baudrate=baud_rate, timeout=2)
             connection = serial.Serial(
                 port=com_port,
                 baudrate=baud_rate,
@@ -276,10 +279,10 @@ class ArduinoController(QtWidgets.QWidget):
             return connection
 
         except:
-            utils.printer("failed to connect to the FSM arduino",'error')
+            utils.printer("failed to connect to the FSM arduino", 'error')
             sys.exit()
 
-    def Run(self,folder):
+    def Run(self, folder):
         """ folder is the logging folder """
         # the folder that is used for storage
         self.run_folder = folder # needs to be stored for access
@@ -291,25 +294,29 @@ class ArduinoController(QtWidgets.QWidget):
         if self.reprogramCheckBox.checkState() == 2: # true when checked
             self.upload()
         else:
-            utils.printer("reusing previously uploaded sketch",'msg')
+            utils.printer("reusing previously uploaded sketch", 'msg')
 
         # last vars
         if self.VariableController.LastVarsCheckBox.checkState() == 2: # true when checked
             last_vars = self.VariableController.load_last_vars()
-            self.VariableController.use_vars(last_vars)
-            utils.printer("reusing variables from last session",'msg')
-
+            if last_vars is not None:
+                self.VariableController.use_vars(last_vars)
+                utils.printer("reusing variables from last session", 'msg')
+            else:
+                utils.printer("using default variables from last session", 'msg')
+            
+        self.VariableController.VariableEditWidget.setEnabled(True)
 
         # connect to serial port
-        self.connection = self.connect()      
+        self.connection = self.connect()
 
         # start up the online data analyzer
         if hasattr(self, 'OnlineDataAnalyser'):
-            utils.printer("starting online data analyser",'msg')
+            utils.printer("starting online data analyser", 'msg')
             self.OnlineDataAnalyser.run()
 
         # external logging
-        fH = open(self.run_folder / 'arduino_log.txt','w')
+        fH = open(self.run_folder / 'arduino_log.txt', 'w')
 
         def read_from_port(ser):
             while ser.is_open:
@@ -330,12 +337,12 @@ class ArduinoController(QtWidgets.QWidget):
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()
-        utils.printer("listening to FSM arduino on serial port %s" % self.config['connections']['FSM_arduino_port'],'msg')
+        utils.printer("listening to FSM arduino on serial port %s" % self.config['connections']['FSM_arduino_port'], 'msg')
 
         # potentially this ... 
         # FIXME remove hardcode, check for type?
         for counter in self.parent().Counters:
-            if hasattr(counter,'timer'):
+            if hasattr(counter, 'timer'):
                 counter.start()
 
         # FIXME start timer
@@ -349,7 +356,7 @@ class ArduinoController(QtWidgets.QWidget):
 
     def closeEvent(self, event):
         # if serial connection is open, reset arduino and close it
-        if hasattr(self,'connection'):
+        if hasattr(self, 'connection'):
             if self.connection.is_open:
                 self.reset_arduino(self.connection)
                 self.connection.close()
@@ -359,7 +366,7 @@ class ArduinoController(QtWidgets.QWidget):
         # self.thread.join()
 
         # overwrite logged arduino vars file
-        if hasattr(self,'run_folder'):
+        if hasattr(self, 'run_folder'):
             target = self.run_folder / self.config['current']['task']  / 'Arduino' / 'src' / 'interface_variables.h'
             if target.exists(): # bc close event is also triggered on task_changed
                 self.VariableController.write_variables(target)
@@ -405,7 +412,8 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.ScrollWidget = QtWidgets.QWidget()
 
         # scroll widget has the layout etc
-        self.VariableEditWidget = Widgets.ValueEditFormLayout(self, DataFrame=self.Df)
+        self.VariableEditWidget = ValueEditFormLayout(self, DataFrame=self.Df)
+        self.VariableEditWidget.setEnabled(False)
 
         # note: the order of this seems to be of utmost importance ... 
         # self.ScrollWidget.setLayout(self.VariableEditWidget)
@@ -421,11 +429,18 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
         # last variables functionality
         LastVarsBtn = QtWidgets.QPushButton(self)
-        LastVarsBtn.setText('use variables from last session')
-        LastVarsBtn.clicked.connect(self.load_last_vars)
-        self.LastVarsCheckBox = QtWidgets.QCheckBox('automatic')
+        LastVarsBtn.setText('last session')
+        LastVarsBtn.clicked.connect(self.use_last_vars)
+
+        DefaultVarsBtn = QtWidgets.QPushButton(self)
+        DefaultVarsBtn.setText('default')
+        DefaultVarsBtn.clicked.connect(self.use_default_vars)
+
+        self.LastVarsCheckBox = QtWidgets.QCheckBox('automatic last')
         self.LastVarsCheckBox.setChecked(True)
         LastVars = QtWidgets.QHBoxLayout(self)
+        LastVars.addWidget(QtWidgets.QLabel("variables to use"))
+        LastVars.addWidget(DefaultVarsBtn)
         LastVars.addWidget(LastVarsBtn)
         LastVars.addWidget(self.LastVarsCheckBox)
         self.Layout.addLayout(LastVars)
@@ -433,7 +448,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.setLayout(self.Layout)
 
         self.setWindowTitle("Arduino variables")
-        
+
         self.settings = QtCore.QSettings('TaskControl', 'ArduinoVariablesController')
         self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
@@ -453,12 +468,12 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
     def send_variables(self):
         """ sends all current variables to arduino """
-        if hasattr(self.parent(),'connection'): # TODO check if this can attempt to write on a closed connection
+        if hasattr(self.parent(), 'connection'): # TODO check if this can attempt to write on a closed connection
             Df = self.VariableEditWidget.get_entries()
-            for i,row in Df.iterrows():
+            for i, row in Df.iterrows():
 
                 # this is the hardcoded command sending definition
-                cmd = ' '.join(['SET',str(row['name']),str(row['value'])])
+                cmd = ' '.join(['SET', str(row['name']), str(row['value'])])
                 cmd = '<'+cmd+'>'
 
                 bytestr = str.encode(cmd)
@@ -468,7 +483,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
                 self.parent().send_raw(bytestr)
                 time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
         else:
-            utils.printer("Arduino is not connected",'error')
+            utils.printer("Arduino is not connected", 'error')
 
     def load_last_vars(self):
         """ try to get arduino variables from last run for the task 
@@ -490,38 +505,38 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         else:
             ix = -1
 
-        prev_session_path = Path(previous_sessions.iloc[ix]['path'])
-        prev_vars_path = prev_session_path / config['current']['task'] / "Arduino" / "src" / "interface_variables.h"
-        if prev_vars_path.exists():
-            prev_vars = utils.parse_arduino_vars(prev_vars_path)
-            return prev_vars
-        else:
-            utils.printer("found variables from last session, but can't set them", "error")
+        try:
+            prev_session_path = Path(previous_sessions.iloc[ix]['path'])
+            prev_vars_path = prev_session_path / config['current']['task'] / "Arduino" / "src" / "interface_variables.h"
+            if prev_vars_path.exists():
+                prev_vars = utils.parse_arduino_vars(prev_vars_path)
+                return prev_vars
+            else:
+                utils.printer("found variables from last session, but can't set them", "error")
+                return None
+        except IndexError:
+            # thrown when there is no previous session
             return None
 
     def use_vars(self, Df):
         # check if possible
         if not np.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
-            utils.printer("unequal variable names between last session and this session",'error')
+            utils.printer("unequal variable names between last session and this session", 'error')
         else:
             self.VariableEditWidget.set_entries(Df)
 
-        # present_vars = list(self.Df['name'].values)
-        # requested_vars = list(Df['name'].values)
-        # ix = [present_vars.index(var) for var in requested_vars if var in present_vars]
-        # Df = Df.iloc[ix]
-        # pd.merge(self.Df,Df,how='inner', on='name')
+    def use_last_vars(self):
+        last_vars = self.load_last_vars()
+        self.use_vars(last_vars)
 
-        # # make an attempt here - slice Df into only those that are overlapping
-        # valid_names = [name for name in Df['name'] if name in self.Df['name']]
-        # # make name index, and loc
-        # try:
-        #     self.VariableEditWidget.set_entries(Df)
-        # except:
-        #     utils.debug_trace()
-                   
+    def use_default_vars(self):
+        vars_path = self.parent().task_folder / 'Arduino' / 'src' / "interface_variables.h"
+        default_vars = utils.parse_arduino_vars(vars_path) # initialize with the default var
+        self.use_vars(default_vars)
+
     def query(self):
-        """ report back all variable values """
+        """ report back all variable values 
+        the problem is that this causes a bug - arduino replies with <VAR and this triggers on_serial """
         for name in self.Df['name'].values:
             self.parent().send("GET "+name)
             time.sleep(0.05)
@@ -535,7 +550,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             if name in self.VariableEditWidget.Df['name'].values:
                 self.VariableEditWidget.set_entry(name, value) # the lineedit should take care of the correct dtype
 
-    def closeEvent(self,event):
+    def closeEvent(self, event):
         """ reimplementation of closeEvent """
         # Write window size and position to config file
         self.settings.setValue("size", self.size())
@@ -556,7 +571,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
 class OnlineDataAnalyser(QtCore.QObject):
     """ listens to serial port, analyzes arduino data as it comes in """
-    trial_data_available = QtCore.pyqtSignal(pd.DataFrame,pd.DataFrame)
+    trial_data_available = QtCore.pyqtSignal(pd.DataFrame, pd.DataFrame)
     decoded_data_available = QtCore.pyqtSignal(str)
 
     def __init__(self, parent, CodesDf, config=None):
@@ -603,14 +618,14 @@ class OnlineDataAnalyser(QtCore.QObject):
                 decoded = self.code_map[code]
 
                 # publish
-                to_send = '\t'.join([decoded,str(t)])
+                to_send = '\t'.join([decoded, str(t)])
                 self.decoded_data_available.emit(to_send)
 
             except:
                 pass
         return decoded
 
-    def update(self,line):
+    def update(self, line):
         self.lines.append(line)
 
         decoded = self.decode(line)
@@ -625,7 +640,7 @@ class OnlineDataAnalyser(QtCore.QObject):
                     TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map, parse_var=True)
                     TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
                 except ValueError:  # important TODO - investigate this! this was added with cue on reach and no mistakes
-                    utils.printer('failed parse of lines into TrialDf','error')
+                    utils.printer('failed parse of lines into TrialDf', 'error')
                     # utils.debug_trace()
                     pass 
                 
@@ -770,13 +785,13 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
 
-    def update(self,line):
+    def update(self, line):
         if not True in [line.startswith(f) for f in self.filter]:
             if not line.startswith('<'):
                 try:
                     code = line.split('\t')[0]
                     decoded = self.code_map[code]
-                    line = '\t'.join([decoded,line.split('\t')[1]])
+                    line = '\t'.join([decoded, line.split('\t')[1]])
                 except:
                     utils.printer("Error dealing with line %s" % line, 'error')
                     pass
@@ -804,7 +819,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
             # else:
             #     sb.setValue(sb_prev_value)
 
-    def closeEvent(self,event):
+    def closeEvent(self, event):
         """ reimplementation of closeEvent """
         # Write window size and position to config file
         self.settings.setValue("size", self.size())
@@ -813,7 +828,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
 
 class StateMachineMonitorWidget(QtWidgets.QWidget):
     
-    def __init__(self,parent, code_map=None):
+    def __init__(self, parent, code_map=None):
         super(StateMachineMonitorWidget, self).__init__(parent=parent)
 
         # code_map related
@@ -851,7 +866,7 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
             #     Btn.setCheckable(False)
             #     self.Events_Layout.addWidget(Btn)
 
-            self.Btns.append((full_name,Btn))
+            self.Btns.append((full_name, Btn))
 
         self.Layout.addLayout(self.States_Layout)
         self.Layout.addLayout(self.Spans_Layout)
@@ -865,7 +880,7 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
 
-    def update(self,line):
+    def update(self, line):
         try:
             code, time = line.split('\t')
             full_name = self.code_map[code]
@@ -884,29 +899,29 @@ class StateMachineMonitorWidget(QtWidgets.QWidget):
                         btn.setStyleSheet("background-color: light gray")
 
                 # and color only active green
-                btn = [btn for name,btn in self.Btns if name==full_name][0]
+                btn = [btn for name, btn in self.Btns if name==full_name][0]
                 btn.setStyleSheet("background-color: green")
 
             # for spans
             if full_name.endswith("_ON"):
-                btn = [btn for name,btn in self.Btns if name==full_name][0]
+                btn = [btn for name, btn in self.Btns if name==full_name][0]
 
                 if full_name.endswith("_ON"):
                     btn.setStyleSheet("background-color: green")
 
             if  full_name.endswith("_OFF"):
-                btn = [btn for name,btn in self.Btns if name==full_name[:-3]+'ON'][0]
+                btn = [btn for name, btn in self.Btns if name==full_name[:-3]+'ON'][0]
                 btn.setStyleSheet("background-color: light gray")
             
             # for events stay green until next line read
             if  full_name.endswith("_EVENT"):
-                btn = [btn for name,btn in self.Btns if name==full_name][0]
+                btn = [btn for name, btn in self.Btns if name==full_name][0]
                 btn.setStyleSheet("background-color: green")
             
         except:
             pass
 
-    def closeEvent(self,event):
+    def closeEvent(self, event):
         """ reimplementation of closeEvent """
         # Write window size and position to config file
         self.settings.setValue("size", self.size())
