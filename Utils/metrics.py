@@ -23,6 +23,15 @@ def has_choice(TrialDf):
  
     return pd.Series(var, name=var_name)
 
+def has_anticipatory_reach(TrialDf):
+    var_name = 'has_anticip_reach'
+    if "ANTICIPATORY_REACH_EVENT" in TrialDf['name'].values:
+        var = True
+    else:
+        var = False    
+ 
+    return pd.Series(var, name=var_name)
+
 def get_chosen_side(TrialDf):
     var_name = "chosen_side"
 
