@@ -29,15 +29,47 @@ class Syncer(object):
         self.graph = {}
 
     def check(self, A, B):
-        """ check consistency of all clock pulses """
-        if self.data[A].shape[0] != self.data[B].shape[0]:
-            print("can't sync %s and %s: unequal size" % (A,B))
-            # implement checks and fixes here
-            # attempt to fix
-            # if fix returns false
-            # if true
+        """ check consistency of all clock pulses and if possible fixes them """
+
+        if self.data[A].shape[0] == 0 or self.data[A].shape[0] == 0:
+            printer("sync failed - %s is empty" % A, 'error')
             return False
-        return True
+
+        elif self.data[B].shape[0] == 0:
+            printer("sync failed - %s is empty" % B, 'error')
+            return False
+
+        elif self.data[A].shape[0] != self.data[B].shape[0]:
+
+            # Decide which is the reference to cut to
+            if self.data[A].shape[0] > self.data[B].shape[0]:
+                bigger = 'A'
+                printer("Clock A has more pulses")
+                t_bigger = self.data[A]
+                t_smaller = self.data[B]
+            else:
+                print("Clock B has more pulses")
+                bigger = 'B'
+                t_bigger = self.data[B]
+                t_smaller = self.data[A]
+            printer("sync problem - unequal number of pulses, %s has more sync signals" % bigger, 'error')
+
+            # Compute the difference
+            offset = np.argmax(np.correlate(np.diff(t_bigger), np.diff(t_smaller), mode='valid'))
+
+            # Cut the initial timestamps from the argument with more clock pulses
+            t_bigger = t_bigger[offset:t_smaller.shape[0]+offset]
+
+            if bigger == 'A':
+                self.data[A] = t_bigger
+                self.data[B] = t_smaller
+            else:
+                self.data[B] = t_bigger
+                self.data[A] = t_smaller
+            
+            return True
+        else:
+            return True
 
     def sync(self, A, B, check=True, symmetric=True):
         """ linreg sync of A to B """
