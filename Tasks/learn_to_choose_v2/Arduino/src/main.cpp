@@ -844,16 +844,25 @@ void finite_state_machine() {
             // update
             if (last_state == current_state){
                 // learn to choose: no premature breaking possible
-                // if (is_reaching == true){
-                //     // premature choice
-                //     log_code(CHOICE_EVENT);
-                //     log_code(PREMATURE_CHOICE_EVENT);
-                //     log_code(TRIAL_UNSUCCESSFUL_EVENT);
-                //     incorrect_choice_cue();
-                //     log_choice();
-                //     current_state = TIMEOUT_STATE;
-                //     break;
-                // }
+                if (punish_premature == 1){
+                    if (is_reaching == true){
+                        // premature choice
+                        log_code(CHOICE_EVENT);
+                        log_code(PREMATURE_CHOICE_EVENT);
+                        log_code(TRIAL_UNSUCCESSFUL_EVENT);
+                        incorrect_choice_cue();
+                        log_choice();
+                        if (use_timeout == 1){
+                            current_state = TIMEOUT_STATE;
+                            break;
+                        }
+                        else {
+                            current_state = ITI_STATE;
+                            break;
+                        }
+                        break;
+                    }
+                }
             }
 
             if (now() - t_state_entry > this_interval){
@@ -953,8 +962,14 @@ void finite_state_machine() {
                         succ_trial_counter = 0;
                     }
                     if (allow_mistakes == 0){
-                        current_state = ITI_STATE;
-                        break;
+                        if (use_timeout == 1){
+                            current_state = TIMEOUT_STATE;
+                            break;
+                        }
+                        else {
+                            current_state = ITI_STATE;
+                            break;
+                        }
                     }
                     else{ // this is for on allow mistakes, if they hold wrong spout
                         delay(100);
