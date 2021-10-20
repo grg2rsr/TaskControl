@@ -520,19 +520,53 @@ def sync_clocks(t_harp, t_arduino, log_path=None):
 from sklearn.linear_model import LogisticRegression
 from scipy.special import expit
 
+# def log_reg(x, y, x_fit=None):
+#     """ x and y are of shape (N, ) y are choices in [0, 1] """
+#     if x_fit is None:
+#         x_fit = np.linspace(x.min(), x.max(), 100)
+
+#     cLR = LogisticRegression()
+#     try:
+#         cLR.fit(x[:, np.newaxis], y)
+#         y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
+#     except ValueError:
+#         y_fit = sp.zeros(x_fit.shape)
+#         y_fit[:] = sp.nan
+
+#     return y_fit
+
 def log_reg(x, y, x_fit=None):
     """ x and y are of shape (N, ) y are choices in [0, 1] """
     if x_fit is None:
         x_fit = np.linspace(x.min(), x.max(), 100)
 
-    cLR = LogisticRegression()
-    try:
-        cLR.fit(x[:, np.newaxis], y)
-        y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
-    except ValueError:
-        y_fit = sp.zeros(x_fit.shape)
-        y_fit[:] = sp.nan
+    # cLR = LogisticRegression()
+    # try:
+    #     cLR.fit(x[:, np.newaxis], y)
+    #     y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
+    # except ValueError:
+    #     y_fit = sp.zeros(x_fit.shape)
+    #     y_fit[:] = sp.nan
 
+    def fun(x, p):
+        x0 = p[0]
+        k = p[1]
+        Lu = p[2]
+        Ll = p[3]
+        return Lu / (1+np.exp(-k * (x-x0))) + Ll
+
+    def obj_fun(p, x, y):
+        yhat = fun(x, p)
+        Rss = np.sum((y-yhat)**2)
+        return Rss
+    
+    from scipy.optimize import minimize
+
+    bounds = ((0,3000), (None, None), (0,1), (0,1))
+
+    p0 = (1500, 0.05, 0, 1)
+    pfit = minimize(obj_fun, p0, args=(x, y), bounds=bounds)
+    y_fit = fun(x_fit, pfit.x)
     return y_fit
 
 def tolerant_mean(arrs):
