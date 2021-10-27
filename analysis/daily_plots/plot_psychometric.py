@@ -27,7 +27,7 @@ colors = dict(success="#72E043",
             left=mpl.cm.PiYG(0.05),
             right=mpl.cm.PiYG(0.95))
 
-def plot_psychometric(session_folder, N=1000, save=None):
+def plot_psychometric(session_folder, N=1000, kind='true', save=None):
     LogDf = bhv.get_LogDf_from_path(session_folder / 'arduino_log.txt')
     session_metrics = (metrics.get_start, metrics.has_choice, metrics.get_chosen_side, 
                         metrics.get_outcome, metrics.get_correct_side, metrics.get_timing_trial,
@@ -42,9 +42,12 @@ def plot_psychometric(session_folder, N=1000, save=None):
         SessionDf.loc[pd.isna(SessionDf['outcome']),'outcome'] = 'reward_autodelivered'
 
     # the three variants
-    # SDf = bhv.intersect(SessionDf, has_choice=True, is_premature=True)
-    # SDf = bhv.intersect(SessionDf, has_choice=True, is_premature=False, timing_trial=False)
-    SDf = bhv.intersect(SessionDf, has_choice=True, is_premature=False, timing_trial=True)
+    if kind == 'true':
+        SDf = bhv.intersect(SessionDf, has_choice=True, is_premature=False, timing_trial=True)
+    if kind == 'cued':
+        SDf = bhv.intersect(SessionDf, has_choice=True, is_premature=False, timing_trial=False)
+    if kind == 'premature':
+        SDf = bhv.intersect(SessionDf, has_choice=True, is_premature=True)
 
     # exit here if there are no timing trials
     if SDf.shape[0] == 0:
@@ -123,5 +126,5 @@ def plot_psychometric(session_folder, N=1000, save=None):
 
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02997_Therapist/2021-10-25_15-59-02_learn_to_choose_v2")
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-01975_Marquez/2021-05-18_09-41-58_learn_to_fixate_discrete_v1")
-# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02997_Therapist/2021-10-26_13-11-18_learn_to_choose_v2")
-# plot_psychometric(session_folder, N=1000)
+# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02997_Therapist/2021-10-27_13-46-31_learn_to_choose_v2")
+# plot_psychometric(session_folder, N=100)

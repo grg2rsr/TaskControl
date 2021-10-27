@@ -43,8 +43,8 @@ from plot_bias_over_sessions import plot_bias_over_sessions
  
 """
 
-# Nicknames = ['Lifeguard', 'Lumberjack', 'Teacher', 'Plumber', 'Poolboy', 'Policeman', 'Therapist']
-Nicknames = ['Poolboy']
+Nicknames = ['Lifeguard', 'Lumberjack', 'Teacher', 'Plumber', 'Poolboy', 'Policeman', 'Therapist']
+# Nicknames = ['Therapist']
 task_name = 'learn_to_choose_v2'
 
 # get animals by Nickname
@@ -79,13 +79,13 @@ for i, Animal in enumerate(Animals):
 
 
         # reward collection rts
-        if 0:
+        if 1:
             outpath = Animal.folder / 'plots' / 'reward_collection_rts' / ('reward_collection_rts_%s_%s_day_%s.png' % (Session.date, Session.time, Session.day))
             if not outpath.exists() or overwrite:
                 plot_reward_collection_rts(session_folder, save=outpath)
 
         # choice RTs
-        if 0:
+        if 1:
             outpath = Animal.folder / 'plots' / 'choice_rts' / ('choice_rts_%s_%s_day_%s.png' % (Session.date, Session.time, Session.day))
             if not outpath.exists() or overwrite:
                 plot_choice_RTs(session_folder, save=outpath)
@@ -94,7 +94,7 @@ for i, Animal in enumerate(Animals):
         if 0:
             outpath = Animal.folder / 'plots' / 'psychometrics' / ('psychometric_%s_%s_day_%s.png' % (Session.date, Session.time, Session.day))
             if not outpath.exists() or overwrite:
-                plot_psychometric(session_folder, save=outpath)
+                plot_psychometric(session_folder, kind='true', save=outpath)
   
 
 
