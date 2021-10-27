@@ -43,8 +43,8 @@ from plot_bias_over_sessions import plot_bias_over_sessions
  
 """
 
-Nicknames = ['Lifeguard', 'Lumberjack', 'Teacher', 'Plumber', 'Poolboy', 'Policeman', 'Therapist']
-# Nicknames = ['Poolboy']
+# Nicknames = ['Lifeguard', 'Lumberjack', 'Teacher', 'Plumber', 'Poolboy', 'Policeman', 'Therapist']
+Nicknames = ['Poolboy']
 task_name = 'learn_to_choose_v2'
 
 # get animals by Nickname
@@ -74,12 +74,9 @@ for i, Animal in enumerate(Animals):
         if 1:
             outpath = Animal.folder / 'plots' / 'init_histograms' / ('init_histogram_%s_%s_day_%s.png' % (Session.date, Session.time, Session.day))
             if not outpath.exists() or overwrite:
-                try:
-                    plot_init_hist(session_folder, save=outpath)
-                except:
-                    # have this in here because of syncing problems
-                    utils.printer("couldn't process %s" % outpath)
-                    pass
+                # plot_init_hist(session_folder)
+                plot_init_hist(session_folder, save=outpath)
+
 
         # reward collection rts
         if 0:

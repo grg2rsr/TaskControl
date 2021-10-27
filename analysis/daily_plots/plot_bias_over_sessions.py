@@ -89,6 +89,6 @@ def plot_bias_over_sessions(Animal_folder, task_name, save=None):
         plt.close(fig)
 
 # %%
-Animal_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02911_Lumberjack")
-task_name = 'learn_to_choose_v2'
-plot_bias_over_sessions(Animal_folder, task_name=task_name, save=None)
+# Animal_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02911_Lumberjack")
+# task_name = 'learn_to_choose_v2'
+# plot_bias_over_sessions(Animal_folder, task_name=task_name, save=None)

@@ -45,15 +45,15 @@ class Syncer(object):
             # Decide which is the reference to cut to
             if self.data[A].shape[0] > self.data[B].shape[0]:
                 bigger = 'A'
-                utils.printer("Clock A has more pulses")
                 t_bigger = self.data[A]
                 t_smaller = self.data[B]
             else:
-                print("Clock B has more pulses")
                 bigger = 'B'
                 t_bigger = self.data[B]
                 t_smaller = self.data[A]
-            utils.printer("sync problem - unequal number of pulses, %s has more sync signals" % bigger, 'error')
+            utils.printer("sync problem - unequal number, %s has more sync signals" % bigger, 'warning')
+            utils.printer("Number in %s: %i" % (A, self.data[A].shape[0]),'warning')
+            utils.printer("Number in %s: %i" % (B, self.data[B].shape[0]),'warning')
 
             # Compute the difference
             offset = np.argmax(np.correlate(np.diff(t_bigger), np.diff(t_smaller), mode='valid'))
@@ -74,15 +74,20 @@ class Syncer(object):
 
     def sync(self, A, B, check=True, symmetric=True):
         """ linreg sync of A to B """
-        if self.check(A, B) is True:
-            m, b = stats.linregress(self.data[A], self.data[B])[:2]
-            self.pairs[(A,B)] = (m, b)
-            if A in self.graph:
-                self.graph[A].append(B)
-            else:
-                self.graph[A] = [B]
+        # check and abort if fails
+        success = self.check(A, B)
+        if not success:
+            return False
+
+        m, b = stats.linregress(self.data[A], self.data[B])[:2]
+        self.pairs[(A,B)] = (m, b)
+        if A in self.graph:
+            self.graph[A].append(B)
+        else:
+            self.graph[A] = [B]
         if symmetric:
             self.sync(B,A, symmetric=False)
+        return True
 
     def convert(self, t, A, B, match_dtype=True):
         path = self._find_shortest_path(A, B)

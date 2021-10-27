@@ -17,24 +17,30 @@ sys.path.append('/home/georg/code/TaskControl')
 from Utils import behavior_analysis_utils as bhv
 from Utils import utils
 from Utils import metrics
+from Utils import sync
 
 def plot_init_hist(session_folder, save=None):
 
     LogDf = bhv.get_LogDf_from_path(session_folder / "arduino_log.txt")
-    LoadCellDf = bhv.parse_bonsai_LoadCellData(session_folder / 'bonsai_LoadCellData.csv')
 
-    # Syncer
-    from Utils import sync
-    lc_sync_event = sync.parse_harp_sync(session_folder / 'bonsai_harp_sync.csv', trig_len=100, ttol=5)
+    # Sync first
+    loadcell_sync_event = sync.parse_harp_sync(session_folder / 'bonsai_harp_sync.csv', trig_len=100, ttol=5)
     arduino_sync_event = sync.get_arduino_sync(session_folder / 'arduino_log.txt')
 
     Sync = sync.Syncer()
     Sync.data['arduino'] = arduino_sync_event['t'].values
-    Sync.data['loadcell'] = lc_sync_event['t'].values
-    Sync.sync('arduino','loadcell')
+    Sync.data['loadcell'] = loadcell_sync_event['t'].values
+    success = Sync.sync('arduino','loadcell')
+    
+    # abort if sync fails
+    if not success:
+        utils.printer("trying to plot_init_hist, but failed to sync in file %s, - aborting" % session_folder)
+        return None
 
     LogDf['t_orig'] = LogDf['t']
     LogDf['t'] = Sync.convert(LogDf['t'].values, 'arduino', 'loadcell')
+
+    LoadCellDf = bhv.parse_bonsai_LoadCellData(session_folder / 'bonsai_LoadCellData.csv')
 
     # preprocessing
     samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
@@ -100,8 +106,9 @@ def plot_init_hist(session_folder, save=None):
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02911_Lumberjack/2021-10-26_09-55-23_learn_to_choose_v2")
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02912_Teacher/2021-10-11_10-00-35_learn_to_choose_v2")
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02912_Teacher/2021-10-15_12-35-12_learn_to_choose_v2")
-session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02995_Poolboy/2021-10-07_12-06-59_learn_to_choose_v2")
-plot_init_hist(session_folder)
+# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02995_Poolboy/2021-10-07_12-06-59_learn_to_choose_v2")
+# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02995_Poolboy/2021-10-07_12-06-59_learn_to_choose_v2")
+# plot_init_hist(session_folder)
 
 
 # %%
