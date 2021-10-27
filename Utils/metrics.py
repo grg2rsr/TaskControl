@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from Utils.behavior_analysis_utils import event_slice
+from Utils import utils
 
 """
  
@@ -30,6 +31,48 @@ def has_anticipatory_reach(TrialDf):
     else:
         var = False    
  
+    return pd.Series(var, name=var_name)
+
+def has_premature_choice(TrialDf):
+    var_name = "has_premature_choice"
+    if "PREMATURE_CHOICE_EVENT" in TrialDf['name'].values:
+        var = True
+    else:
+        var = False    
+ 
+    return pd.Series(var, name=var_name)
+
+def has_reward_collected(TrialDf):
+    var_name = "has_reward_collected"
+    if "REWARD_COLLECTED_EVENT" in TrialDf['name'].values:
+        var = True
+    else:
+        var = False    
+ 
+    return pd.Series(var, name=var_name)
+
+def has_autodelivered_reward(TrialDf):
+    var_name = "has_autodelivered_reward"
+    if "REWARD_AUTODELIVERED_EVENT" in TrialDf['name'].values:
+        var = True
+    else:
+        var = False    
+ 
+    return pd.Series(var, name=var_name)
+
+def has_premature_reach(TrialDf):
+    var_name = "has_premature_reach"
+    try:
+        Df = event_slice(TrialDf, "PRESENT_INTERVAL_STATE", "CHOICE_STATE")
+        events = Df['name'].values
+        if "REACH_LEFT_ON" in events or "REACH_RIGHT_ON" in events:
+            var = True
+        else:
+            var = False
+    except KeyError:
+        # this should take care of incomplete trials
+        var = np.NaN
+
     return pd.Series(var, name=var_name)
 
 def get_chosen_side(TrialDf):
@@ -147,6 +190,16 @@ def get_timing_trial(TrialDf):
 
     return pd.Series(var, name=var_name)
 
+def get_autodeliver_trial(TrialDf):
+    var_name = "autodeliver_rewards"
+    try:
+        Df = TrialDf.groupby('var').get_group(var_name)
+        var = Df.iloc[0]['value'].astype('bool')
+    except KeyError:
+        var = np.NaN
+
+    return pd.Series(var, name=var_name)
+
 """
  
  ######## #### ##     ## #### ##    ##  ######   
@@ -192,3 +245,12 @@ def get_choice_rt(TrialDf):
         var = np.NaN
     return pd.Series(var, name=var_name)
 
+def get_reward_collection_rt(TrialDf):
+    var_name = "reward_collection_rt"
+    side = get_correct_side(TrialDf).values[0]
+    try:
+        Df = event_slice(TrialDf, "REWARD_%s_VALVE_ON" % side.upper(), "REWARD_COLLECTED_EVENT")
+        var = Df.iloc[-1]['t'] - Df.iloc[0]['t']
+    except IndexError:
+        var = np.NaN
+    return pd.Series(var, name=var_name)

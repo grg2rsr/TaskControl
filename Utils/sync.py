@@ -9,6 +9,7 @@ import pandas as pd
 
 sys.path.append('..')
 from Utils import behavior_analysis_utils as bhv
+from Utils import utils
 
 """
  
@@ -32,11 +33,11 @@ class Syncer(object):
         """ check consistency of all clock pulses and if possible fixes them """
 
         if self.data[A].shape[0] == 0 or self.data[A].shape[0] == 0:
-            printer("sync failed - %s is empty" % A, 'error')
+            utils.printer("sync failed - %s is empty" % A, 'error')
             return False
 
         elif self.data[B].shape[0] == 0:
-            printer("sync failed - %s is empty" % B, 'error')
+            utils.printer("sync failed - %s is empty" % B, 'error')
             return False
 
         elif self.data[A].shape[0] != self.data[B].shape[0]:
@@ -44,7 +45,7 @@ class Syncer(object):
             # Decide which is the reference to cut to
             if self.data[A].shape[0] > self.data[B].shape[0]:
                 bigger = 'A'
-                printer("Clock A has more pulses")
+                utils.printer("Clock A has more pulses")
                 t_bigger = self.data[A]
                 t_smaller = self.data[B]
             else:
@@ -52,7 +53,7 @@ class Syncer(object):
                 bigger = 'B'
                 t_bigger = self.data[B]
                 t_smaller = self.data[A]
-            printer("sync problem - unequal number of pulses, %s has more sync signals" % bigger, 'error')
+            utils.printer("sync problem - unequal number of pulses, %s has more sync signals" % bigger, 'error')
 
             # Compute the difference
             offset = np.argmax(np.correlate(np.diff(t_bigger), np.diff(t_smaller), mode='valid'))

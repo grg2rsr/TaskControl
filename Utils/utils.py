@@ -49,6 +49,7 @@ class Session(object):
         self.folder = Path(folder)
         self.task = '_'.join(folder.stem.split('_')[2:])
         self.date = folder.stem.split('_')[0]
+        self.time = folder.stem.split('_')[1]
         self.SessionsDf = get_sessions(folder.parent)
         self.total_days = self.SessionsDf.shape[0]
         self.task_days = self.SessionsDf.groupby('task').get_group(self.task).shape[0]
@@ -81,8 +82,11 @@ def get_Animals(folder):
                 Animals.append(Animal(path))
     return Animals
 
-def select(objs,key,value):
+def select(objs, key, value):
     return [obj for obj in objs if obj.__dict__[key] == value]
+
+def groupby_dict(Df, Dict):
+    return Df.groupby(list(Dict.keys())).get_group(tuple(Dict.values()))
 
 def printer(s, mode='msg'):
     if mode == 'msg':

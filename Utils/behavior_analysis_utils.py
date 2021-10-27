@@ -61,7 +61,7 @@ def parse_arduino_log(log_path, code_map=None, parse_var=True, return_check=Fals
             valid_lines.append(line)
         else:
             invalid_lines.append(line)
-            print(i, line)
+            utils.printer("bad line in log: %i: %s" % (i, line),"error")
 
     if len(invalid_lines) == 0:
         all_good = True
@@ -282,7 +282,7 @@ def parse_trials(TrialDfs, Metrics):
     SessionDf = SessionDf.reset_index(drop=True)
   
     return SessionDf
-    
+  
 """
  
   ######  ########  ######   ######  ####  #######  ##    ##  ######  
@@ -294,6 +294,17 @@ def parse_trials(TrialDfs, Metrics):
   ######  ########  ######   ######  ####  #######  ##    ##  ######  
  
 """
+
+def get_SessionDf(LogDf, metrics, trial_entry_event="TRIAL_AVAILABLE_STATE", trial_exit_event="ITI_STATE"):
+
+    TrialSpans = get_spans_from_names(LogDf, trial_entry_event, trial_exit_event)
+
+    TrialDfs = []
+    for i, row in tqdm(TrialSpans.iterrows()):
+        TrialDfs.append(time_slice(LogDf, row['t_on'], row['t_off']))
+    
+    SessionDf = parse_trials(TrialDfs, metrics)
+    return SessionDf, TrialDfs
 
 def parse_session(SessionDf, Metrics):
     """ Applies 2nd level metrics to a session """
@@ -346,19 +357,68 @@ def time_slice(Df, t_min, t_max, col='t', reset_index=True, mode='inclusive'):
 
 def event_slice(Df, event_a, event_b, col='name', reset_index=True):
     """ helper function that slices Df along column name from event_a to event_b """
-    ix_start = Df[Df['name'] == event_a].index[0]
-    ix_stop = Df[Df['name'] == event_b].index[0]
-    return Df.loc[ix_start:ix_stop]
+    try:
+        ix_start = Df[Df[col] == event_a].index[0]
+        ix_stop = Df[Df[col] == event_b].index[0]
+    except IndexError:
+        # if either of the events are not present, return an empty dataframe
+        return pd.DataFrame([],columns=Df.columns) 
 
-def event_based_time_slice(Df, event, pre, post, col='name',on='t'):
+    Df = Df.loc[ix_start:ix_stop]
+
+    if reset_index:
+        Df = Df.reset_index(drop=True)
+
+    return Df
+
+def event_based_time_slice(Df, event, pre, post, col='name', on='t', Df_to_slice=None):
+    """ slice around and event """
+    
+    if Df_to_slice is None:
+        Df_to_slice = Df
+
     Dfs = []
     times = Df.groupby(col).get_group(event)[on].values
     for t in times:
-        Dfs.append(time_slice(Df, t+pre, t+post))
+        Dfs.append(time_slice(Df_to_slice, t+pre, t+post))
     return Dfs
 
+    # Dfs = []
+    # times = Df.groupby(col).get_group(event)[on].values
+    # for t in times:
+    #     Dfs.append(time_slice(Df, t+pre, t+post))
+    # return Dfs
+
 def groupby_dict(Df, Dict):
+    """ will turn obsolete ... """
     return Df.groupby(list(Dict.keys())).get_group(tuple(Dict.values()))
+
+def intersect(Df, **kwargs):
+    """ helper to slice pd.DataFrame, keys select columns, values select rows at columns
+    full intersection, returns empty dataframe on KeyError.
+    
+    This should replace groupby_dict everywhere """
+    try:
+        if len(kwargs) == 1:
+            return Df.groupby(list(kwargs.keys())[0]).get_group(tuple(kwargs.values())[0])
+        else:
+            try:
+                return Df.groupby(list(kwargs.keys())).get_group(tuple(kwargs.values()))
+            except IndexError:
+                # thrown when more then 1 key are empty
+                return pd.DataFrame([],columns=Df.columns)
+    except KeyError:
+        # thrown when key is not present
+        return pd.DataFrame([],columns=Df.columns)
+
+def expand_columns(Df, categorial_cols):
+    """ turns a single categorial column into boolean columns with is_ prefix """
+    for category_col in categorial_cols:
+        categories = Df[category_col].unique()
+        categories = [cat for cat in categories if not pd.isna(cat)]
+        for category in categories:
+            Df['is_'+category] = Df[category_col] == category
+    return Df
 
 """
 
@@ -402,8 +462,6 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     trig_len is time in ms of sync trig high, tol is deviation in ms
     check harp sampling time, seems to be 10 khz? """
 
-    # TODO check remove - deprecated?
-
     with open(harp_csv_path, 'r') as fH:
         lines = fH.readlines()
 
@@ -442,72 +500,6 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
     
     return LoadCellDf, t_sync
 
-# REMOVE
-def get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT", save=True):
-    """ extracts arduino sync times from an arduino log """ 
-
-    LogDf = get_LogDf_from_path(log_path)
-    SyncEvent = get_events_from_name(LogDf, sync_event_name)
-
-    if save:
-        SyncEvent.to_csv(log_path.parent / "arduino_sync.csv")
-
-    return SyncEvent
-
-# MOVE TO SYNC
-def cut_timestamps(t_arduino, t_harp, verbose=False, return_offset=False):
-    """ finds offset between to unequal timestamp series and cuts
-    the bigger to match the size of the smaller """
-
-    if verbose:
-        print("timestamps in arduino: "+ str(t_arduino.shape[0]))
-        print("timestamps in harp: "+ str(t_harp.shape[0]))
-
-    if t_harp.shape[0] > t_arduino.shape[0]:
-        bigger = 'harp'
-        t_bigger = t_harp
-        t_smaller = t_arduino
-    else:
-        bigger = 'arduino'
-        t_bigger = t_arduino
-        t_smaller = t_harp
-
-    offset = np.argmax(np.correlate(np.diff(t_bigger), np.diff(t_smaller), mode='valid'))
-    if verbose:
-        print("offset between the two: ", offset)
-    t_bigger = t_bigger[offset:t_smaller.shape[0]+offset]
-
-    if bigger == 'harp':
-        t_harp = t_bigger
-        t_arduino = t_smaller
-    else:
-        t_arduino = t_bigger
-        t_harp = t_smaller
-        
-    if return_offset == True:
-        return t_arduino, t_harp, offset
-    else:
-        return t_arduino, t_harp
-
-# REMOVE
-def sync_clocks(t_harp, t_arduino, log_path=None):
-    """ linregress between two clocks - master clock is harp
-    if LogDf is given, save the corrected clock to it"""
-
-    from scipy import stats
-
-    res = stats.linregress(t_arduino, t_harp)
-    m, b = res.slope, res.intercept
-
-    if log_path is not None:
-        LogDf = get_LogDf_from_path(log_path)
-        LogDf['t_original'] = LogDf['t'] # store original time stampts
-        LogDf['t'] = LogDf['t']*m + b
-        LogDf.to_csv(log_path.parent / "LogDf.csv")
-
-    return m, b
-
-
 """
  ######  ########    ###    ########  ######
 ##    ##    ##      ## ##      ##    ##    ##
@@ -535,39 +527,42 @@ from scipy.special import expit
 
 #     return y_fit
 
-def log_reg(x, y, x_fit=None):
+def log_reg(x, y, x_fit=None, fit_lapses=True):
     """ x and y are of shape (N, ) y are choices in [0, 1] """
     if x_fit is None:
         x_fit = np.linspace(x.min(), x.max(), 100)
-
-    # cLR = LogisticRegression()
-    # try:
-    #     cLR.fit(x[:, np.newaxis], y)
-    #     y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
-    # except ValueError:
-    #     y_fit = sp.zeros(x_fit.shape)
-    #     y_fit[:] = sp.nan
-
-    def fun(x, p):
-        x0 = p[0]
-        k = p[1]
-        Lu = p[2]
-        Ll = p[3]
-        return Lu / (1+np.exp(-k * (x-x0))) + Ll
-
-    def obj_fun(p, x, y):
-        yhat = fun(x, p)
-        Rss = np.sum((y-yhat)**2)
-        return Rss
     
-    from scipy.optimize import minimize
+    if fit_lapses:
+        def fun(x, p):
+            x0 = p[0]
+            k = p[1]
+            Lu = p[2]
+            Ll = p[3]
+            return Lu / (1+np.exp(-k * (x-x0))) + Ll
 
-    bounds = ((0,3000), (None, None), (0,1), (0,1))
+        def obj_fun(p, x, y):
+            yhat = fun(x, p)
+            Rss = np.sum((y-yhat)**2)
+            return Rss
+        
+        from scipy.optimize import minimize
 
-    p0 = (1500, 0.05, 0, 1)
-    pfit = minimize(obj_fun, p0, args=(x, y), bounds=bounds)
-    y_fit = fun(x_fit, pfit.x)
-    return y_fit
+        bounds = ((0,3000), (None, None), (-1,1), (-1,1))
+
+        p0 = (1500, 0.05, 0, 1)
+        pfit = minimize(obj_fun, p0, args=(x, y), bounds=bounds)
+        y_fit = fun(x_fit, pfit.x)
+        return y_fit, pfit.x
+
+    else:
+        cLR = LogisticRegression()
+        try:
+            cLR.fit(x[:, np.newaxis], y)
+            y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
+        except ValueError:
+            y_fit = sp.zeros(x_fit.shape)
+            y_fit[:] = sp.nan
+        return yfit
 
 def tolerant_mean(arrs):
     'A mean that is tolerant to different sized arrays'
