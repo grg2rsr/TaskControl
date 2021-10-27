@@ -1,0 +1,85 @@
+# %%
+import sys, os
+from pathlib import Path
+import numpy as np
+import scipy as sp
+import pandas as pd
+import seaborn as sns
+from tqdm import tqdm
+
+from matplotlib import pyplot as plt
+import matplotlib as mpl
+# mpl.rcParams['figure.dpi'] = 331 # laptop
+mpl.rcParams['figure.dpi'] = 166 # the screens in the viv
+
+sys.path.append('/home/georg/code/TaskControl')
+
+from Utils import behavior_analysis_utils as bhv
+from Utils import utils
+from Utils import metrics
+
+def plot_grasp_histograms(session_folder, save=None):
+    LogDf = bhv.get_LogDf_from_path(session_folder / "arduino_log.txt")
+    LogDf['min'] = LogDf['t'] / 60000
+
+    #  reach time split by cue
+    sides = ('left','right')
+    events = ['GO_CUE_LEFT_EVENT', 'GO_CUE_RIGHT_EVENT']
+    # events = ['REWARD_LEFT_VALVE_ON', 'REWARD_RIGHT_VALVE_ON']
+    grasps = ['GRASP_LEFT_ON', 'GRASP_RIGHT_ON']
+    pre, post = -2500, 2500
+
+    tab10 = sns.color_palette('tab10',n_colors=5)
+    colors = dict(reach=tab10[1],
+                    grasp=tab10[2],
+                    rewarded=tab10[0],
+                    anticipatory=tab10[4])
+
+
+    bins = sp.linspace(pre,post,50)
+    fig, axes = plt.subplots(2,2,sharex=True,sharey=True)
+    for i, event in enumerate(events):
+        times = LogDf.groupby('name').get_group(event)['t'].values
+
+        Dfs = []
+        for t in times:
+            Df = bhv.time_slice(LogDf, t+pre, t+post)
+            Df['t'] = Df['t'] - t
+            Dfs.append(Df)
+
+        Dfs = pd.concat(Dfs)
+
+        for j, grasp in enumerate(grasps):
+            try:
+                gt = Dfs.groupby('name').get_group(grasp)['t'].values
+                axes[j,i].hist(gt,bins=bins, color=colors['grasp'], label='grasps')
+            except KeyError:
+                pass
+
+    for ax in axes.flatten():
+        ax.axvline(0,linestyle=':',alpha=0.5)
+
+    for i,ax in enumerate(axes[:,0]):
+        ax.set_ylabel(grasps[i])
+
+    for i,ax in enumerate(axes[0,:]):
+        ax.set_title(events[i])
+
+    for i, ax in enumerate(axes[1,:]):
+        ax.set_xlabel('time (ms)')
+
+    axes[0,0].legend(fontsize='small')
+
+    Animal = utils.Animal(session_folder.parent)
+    Session = utils.Session(session_folder)
+    title = ' - '.join([Animal.display(),Session.date,'day: %s'% Session.day])
+
+    fig.suptitle(title)
+    sns.despine(fig)
+    fig.tight_layout()
+    fig.subplots_adjust(top=0.85)
+
+    if save is not None:
+        os.makedirs(save.parent, exist_ok=True)
+        plt.savefig(save, dpi=600)
+        plt.close(fig)

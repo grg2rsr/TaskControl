@@ -1,0 +1,85 @@
+# %%
+%matplotlib qt5
+%load_ext autoreload
+%autoreload 2
+
+sys.path.append('..')
+
+from matplotlib import pyplot as plt
+import matplotlib as mpl
+# mpl.rcParams['figure.dpi'] = 331
+mpl.rcParams['figure.dpi'] = 166 # the screens in the viv
+from Utils import behavior_analysis_utils as bhv
+import pandas as pd
+
+# this should be changed ... 
+from pathlib import Path
+import scipy as sp
+import numpy as np
+import seaborn as sns
+from tqdm import tqdm
+import os
+from Utils import utils
+from Utils.utils import groupby_dict
+from datetime import datetime
+
+
+# %%
+%matplotlib qt5
+%load_ext autoreload
+%autoreload 2
+
+# this should be changed ... 
+import sys, os
+sys.path.append('..')
+from pathlib import Path
+import numpy as np
+import scipy as sp
+import pandas as pd
+import seaborn as sns
+from tqdm import tqdm
+
+from matplotlib import pyplot as plt
+import matplotlib as mpl
+# mpl.rcParams['figure.dpi'] = 331 # laptop
+mpl.rcParams['figure.dpi'] = 166 # the screens in the viv
+
+from Utils import behavior_analysis_utils as bhv
+from Utils import utils
+
+from sklearn.linear_model import LogisticRegression
+from scipy.special import expit
+
+
+# init times analysis
+def plot_init_times_hist(SessionDf, axes=None):
+    if axes is None:
+        fig, axes = plt.subplots(nrows=len(outcomes),sharex=True, figsize=[4,5.5])
+
+    bins = sp.linspace(0,5000,25)
+    for i, outcome in enumerate(outcomes):
+        SDf = SessionDf.groupby('outcome').get_group(outcome)
+        axes[i].hist(SDf['init_rt'].values,bins=bins,color=colors[outcome])
+        axes[i].set_ylabel(outcome)
+
+    axes[-1].set_xlabel('time (ms)')
+
+    return axes
+
+def plot_init_times(SessionDf, axes=None):
+    if axes is None:
+        fig, axes = plt.subplots()
+
+    x = range(SessionDf.shape[0])
+    y = SessionDf['init_rt'] / 1000
+
+    outcomes = SessionDf.outcome.unique()
+
+    dot_colors = [colors[outcome] for outcome in SessionDf.outcome]
+    axes.scatter(x , y,color=dot_colors, s=8)
+    axes.axhline(0,linestyle=':',color='k',alpha=0.5)
+
+    axes.set_ylim(-1,30)
+    axes.set_ylabel('time to init (s)')
+    axes.set_xlabel('trial #')
+    return axes

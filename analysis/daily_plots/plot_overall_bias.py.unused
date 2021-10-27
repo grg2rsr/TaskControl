@@ -1,0 +1,48 @@
+
+
+def plot_bias(session_folder,save=None):
+    Session = utils.Session(session_folder)
+    Animal = utils.Animal(session_folder.parent)
+
+    LogDf = bhv.get_LogDf_from_path(session_folder / "arduino_log.txt")
+    LogDf['min'] = LogDf['t'] / 60000
+
+    from Utils import metrics as m
+    metrics = (m.get_start, m.get_stop, m.has_choice, m.get_correct_side, m.get_chosen_side)
+    SessionDf, TrialDfs = bhv.get_SessionDf(LogDf, metrics)
+
+    fig, axes = plt.subplots(ncols=2,sharey=True)
+    sides = ('left','right')
+    for i, side in enumerate(sides): # trial type
+        axes[i].set_title(side)
+        axes[i].set_xlabel('chosen side')
+        
+        f_choices = []
+        
+        try:
+            Df = groupby_dict(SessionDf, dict(has_choice=True, correct_side=side))
+            for j, side in enumerate(sides): # choice
+                df = Df.groupby('chosen_side').get_group(side)
+                n_choices = df.shape[0]
+                f_choices.append(df.shape[0] / Df.shape[0]) # frac of choices given trial type
+        except KeyError:
+            f_choices = [np.nan,np.nan]
+            pass
+
+        pos = range(2)
+        axes[i].bar(pos, f_choices)
+        axes[i].set_ylim(0,1)
+        axes[i].set_xticks(pos)
+        axes[i].set_xticklabels(sides)
+        axes[i].axhline(0.5, linestyle=':', lw=1, alpha=0.5, color='k')
+
+    title = ' - '.join([Animal.display(),Session.date,'day: %s'% Session.day])
+    sns.despine(fig)
+    fig.suptitle(title+'\nChoices split by trial type\n')
+    fig.tight_layout()
+    fig.subplots_adjust(top=0.8)
+
+    if save is not None:
+        os.makedirs(session_folder / 'plots', exist_ok=True)
+        plt.savefig(save, dpi=600)
+        plt.close(fig)

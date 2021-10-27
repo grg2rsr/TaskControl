@@ -1,0 +1,107 @@
+
+def plot_reach_durations(session_folder, save=None):
+    LogDf = bhv.get_LogDf_from_path(session_folder / "arduino_log.txt")
+    LogDf['min'] = LogDf['t'] / 60000
+
+    # check each reach
+    ReachesLeftDf = bhv.get_spans_from_names(LogDf, "REACH_LEFT_ON", "REACH_LEFT_OFF")
+    ReachesLeftDf['side'] = 'left'
+
+    ReachesRightDf = bhv.get_spans_from_names(LogDf, "REACH_RIGHT_ON", "REACH_RIGHT_OFF")
+    ReachesRightDf['side'] = 'right'
+
+    ReachesDf = pd.concat([ReachesLeftDf, ReachesRightDf]).sort_values('t_on')
+
+    # drop invalid
+    min_th = 5
+    max_th = 2000
+
+    binds = np.logical_and(ReachesDf['dt'].values > min_th, ReachesDf['dt'].values < max_th)
+
+    ReachesDf = ReachesDf.loc[binds]
+    ReachesDf = ReachesDf.reset_index().sort_values('t_on')
+
+    ReachesDf[['is_grasp','is_rewarded','is_anticipatory']] = False
+    for i, row in ReachesDf.iterrows():
+        t_on = row['t_on']
+        t_off = row['t_off']
+        Df = bhv.time_slice(LogDf, t_on, t_off)
+
+        # check for grasp
+        if 'GRASP_LEFT_ON' in Df.name.values or 'GRASP_RIGHT_ON' in Df.name.values:
+            ReachesDf.loc[i, 'is_grasp'] = True
+
+        # check for rewarded
+        if 'REWARD_LEFT_COLLECTED_EVENT' in Df.name.values or 'REWARD_RIGHT_COLLECTED_EVENT' in Df.name.values:
+            ReachesDf.loc[i, 'is_rewarded'] = True
+
+        # check for anticipatory
+        if 'ANTICIPATORY_REACH_EVENT' in Df.name.values:
+            ReachesDf.loc[i, 'is_anticipatory'] = True
+
+    # some number
+    n_reaches = ReachesDf.shape[0]
+    f_grasps = ReachesDf.sum(0)['is_grasp'] / n_reaches
+    f_rewarded = ReachesDf.sum(0)['is_rewarded'] / n_reaches
+    f_anticipatory = ReachesDf.sum(0)['is_anticipatory'] / n_reaches
+
+    # plot
+    tab10 = sns.color_palette('tab10',n_colors=5)
+    colors = dict(reach=tab10[1],
+                  grasp=tab10[2],
+                  rewarded=tab10[0],
+                  anticipatory=tab10[4])
+
+    fig, axes = plt.subplots(nrows=2, ncols=2, gridspec_kw=dict(width_ratios=(1,0.2)),sharey=True)
+    bins = np.arange(0,500,1000/60)
+    for i, side in enumerate(['right','left']):
+        try:
+            Df = groupby_dict(ReachesDf, dict(side=side, is_grasp=False))
+            kws = dict(label='reach %i' % n_reaches, color=colors['reach'], alpha=0.7)
+            axes[i,0].plot(Df['t_on']/6e4, Df['dt'],'.', **kws)
+            axes[i,1].hist(Df['dt'], bins=bins, orientation='horizontal', **kws)
+        except:
+            pass
+        
+        try:
+            Df = groupby_dict(ReachesDf, dict(side=side, is_grasp=True, is_rewarded=False, is_anticipatory=False))
+            kws = dict(label='grasp %.2f' % f_grasps, color=colors['grasp'], alpha=0.8)
+            axes[i,0].plot(Df['t_on']/6e4, Df['dt'],'.', **kws)
+            axes[i,1].hist(Df['dt'], bins=bins, orientation='horizontal', **kws)
+        except:
+            pass
+
+        try:
+            Df = groupby_dict(ReachesDf, dict(side=side, is_rewarded=True, is_anticipatory=False))
+            kws = dict(label='rewarded %.2f' % f_rewarded, color=colors['rewarded'], alpha=0.8)
+            axes[i,0].plot(Df['t_on']/6e4, Df['dt'],'.', **kws)
+            axes[i,1].hist(Df['dt'], bins=bins, orientation='horizontal', **kws)
+        except:
+            pass
+
+        try:
+            Df = groupby_dict(ReachesDf, dict(side=side, is_anticipatory=True))
+            kws = dict(label='anticipatory %.2f' % f_anticipatory,color=colors['anticipatory'], alpha=0.8)
+            axes[i,0].plot(Df['t_on']/6e4, Df['dt'],'.', **kws)
+            axes[i,1].hist(Df['dt'], bins=bins, orientation='horizontal', **kws)
+        except:
+            pass
+
+        axes[i,0].set_ylim(0,250)
+        axes[i,1].set_ylim(0,250)
+
+        axes[i,0].set_ylabel('%s' '\nduration (ms)' % side)
+
+    Session = utils.Session(session_folder)
+    title = ' - '.join([Animal.display(), Session.date, 'day: %s'% Session.day])
+
+    sns.despine(fig)
+    fig.suptitle(title)
+    axes[1,0].set_xlabel('time (min)')
+    axes[0,1].legend(fontsize='small')
+    fig.tight_layout()
+
+    if save is not None:
+        os.makedirs(session_folder / 'plots', exist_ok=True)
+        plt.savefig(save, dpi=600)
+        plt.close(fig)

@@ -1,0 +1,164 @@
+# %%
+%matplotlib qt5
+%load_ext autoreload
+%autoreload 2
+
+# this should be changed ... 
+import sys, os
+from pathlib import Path
+import numpy as np
+import scipy as sp
+import pandas as pd
+import seaborn as sns
+from tqdm import tqdm
+
+from matplotlib import pyplot as plt
+import matplotlib as mpl
+# mpl.rcParams['figure.dpi'] = 331 # laptop
+mpl.rcParams['figure.dpi'] = 166 # the screens in the viv
+
+sys.path.append('/home/georg/code/TaskControl')
+
+from Utils import behavior_analysis_utils as bhv
+from Utils import utils
+from Utils import metrics
+
+
+# session path
+# poolboy last good
+session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02995_Poolboy/2021-10-15_14-15-36_learn_to_choose_v2")
+
+# %%
+LogDf = bhv.get_LogDf_from_path(session_folder / "arduino_log.txt")
+
+### LoadCell Data
+LoadCellDf = bhv.parse_bonsai_LoadCellData(session_folder / 'bonsai_LoadCellData.csv')
+
+# Syncer
+from Utils import sync
+lc_sync_event = sync.parse_harp_sync(session_folder / 'bonsai_harp_sync.csv', trig_len=100, ttol=5)
+arduino_sync_event = sync.get_arduino_sync(session_folder / 'arduino_log.txt')
+
+Sync = sync.Syncer()
+Sync.data['arduino'] = arduino_sync_event['t'].values
+Sync.data['loadcell'] = lc_sync_event['t'].values
+Sync.sync('arduino','loadcell')
+
+LogDf['t_orig'] = LogDf['t']
+LogDf['t'] = Sync.convert(LogDf['t'].values, 'arduino', 'loadcell')
+
+# preprocessing
+samples = 10000 # 10s buffer: harp samples at 1khz, arduino at 100hz, LC controller has 1000 samples in buffer
+LoadCellDf['x'] = LoadCellDf['x'] - LoadCellDf['x'].rolling(samples).mean()
+LoadCellDf['y'] = LoadCellDf['y'] - LoadCellDf['y'].rolling(samples).mean()
+
+# %% categorizing pushes by clustering
+# slice all pushes
+F = LoadCellDf[['x','y']].values
+th = 500
+L = F < -th
+
+events = np.where(np.diff(np.logical_and(L[:,0],L[:,1])) == 1)[0]
+times = [LoadCellDf.iloc[int(i)]['t'] for i in events]
+
+pre, post = -500,500
+All_Pushes = []
+for i, t in enumerate(tqdm(times)):
+    push = bhv.time_slice(LoadCellDf, t+pre, t+post, reset_index=False)
+    if ~np.any(pd.isna(push).values):
+        All_Pushes.append(push)
+
+n_samples = int(np.median([p.shape[0] for p in All_Pushes]))
+Pushes = [p[['x','y']].values for p in All_Pushes if p.shape[0] == n_samples]
+push_times = [p['t'].values[0]-pre for p in All_Pushes if p.shape[0] == n_samples]
+
+# reshape and cluster
+P = np.concatenate([p.T.flatten()[:,np.newaxis] for p in Pushes],axis=1)
+P = P[:,50:]
+
+from sklearn.cluster import KMeans
+n_clusters = 5
+clust = KMeans(n_clusters=n_clusters).fit(P.T)
+labels = clust.labels_
+labels_unique = np.unique(labels)
+
+# sort labels by occurence
+order = np.argsort([np.sum(labels == label) for label in np.unique(labels)])
+labels_unique = labels_unique[order]
+
+# %% plot each
+tvec = np.linspace(pre,post,n_samples)
+fig, axes = plt.subplots(nrows=2, ncols=n_clusters, figsize=[6,3],sharey=True)
+colors = sns.color_palette('tab10', n_colors=n_clusters)
+
+for i, label in enumerate(labels_unique):
+    ix = np.where(labels == label)[0]
+    axes[0,i].plot(tvec, np.median(P[:n_samples,ix],1), color=colors[i])
+    axes[1,i].plot(tvec, np.median(P[n_samples:,ix],1), color=colors[i])
+
+    axes[0,i].set_title("N=%i" % np.sum(labels == label))
+
+for ax in axes.flatten():
+    ax.axvline(0, linestyle=':', color='k', lw=1)
+    ax.axhline(-500, linestyle=':', color='k', lw=1)
+
+fig.tight_layout()
+sns.despine(fig)
+
+# %% look at temporal distribution of each clusters event wrt events
+# get timepoints for each
+# push_times = push_times
+push_times = push_times[50:]
+event_times = np.array(push_times)
+EventDf = pd.DataFrame(zip(['PUSH_EVENT'] * event_times.shape[0], event_times, labels), columns=['name','t','var'])
+LogDf = pd.concat([LogDf,EventDf])
+LogDf = LogDf.sort_values('t')
+
+# %% 
+trial_avail_times = LogDf.groupby('name').get_group("TRIAL_AVAILABLE_EVENT")['t'].values
+pre, post = -1000, 1000
+
+label_times = {}
+for label in labels_unique:
+    label_times[label] = []
+
+for label in labels_unique:
+    event_times = LogDf.groupby(['name','var']).get_group(('PUSH_EVENT',label))['t'].values
+    for t in trial_avail_times:
+        dtimes = event_times - t
+        ix = np.logical_and( (dtimes > pre), ( dtimes < post) )
+        if np.sum(ix) > 0:
+            label_times[label].append(dtimes[ix])
+
+    label_times[label] = np.concatenate(label_times[label])
+# %%
+fig, axes = plt.subplots(nrows=n_clusters,sharex=True,sharey=True)
+bins = np.linspace(pre, post, 50)
+for i, label in enumerate(labels_unique):
+    axes[i].hist(label_times[label],bins=bins,color=colors[i])
+
+for ax in axes:
+    ax.axvline(0, linestyle=':',linewidth=1,color='k',alpha=0.5)
+
+sns.despine(fig)
+fig.suptitle(title)
+fig.tight_layout()
+fig.subplots_adjust(top=0.9)
+
+save is None
+if save is not None:
+    os.makedirs(session_folder / 'plots', exist_ok=True)
+    plt.savefig(save, dpi=600)
+    plt.close(fig)
+
+
+# %%
+pre_events = bhv.get_spans_from_names(LogDf, 'PUSH_EVENT', 'TRIAL_AVAILABLE_EVENT')
+post_events = bhv.get_spans_from_names(LogDf, 'TRIAL_AVAILABLE_EVENT', 'PUSH_EVENT')
+
+# %% 
+bins = np.linspace(0,500,100)
+fig, axes = plt.subplots()
+axes.hist(pre_events['dt'].values,bins=bins, alpha=0.5)
+axes.hist(post_events['dt'].values,bins=bins, alpha=0.5)
+# %%
