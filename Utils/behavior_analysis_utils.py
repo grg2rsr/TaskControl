@@ -512,57 +512,75 @@ def parse_harp_csv(harp_csv_path, save=True, trig_len=1, ttol=0.2):
 from sklearn.linear_model import LogisticRegression
 from scipy.special import expit
 
-# def log_reg(x, y, x_fit=None):
-#     """ x and y are of shape (N, ) y are choices in [0, 1] """
-#     if x_fit is None:
-#         x_fit = np.linspace(x.min(), x.max(), 100)
 
-#     cLR = LogisticRegression()
-#     try:
-#         cLR.fit(x[:, np.newaxis], y)
-#         y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
-#     except ValueError:
-#         y_fit = sp.zeros(x_fit.shape)
-#         y_fit[:] = sp.nan
-
-#     return y_fit
-
-def log_reg(x, y, x_fit=None, fit_lapses=True):
+def log_reg_sklearn(x, y, x_fit=None):
     """ x and y are of shape (N, ) y are choices in [0, 1] """
     if x_fit is None:
         x_fit = np.linspace(x.min(), x.max(), 100)
-    
+
+    cLR = LogisticRegression()
+    try:
+        cLR.fit(x[:, np.newaxis], y)
+        y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
+    except ValueError:
+        y_fit = sp.zeros(x_fit.shape)
+        y_fit[:] = sp.nan
+
+    return y_fit, (cLR.coef_, cLR.intercept_)
+
+def psychometric(x, x0, k):
+    return 1 / (1+np.exp(-k * (x-x0)))
+
+def psychometric_w_lapses(x, x0, k, Lu, Ll):
+    return Lu / (1+np.exp(-k * (x-x0))) + Ll
+
+def log_reg_cf(x, y, x_fit=None, fit_lapses=True):
+    """ x and y are of shape (N, ) y are choices in [0, 1] """
+    from scipy.optimize import curve_fit
+
+    if x_fit is None:
+        x_fit = np.linspace(x.min(), x.max(), 100)
+
     if fit_lapses:
-        def fun(x, p):
-            x0 = p[0]
-            k = p[1]
-            Lu = p[2]
-            Ll = p[3]
-            return Lu / (1+np.exp(-k * (x-x0))) + Ll
-
-        def obj_fun(p, x, y):
-            yhat = fun(x, p)
-            Rss = np.sum((y-yhat)**2)
-            return Rss
-        
-        from scipy.optimize import minimize
-
-        bounds = ((0,3000), (None, None), (-1,1), (-1,1))
-
-        p0 = (1500, 0.05, 0, 1)
-        pfit = minimize(obj_fun, p0, args=(x, y), bounds=bounds)
-        y_fit = fun(x_fit, pfit.x)
-        return y_fit, pfit.x
-
+        fun = psychometric_w_lapses
+        bounds = ((0,3000), (-0.1, 0.1), (0,1), (0,1))
+        p0 = (1500, 0.0, 0, 1)
     else:
-        cLR = LogisticRegression()
-        try:
-            cLR.fit(x[:, np.newaxis], y)
-            y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
-        except ValueError:
-            y_fit = sp.zeros(x_fit.shape)
-            y_fit[:] = sp.nan
-        return yfit
+        fun = psychometric
+        bounds = ((0, 3000), (-0.1, 0.1))
+        p0 = (1500, 0)
+
+    pfit = curve_fit(fun, x, y, p0, bounds=np.array(bounds).T)[0]
+    y_fit = fun(x_fit, *pfit)
+    return y_fit, pfit
+
+def log_reg(x, y, x_fit=None, fit_lapses=True):
+    """ x and y are of shape (N, ) y are choices in [0, 1] """
+
+    """ note - this is broken """
+    
+    from scipy.optimize import minimize
+
+    if x_fit is None:
+        x_fit = np.linspace(x.min(), x.max(), 100)
+
+    def obj_fun(p, x, y, fun):
+        yhat = fun(x, *p)
+        Rss = np.sum((y-yhat)**2)
+        return Rss
+
+    if fit_lapses:
+        fun = psychometric_w_lapses
+        bounds = ((0,3000), (-0.1, 0.1), (0,1), (0,1))
+        p0 = (1500, 0.005, 0, 1)
+    else:
+        fun = psychometric
+        bounds = ((0, 3000), (-0.1, 0.1))
+        p0 = (1500, 0.005)
+
+    pfit = minimize(obj_fun, p0, args=(x, y, fun))
+    y_fit = fun(x_fit, *pfit.x)
+    return y_fit, pfit.x
 
 def tolerant_mean(arrs):
     'A mean that is tolerant to different sized arrays'
@@ -579,4 +597,3 @@ def tolerant_mean(arrs):
     arrs=[np.pad(arr, (0, max_length-arr.shape[0]), mode='constant', constant_values=np.nan) for arr in arrs] # pad every array until max_length to obtain square matrix
 
     return np.nanmean(arrs, axis = 0)
-

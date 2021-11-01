@@ -27,8 +27,14 @@ colors = dict(success="#72E043",
             left=mpl.cm.PiYG(0.05),
             right=mpl.cm.PiYG(0.95))
 
-def plot_psychometric(session_folder, N=1000, kind='true', save=None):
+def plot_psychometric(session_folder, N=1000, kind='true', fit_lapses=True, save=None):
+
     LogDf = bhv.get_LogDf_from_path(session_folder / 'arduino_log.txt')
+
+    # exit here if there are no timing trials
+    if not np.any(LogDf.groupby('var').get_group('timing_trial')['value']):
+        return None
+
     session_metrics = (metrics.get_start, metrics.has_choice, metrics.get_chosen_side, 
                         metrics.get_outcome, metrics.get_correct_side, metrics.get_timing_trial,
                         metrics.get_interval, metrics.get_interval_category, metrics.get_in_corr_loop,
@@ -49,10 +55,6 @@ def plot_psychometric(session_folder, N=1000, kind='true', save=None):
     if kind == 'premature':
         SDf = bhv.intersect(SessionDf, has_choice=True, is_premature=True)
 
-    # exit here if there are no timing trials
-    if SDf.shape[0] == 0:
-        return None
-
     fig, axes = plt.subplots()
 
     # plot the choices as p(Long)
@@ -67,34 +69,43 @@ def plot_psychometric(session_folder, N=1000, kind='true', save=None):
     y = SDf['chosen_side'].values == 'right'
     x = SDf['this_interval'].values
     x_fit = np.linspace(0,3000,100)
-    y_fit, p_fit = bhv.log_reg(x, y, x_fit, fit_lapses=True)
+
+    y_fit, p_fit = bhv.log_reg_cf(x, y, x_fit, fit_lapses=fit_lapses)
     axes.plot(x_fit, y_fit,color='red', linewidth=2,alpha=0.75)
-    
-    # lapse rates
-    lupper = p_fit[3] + p_fit[2]
-    llower = p_fit[3]
-    axes.text(intervals[0], llower+0.05, "%.2f" % llower, ha='center', va='center')
-    axes.text(intervals[-1], lupper+0.05, "%.2f" % lupper, ha='center', va='center')
+
+    if fit_lapses:
+        # add lapse rate as text to the axes
+        lapse_upper = p_fit[3] + p_fit[2]
+        lapse_lower = p_fit[3]
+        axes.text(intervals[0], lapse_lower+0.05, "%.2f" % lapse_lower, ha='center', va='center')
+        axes.text(intervals[-1], lapse_upper+0.05, "%.2f" % lapse_upper, ha='center', va='center')
 
     if N is not None:
-        # plot the random models based on the choice bias
+        # simulating random choices based, respecting session bias
         bias = (SDf['chosen_side'] == 'right').sum() / SDf.shape[0]
-        R = []
+        R = np.zeros((x_fit.shape[0], N))
+        P = []
+        R[:] = np.nan
         for i in tqdm(range(N)):
+            # simulating random choices
             rand_choices = sp.rand(SDf.shape[0]) < bias
             try:
-                R.append(bhv.log_reg(x, rand_choices, x_fit)[0])
-            except ValueError:
-                # thrown when all samples are true or false
-                print("all true or false")
+                y_fit, p_fit = bhv.log_reg_cf(x, rand_choices, x_fit, fit_lapses=fit_lapses)
+                R[:,i] = y_fit
+                P.append(p_fit)
+            except RuntimeError:
                 pass
-        R = np.array(R)
+    
+        # filter out NaN cols
+        R = R[:,~np.isnan(R[0,:])]
+        R = R.T
+        P = np.array(P)
 
         # Several statistical boundaries
         alphas = [5, 0.5, 0.05]
         opacities = [0.2, 0.2, 0.2]
         for alpha, a in zip(alphas, opacities):
-            R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
+            R_pc = np.percentile(R, (alpha, 100-alpha), 0)
             axes.fill_between(x_fit, R_pc[0], R_pc[1], color='blue', alpha=a, linewidth=0)
 
     # deco
@@ -126,5 +137,17 @@ def plot_psychometric(session_folder, N=1000, kind='true', save=None):
 
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02997_Therapist/2021-10-25_15-59-02_learn_to_choose_v2")
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-01975_Marquez/2021-05-18_09-41-58_learn_to_fixate_discrete_v1")
-# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02997_Therapist/2021-10-27_13-46-31_learn_to_choose_v2")
-# plot_psychometric(session_folder, N=100)
+# session_folder = Path("/media/georg/data/animals_reaching/therapist/2021-10-29_15-41-48_learn_to_choose_v2")
+
+# marquez last
+# session_folder = Path("/media/georg/data/reaching_dlc/marquez_last_session/2021-05-18_09-41-58_learn_to_fixate_discrete_v1")
+
+# plot_psychometric(session_folder, N=500, fit_lapses=True)
+# 
+
+
+
+
+
+
+# %%
