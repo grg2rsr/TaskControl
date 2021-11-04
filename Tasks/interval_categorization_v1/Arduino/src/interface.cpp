@@ -16,8 +16,10 @@ bool deliver_reward_left = false;
 bool deliver_reward_right = false;
 bool present_reward_left_cue = false;
 bool present_reward_right_cue = false;
-bool punish = false;
 
+int left = 4; // fwd declared now in the interface_template
+int right = 6; // fwd declared now in the interface_template
+int correct_side;
 int current_state = 0; // WATCH OUT this is ini state
 
 // fwd declare functions for logging
@@ -154,8 +156,8 @@ void processSerialData() {
             log_ulong("choice_dur", choice_dur);
         }
 
-        if (strcmp(varname,"reward_available_dur")==0){
-            log_ulong("reward_available_dur", reward_available_dur);
+        if (strcmp(varname,"reward_collection_dur")==0){
+            log_ulong("reward_collection_dur", reward_collection_dur);
         }
 
         if (strcmp(varname,"present_init_cue")==0){
@@ -164,10 +166,6 @@ void processSerialData() {
 
         if (strcmp(varname,"LED_enabled")==0){
             log_int("LED_enabled", LED_enabled);
-        }
-
-        if (strcmp(varname,"allow_mistakes")==0){
-            log_int("allow_mistakes", allow_mistakes);
         }
 
         if (strcmp(varname,"prob_bias_corr")==0){
@@ -194,28 +192,24 @@ void processSerialData() {
             log_int("autodeliver_rewards", autodeliver_rewards);
         }
 
-        if (strcmp(varname,"reward_predictive_reaches")==0){
-            log_int("reward_predictive_reaches", reward_predictive_reaches);
+        if (strcmp(varname,"cue_on_rewarded_reach")==0){
+            log_int("cue_on_rewarded_reach", cue_on_rewarded_reach);
         }
 
-        if (strcmp(varname,"use_jackpot")==0){
-            log_int("use_jackpot", use_jackpot);
+        if (strcmp(varname,"n_warmup_trials")==0){
+            log_int("n_warmup_trials", n_warmup_trials);
         }
 
-        if (strcmp(varname,"use_warmup")==0){
-            log_int("use_warmup", use_warmup);
+        if (strcmp(varname,"punish_premature")==0){
+            log_int("punish_premature", punish_premature);
         }
 
         if (strcmp(varname,"use_incorrect_cue_on_miss")==0){
             log_int("use_incorrect_cue_on_miss", use_incorrect_cue_on_miss);
         }
 
-        if (strcmp(varname,"miss_frac_thresh")==0){
-            log_float("miss_frac_thresh", miss_frac_thresh);
-        }
-
-        if (strcmp(varname,"n_warmup_trials")==0){
-            log_int("n_warmup_trials", n_warmup_trials);
+        if (strcmp(varname,"p_left")==0){
+            log_float("p_left", p_left);
         }
 
         if (strcmp(varname,"p_timing_trial")==0){
@@ -244,18 +238,6 @@ void processSerialData() {
 
         if (strcmp(varname,"valve_ul_ms_right")==0){
             log_float("valve_ul_ms_right", valve_ul_ms_right);
-        }
-
-        if (strcmp(varname,"test")==0){
-            log_int("test", test);
-        }
-
-        if (strcmp(varname,"pest")==0){
-            log_int("pest", pest);
-        }
-
-        if (strcmp(varname,"quest")==0){
-            log_int("quest", quest);
         }
 
         }
@@ -344,8 +326,8 @@ void processSerialData() {
             choice_dur = strtoul(varvalue,NULL,10);
         }
 
-        if (strcmp(varname,"reward_available_dur")==0){
-            reward_available_dur = strtoul(varvalue,NULL,10);
+        if (strcmp(varname,"reward_collection_dur")==0){
+            reward_collection_dur = strtoul(varvalue,NULL,10);
         }
 
         if (strcmp(varname,"present_init_cue")==0){
@@ -354,10 +336,6 @@ void processSerialData() {
 
         if (strcmp(varname,"LED_enabled")==0){
             LED_enabled = atoi(varvalue);
-        }
-
-        if (strcmp(varname,"allow_mistakes")==0){
-            allow_mistakes = atoi(varvalue);
         }
 
         if (strcmp(varname,"prob_bias_corr")==0){
@@ -384,28 +362,24 @@ void processSerialData() {
             autodeliver_rewards = atoi(varvalue);
         }
 
-        if (strcmp(varname,"reward_predictive_reaches")==0){
-            reward_predictive_reaches = atoi(varvalue);
+        if (strcmp(varname,"cue_on_rewarded_reach")==0){
+            cue_on_rewarded_reach = atoi(varvalue);
         }
 
-        if (strcmp(varname,"use_jackpot")==0){
-            use_jackpot = atoi(varvalue);
+        if (strcmp(varname,"n_warmup_trials")==0){
+            n_warmup_trials = atoi(varvalue);
         }
 
-        if (strcmp(varname,"use_warmup")==0){
-            use_warmup = atoi(varvalue);
+        if (strcmp(varname,"punish_premature")==0){
+            punish_premature = atoi(varvalue);
         }
 
         if (strcmp(varname,"use_incorrect_cue_on_miss")==0){
             use_incorrect_cue_on_miss = atoi(varvalue);
         }
 
-        if (strcmp(varname,"miss_frac_thresh")==0){
-            miss_frac_thresh = atof(varvalue);
-        }
-
-        if (strcmp(varname,"n_warmup_trials")==0){
-            n_warmup_trials = atoi(varvalue);
+        if (strcmp(varname,"p_left")==0){
+            p_left = atof(varvalue);
         }
 
         if (strcmp(varname,"p_timing_trial")==0){
@@ -434,18 +408,6 @@ void processSerialData() {
 
         if (strcmp(varname,"valve_ul_ms_right")==0){
             valve_ul_ms_right = atof(varvalue);
-        }
-
-        if (strcmp(varname,"test")==0){
-            test = atoi(varvalue);
-        }
-
-        if (strcmp(varname,"pest")==0){
-            pest = atoi(varvalue);
-        }
-
-        if (strcmp(varname,"quest")==0){
-            quest = atoi(varvalue);
         }
 
         }
@@ -498,18 +460,34 @@ void processSerialData() {
             }
 
             if (strcmp(CMD,"r")==0){
-                deliver_reward_left = true;
                 present_reward_left_cue = true;
+                deliver_reward_left = true;
             }
 
             if (strcmp(CMD,"t")==0){
+                present_reward_right_cue = true;
                 deliver_reward_right = true;
+            }
+
+            if (strcmp(CMD,"g")==0){
+                present_reward_left_cue = true;
+            }
+
+            if (strcmp(CMD,"f")==0){
                 present_reward_right_cue = true;
             }
 
-            if (strcmp(CMD,"p")==0){
-                punish = true;
+            if (strcmp(CMD,"b")==0){
+                correct_side = right;
+                current_state = CHOICE_STATE;
             }
+
+            if (strcmp(CMD,"v")==0){
+                correct_side = right;
+                current_state = CHOICE_STATE;
+            }
+
+
         }
 
         newData = false;

@@ -352,15 +352,14 @@ void reward_valve_controller(){
     // flipped by setting deliver_reward to true somewhere in the FSM
     
     // left
+    
+    // present cue? (this is necessary for keeping the keyboard reward functionality)
+    if (present_reward_left_cue == true){
+        reward_left_cue();
+        present_reward_left_cue = false;
+    }
+
     if (reward_valve_left_is_open == false && deliver_reward_left == true) {
-
-        // present cue? (this is necessary for keeping the keyboard reward functionality)
-        if (present_reward_left_cue == true){
-            reward_left_cue();
-            present_reward_left_cue = false;
-            this_kamin_block_protect_dur = random(kamin_block_protect_dur_min, kamin_block_protect_dur_max);
-        }
-
         if (autodeliver_rewards == 1){
             // kamin block time is up - autodeliver
             if (now() - t_present_left_cue > this_kamin_block_protect_dur){
@@ -377,15 +376,14 @@ void reward_valve_controller(){
     }
 
     // right
+
+    // present cue? (this is necessary for keeping the keyboard reward functionality)
+    if (present_reward_right_cue == true){
+        reward_right_cue();
+        present_reward_right_cue = false;
+    }
+
     if (reward_valve_right_is_open == false && deliver_reward_right == true) {
-
-        // present cue? (this is necessary for keeping the keyboard reward functionality)
-        if (present_reward_right_cue == true){
-            reward_right_cue();
-            present_reward_right_cue = false;
-            this_kamin_block_protect_dur = random(kamin_block_protect_dur_min, kamin_block_protect_dur_max);
-        }
-
         if (autodeliver_rewards == 1){
             // kamin block time is up - autodeliver
             if (now() - t_present_right_cue > this_kamin_block_protect_dur){
@@ -448,16 +446,16 @@ void sync_pin_controller(){
 
 // running bias calculation as a mechanism to combat bias
 const int n_choice_hist = 10;
-// int past_choices[n_choice_hist] = {0,1,0,1,0,1,0,1,0,1};
-int past_choices[n_choice_hist];
-for (int i = 0; i < n_choice_hist; i++){
-    if (i % 2 == 0){
-        past_choices[i] = 1
-    }
-    else {
-        past_choices[i] = 0
-    }
-}
+int past_choices[n_choice_hist] = {0,1,0,1,0,1,0,1,0,1};
+// int past_choices[n_choice_hist];
+// for (int i = 0; i < n_choice_hist; i++){
+//     if (i % 2 == 0){
+//         past_choices[i] = 1
+//     }
+//     else {
+//         past_choices[i] = 0
+//     }
+// }
 float bias = 0.5;
 
 void update_bias(int choice){ // choice 0 is left, right is 1
@@ -493,50 +491,63 @@ within correction loop, any mistake restarts the counter from the beginning
 no resetting: intermediate mistakes allowed, corr loop is exited after 3 correct choices
 */
 
+const int n_intervals = 2;
 unsigned long this_interval = 1500;
-unsigned long short_intervals[2] = {600, 1000};
-unsigned long long_intervals[2] = {2000, 2400};
-float p_short_intervals[2] = {1, 0};
-float p_long_intervals[2] = {0, 1};
+unsigned long short_intervals[n_intervals] = {600, 1000};
+unsigned long long_intervals[n_intervals] = {2000, 2400};
+float p_short_intervals[n_intervals] = {.5, .5};
+float p_long_intervals[n_intervals] = {.5, .5};
 int i;
+float p_cum;
 
 unsigned long get_short_interval(){
     r = random(0,1000) / 1000.0;
-    if (r < p_short_intervals[0]){
-        return short_intervals[0];
+    for (int i = 0; i < n_intervals; i++){
+        p_cum = 0;
+        for (int j = 0; j <= i; j++){
+            p_cum += p_short_intervals[j];
+        }
+        if (r < p_cum){
+            return short_intervals[i];
+        }
     }
-    else{
-        return short_intervals[1];
-    }
+    return -1;
 }
 
 unsigned long get_long_interval(){
     r = random(0,1000) / 1000.0;
-    if (r < p_long_intervals[0]){
-        return long_intervals[0];
+    for (int i = 0; i < n_intervals; i++){
+        p_cum = 0;
+        for (int j = 0; j <= i; j++){
+            p_cum += p_long_intervals[j];
+        }
+        if (r < p_cum){
+            return long_intervals[i];
+        }
     }
-    else{
-        return long_intervals[1];
-    }
+    return -1;
 }
 
 // unsigned long get_short_interval(){
+   
 //     r = random(0,1000) / 1000.0;
-//     if (r < 0.5){
-//         return 600;
+
+
+//     if (r < p_short_intervals[0]){
+//         return short_intervals[0];
 //     }
 //     else{
-//         return 1000;
+//         return short_intervals[1];
 //     }
 // }
 
 // unsigned long get_long_interval(){
 //     r = random(0,1000) / 1000.0;
-//     if (r < 0.5){
-//         return 2400;
+//     if (r < p_long_intervals[0]){
+//         return long_intervals[0];
 //     }
 //     else{
-//         return 2000;
+//         return long_intervals[1];
 //     }
 // }
 
@@ -610,7 +621,7 @@ void get_trial_type(){
     }
 
     // switches off autodeliver rewards after warmup
-    if (trial_counter <= n_warmup_trials && use_warmup){
+    if (trial_counter <= n_warmup_trials){
         autodeliver_rewards = 1;
         // turn it off once on last
         if (trial_counter == n_warmup_trials){
@@ -747,15 +758,11 @@ void finite_state_machine() {
                     // premature choice
                     log_code(CHOICE_EVENT);
                     log_code(PREMATURE_CHOICE_EVENT);
-                    log_code(TRIAL_UNSUCCESSFUL_EVENT);
                     incorrect_choice_cue();
                     log_choice();
-                    if (use_timeout == 1){
-                        this_ITI_dur += timeout_dur;
-
+                    this_ITI_dur += timeout_dur;
                     current_state = ITI_STATE;
                     break;
-                    }
                 }
             }
 
@@ -866,11 +873,7 @@ void finite_state_machine() {
                         succ_trial_counter = 0;
                     }
 
-                    if (use_timeout == 1){
-                        this_ITI_dur += timeout_dur;
-                        break;
-                    }
-
+                    this_ITI_dur += timeout_dur;
                     current_state = ITI_STATE;
                     break;
                 }
@@ -879,7 +882,6 @@ void finite_state_machine() {
             // no choice was made
             if (now() - t_state_entry > choice_dur){
                 log_code(CHOICE_MISSED_EVENT);
-                log_code(TRIAL_UNSUCCESSFUL_EVENT);
                 
                 // cue
                 if (use_incorrect_cue_on_miss){
@@ -980,12 +982,6 @@ void setup() {
 
     // LED related
     FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
-    for (int i = 0; i < NUM_LEDS; i++) {
-        led_is_on[i] = false;
-        switch_led_on[i] = false;
-        led_on_time[i] = max_future;
-    }
-
     lights_off();
     Serial.println("<Arduino is ready to receive commands>");
     delay(1000);
