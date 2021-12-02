@@ -61,19 +61,29 @@ bool reward_available = false;
 bool reward_left_available = false;
 bool reward_right_available = false;
 
-bool reach_left = false;
-bool reach_right = false;
+// bool reach_left = false;
+// bool reach_right = false;
 
-bool is_reaching = false;
-bool is_reaching_left = false;
-bool is_reaching_right = false;
+bool touch_left = false;
+bool touch_right = false;
+
+bool is_touching = false;
+bool is_touching_left = false;
+bool is_touching_right = false;
+
+unsigned long t_last_touch_on = max_future;
+unsigned long t_last_touch_off = max_future;
+
+// bool is_reaching = false;
+// bool is_reaching_left = false;
+// bool is_reaching_right = false;
 
 bool is_grasping = false;
 bool is_grasping_left = false;
 bool is_grasping_right = false;
 
-unsigned long t_last_reach_on = max_future;
-unsigned long t_last_reach_off = max_future;
+// unsigned long t_last_reach_on = max_future;
+// unsigned long t_last_reach_off = max_future;
 
 unsigned long t_last_trial_entry = max_future;
 
@@ -81,27 +91,27 @@ unsigned long t_last_trial_entry = max_future;
 void go_cue_left(); 
 void go_cue_right();
 
-void read_reaches(){
+void read_touches(){
     // left
-    reach_left = digitalRead(REACH_LEFT_PIN);
-    // reach on
-    if (is_reaching_left == false && reach_left == true){
-        log_code(REACH_LEFT_ON);
-        is_reaching_left = true;
-        t_last_reach_on = now();
+    touch_left = digitalRead(TOUCH_LEFT_PIN);
+    // touch on
+    if (is_touching_left == false && touch_left == true){
+        log_code(TOUCH_LEFT_ON);
+        is_touching_left = true;
+        t_last_touch_on = now();
     }
 
     // grasp
-    if (is_reaching_left && now() - t_last_reach_on > min_grasp_dur && is_grasping_left == false){
+    if (is_touching_left && now() - t_last_touch_on > min_grasp_dur && is_grasping_left == false){
         log_code(GRASP_LEFT_ON);
         is_grasping_left = true;
     }
 
-    // reach off
-    if (is_reaching_left == true && reach_left == false){
-        log_code(REACH_LEFT_OFF);
-        is_reaching_left = false;
-        t_last_reach_off = now();
+    // touch off
+    if (is_touching_left == true && touch_left == false){
+        log_code(TOUCH_LEFT_OFF);
+        is_touching_left = false;
+        t_last_touch_off = now();
 
         // reward collected
         if (reward_left_available == true){
@@ -116,25 +126,25 @@ void read_reaches(){
     }
 
     // right 
-    reach_right = digitalRead(REACH_RIGHT_PIN);
-    // reach on
-    if (is_reaching_right == false && reach_right == true){
-        log_code(REACH_RIGHT_ON);
-        is_reaching_right = true;
-        t_last_reach_on = now();
+    touch_right = digitalRead(TOUCH_RIGHT_PIN);
+    // touch on
+    if (is_touching_right == false && touch_right == true){
+        log_code(TOUCH_RIGHT_ON);
+        is_touching_right = true;
+        t_last_touch_on = now();
     }
 
     // grasp on
-    if (is_reaching_right && now() - t_last_reach_on > min_grasp_dur && is_grasping_right == false){
+    if (is_touching_right && now() - t_last_touch_on > min_grasp_dur && is_grasping_right == false){
         log_code(GRASP_RIGHT_ON);
         is_grasping_right = true;
     }
 
-    // reach off
-    if (is_reaching_right == true && reach_right == false){
-        log_code(REACH_RIGHT_OFF);
-        is_reaching_right = false;
-        t_last_reach_off = now();
+    // touch off
+    if (is_touching_right == true && touch_right == false){
+        log_code(TOUCH_RIGHT_OFF);
+        is_touching_right = false;
+        t_last_touch_off = now();
 
         // reward collected
         if (reward_right_available == true){
@@ -148,10 +158,110 @@ void read_reaches(){
         }
     }
 
-    is_reaching = (is_reaching_left || is_reaching_right);
+    is_touching = (is_touching_left || is_touching_right);
     is_grasping = (is_grasping_left || is_grasping_right);
     reward_available = (reward_left_available || reward_right_available);
 }
+
+// void read_reaches(){
+//     // left
+//     reach_left = digitalRead(REACH_LEFT_PIN);
+//     // reach on
+//     if (is_reaching_left == false && reach_left == true){
+//         log_code(REACH_LEFT_ON);
+//         is_reaching_left = true;
+//         t_last_reach_on = now();
+//     }
+
+//     // grasp
+//     if (is_reaching_left && now() - t_last_reach_on > min_grasp_dur && is_grasping_left == false){
+//         log_code(GRASP_LEFT_ON);
+//         is_grasping_left = true;
+//     }
+
+//     // reach off
+//     if (is_reaching_left == true && reach_left == false){
+//         log_code(REACH_LEFT_OFF);
+//         is_reaching_left = false;
+//         t_last_reach_off = now();
+
+//         // reward collected
+//         if (reward_left_available == true){
+//             reward_left_available = false;
+//         }
+
+//         // grasp off
+//         if (is_grasping_left){
+//             log_code(GRASP_LEFT_OFF);
+//             is_grasping_left = false;
+//         }
+//     }
+//     // touch
+//     touch_left = digitalRead(TOUCH_LEFT_PIN);
+//     // touch on
+//     if (is_touching_left == false && touch_left == true){
+//         log_code(TOUCH_LEFT_ON);
+//         is_touching_left = true;
+//     }
+//     // touch off
+//     if (is_touching_left == true && touch_left == false){
+//         log_code(TOUCH_LEFT_OFF);
+//         is_touching_left = false;
+//     }
+
+//     // right 
+//     reach_right = digitalRead(REACH_RIGHT_PIN);
+//     // reach on
+//     if (is_reaching_right == false && reach_right == true){
+//         log_code(REACH_RIGHT_ON);
+//         is_reaching_right = true;
+//         t_last_reach_on = now();
+//     }
+
+//     // grasp on
+//     if (is_reaching_right && now() - t_last_reach_on > min_grasp_dur && is_grasping_right == false){
+//         log_code(GRASP_RIGHT_ON);
+//         is_grasping_right = true;
+//     }
+
+//     // reach off
+//     if (is_reaching_right == true && reach_right == false){
+//         log_code(REACH_RIGHT_OFF);
+//         is_reaching_right = false;
+//         t_last_reach_off = now();
+
+//         // reward collected
+//         if (reward_right_available == true){
+//             reward_right_available = false;
+//         }
+
+//         // grasp off
+//         if (is_grasping_right){
+//             log_code(GRASP_RIGHT_OFF);
+//             is_grasping_right = false;
+//         }
+//     }
+
+//     // touch
+//     touch_right = digitalRead(TOUCH_RIGHT_PIN);
+//     // touch on
+//     if (is_touching_right == false && touch_right == true){
+//         log_code(TOUCH_RIGHT_ON);
+//         is_touching_right = true;
+//     }
+//     // touch off
+//     if (is_touching_right == true && touch_right == false){
+//         log_code(TOUCH_RIGHT_OFF);
+//         is_touching_right = false;
+//     }
+
+//     is_reaching = (is_reaching_left || is_reaching_right);
+//     is_grasping = (is_grasping_left || is_grasping_right);
+//     reward_available = (reward_left_available || reward_right_available);
+// }
+
+
+
 
 /*
 ##       ######## ########
@@ -198,6 +308,99 @@ void lights_off(){
  ######   #######  ########  ######
 */
 
+
+bool present_touch_cue_left = false;
+bool touch_cue_left_is_on = false;
+unsigned long t_last_touch_cue_left = max_future;
+
+bool present_touch_cue_right = false;
+bool touch_cue_right_is_on = false;
+unsigned long t_last_touch_cue_right = max_future;
+
+unsigned long touch_cue_dur = 2;
+
+void touch_cue_controller(){
+
+    // left
+    // switch on
+    if (present_touch_cue_left == true){
+        digitalWrite(TOUCH_CUE_LEFT_PIN, HIGH);
+        touch_cue_left_is_on = true;
+        present_touch_cue_left = false;
+        t_last_touch_cue_left = now();
+    }
+
+    // switch off at end
+    if (now() - t_last_touch_cue_left > touch_cue_dur && touch_cue_left_is_on){
+        digitalWrite(TOUCH_CUE_LEFT_PIN, LOW);
+        touch_cue_left_is_on = false;
+    }
+
+    // right
+    // switch on
+    if (present_touch_cue_right == true){
+        digitalWrite(TOUCH_CUE_RIGHT_PIN, HIGH);
+        touch_cue_right_is_on = true;
+        present_touch_cue_right = false;
+        t_last_touch_cue_right = now();
+    }
+
+    // switch off at end
+    if (now() - t_last_touch_cue_right > touch_cue_dur && touch_cue_right_is_on){
+        digitalWrite(TOUCH_CUE_RIGHT_PIN, LOW);
+        touch_cue_right_is_on = false;
+    }
+}
+
+
+// bool switch_on = false;
+// bool pin_is_on = false;
+// unsigned long t_begin = max_future;
+// unsigned long t_last_per_on = max_future;
+// unsigned long t_last_per_off = max_future;
+// unsigned long total_on_dur = 6;
+// unsigned long on_dur = 2;
+// unsigned long off_dur = 2;
+// bool is_pulsing = false;
+
+// void touch_cue_controller(){
+//     // switch on
+//     if (switch_on == true){
+//         log_msg("running");
+//         digitalWrite(PIN, HIGH);
+//         pin_is_on = true;
+//         switch_on = false;
+//         is_pulsing = true;
+//         t_begin = now();
+//         t_last_per_on = now();
+//     }
+
+//     // write low
+//     if (now() - t_last_per_on > on_dur && is_pulsing && pin_is_on){
+//         digitalWrite(PIN, LOW);
+//         log_msg("low");
+//         pin_is_on = false;
+//         t_last_per_off = now();
+//     }
+
+//     // write high
+//     if (now() - t_last_per_off > off_dur && is_pulsing && !pin_is_on){
+//         digitalWrite(PIN, HIGH);
+//         log_msg("high");
+//         pin_is_on = true;
+//         t_last_per_on = now();
+//     }
+
+//     // switch off at end
+//     if (now() - t_begin > total_on_dur && is_pulsing){
+//         // make sure that is low at end
+//         log_msg("done");
+//         digitalWrite(PIN, LOW);
+//         pin_is_on = false;
+//         is_pulsing = false;
+//     }
+// }
+
 // speaker
 Tone tone_controller;
 
@@ -219,6 +422,7 @@ unsigned long t_present_right_cue = max_future;
 void reward_left_cue(){
     // tone_controller_left.play(go_cue_freq, tone_dur);
     t_present_left_cue = now();
+    switch_on = true;
     if (timing_trial == false){
         buzz_controller.play(buzz_low_freq, buzz_dur);
     }
@@ -230,6 +434,7 @@ void reward_left_cue(){
 void reward_right_cue(){
     // tone_controller_right.play(go_cue_freq, tone_dur);
     t_present_right_cue = now();
+    switch_on = true;
     if (timing_trial == false){
         buzz_controller.play(buzz_high_freq, buzz_dur);
     }
@@ -701,13 +906,13 @@ void finite_state_machine() {
             // the update loop
             if (current_state == last_state){
                 if (trial_autostart == 0){
-                    if (digitalRead(TRIAL_INIT_PIN) == true && now() - t_last_reach_off > reach_block_dur && is_reaching == false){
+                    if (digitalRead(TRIAL_INIT_PIN) == true && now() - t_last_touch_off > touch_block_dur && is_touching == false){
                         current_state = TRIAL_ENTRY_STATE;
                         break;
                     }
                 }
                 else{
-                    if (now() - t_last_reach_off > reach_block_dur && is_reaching == false){
+                    if (now() - t_last_touch_off > touch_block_dur && is_touching == false){
                         current_state = TRIAL_ENTRY_STATE;
                         break;
                     }
@@ -754,7 +959,7 @@ void finite_state_machine() {
             // update
             if (last_state == current_state){
                 // learn to choose: no premature breaking possible
-                if (punish_premature == 1 && is_reaching){
+                if (punish_premature == 1 && is_touching){
                     // premature choice
                     log_code(CHOICE_EVENT);
                     log_code(PREMATURE_CHOICE_EVENT);
@@ -821,7 +1026,7 @@ void finite_state_machine() {
                     log_code(CHOICE_CORRECT_EVENT);
 
                     // play cue? // this is for autoshaping
-                    if (cue_on_rewarded_reach == 1){
+                    if (cue_on_rewarded_touch == 1){
                         if (correct_side == left){
                             go_cue_left();
                         }
@@ -839,7 +1044,7 @@ void finite_state_machine() {
                         right_error_counter = 0;
                     }
 
-                    // if autodeliver - this is a predictive reach
+                    // if autodeliver - this is a predictive touch
                     if (autodeliver_rewards == 1){
                         log_code(ANTICIPATORY_REACH_EVENT);
                         if (is_grasping_left){
@@ -856,7 +1061,7 @@ void finite_state_machine() {
                 }
 
                 // incorrect choice
-                if ((correct_side == left && is_reaching_right) || (correct_side == right && is_reaching_left)){
+                if ((correct_side == left && is_touching_right) || (correct_side == right && is_touching_left)){
                     log_code(CHOICE_INCORRECT_EVENT);
                     incorrect_choice_cue();
 
@@ -967,8 +1172,11 @@ void setup() {
     Serial.begin(115200); // main serial communication with computer
 
     // TTL com with firmata
-    pinMode(REACH_LEFT_PIN, INPUT);
-    pinMode(REACH_RIGHT_PIN, INPUT);
+    // pinMode(REACH_LEFT_PIN, INPUT);
+    // pinMode(REACH_RIGHT_PIN, INPUT);
+
+    pinMode(TOUCH_LEFT_PIN, INPUT);
+    pinMode(TOUCH_RIGHT_PIN, INPUT);
     
     // TTL COM w camera
     pinMode(CAM_SYNC_PIN,OUTPUT);
@@ -979,6 +1187,8 @@ void setup() {
     pinMode(BUZZER_PIN, OUTPUT);
     buzz_controller.begin(BUZZER_PIN);
     tone_controller.begin(SPEAKER_PIN);
+
+    pinMode(PIN, OUTPUT);
 
     // LED related
     FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
@@ -997,7 +1207,7 @@ void loop() {
     // led_blink_controller();
 
     // sample sensors
-    read_reaches();
+    read_touches();
 
     // serial communication with main PC
     getSerialData();
@@ -1012,5 +1222,6 @@ void loop() {
     
     // non-blocking cam sync pin
     sync_pin_controller();
+    touch_cue_controller();
 
 }

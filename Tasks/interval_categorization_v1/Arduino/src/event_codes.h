@@ -17,16 +17,22 @@ const unsigned int REWARD_STATE = 5;
 const unsigned int ITI_STATE = 6;
 
 // REACHES
-unsigned int REACH_LEFT_ON = 10;
-unsigned int REACH_LEFT_OFF = 11;
-unsigned int REACH_RIGHT_ON = 12;
-unsigned int REACH_RIGHT_OFF = 13;
+// unsigned int REACH_LEFT_ON = 10;
+// unsigned int REACH_LEFT_OFF = 11;
+// unsigned int REACH_RIGHT_ON = 12;
+// unsigned int REACH_RIGHT_OFF = 13;
 
-// REACHES
+// GRASPS
 unsigned int GRASP_LEFT_ON = 100;
 unsigned int GRASP_LEFT_OFF = 110;
 unsigned int GRASP_RIGHT_ON = 120;
 unsigned int GRASP_RIGHT_OFF = 130;
+
+// TOUCHES
+unsigned int TOUCH_LEFT_ON = 101;
+unsigned int TOUCH_LEFT_OFF = 111;
+unsigned int TOUCH_RIGHT_ON = 121;
+unsigned int TOUCH_RIGHT_OFF = 131;
 
 // VALVES
 unsigned int REWARD_LEFT_VALVE_ON = 14;

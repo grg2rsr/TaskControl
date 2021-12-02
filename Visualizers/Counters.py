@@ -207,7 +207,7 @@ class Timer(QtWidgets.QWidget):
         self.Layout.addWidget(self.LCDclock)
 
         # self-terminate functionality
-        Df = pd.DataFrame([['after (min) ',  45,   'int32']],
+        Df = pd.DataFrame([['after (min) ',  90,   'int32']],
                            columns=['name','value','dtype'])
         self.Terminator = TerminateEdit(self, DataFrame=Df)
         self.Layout.addWidget(self.Terminator)

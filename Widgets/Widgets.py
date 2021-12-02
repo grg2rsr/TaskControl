@@ -21,10 +21,6 @@ from Visualizers.TaskVis_mpl import SessionVis
 from Widgets.Popups import RunInfoPopup
 from Widgets.UtilityWidgets import StringChoiceWidget, ValueEditFormLayout, PandasModel
 
-from Widgets.ArduinoWidgets import ArduinoController
-from Widgets.BonsaiWidgets import BonsaiController
-# from LoadCellWidgets import LoadCellController
-
 """
  
  ##     ##    ###    #### ##    ##    ##      ## #### ##    ## ########   #######  ##      ## 
@@ -167,6 +163,9 @@ class SettingsWidget(QtWidgets.QWidget):
         for Counter in self.Counters:
             Counter.close()
 
+        if hasattr(self,'CamCalib'):
+            self.CamCalib.close()
+
         # Write window size and position to config file
         self.settings.setValue("size", self.size())
         self.settings.setValue("pos", self.pos())
@@ -288,14 +287,22 @@ class SettingsWidget(QtWidgets.QWidget):
                 utils.printer("initializing %s" % section, 'msg')
 
                 if section == 'Arduino':
+                    from Widgets.ArduinoWidgets import ArduinoController
                     self.ArduinoController = ArduinoController(self, self.config, self.task_config['Arduino'])
                     self.Controllers.append(self.ArduinoController)
 
                 if section == 'Bonsai':
+                    from Widgets.BonsaiWidgets import BonsaiController
                     self.BonsaiController = BonsaiController(self, self.config, self.task_config['Bonsai'])
                     self.Controllers.append(self.BonsaiController)
 
+                if section == 'CameraCalib':
+                    from Widgets.CameraCalibrationWidget import CameraCalibrationWidget
+                    self.CamCalib = CameraCalibrationWidget(self, self.config, self.task_config['CameraCalib'])
+                    # self.Controllers.append(self.CamCalib)
+
                 # if section == 'LoadCell':
+                    # from LoadCellWidgets import LoadCellController
                 #     self.LoadCellController = LoadCellController(self, self.config, self.task_config['LoadCell'])
                 #     self.Controllers.append(self.LoadCellController)
 

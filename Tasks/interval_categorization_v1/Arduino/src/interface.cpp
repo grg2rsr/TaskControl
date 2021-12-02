@@ -160,6 +160,14 @@ void processSerialData() {
             log_ulong("reward_collection_dur", reward_collection_dur);
         }
 
+        if (strcmp(varname,"use_touch_detection")==0){
+            log_int("use_touch_detection", use_touch_detection);
+        }
+
+        if (strcmp(varname,"min_touch_dur")==0){
+            log_ulong("min_touch_dur", min_touch_dur);
+        }
+
         if (strcmp(varname,"present_init_cue")==0){
             log_int("present_init_cue", present_init_cue);
         }
@@ -192,8 +200,8 @@ void processSerialData() {
             log_int("autodeliver_rewards", autodeliver_rewards);
         }
 
-        if (strcmp(varname,"cue_on_rewarded_reach")==0){
-            log_int("cue_on_rewarded_reach", cue_on_rewarded_reach);
+        if (strcmp(varname,"cue_on_rewarded_touch")==0){
+            log_int("cue_on_rewarded_touch", cue_on_rewarded_touch);
         }
 
         if (strcmp(varname,"n_warmup_trials")==0){
@@ -216,8 +224,8 @@ void processSerialData() {
             log_float("p_timing_trial", p_timing_trial);
         }
 
-        if (strcmp(varname,"reach_block_dur")==0){
-            log_ulong("reach_block_dur", reach_block_dur);
+        if (strcmp(varname,"touch_block_dur")==0){
+            log_ulong("touch_block_dur", touch_block_dur);
         }
 
         if (strcmp(varname,"min_grasp_dur")==0){
@@ -330,6 +338,14 @@ void processSerialData() {
             reward_collection_dur = strtoul(varvalue,NULL,10);
         }
 
+        if (strcmp(varname,"use_touch_detection")==0){
+            use_touch_detection = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"min_touch_dur")==0){
+            min_touch_dur = strtoul(varvalue,NULL,10);
+        }
+
         if (strcmp(varname,"present_init_cue")==0){
             present_init_cue = atoi(varvalue);
         }
@@ -362,8 +378,8 @@ void processSerialData() {
             autodeliver_rewards = atoi(varvalue);
         }
 
-        if (strcmp(varname,"cue_on_rewarded_reach")==0){
-            cue_on_rewarded_reach = atoi(varvalue);
+        if (strcmp(varname,"cue_on_rewarded_touch")==0){
+            cue_on_rewarded_touch = atoi(varvalue);
         }
 
         if (strcmp(varname,"n_warmup_trials")==0){
@@ -386,8 +402,8 @@ void processSerialData() {
             p_timing_trial = atof(varvalue);
         }
 
-        if (strcmp(varname,"reach_block_dur")==0){
-            reach_block_dur = strtoul(varvalue,NULL,10);
+        if (strcmp(varname,"touch_block_dur")==0){
+            touch_block_dur = strtoul(varvalue,NULL,10);
         }
 
         if (strcmp(varname,"min_grasp_dur")==0){
