@@ -422,7 +422,7 @@ unsigned long t_present_right_cue = max_future;
 void reward_left_cue(){
     // tone_controller_left.play(go_cue_freq, tone_dur);
     t_present_left_cue = now();
-    switch_on = true;
+    present_touch_cue_left = true;
     if (timing_trial == false){
         buzz_controller.play(buzz_low_freq, buzz_dur);
     }
@@ -434,7 +434,7 @@ void reward_left_cue(){
 void reward_right_cue(){
     // tone_controller_right.play(go_cue_freq, tone_dur);
     t_present_right_cue = now();
-    switch_on = true;
+    present_touch_cue_right = true;
     if (timing_trial == false){
         buzz_controller.play(buzz_high_freq, buzz_dur);
     }
@@ -1188,7 +1188,8 @@ void setup() {
     buzz_controller.begin(BUZZER_PIN);
     tone_controller.begin(SPEAKER_PIN);
 
-    pinMode(PIN, OUTPUT);
+    pinMode(TOUCH_CUE_LEFT_PIN, OUTPUT);
+    pinMode(TOUCH_CUE_RIGHT_PIN, OUTPUT);
 
     // LED related
     FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);

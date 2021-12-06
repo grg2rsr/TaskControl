@@ -200,7 +200,7 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="ard:DigitalOutput">
           <ard:PortName>COM4</ard:PortName>
-          <ard:Pin>24</ard:Pin>
+          <ard:Pin>22</ard:Pin>
         </Combinator>
       </Expression>
       <Expression xsi:type="Disable">
@@ -320,7 +320,7 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="ard:DigitalOutput">
           <ard:PortName>COM4</ard:PortName>
-          <ard:Pin>28</ard:Pin>
+          <ard:Pin>24</ard:Pin>
         </Combinator>
       </Expression>
       <Expression xsi:type="scr:ExpressionTransform">
@@ -540,7 +540,7 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="ard:DigitalOutput">
           <ard:PortName>COM4</ard:PortName>
-          <ard:Pin>51</ard:Pin>
+          <ard:Pin>28</ard:Pin>
         </Combinator>
       </Expression>
       <Expression xsi:type="Combinator">
@@ -567,7 +567,7 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="ard:DigitalOutput">
           <ard:PortName>COM4</ard:PortName>
-          <ard:Pin>50</ard:Pin>
+          <ard:Pin>30</ard:Pin>
         </Combinator>
       </Expression>
       <Expression xsi:type="ExternalizedMapping">

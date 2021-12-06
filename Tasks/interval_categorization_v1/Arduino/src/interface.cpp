@@ -160,10 +160,6 @@ void processSerialData() {
             log_ulong("reward_collection_dur", reward_collection_dur);
         }
 
-        if (strcmp(varname,"use_touch_detection")==0){
-            log_int("use_touch_detection", use_touch_detection);
-        }
-
         if (strcmp(varname,"min_touch_dur")==0){
             log_ulong("min_touch_dur", min_touch_dur);
         }
@@ -336,10 +332,6 @@ void processSerialData() {
 
         if (strcmp(varname,"reward_collection_dur")==0){
             reward_collection_dur = strtoul(varvalue,NULL,10);
-        }
-
-        if (strcmp(varname,"use_touch_detection")==0){
-            use_touch_detection = atoi(varvalue);
         }
 
         if (strcmp(varname,"min_touch_dur")==0){

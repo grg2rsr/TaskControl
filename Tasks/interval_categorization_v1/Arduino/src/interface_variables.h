@@ -14,7 +14,6 @@ unsigned long ITI_dur_max = 9000;
 unsigned long timeout_dur = 6000;
 unsigned long choice_dur = 30000;
 unsigned long reward_collection_dur = 4000;
-int use_touch_detection = 0;
 unsigned long min_touch_dur = 15;
 int present_init_cue = 0;
 int LED_enabled = 1;
