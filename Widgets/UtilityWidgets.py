@@ -111,10 +111,11 @@ class ValueEditFormLayout(QtWidgets.QWidget):
     def set_entries(self, Df):
         """ make sure elsewhere that this is only called with valid Dfs? """
         # update the model
-        self.Df = Df
+        # self.Df = Df
 
         # update the view
         for i, row in Df.iterrows():
+            self.Df[row['name']] = row['value']
             self.set_entry(row['name'], row['value'])
 
     def get_entry(self, name):

@@ -304,9 +304,8 @@ class ArduinoController(QtWidgets.QWidget):
                 utils.printer("reusing variables from last session", 'msg')
             else:
                 utils.printer("using default variables from last session", 'msg')
-            
         self.VariableController.VariableEditWidget.setEnabled(True)
-
+            
         # connect to serial port
         self.connection = self.connect()
 
@@ -339,14 +338,14 @@ class ArduinoController(QtWidgets.QWidget):
         self.thread.start()
         utils.printer("listening to FSM arduino on serial port %s" % self.config['connections']['FSM_arduino_port'], 'msg')
 
-        # potentially this ... 
-        # FIXME remove hardcode, check for type?
+        # start timer
         for counter in self.parent().Counters:
             if hasattr(counter, 'timer'):
                 counter.start()
 
-        # FIXME start timer
-        # self.parent().Counters[0].start()
+        # now send variables
+        # self.VariableController.send_variables()
+
     
     def stop(self):
         """ halts the FSM """
@@ -523,7 +522,9 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         if not np.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
             utils.printer("unequal variable names between last session and this session", 'error')
         else:
-            self.VariableEditWidget.set_entries(Df)
+            # not touching the valve calib
+            Df_ = Df.loc[['ul_ms' not in name for name in Df['name']]]
+            self.VariableEditWidget.set_entries(Df_)
 
     def use_last_vars(self):
         last_vars = self.load_last_vars()
