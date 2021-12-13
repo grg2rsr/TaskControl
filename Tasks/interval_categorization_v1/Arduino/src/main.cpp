@@ -96,7 +96,7 @@ void read_touches(){
     touch_left = digitalRead(TOUCH_LEFT_PIN);
     // touch on
     if (is_touching_left == false && touch_left == true){
-        log_code(TOUCH_LEFT_ON);
+        // log_code(TOUCH_LEFT_ON);
         is_touching_left = true;
         t_last_touch_on = now();
     }
@@ -109,7 +109,7 @@ void read_touches(){
 
     // touch off
     if (is_touching_left == true && touch_left == false){
-        log_code(TOUCH_LEFT_OFF);
+        // log_code(TOUCH_LEFT_OFF);
         is_touching_left = false;
         t_last_touch_off = now();
 
@@ -129,7 +129,7 @@ void read_touches(){
     touch_right = digitalRead(TOUCH_RIGHT_PIN);
     // touch on
     if (is_touching_right == false && touch_right == true){
-        log_code(TOUCH_RIGHT_ON);
+        // log_code(TOUCH_RIGHT_ON);
         is_touching_right = true;
         t_last_touch_on = now();
     }
@@ -142,7 +142,7 @@ void read_touches(){
 
     // touch off
     if (is_touching_right == true && touch_right == false){
-        log_code(TOUCH_RIGHT_OFF);
+        // log_code(TOUCH_RIGHT_OFF);
         is_touching_right = false;
         t_last_touch_off = now();
 
@@ -351,55 +351,6 @@ void touch_cue_controller(){
         touch_cue_right_is_on = false;
     }
 }
-
-
-// bool switch_on = false;
-// bool pin_is_on = false;
-// unsigned long t_begin = max_future;
-// unsigned long t_last_per_on = max_future;
-// unsigned long t_last_per_off = max_future;
-// unsigned long total_on_dur = 6;
-// unsigned long on_dur = 2;
-// unsigned long off_dur = 2;
-// bool is_pulsing = false;
-
-// void touch_cue_controller(){
-//     // switch on
-//     if (switch_on == true){
-//         log_msg("running");
-//         digitalWrite(PIN, HIGH);
-//         pin_is_on = true;
-//         switch_on = false;
-//         is_pulsing = true;
-//         t_begin = now();
-//         t_last_per_on = now();
-//     }
-
-//     // write low
-//     if (now() - t_last_per_on > on_dur && is_pulsing && pin_is_on){
-//         digitalWrite(PIN, LOW);
-//         log_msg("low");
-//         pin_is_on = false;
-//         t_last_per_off = now();
-//     }
-
-//     // write high
-//     if (now() - t_last_per_off > off_dur && is_pulsing && !pin_is_on){
-//         digitalWrite(PIN, HIGH);
-//         log_msg("high");
-//         pin_is_on = true;
-//         t_last_per_on = now();
-//     }
-
-//     // switch off at end
-//     if (now() - t_begin > total_on_dur && is_pulsing){
-//         // make sure that is low at end
-//         log_msg("done");
-//         digitalWrite(PIN, LOW);
-//         pin_is_on = false;
-//         is_pulsing = false;
-//     }
-// }
 
 // speaker
 Tone tone_controller;
