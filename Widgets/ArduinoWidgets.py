@@ -55,8 +55,9 @@ class ArduinoController(QtWidgets.QWidget):
 
         # VariableController
         self.vars_path = self.task_folder / 'Arduino' / 'src' / "interface_variables.h"
-        Df = utils.parse_arduino_vars(self.vars_path) # initialize with the default variables
-        self.VariableController = ArduinoVariablesWidget(self, Df)
+
+        # Df = utils.parse_arduino_vars(self.vars_path) # initialize with the default variables
+        self.VariableController = ArduinoVariablesWidget(self)
         self.Children.append(self.VariableController)
 
         events_path = self.task_folder / 'Arduino' / 'src' / 'event_codes.h'
@@ -300,10 +301,15 @@ class ArduinoController(QtWidgets.QWidget):
         if self.VariableController.LastVarsCheckBox.checkState() == 2: # true when checked
             last_vars = self.VariableController.load_last_vars()
             if last_vars is not None:
-                self.VariableController.use_vars(last_vars)
-                utils.printer("reusing variables from last session", 'msg')
+                current_vars = self.VariableController.Df
+                if self.VariableController.check_vars(last_vars, current_vars):
+                    self.VariableController.use_last_vars()
+                    utils.printer("using variables from last session", 'msg')
+                else:
+                    self.VariableController.use_default_vars()
+                    utils.printer("attemped use variables from last session, but they are unequal. Using default instead", 'warning')
             else:
-                utils.printer("using default variables from last session", 'msg')
+                utils.printer("attempted to use variables from last session, but couldn't find. Using default instead", 'warning')
         self.VariableController.VariableEditWidget.setEnabled(True)
             
         # connect to serial port
@@ -344,8 +350,8 @@ class ArduinoController(QtWidgets.QWidget):
                 counter.start()
 
         # now send variables
-        # self.VariableController.send_variables()
-
+        time.sleep(3)
+        self.VariableController.send_all_variables()
     
     def stop(self):
         """ halts the FSM """
@@ -396,10 +402,10 @@ class ArduinoController(QtWidgets.QWidget):
 class ArduinoVariablesWidget(QtWidgets.QWidget):
     """ displayes and allows for online editing of variables """
 
-    def __init__(self, parent, Df):
+    def __init__(self, parent):
         super(ArduinoVariablesWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
-        self.Df = Df
+        self.Df = self.load_default_vars()
         self.initUI()
 
         # connect
@@ -423,7 +429,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
         SendBtn = QtWidgets.QPushButton(self)
         SendBtn.setText('Send')
-        SendBtn.clicked.connect(self.send_variables)
+        SendBtn.clicked.connect(self.send_all_variables)
         self.Layout.addWidget(SendBtn)
 
         # last variables functionality
@@ -453,36 +459,15 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
 
-    def write_variables(self, path):
-        """ writes current arduino variables to the path """
-        # get the model
-        Df = self.VariableEditWidget.get_entries()
-
-        # convert it to arduino compatible
-        lines = utils.Df2arduino_vars(Df)
-
-        # write it
-        with open(path, 'w') as fH:
-            fH.writelines(lines)
-
-    def send_variables(self):
-        """ sends all current variables to arduino """
-        if hasattr(self.parent(), 'connection'): # TODO check if this can attempt to write on a closed connection
-            Df = self.VariableEditWidget.get_entries()
-            for i, row in Df.iterrows():
-
-                # this is the hardcoded command sending definition
-                cmd = ' '.join(['SET', str(row['name']), str(row['value'])])
-                cmd = '<'+cmd+'>'
-
-                bytestr = str.encode(cmd)
-                # reading and writing from different threads apparently threadsafe
-                # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
-                # self.parent().connection.write(bytestr)
-                self.parent().send_raw(bytestr)
-                time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
-        else:
-            utils.printer("Arduino is not connected", 'error')
+    def load_default_vars(self):
+        # contains the hardcoded path
+        vars_path = self.parent().task_folder / 'Arduino' / 'src' / "interface_variables.h"
+        try:
+            default_vars = utils.parse_arduino_vars(vars_path)
+            return default_vars
+        except:
+            utils.printer("failed to load default variables",'error')
+            return None 
 
     def load_last_vars(self):
         """ try to get arduino variables from last run for the task 
@@ -511,28 +496,107 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
                 prev_vars = utils.parse_arduino_vars(prev_vars_path)
                 return prev_vars
             else:
-                utils.printer("found variables from last session, but can't set them", "error")
+                utils.printer("didn't find variables from last session", "error")
                 return None
+
         except IndexError:
             # thrown when there is no previous session
             return None
 
-    def use_vars(self, Df):
-        # check if possible
-        if not np.all(Df['name'].sort_values().values == self.Df['name'].sort_values().values):
+    def check_vars(self, Df_a, Df_b):
+        if not np.all(Df_a['name'].sort_values().values == Df_b['name'].sort_values().values):
             utils.printer("unequal variable names between last session and this session", 'error')
+            return False
         else:
-            # not touching the valve calib
-            Df_ = Df.loc[['ul_ms' not in name for name in Df['name']]]
-            self.VariableEditWidget.set_entries(Df_)
+            return True
+    
+    def write_variables(self, path):
+        """ writes current arduino variables to the path """
+        # get the model
+        Df = self.VariableEditWidget.get_entries()
 
+        # convert it to arduino compatible
+        lines = utils.Df2arduino_vars(Df)
+
+        # write it
+        with open(path, 'w') as fH:
+            fH.writelines(lines)
+
+    def send_variable(self, name, value):
+         # this is the hardcoded command sending definition
+        if hasattr(self.parent(), 'connection'):
+            cmd = '<SET %s %s>' % (name, value) 
+            bytestr = str.encode(cmd)
+            # reading and writing from different threads apparently threadsafe
+            # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
+            # self.parent().connection.write(bytestr)
+            self.parent().send_raw(bytestr)
+            time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
+        else:
+            utils.printer("trying to send variable %s to the FSM, but is not connected" % name, 'error')
+
+    def send_variables(self, names):
+        for name in names:
+            row = self.VariableEditWidget.get_entry(name)
+            self.send_variable(row['name'], row['value'])
+
+    def send_all_variables(self):
+        Df = self.VariableEditWidget.get_entries()
+        for i, row in Df.iterrows():
+            self.send_variable(row['name'], row['value'])
+            utils.printer("sending variable %s: %s" % (row['name'], row['value']))
+
+    # def send_variables(self):
+    #     """ sends all current variables to arduino """
+    #     if hasattr(self.parent(), 'connection'): # TODO check if this can attempt to write on a closed connection
+    #         Df = self.VariableEditWidget.get_entries()
+    #         for i, row in Df.iterrows():
+
+    #             # this is the hardcoded command sending definition
+    #             cmd = ' '.join(['SET', str(row['name']), str(row['value'])])
+    #             cmd = '<'+cmd+'>'
+
+    #             bytestr = str.encode(cmd)
+    #             # reading and writing from different threads apparently threadsafe
+    #             # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
+    #             # self.parent().connection.write(bytestr)
+    #             self.parent().send_raw(bytestr)
+    #             time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
+    #     else:
+    #         utils.printer("Arduino is not connected", 'error')
+
+    # def send_variables(self):
+    #     """ sends all current variables to arduino """
+    #     if hasattr(self.parent(), 'connection'): # TODO check if this can attempt to write on a closed connection
+    #         Df = self.VariableEditWidget.get_entries()
+    #         for i, row in Df.iterrows():
+
+    #             # this is the hardcoded command sending definition
+    #             cmd = ' '.join(['SET', str(row['name']), str(row['value'])])
+    #             cmd = '<'+cmd+'>'
+
+    #             bytestr = str.encode(cmd)
+    #             # reading and writing from different threads apparently threadsafe
+    #             # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
+    #             # self.parent().connection.write(bytestr)
+    #             self.parent().send_raw(bytestr)
+    #             time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
+    #     else:
+    #         utils.printer("Arduino is not connected", 'error')
+
+    def use_vars(self, Df):
+        # does not send
+        # ignoring valve calib
+        Df_ = Df.loc[['ul_ms' not in name for name in Df['name']]]
+        self.VariableEditWidget.set_entries(Df_)
+    
     def use_last_vars(self):
         last_vars = self.load_last_vars()
         self.use_vars(last_vars)
 
     def use_default_vars(self):
-        vars_path = self.parent().task_folder / 'Arduino' / 'src' / "interface_variables.h"
-        default_vars = utils.parse_arduino_vars(vars_path) # initialize with the default var
+        default_vars = self.load_default_vars()
+        self.LastVarsCheckBox.setChecked(False)
         self.use_vars(default_vars)
 
     def query(self):
