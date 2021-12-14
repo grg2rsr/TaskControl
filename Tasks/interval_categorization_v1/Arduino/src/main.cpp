@@ -777,11 +777,13 @@ void get_trial_type(){
     }
 
     // switches off autodeliver rewards after warmup
-    if (trial_counter <= n_warmup_trials){
-        autodeliver_rewards = 1;
-        // turn it off once on last
-        if (trial_counter == n_warmup_trials){
-            autodeliver_rewards = 0;
+    if (use_warmup == 1){
+        if (trial_counter <= n_warmup_trials){
+            autodeliver_rewards = 1;
+            // turn it off once on last
+            if (trial_counter == n_warmup_trials){
+                autodeliver_rewards = 0;
+            }
         }
     }
     

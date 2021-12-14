@@ -160,10 +160,6 @@ void processSerialData() {
             log_ulong("reward_collection_dur", reward_collection_dur);
         }
 
-        if (strcmp(varname,"min_touch_dur")==0){
-            log_ulong("min_touch_dur", min_touch_dur);
-        }
-
         if (strcmp(varname,"present_init_cue")==0){
             log_int("present_init_cue", present_init_cue);
         }
@@ -198,6 +194,10 @@ void processSerialData() {
 
         if (strcmp(varname,"cue_on_rewarded_touch")==0){
             log_int("cue_on_rewarded_touch", cue_on_rewarded_touch);
+        }
+
+        if (strcmp(varname,"use_warmup")==0){
+            log_int("use_warmup", use_warmup);
         }
 
         if (strcmp(varname,"n_warmup_trials")==0){
@@ -334,10 +334,6 @@ void processSerialData() {
             reward_collection_dur = strtoul(varvalue,NULL,10);
         }
 
-        if (strcmp(varname,"min_touch_dur")==0){
-            min_touch_dur = strtoul(varvalue,NULL,10);
-        }
-
         if (strcmp(varname,"present_init_cue")==0){
             present_init_cue = atoi(varvalue);
         }
@@ -372,6 +368,10 @@ void processSerialData() {
 
         if (strcmp(varname,"cue_on_rewarded_touch")==0){
             cue_on_rewarded_touch = atoi(varvalue);
+        }
+
+        if (strcmp(varname,"use_warmup")==0){
+            use_warmup = atoi(varvalue);
         }
 
         if (strcmp(varname,"n_warmup_trials")==0){
