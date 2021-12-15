@@ -3,6 +3,7 @@ from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 import configparser
 import importlib
+from copy import copy
 
 from pathlib import Path
 import subprocess
@@ -406,6 +407,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         super(ArduinoVariablesWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
         self.Df = self.load_default_vars()
+        self.sent_variables = copy(self.Df)
         self.initUI()
 
         # connect
@@ -509,6 +511,10 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             return False
         else:
             return True
+
+    def get_changed_vars(self):
+        binds = self.Df['values'] == self.sent_variables['values']
+        return self.Df.iloc[binds]
     
     def write_variables(self, path):
         """ writes current arduino variables to the path """
@@ -532,6 +538,8 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             # self.parent().connection.write(bytestr)
             self.parent().send_raw(bytestr)
             time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
+            self.sent_variables.loc[self.sent_variables['name'] == name] = value
+
         else:
             utils.printer("trying to send variable %s to the FSM, but is not connected" % name, 'error')
 
@@ -546,49 +554,14 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             self.send_variable(row['name'], row['value'])
             utils.printer("sending variable %s: %s" % (row['name'], row['value']))
 
-    # def send_variables(self):
-    #     """ sends all current variables to arduino """
-    #     if hasattr(self.parent(), 'connection'): # TODO check if this can attempt to write on a closed connection
-    #         Df = self.VariableEditWidget.get_entries()
-    #         for i, row in Df.iterrows():
-
-    #             # this is the hardcoded command sending definition
-    #             cmd = ' '.join(['SET', str(row['name']), str(row['value'])])
-    #             cmd = '<'+cmd+'>'
-
-    #             bytestr = str.encode(cmd)
-    #             # reading and writing from different threads apparently threadsafe
-    #             # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
-    #             # self.parent().connection.write(bytestr)
-    #             self.parent().send_raw(bytestr)
-    #             time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
-    #     else:
-    #         utils.printer("Arduino is not connected", 'error')
-
-    # def send_variables(self):
-    #     """ sends all current variables to arduino """
-    #     if hasattr(self.parent(), 'connection'): # TODO check if this can attempt to write on a closed connection
-    #         Df = self.VariableEditWidget.get_entries()
-    #         for i, row in Df.iterrows():
-
-    #             # this is the hardcoded command sending definition
-    #             cmd = ' '.join(['SET', str(row['name']), str(row['value'])])
-    #             cmd = '<'+cmd+'>'
-
-    #             bytestr = str.encode(cmd)
-    #             # reading and writing from different threads apparently threadsafe
-    #             # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
-    #             # self.parent().connection.write(bytestr)
-    #             self.parent().send_raw(bytestr)
-    #             time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
-    #     else:
-    #         utils.printer("Arduino is not connected", 'error')
-
-    def use_vars(self, Df):
+    def use_vars(self, Df, ignore_calib=True):
         # does not send
         # ignoring valve calib
-        Df_ = Df.loc[['ul_ms' not in name for name in Df['name']]]
-        self.VariableEditWidget.set_entries(Df_)
+        if ignore_calib:
+            Df_ = Df.loc[['ul_ms' not in name for name in Df['name']]]
+            self.VariableEditWidget.set_entries(Df_)
+        else:
+            self.VariableEditWidget.set_entries(Df)
     
     def use_last_vars(self):
         last_vars = self.load_last_vars()
@@ -620,7 +593,6 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         # Write window size and position to config file
         self.settings.setValue("size", self.size())
         self.settings.setValue("pos", self.pos())
-
 
 """
  
@@ -721,81 +693,6 @@ class OnlineDataAnalyser(QtCore.QObject):
 
                     # restart lines with current line
                     self.lines = [line]
-
-
-
-# """
- 
-#  ######## ########  ####    ###    ##           ######   #######  ##    ## ######## ########   #######  ##       ##       ######## ########  
-#     ##    ##     ##  ##    ## ##   ##          ##    ## ##     ## ###   ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
-#     ##    ##     ##  ##   ##   ##  ##          ##       ##     ## ####  ##    ##    ##     ## ##     ## ##       ##       ##       ##     ## 
-#     ##    ########   ##  ##     ## ##          ##       ##     ## ## ## ##    ##    ########  ##     ## ##       ##       ######   ########  
-#     ##    ##   ##    ##  ######### ##          ##       ##     ## ##  ####    ##    ##   ##   ##     ## ##       ##       ##       ##   ##   
-#     ##    ##    ##   ##  ##     ## ##          ##    ## ##     ## ##   ###    ##    ##    ##  ##     ## ##       ##       ##       ##    ##  
-#     ##    ##     ## #### ##     ## ########     ######   #######  ##    ##    ##    ##     ##  #######  ######## ######## ######## ##     ## 
- 
-# """
-
-# class TrialTypeController(QtWidgets.QWidget):
-#     def __init__(self, parent, ArduinoController, OnlineDataAnalyser):
-#         super(TrialTypeController, self).__init__(parent=parent)
-
-#         # needs an arduinocontroller to be instantiated
-#         self.ArduinoController = ArduinoController
-#         self.AduinoController.serial_data_available.connect(self.on_serial)
-
-#         self.OnlineDataAnalyzer = OnlineDataAnalyser
-
-#         # calculate current engagement from behav data
-
-#         # calculate trial hardness from behav data
-
-#         # send new p values to arduino
-
-#         # plot them
-
-#     def initUI(self):
-#         """ plots of the current p values """
-#         pass
-
-#     def on_serial(self,line):
-#         # if arduino requests action
-#         if line == "<MSG REQUEST TRIAL_PROBS>":
-#             E = calculate_task_engagement()
-#             H = calculate_trial_difficulty()
-#             W = calculate_trial_weights(E,H)
-
-#             self.update_plot()
-
-#     def calculate_task_engagement(self):
-#         n_trial_types = 6 # HARDCODE
-#         P_default = sp.array([0.5,0,0,0,0,0.5])
-#         history = 10 # past trials to take into consideration 
-
-#         # get the data
-
-#         # do the calc
-
-#         pass
-
-#     def calculate_trial_difficulty(self):
-#         # get the data (same data?)
-
-#         # do the calc
-#         # what to do if there are less than 10 past trials
-#         pass
-
-#     def send_probabilities(self):
-#         # uses arduinocontroller to send
-#         # for i in range(n_trial_types):
-#         #     cmd = ' '.join(['UPD',str(i),str(self.P[i])])
-#         #     cmd = '<'+cmd+'>'
-#         #     bytestr = str.encode(cmd)
-#         #     self.ArduinoController.send_raw(bytestr)
-#         pass
-
-#     def update_plot(self):
-#         pass
 
 """
  
