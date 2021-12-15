@@ -513,8 +513,9 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             return True
 
     def get_changed_vars(self):
-        binds = self.Df['values'] == self.sent_variables['values']
-        return self.Df.iloc[binds]['name']
+        Df = self.VariableEditWidget.get_entries()
+        binds = (Df['value'] != self.sent_variables['value']).values
+        return self.Df.loc[binds]['name'].values
     
     def write_variables(self, path):
         """ writes current arduino variables to the path """
@@ -529,16 +530,21 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             fH.writelines(lines)
 
     def send_variable(self, name, value):
-         # this is the hardcoded command sending definition
+        # reading and writing from different threads apparently threadsafe
+        # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
+
         if hasattr(self.parent(), 'connection'):
+            # report
+            utils.printer("sending variable %s: %s" % (name, value))
+
+            # this is the hardcoded command sending definition
             cmd = '<SET %s %s>' % (name, value) 
             bytestr = str.encode(cmd)
-            # reading and writing from different threads apparently threadsafe
-            # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
-            # self.parent().connection.write(bytestr)
             self.parent().send_raw(bytestr)
-            time.sleep(0.05) # to fix incomplete sends? verify if this really works ... 
-            self.sent_variables.loc[self.sent_variables['name'] == name] = value
+            time.sleep(0.05) # grace period to guarantee successful sending
+
+            # store
+            self.sent_variables.loc[self.sent_variables['name'] == name,'value'] = value
 
         else:
             utils.printer("trying to send variable %s to the FSM, but is not connected" % name, 'error')
@@ -552,7 +558,6 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         Df = self.VariableEditWidget.get_entries()
         for i, row in Df.iterrows():
             self.send_variable(row['name'], row['value'])
-            utils.printer("sending variable %s: %s" % (row['name'], row['value']))
 
     def send_btn_clicked(self):
         changed_vars = self.get_changed_vars()
