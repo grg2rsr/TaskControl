@@ -431,7 +431,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
         SendBtn = QtWidgets.QPushButton(self)
         SendBtn.setText('Send')
-        SendBtn.clicked.connect(self.send_all_variables)
+        SendBtn.clicked.connect(self.send_btn_clicked)
         self.Layout.addWidget(SendBtn)
 
         # last variables functionality
@@ -514,7 +514,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
     def get_changed_vars(self):
         binds = self.Df['values'] == self.sent_variables['values']
-        return self.Df.iloc[binds]
+        return self.Df.iloc[binds]['name']
     
     def write_variables(self, path):
         """ writes current arduino variables to the path """
@@ -553,6 +553,10 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         for i, row in Df.iterrows():
             self.send_variable(row['name'], row['value'])
             utils.printer("sending variable %s: %s" % (row['name'], row['value']))
+
+    def send_btn_clicked(self):
+        changed_vars = self.get_changed_vars()
+        self.send_variables(changed_vars)
 
     def use_vars(self, Df, ignore_calib=True):
         # does not send
