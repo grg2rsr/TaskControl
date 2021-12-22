@@ -43,14 +43,16 @@ from plot_bias_over_sessions import plot_bias_over_sessions
  
 """
 
-Nicknames = ['Lifeguard', 'Lumberjack', 'Teacher', 'Plumber', 'Poolboy', 'Policeman', 'Therapist']
-# Nicknames = ['Therapist']
-task_name = 'learn_to_choose_v2'
+# Nicknames = ['Lifeguard', 'Lumberjack', 'Teacher', 'Plumber', 'Poolboy', 'Policeman', 'Therapist']
+# Nicknames = ['Therapist', 'Teacher']
+Nicknames = ['Actress','Secretary','Nurse','Firefighter','Priest','Sailor']
+task_name = 'interval_categorization_v1'
 
 # get animals by Nickname
 Animals_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching")
-Animals = utils.get_Animals(Animals_folder)
+# Animals_folder = Path("/media/georg/data/animals_reaching")
 
+Animals = utils.get_Animals(Animals_folder)
 Animals = [a for a in Animals if a.Nickname in Nicknames]
 
 overwrite = False
@@ -65,36 +67,48 @@ for i, Animal in enumerate(Animals):
         Session = utils.Session(session_folder)
         
         # session overview
-        if 0:
+        if 1:
             outpath = Animal.folder / 'plots' / 'session_overviews' / ('session_overview_%s_%s_day_%s.png' % (Session.date, Session.time, Session.day))
             if not outpath.exists() or overwrite:
-                plot_session_overview(session_folder, save=outpath)
+                utils.printer("plotting %s" % outpath.stem)
+                try:
+                    LogDf = pd.read_csv(session_folder / 'LogDf.csv')
+                    plot_session_overview(session_folder, LogDf=LogDf, save=outpath)
+                except FileNotFoundError:
+                    utils.printer("skipping %s" % outpath.stem, 'warning')
+                    pass
+                # plot_session_overview(session_folder)
 
         # init histograms
-        if 1:
+        if 0:
             outpath = Animal.folder / 'plots' / 'init_histograms' / ('init_histogram_%s_%s_day_%s.png' % (Session.date, Session.time, Session.day))
             if not outpath.exists() or overwrite:
+                utils.printer("plotting %s" % outpath.stem)
                 # plot_init_hist(session_folder)
                 plot_init_hist(session_folder, save=outpath)
 
 
         # reward collection rts
-        if 1:
+        if 0:
             outpath = Animal.folder / 'plots' / 'reward_collection_rts' / ('reward_collection_rts_%s_%s_day_%s.png' % (Session.date, Session.time, Session.day))
             if not outpath.exists() or overwrite:
+                utils.printer("plotting %s" % outpath.stem)
                 plot_reward_collection_rts(session_folder, save=outpath)
 
         # choice RTs
-        if 1:
+        if 0:
             outpath = Animal.folder / 'plots' / 'choice_rts' / ('choice_rts_%s_%s_day_%s.png' % (Session.date, Session.time, Session.day))
             if not outpath.exists() or overwrite:
+                utils.printer("plotting %s" % outpath.stem)
                 plot_choice_RTs(session_folder, save=outpath)
 
         # psychometric
         if 0:
             outpath = Animal.folder / 'plots' / 'psychometrics' / ('psychometric_%s_%s_day_%s.png' % (Session.date, Session.time, Session.day))
             if not outpath.exists() or overwrite:
-                plot_psychometric(session_folder, kind='true', save=outpath)
+                utils.printer("plotting %s" % outpath.stem)
+                # plot_psychometric(session_folder, kind='true', save=outpath)
+                plot_psychometric(session_folder, kind='true')
   
 
 
@@ -111,15 +125,16 @@ for i, Animal in enumerate(Animals):
  
 """
 
-Nicknames = ['Lifeguard', 'Lumberjack', 'Teacher', 'Plumber', 'Poolboy', 'Policeman', 'Therapist']
-# Nicknames = ['Lumberjack']
+# Nicknames = ['Lifeguard', 'Lumberjack', 'Teacher', 'Plumber', 'Poolboy', 'Policeman', 'Therapist']
+Nicknames = ['Therapist']
 # Nicknames = ['Poolboy']
 
 task_name = 'learn_to_choose_v2'
 
 # get animals by Nickname
 folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching")
-Animals = utils.get_Animals(folder)
+# Animals_folder = Path("/media/georg/data/animals_reaching")
+Animals = utils.get_Animals(Animals_folder)
 
 Animals = [a for a in Animals if a.Nickname in Nicknames]
 
@@ -129,7 +144,7 @@ for i, Animal in enumerate(Animals):
     utils.printer("processing Animal %s" % Animal.Nickname, 'msg')
 
     # bias
-    if 1:
+    if 0:
         outpath = Animal.folder / 'plots' / 'bias_across_sessions.png'
         if not outpath.exists() or overwrite:
             utils.printer("processing plot %s" % outpath.stem, 'msg')

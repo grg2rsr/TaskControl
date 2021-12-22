@@ -158,6 +158,42 @@ def get_outcome(TrialDf):
     return pd.Series(var, name = var_name)
 
 
+def get_anticip_reach_outcome(TrialDf):
+    var_name = 'anticip_reach_outcome'
+    var = np.nan
+
+    sl = event_slice(TrialDf, 'CHOICE_STATE', 'REWARD_EVENT')
+    
+    events = sl['name'].values
+    choice = None
+
+    if "REACH_LEFT_ON" in events and "REACH_RIGHT_ON" in events:
+        ix_l = sl[sl['name'] == "REACH_LEFT_ON"].index[0]
+        ix_r = sl[sl['name'] == "REACH_RIGHT_ON"].index[0]
+        if ix_l < ix_r:
+            choice = 'left'
+        else:
+            choice = 'right'
+
+    if "REACH_LEFT_ON" in events:
+        ix = sl[sl['name'] == "REACH_LEFT_ON"].index[0]
+        choice = 'left'
+
+    if "REACH_RIGHT_ON" in events:
+        ix = sl[sl['name'] == "REACH_RIGHT_ON"].index[0]
+        choice = 'right'
+
+    if choice is not None:
+        # correct_side = SessionDf.loc[i]['correct_side']
+        correct_side = get_correct_side(TrialDf).values[0]
+        if correct_side == choice:
+            var = 'correct'
+        else:
+            var = 'incorrect'
+
+    return pd.Series(var, name=var_name)
+
+
 """
  
  ######## ########  ####    ###    ##          ######## ##    ## ########  ######## 

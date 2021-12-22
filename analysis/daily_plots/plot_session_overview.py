@@ -26,16 +26,15 @@ colors = dict(success="#72E043",
             missed="#F7D379",
             reward_autodelivered='gray')
 
-def plot_session_overview(session_folder, save=None, on_t=True):
+def plot_session_overview(session_folder, LogDf=None, save=None, on_t=True):
 
-    LogDf = bhv.get_LogDf_from_path(session_folder / 'arduino_log.txt')
-    # session_metrics = (metrics.get_start, metrics.has_choice, metrics.get_chosen_side, 
-    #                 metrics.get_outcome, metrics.get_correct_side, metrics.get_timing_trial,
-    #                 metrics.get_interval, metrics.get_interval_category, metrics.get_in_corr_loop,
-    #                 metrics.has_reward_collected, metrics.get_autodeliver_trial)
+    if LogDf is None:
+        LogDf = bhv.get_LogDf_from_path(session_folder / 'arduino_log.txt')
+
     session_metrics = (metrics.get_start, metrics.has_choice, metrics.get_chosen_side, 
                        metrics.get_outcome, metrics.get_correct_side, metrics.get_timing_trial,
-                       metrics.has_reward_collected, metrics.get_autodeliver_trial, metrics.get_in_corr_loop)
+                       metrics.has_reward_collected, metrics.get_autodeliver_trial, metrics.get_in_corr_loop,
+                       metrics.get_anticip_reach_outcome)
 
     SessionDf, TrialDfs = bhv.get_SessionDf(LogDf, session_metrics)
     SessionDf = bhv.expand_columns(SessionDf, ['outcome'])
@@ -52,7 +51,7 @@ def plot_session_overview(session_folder, save=None, on_t=True):
         else:
             t = i
 
-        axes.plot([t,t],[0,1],lw=2.5,color=colors[row['outcome']],zorder=-1)
+        axes.plot([t,t],[0,1],lw=2.5, alpha=1, color=colors[row['outcome']],zorder=-1)
 
         w = 0.05
         if row['correct_side'] == 'left':
@@ -80,17 +79,23 @@ def plot_session_overview(session_folder, save=None, on_t=True):
                 axes.plot(t,-0.0,'.',color=colors['reward'],markersize=3,alpha=0.5)
             if row['correct_side'] == 'right':
                 axes.plot(t,1.0,'.',color=colors['reward'],markersize=3,alpha=0.5)
+
+        if not pd.isna(row['anticip_reach_outcome']):
+            col = colors[row['anticip_reach_outcome']]
+            axes.plot([t,t],[0.1,0.9], color=col, alpha=0.9, zorder=-1, lw=3)
+            axes.plot([t],[0.5], '.', markersize=5, color='k', alpha=0.9, zorder=1)
+            axes.plot([t],[0.5], '.', markersize=3, color=col, alpha=0.9, zorder=2)
                 
     # success rate
     hist=10
-    for outcome in ['missed']:
-        srate = (SessionDf['outcome'] == outcome).rolling(hist).mean()
-        if on_t:
-            k = SessionDf['t_on'].values / 60000
-        else:
-            k = range(SessionDf.shape[0])
-        axes.plot(k, srate,lw=1.5,color='black',alpha=0.75)
-        axes.plot(k, srate,lw=1,color=colors[outcome],alpha=0.75)
+    # for outcome in ['missed']:
+    #     srate = (SessionDf['outcome'] == outcome).rolling(hist).mean()
+    #     if on_t:
+    #         k = SessionDf['t_on'].values / 60000
+    #     else:
+    #         k = range(SessionDf.shape[0])
+    #     axes.plot(k, srate,lw=1.5,color='black',alpha=0.75)
+    #     axes.plot(k, srate,lw=1,color=colors[outcome],alpha=0.75)
 
     # valid trials
     SDf = bhv.intersect(SessionDf,is_missed=False)
@@ -124,13 +129,9 @@ def plot_session_overview(session_folder, save=None, on_t=True):
         plt.savefig(save, dpi=600)
         plt.close(fig)
 
-# # %%
-# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02997_Therapist/2021-10-25_15-59-02_learn_to_choose_v2")
-# # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02911_Lumberjack/2021-10-21_11-47-21_learn_to_choose_v2")
-# # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02909_Lifeguard/2021-10-22_10-39-25_learn_to_choose_v2")
-# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02997_Therapist/2021-10-25_15-59-02_learn_to_choose_v2")
-# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02997_Therapist/2021-10-26_13-11-18_learn_to_choose_v2")
-# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02995_Poolboy/2021-10-26_11-30-14_learn_to_choose_v2")
-# plot_session_overview(session_folder)
 
-# # %%
+# path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03344_Actress/2021-12-20_12-50-48_interval_categorization_v1"
+# session_folder = Path(path)
+# LogDf = pd.read_csv(session_folder / 'LogDf.csv')
+# plot_session_overview(session_folder, LogDf=LogDf)
+
