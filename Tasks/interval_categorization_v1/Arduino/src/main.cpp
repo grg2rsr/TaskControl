@@ -647,12 +647,21 @@ within correction loop, any mistake restarts the counter from the beginning
 no resetting: intermediate mistakes allowed, corr loop is exited after 3 correct choices
 */
 
-const int n_intervals = 2;
+// const int n_intervals = 2;
+// unsigned long this_interval = 1500;
+// unsigned long short_intervals[n_intervals] = {600, 1000};
+// unsigned long long_intervals[n_intervals] = {2000, 2400};
+// float p_short_intervals[n_intervals] = {.5, .5};
+// float p_long_intervals[n_intervals] = {.5, .5};
+// int i;
+// float p_cum;
+
+const int n_intervals = 1;
 unsigned long this_interval = 1500;
-unsigned long short_intervals[n_intervals] = {600, 1000};
-unsigned long long_intervals[n_intervals] = {2000, 2400};
-float p_short_intervals[n_intervals] = {.5, .5};
-float p_long_intervals[n_intervals] = {.5, .5};
+unsigned long short_intervals[n_intervals] = {600};
+unsigned long long_intervals[n_intervals] = {2400};
+float p_short_intervals[n_intervals] = {1};
+float p_long_intervals[n_intervals] = {1};
 int i;
 float p_cum;
 
