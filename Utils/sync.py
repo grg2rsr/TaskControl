@@ -11,6 +11,9 @@ sys.path.append('..')
 from Utils import behavior_analysis_utils as bhv
 from Utils import utils
 
+from scipy.optimize import curve_fit
+from scipy.interpolate import interp1d
+
 """
  
   ######  ##    ## ##    ##  ######      ######  ##          ###     ######   ######  
@@ -22,25 +25,47 @@ from Utils import utils
   ######     ##    ##    ##  ######      ######  ######## ##     ##  ######   ######  
  
 """
+def lin(x, b, m):
+    return m * x + b
 
+def sin(x, A, w, phi):
+    return A*np.sin(x*w+phi)
+
+def linsin(x, b, m ,A, w, phi):
+    return lin(x, b, m) + sin(x, A, w, phi)
+
+# def quad(x, x0, a, b, c):
+#     return a*(x-x0)**2 + b*(x-x0) + c
+
+# def cube(x, x0, a, b, c, d):
+#     return a*(x-x0)**3 + b*(x-x0)**2 + c*(x-x0) + d
+
+# def poly(x, x0, *a):
+#     # print(len(a))
+#     return np.sum([a[i]*(x-x0)**i for i in range(len(a))])
+
+def polyv(x, *args):
+    n = int(len(args)/2)
+    x0 = args[:n]
+    a = args[n:]
+    return np.sum(np.array([a[i]*(x-x0[i])**i for i in range(len(a))]),axis=0)
+    
 class Syncer(object):
     def __init__(self):
         self.data = {}
         self.pairs = {}
         self.graph = {}
+        self.funcs = {}
 
     def check(self, A, B):
         """ check consistency of all clock pulses and if possible fixes them """
 
-        if self.data[A].shape[0] == 0 or self.data[A].shape[0] == 0:
-            utils.printer("sync failed - %s is empty" % A, 'error')
-            return False
+        for x in [A, B]:
+            if self.data[x].shape[0] == 0:
+                utils.printer("sync failed - %s is empty" % x, 'error')
+                return False
 
-        elif self.data[B].shape[0] == 0:
-            utils.printer("sync failed - %s is empty" % B, 'error')
-            return False
-
-        elif self.data[A].shape[0] != self.data[B].shape[0]:
+        if self.data[A].shape[0] != self.data[B].shape[0]:
 
             # Decide which is the reference to cut to
             if self.data[A].shape[0] > self.data[B].shape[0]:
@@ -72,21 +97,87 @@ class Syncer(object):
         else:
             return True
 
-    def sync(self, A, B, check=True, symmetric=True):
+    # def guess_p0(self, func, A, B):
+    #     if func == lin:
+    #         b = A[0]
+    #         m = (B[-1] - B[0]) / (A[-1] - A[0])
+    #         return (m,b)
+
+    #     if func == quad:
+    #         x0 = (A.max() - A.min()) / 2
+    #         a = 0
+    #         b = (B[-1] - B[0]) / (A[-1] - A[0])
+    #         c = A[0]
+    #         return (x0,a,b,c)
+
+    #     if func == cube:
+    #         x0 = (A.max() - A.min()) / 2
+    #         a = 0
+    #         b = 0
+    #         c = (B[-1] - B[0]) / (A[-1] - A[0])
+    #         d = A[0]
+    #         return (x0,a,b,c,d)
+
+
+    def fit(self, data_A, data_B, func=lin, order=None):
+
+        # guess p0
+        if func == lin:
+            m = (data_B[-1] - data_B[0]) / (data_A[-1] - data_A[0])
+            b = data_A[0]
+            p0 = (b, m)
+            bounds = (-np.inf,np.inf)
+        
+        if func == polyv:
+            x0 = (data_A.max() - data_A.min()) / 2
+            x0s = np.ones(order) * x0
+            x0s[:2] = 0
+            a = np.zeros(order)
+            a[0] = data_A[0]
+            a[1] = (data_B[-1] - data_B[0]) / (data_A[-1] - data_A[0])
+            p0 = (*x0s, *a)
+            bounds = (-np.inf,np.inf)
+            print(p0)
+
+        if func==linsin:
+            m = (data_B[-1] - data_B[0]) / (data_A[-1] - data_A[0])
+            b = data_A[0]
+            A = 0
+            w = 0
+            phi = 0
+            p0 = (b, m , A, w, phi)
+            bounds = (np.array((-np.inf, -np.inf, 0, -np.inf, 0)), np.array((np.inf, np.inf, np.inf, np.inf, 2*np.pi)))
+            # bounds = ((-np.inf, np.inf),(-np.inf, np.inf),(0, np.inf),(-np.inf, np.inf),(0, 2*np.pi))
+            print(p0)
+
+        pfit = curve_fit(func, data_A, data_B, p0=p0, bounds=bounds)[0]
+        print(pfit)
+        return pfit
+
+    def interp(self, A, B):
+        return interp1d(self.data[A], self.data[B], fill_value='extrapolate')
+
+    def sync(self, A, B, check=True, symmetric=True, func=lin, order=None):
         """ linreg sync of A to B """
         # check and abort if fails
         success = self.check(A, B)
         if not success:
+            utils.printer("not successsful")
             return False
 
-        m, b = stats.linregress(self.data[A], self.data[B])[:2]
-        self.pairs[(A,B)] = (m, b)
+        pfit = self.fit(self.data[A], self.data[B], func=func, order=order)
+
+        self.pairs[(A,B)] = pfit
+        self.funcs[(A,B)] = func
+
         if A in self.graph:
             self.graph[A].append(B)
         else:
             self.graph[A] = [B]
+
         if symmetric:
-            self.sync(B,A, symmetric=False)
+            self.sync(B, A, symmetric=False)
+            
         return True
 
     def convert(self, t, A, B, match_dtype=True):
@@ -101,10 +192,15 @@ class Syncer(object):
         return t
 
     def _convert(self, t, A ,B):
-        if (A,B) not in self.pairs:
-            self.sync(A,B)
-        m,b = self.pairs[(A,B)]
-        return t * m+b
+        func = self.interp(A, B)
+        return func(t)
+
+    # def _convert(self, t, A ,B):
+    #     if (A,B) not in self.pairs:
+    #         self.sync(A,B)
+    #     pfit = self.pairs[(A,B)]
+    #     func = self.funcs[(A,B)]
+    #     return func(t, *pfit)
 
     def _find_shortest_path(self, start, end, path=[]):
         # from https://www.python.org/doc/essays/graphs/
@@ -121,6 +217,35 @@ class Syncer(object):
                     if not shortest or len(newpath) < len(shortest):
                         shortest = newpath
         return shortest
+
+    def eval_plot(self, plot_residuals=True):
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+
+        fig, axes = plt.subplots(ncols=len(self.pairs),figsize=[14,4])
+        for i, pair in enumerate(self.pairs):
+            A, B = pair
+            if plot_residuals:
+                x = self.data[A]
+                y = self.data[B]
+                yhat = self._convert(self.data[A], A, B)
+                res = y - yhat
+                axes[i].plot(x, res, 'o')
+            else:
+                axes[i].plot(self.data[A], self.data[B], 'o')
+                t = np.linspace(self.data[A][0], self.data[A][-1], 100)
+                axes[i].plot(t, t * m + b, alpha=0.5, lw=1)
+
+            axes[i].set_title("%s - %s" % pair)
+            axes[i].set_xlabel(A)
+            axes[i].set_ylabel(B)
+
+        for ax in axes:
+            ax.axhline(0,linestyle=':',color='k',lw=1,alpha=0.75)
+        sns.despine(fig)
+        fig.tight_layout()
+
+        
 
 """
  
@@ -150,7 +275,7 @@ def parse_harp_sync(csv_path, trig_len=1, ttol=0.2):
     SyncDf = pd.DataFrame(t_sync, columns=['t'])
     return SyncDf
 
-def parse_cam_sync(csv_path):
+def parse_cam_sync(csv_path, offset=1, return_full=False):
     """ csv_path is the video_sync_path, files called 
     bonsai_harp_sync.csv """
 
@@ -166,5 +291,9 @@ def parse_cam_sync(csv_path):
     ons = np.where(np.diff(Df.GPIO) > 1)[0]
     offs = np.where(np.diff(Df.GPIO) < -1)[0] # can be used to check correct length
 
-    SyncDf = Df.iloc[ons+1] # one frame offset
-    return SyncDf
+    SyncDf = Df.iloc[ons+offset] # one frame offset
+    if return_full is False:
+        return SyncDf
+    else:
+        return SyncDf, Df
+

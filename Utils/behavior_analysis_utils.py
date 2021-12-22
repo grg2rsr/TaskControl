@@ -295,12 +295,12 @@ def parse_trials(TrialDfs, Metrics):
  
 """
 
-def get_SessionDf(LogDf, metrics, trial_entry_event="TRIAL_AVAILABLE_STATE", trial_exit_event="ITI_STATE"):
-
+def get_SessionDf(LogDf, metrics, trial_entry_event="TRIAL_AVAILABLE_STATE", trial_exit_event="ITI_STATE", verbose=True):
     TrialSpans = get_spans_from_names(LogDf, trial_entry_event, trial_exit_event)
-
     TrialDfs = []
-    for i, row in tqdm(TrialSpans.iterrows()):
+    desc = "slicing LogDf into trials" if verbose else None
+    
+    for i, row in tqdm(TrialSpans.iterrows(),desc=desc):
         TrialDfs.append(time_slice(LogDf, row['t_on'], row['t_off']))
     
     SessionDf = parse_trials(TrialDfs, metrics)
@@ -437,6 +437,10 @@ def parse_bonsai_LoadCellData(csv_path):
     LoadCellDf = pd.read_csv(csv_path, names=['t','x','y'])
     return LoadCellDf
 
+def parse_bonsai_LoadCellData_touch(csv_path):
+    LoadCellDf = pd.read_csv(csv_path, names=['t','paw_l','paw_r','touch_l','touch_r'])
+    return LoadCellDf
+
 # def parse_bonsai_LoadCellData(csv_path, save=True, trig_len=1, ttol=0.2):
 #     LoadCellDf = pd.read_csv(csv_path, names=['t','x','y'])
 
@@ -543,7 +547,7 @@ def log_reg_cf(x, y, x_fit=None, fit_lapses=True):
 
     if fit_lapses:
         fun = psychometric_w_lapses
-        bounds = ((0,3000), (-0.1, 0.1), (0,1), (0,1))
+        bounds = ((0,3000), (-0.1, 0.1), (0,1), (-1,1))
         p0 = (1500, 0.0, 0, 1)
     else:
         fun = psychometric
