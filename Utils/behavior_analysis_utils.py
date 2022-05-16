@@ -110,7 +110,8 @@ def parse_lines(lines, code_map=None, parse_var=False):
         VarDf = correct_wraparound(VarDf)
         
         # join
-        LogDf = LogDf.append(VarDf, ignore_index=True, sort=True)
+        # LogDf = LogDf.append(VarDf, ignore_index=True, sort=True)
+        LogDf = pd.concat([LogDf,VarDf])
         LogDf = LogDf.sort_values('t')
         LogDf = LogDf.reset_index(drop=True)
 
@@ -278,10 +279,14 @@ def parse_trial(TrialDf, Metrics):
     
 def parse_trials(TrialDfs, Metrics):
     """ helper to run parse_trial on multiple trials """
-    SessionDf = pd.concat([parse_trial(Df, Metrics) for Df in TrialDfs], axis=0)
-    SessionDf = SessionDf.reset_index(drop=True)
-  
-    return SessionDf
+    if Metrics is not None:
+        SessionDf = pd.concat([parse_trial(Df, Metrics) for Df in TrialDfs], axis=0)
+        SessionDf = SessionDf.reset_index(drop=True)
+        return SessionDf
+    else:
+        return None
+
+
   
 """
  

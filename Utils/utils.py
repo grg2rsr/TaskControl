@@ -119,8 +119,9 @@ def get_sessions(folder):
         if subfolder.is_dir():
             sessions.append(subfolder)
 
-    Df = pd.DataFrame(columns=['path','date','time','task'])
+    # Df = pd.DataFrame(columns=['path','date','time','task'])
 
+    Dfs = []
     for session in sessions:
         path = str(session)
         folder_name = os.path.basename(path)
@@ -129,8 +130,10 @@ def get_sessions(folder):
         date = folder_name.split('_')[0]
         time = folder_name.split('_')[1]
         task = '_'.join(folder_name.split('_')[2:])
-        Df = Df.append(dict(path=path,date=date,time=time,task=task),ignore_index=True)
+        Df= pd.DataFrame(dict(path=path,date=date,time=time,task=task),index=[0])
+        Dfs.append(Df)
 
+    Df = pd.concat(Dfs)
     Df = Df.sort_values(['date','time'])
     Df = Df.reset_index()
 

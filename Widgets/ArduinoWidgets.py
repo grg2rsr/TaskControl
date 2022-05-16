@@ -694,7 +694,7 @@ class OnlineDataAnalyser(QtCore.QObject):
                     if self.SessionDf is None: # on first
                         self.SessionDf = TrialMetricsDf
                     else:
-                        self.SessionDf = self.SessionDf.append(TrialMetricsDf)
+                        self.SessionDf = pd.concat([self.SessionDf, TrialMetricsDf])
                         self.SessionDf = self.SessionDf.reset_index(drop=True)
 
                     # emit data
