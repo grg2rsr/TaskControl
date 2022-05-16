@@ -12,8 +12,10 @@ char buf[numChars];
 boolean newData = false;
 bool verbose = true;
 bool run = false;
-bool deliver_reward = false;
-bool present_reward_cue = false;
+bool deliver_reward_left = false;
+bool deliver_reward_right = false;
+bool present_reward_left_cue = false;
+bool present_reward_right_cue = false;
 bool punish = false;
 
 int current_state = 0; // WATCH OUT this is ini state
@@ -200,8 +202,13 @@ void processSerialData() {
             }
 
             if (strcmp(CMD,"r")==0){
-                deliver_reward = true;
-                present_reward_cue = true;
+                deliver_reward_left = true;
+                present_reward_left_cue = true;
+            }
+
+            if (strcmp(CMD,"t")==0){
+                deliver_reward_right = true;
+                present_reward_right_cue = true;
             }
 
             if (strcmp(CMD,"p")==0){
