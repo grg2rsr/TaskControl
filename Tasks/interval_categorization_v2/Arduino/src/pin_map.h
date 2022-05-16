@@ -1,0 +1,14 @@
+const byte REWARD_LEFT_VALVE_PIN = 5;
+const byte REWARD_RIGHT_VALVE_PIN = 4;
+const byte LED_PIN = 48;
+const byte SPEAKER_PIN = 2;
+const byte CAM_SYNC_PIN = A0;
+const byte LC_SYNC_PIN = 40;
+const byte BUZZER_PIN = 46;
+const byte TRIAL_INIT_PIN = 22;
+const byte TOUCH_LEFT_PIN = 26;
+const byte TOUCH_RIGHT_PIN = 24;
+const byte REACH_LEFT_PIN = 28;
+const byte REACH_RIGHT_PIN = 30;
+const byte TOUCH_CUE_LEFT_PIN = 53;
+const byte TOUCH_CUE_RIGHT_PIN = 52;
