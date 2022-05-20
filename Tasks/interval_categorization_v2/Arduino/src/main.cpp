@@ -94,22 +94,31 @@ void go_cue_right();
 /*
 4 pins:
 
-0 loadcell on spout left
-1 loadcell on spout right
-2 loadcell under paw left
-3 loadcell under paw right
-4 camera under spout left
-5 camera under spout right
+0 init pin = 22
+1 loadcell on spout left = 24
+2 loadcell on spout right = 26
+3 camera under spout left = 28
+4 camera under spout right = 30
 
 */
+const int n_digital_pins = sizeof(DIGITAL_PINS) / sizeof(DIGITAL_PINS[0]);
+bool pin_is_high[n_digital_pins];
+unsigned long t_last_pin_high[n_digital_pins];
+unsigned long t_last_pin_low[n_digital_pins];
+
+bool pin_state;
+
 void read_digital_pins(){
-    for (int i = 0; i < n_pins; i++){
-        pin_state = digitalRead(digital_pins[i]);
+    for (int i = 0; i < n_digital_pins; i++){
+        pin_state = digitalRead(DIGITAL_PINS[i]);
         // high
         if (pin_is_high[i] == false && pin_state == true){
             pin_is_high[i] = true;
             t_last_pin_high[i] = now();
         }
+    }
+    for (int i = 0; i < n_digital_pins; i++){
+        pin_state = digitalRead(DIGITAL_PINS[i]);
         // low
         if (pin_is_high[i] == true && pin_state == false){
             pin_is_high[i] = false;
@@ -120,13 +129,13 @@ void read_digital_pins(){
 
 
 void process_pin_states(){
-    is_touching_left = pin_is_high[0];
-    is_touching_right = pin_is_high[1];
-    is_optical_left = pin_is_high[4];
-    is_optical_right = pin_is_high[5];
+    is_touching_left = pin_is_high[1]; // 
+    is_touching_right = pin_is_high[2];
+    // is_optical_left = pin_is_high[3];
+    // is_optical_right = pin_is_high[4];
 
     // process into grasps
-    if (is_touching_left && now() - t_last_pin_high[0] > min_grasp_dur && is_grasping_left == false){
+    if (is_touching_left && now() - t_last_pin_high[1] > min_grasp_dur && is_grasping_left == false){
         log_code(GRASP_LEFT_ON);
         is_grasping_left = true;
     }
@@ -135,8 +144,8 @@ void process_pin_states(){
         is_grasping_left = false;
     }
 
-    if (is_touching_right && now() - t_last_pin_high[1] > min_grasp_dur && is_grasping_right == false){
-        log_code(GRASP_LEFT_ON);
+    if (is_touching_right && now() - t_last_pin_high[2] > min_grasp_dur && is_grasping_right == false){
+        log_code(GRASP_RIGHT_ON);
         is_grasping_right = true;
     }
     if (is_grasping_right == true && is_touching_right == false){
@@ -149,77 +158,77 @@ void process_pin_states(){
 
 }
 
-void read_touches(){
-    // left
-    touch_left = digitalRead(TOUCH_LEFT_PIN);
-    // touch on
-    if (is_touching_left == false && touch_left == true){
-        // log_code(TOUCH_LEFT_ON);
-        is_touching_left = true;
-        t_last_touch_on = now();
-    }
+// void read_touches(){
+//     // left
+//     touch_left = digitalRead(TOUCH_LEFT_PIN);
+//     // touch on
+//     if (is_touching_left == false && touch_left == true){
+//         // log_code(TOUCH_LEFT_ON);
+//         is_touching_left = true;
+//         t_last_touch_on = now();
+//     }
 
-    // grasp
-    if (is_touching_left && now() - t_last_touch_on > min_grasp_dur && is_grasping_left == false){
-        log_code(GRASP_LEFT_ON);
-        is_grasping_left = true;
-    }
+//     // grasp
+//     if (is_touching_left && now() - t_last_touch_on > min_grasp_dur && is_grasping_left == false){
+//         log_code(GRASP_LEFT_ON);
+//         is_grasping_left = true;
+//     }
 
-    // touch off
-    if (is_touching_left == true && touch_left == false){
-        // log_code(TOUCH_LEFT_OFF);
-        is_touching_left = false;
-        t_last_touch_off = now();
+//     // touch off
+//     if (is_touching_left == true && touch_left == false){
+//         // log_code(TOUCH_LEFT_OFF);
+//         is_touching_left = false;
+//         t_last_touch_off = now();
 
-        // reward collected
-        if (reward_left_available == true){
-            reward_left_available = false;
-        }
+//         // reward collected
+//         if (reward_left_available == true){
+//             reward_left_available = false;
+//         }
 
-        // grasp off
-        if (is_grasping_left){
-            log_code(GRASP_LEFT_OFF);
-            is_grasping_left = false;
-        }
-    }
+//         // grasp off
+//         if (is_grasping_left){
+//             log_code(GRASP_LEFT_OFF);
+//             is_grasping_left = false;
+//         }
+//     }
 
-    // right 
-    touch_right = digitalRead(TOUCH_RIGHT_PIN);
-    // touch on
-    if (is_touching_right == false && touch_right == true){
-        // log_code(TOUCH_RIGHT_ON);
-        is_touching_right = true;
-        t_last_touch_on = now();
-    }
+//     // right 
+//     touch_right = digitalRead(TOUCH_RIGHT_PIN);
+//     // touch on
+//     if (is_touching_right == false && touch_right == true){
+//         // log_code(TOUCH_RIGHT_ON);
+//         is_touching_right = true;
+//         t_last_touch_on = now();
+//     }
 
-    // grasp on
-    if (is_touching_right && now() - t_last_touch_on > min_grasp_dur && is_grasping_right == false){
-        log_code(GRASP_RIGHT_ON);
-        is_grasping_right = true;
-    }
+//     // grasp on
+//     if (is_touching_right && now() - t_last_touch_on > min_grasp_dur && is_grasping_right == false){
+//         log_code(GRASP_RIGHT_ON);
+//         is_grasping_right = true;
+//     }
 
-    // touch off
-    if (is_touching_right == true && touch_right == false){
-        // log_code(TOUCH_RIGHT_OFF);
-        is_touching_right = false;
-        t_last_touch_off = now();
+//     // touch off
+//     if (is_touching_right == true && touch_right == false){
+//         // log_code(TOUCH_RIGHT_OFF);
+//         is_touching_right = false;
+//         t_last_touch_off = now();
 
-        // reward collected
-        if (reward_right_available == true){
-            reward_right_available = false;
-        }
+//         // reward collected
+//         if (reward_right_available == true){
+//             reward_right_available = false;
+//         }
 
-        // grasp off
-        if (is_grasping_right){
-            log_code(GRASP_RIGHT_OFF);
-            is_grasping_right = false;
-        }
-    }
+//         // grasp off
+//         if (is_grasping_right){
+//             log_code(GRASP_RIGHT_OFF);
+//             is_grasping_right = false;
+//         }
+//     }
 
-    is_touching = (is_touching_left || is_touching_right);
-    is_grasping = (is_grasping_left || is_grasping_right);
-    reward_available = (reward_left_available || reward_right_available);
-}
+//     is_touching = (is_touching_left || is_touching_right);
+//     is_grasping = (is_grasping_left || is_grasping_right);
+//     reward_available = (reward_left_available || reward_right_available);
+// }
 
 // void read_reaches(){
 //     // left
@@ -553,6 +562,8 @@ void open_right_reward_valve(){
     reward_valve_right_dur = ul2time(reward_magnitude, valve_ul_ms_right);
     t_reward_valve_right_open = now();
     deliver_reward_right = false;
+    // delay(reward_valve_right_dur);
+    // digitalWrite(REWARD_RIGHT_VALVE_PIN, LOW);
 }
 
 void close_right_reward_valve(){
@@ -560,6 +571,22 @@ void close_right_reward_valve(){
     log_code(REWARD_RIGHT_VALVE_OFF);
     reward_valve_right_is_open = false;
 }
+
+// void open_right_reward_valve(){
+//     tone_controller.play(tone_freq, tone_dur);
+//     digitalWrite(REWARD_RIGHT_VALVE_PIN, HIGH);
+//     log_code(REWARD_RIGHT_VALVE_ON);
+//     reward_valve_right_is_open = true;
+//     reward_valve_right_dur = ul2time(reward_magnitude, valve_ul_ms_right);
+//     t_reward_valve_right_open = now();
+//     deliver_reward_right = false;
+// }
+
+// void close_right_reward_valve(){
+//     digitalWrite(REWARD_RIGHT_VALVE_PIN, LOW);
+//     log_code(REWARD_RIGHT_VALVE_OFF);
+//     reward_valve_right_is_open = false;
+// }
 
 void reward_valve_controller(){
     // a self terminating digital pin switch with a delay between cue and reward
@@ -586,6 +613,7 @@ void reward_valve_controller(){
     }
 
     if (reward_valve_left_is_open == true && now() - t_reward_valve_left_open > reward_valve_left_dur) {
+        log_ulong("reward_valve_left_dur", reward_valve_left_dur);
         close_left_reward_valve();
     }
 
@@ -1195,8 +1223,11 @@ void setup() {
     // pinMode(REACH_LEFT_PIN, INPUT);
     // pinMode(REACH_RIGHT_PIN, INPUT);
 
-    pinMode(TOUCH_LEFT_PIN, INPUT);
-    pinMode(TOUCH_RIGHT_PIN, INPUT);
+    for (int i = 0; i < n_digital_pins; i++){
+        pinMode(DIGITAL_PINS[i], INPUT);
+    }
+    // pinMode(TOUCH_LEFT_PIN, INPUT);
+    // pinMode(TOUCH_RIGHT_PIN, INPUT);
     
     // TTL COM w camera
     pinMode(CAM_SYNC_PIN,OUTPUT);
@@ -1205,6 +1236,10 @@ void setup() {
     // ini speakers and buzzers
     pinMode(SPEAKER_PIN, OUTPUT);
     pinMode(BUZZER_PIN, OUTPUT);
+
+    pinMode(REWARD_LEFT_VALVE_PIN, OUTPUT);
+    pinMode(REWARD_RIGHT_VALVE_PIN, OUTPUT);
+
     buzz_controller.begin(BUZZER_PIN);
     tone_controller.begin(SPEAKER_PIN);
 
@@ -1228,7 +1263,9 @@ void loop() {
     // led_blink_controller();
 
     // sample sensors
-    read_touches();
+    // read_touches();
+    read_digital_pins();
+    process_pin_states();
 
     // serial communication with main PC
     getSerialData();

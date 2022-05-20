@@ -477,11 +477,11 @@ void processSerialData() {
                 deliver_reward_right = true;
             }
 
-            if (strcmp(CMD,"g")==0){
+            if (strcmp(CMD,"f")==0){
                 present_reward_left_cue = true;
             }
 
-            if (strcmp(CMD,"f")==0){
+            if (strcmp(CMD,"g")==0){
                 present_reward_right_cue = true;
             }
 
