@@ -8,11 +8,12 @@ from Utils import utils
 class BonsaiController(QtWidgets.QWidget):
     """ a Widget without UI that launches a bonsai sketch """
     
-    def __init__(self, parent, config, task_config):
+    def __init__(self, parent, config, task_config, box):
         super(BonsaiController, self).__init__(parent=parent)
         self.name = "BonsaiController"
         self.config = config
         self.task_config = task_config
+        self.box = box
 
     def Run(self, folder):
         """ folder is the logging folder """
@@ -25,12 +26,12 @@ class BonsaiController(QtWidgets.QWidget):
         parameters = "-p:save_path=\""+str(save_path)+"\""
 
         # com port for firmata
-        if 'firmata_arduino_port' in dict(self.config['connections']).keys():
-            parameters = parameters + " -p:com_port="+self.config['connections']['firmata_arduino_port']
+        if 'firmata_arduino_port' in dict(self.box['connections']).keys():
+            parameters = parameters + " -p:com_port="+self.box['connections']['firmata_arduino_port']
 
         # com port for load cell
-        if 'harp_loadcell_port' in dict(self.config['connections']).keys():
-            parameters = parameters + " -p:LC_com_port="+self.config['connections']['harp_loadcell_port']
+        if 'harp_loadcell_port' in dict(self.box['connections']).keys():
+            parameters = parameters + " -p:LC_com_port="+self.box['connections']['harp_loadcell_port']
 
         # getting other manually set params
         variables_path = task_folder / "Bonsai" / "interface_variables.ini"

@@ -99,7 +99,16 @@ def printer(s, mode='msg'):
         print(Fore.YELLOW + "WARNING: %s" % s)
     if mode == 'debug':
         print(Fore.MAGENTA + "DEBUG: %s" % s)
-        
+
+def get_boxes(folder):
+    boxes = []
+    boxes_folder = pathlib.Path(folder)
+    for file in boxes_folder.iterdir():
+        if not file.is_dir():
+            if file.suffix == '.ini':
+                boxes.append(file.stem)
+    return boxes
+
 def get_tasks(folder):
     """ gets all valid tasks """
     tasks = []

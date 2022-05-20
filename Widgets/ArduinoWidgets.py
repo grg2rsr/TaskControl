@@ -43,14 +43,15 @@ class ArduinoController(QtWidgets.QWidget):
     # here: https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html
     # and here: https://stackoverflow.com/questions/2970312/pyqt4-qtcore-pyqtsignal-object-has-no-attribute-connect
 
-    def __init__(self, parent, config, task_config):
+    def __init__(self, parent, config, task_config, box):
         super(ArduinoController, self).__init__(parent=parent)
         self.name = "ArduinoController"
         
         # the original folder of the task
         self.task_folder = Path(config['paths']['tasks_folder']) / config['current']['task']
-        self.config = config
-        self.task_config = task_config
+        self.config = config # this is just the paths
+        self.task_config = task_config # this is the section of the task_config.ini ['Arduino']
+        self.box = box # this now holds all the connections
 
         self.Children = []
 
@@ -194,7 +195,7 @@ class ArduinoController(QtWidgets.QWidget):
         pio_config.read(self.pio_config_path)
 
         # get upload port
-        upload_port = self.config['connections']['FSM_arduino_port']
+        upload_port = self.box['connections']['FSM_arduino_port']
 
         for section in pio_config.sections():
             if section.split(":")[0] == "env":
@@ -214,11 +215,11 @@ class ArduinoController(QtWidgets.QWidget):
 
         # setting the valve calibration factor
         utils.printer("setting valve calibration factors", 'task')
-        valves = [key for key in dict(self.config['box']).keys() if key.startswith('valve_')]
+        valves = [key for key in dict(self.box).keys() if key.startswith('valve_')]
         for valve in valves:
             try:
-                utils.printer('setting calibration factor of valve: %s = %s' % (valve, self.config['box'][valve]), 'msg')
-                self.VariableController.VariableEditWidget.set_entry(valve, self.config['box'][valve])
+                utils.printer('setting calibration factor of valve: %s = %s' % (valve, self.box[valve]), 'msg')
+                self.VariableController.VariableEditWidget.set_entry(valve, self.box[valve])
             except:
                 utils.printer("can't set valve calibration factors of valve %s" % valve, 'error')
 
@@ -261,8 +262,8 @@ class ArduinoController(QtWidgets.QWidget):
         
     def connect(self):
         """ establish serial connection with the arduino board """
-        com_port = self.config['connections']['FSM_arduino_port']
-        baud_rate = self.config['connections']['arduino_baud_rate']
+        com_port = self.box['connections']['FSM_arduino_port']
+        baud_rate = self.box['connections']['arduino_baud_rate']
         try:
             utils.printer("initializing serial port: " + com_port, 'message')
             # ser = serial.Serial(port=com_port, baudrate=baud_rate, timeout=2)
@@ -343,7 +344,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()
-        utils.printer("listening to FSM arduino on serial port %s" % self.config['connections']['FSM_arduino_port'], 'msg')
+        utils.printer("listening to FSM arduino on serial port %s" % self.box['connections']['FSM_arduino_port'], 'msg')
 
         # start timer
         for counter in self.parent().Counters:

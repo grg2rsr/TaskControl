@@ -68,6 +68,19 @@ class SettingsWidget(QtWidgets.QWidget):
         FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
         self.setLayout(FormLayout)
 
+        # Box selector
+        boxes = utils.get_boxes(self.config['paths']['boxes_folder'])
+        self.box_name = self.config['last']['box']
+        self.BoxChoiceWidget = StringChoiceWidget(self, choices=boxes)
+        self.BoxChoiceWidget.currentIndexChanged.connect(self.box_changed)
+        try:
+            self.BoxChoiceWidget.set_value(self.box_name)
+        except:
+            # if task is not in list
+            self.BoxChoiceWidget.set_value(boxes[0])
+        FormLayout.addRow('Box', self.BoxChoiceWidget)
+        self.box_changed() # enforce call
+
         # animal selector
         self.Animals = utils.get_Animals(self.config['paths']['animals_folder'])
         last_id = self.config['last']['animal']
@@ -125,6 +138,7 @@ class SettingsWidget(QtWidgets.QWidget):
         # self.AnimalChoiceWidget.set_value(self.Animal.display())
                 
         # enforce function calls if first animal
+        
         self.animal_changed()
         # if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
         #     self.animal_changed()
@@ -238,6 +252,16 @@ class SettingsWidget(QtWidgets.QWidget):
 
         self.task_changed() # this reinitialized all controllers
 
+    def box_changed(self):
+        print("called")
+        # update current box
+        self.config['current']['box'] = self.BoxChoiceWidget.get_value()
+        self.box_name = self.config['current']['box']
+        self.box = configparser.ConfigParser()
+        box_config_path = Path(self.config['paths']['boxes_folder']) / (self.box_name + '.ini')
+        self.box.read(box_config_path)
+        utils.printer("selected Box: %s" % self.box_name, 'msg')
+        
     def animal_changed(self):
         current_id = self.AnimalChoiceWidget.get_value().split(' - ')[0]
         self.config['current']['animal'] = current_id
@@ -288,17 +312,17 @@ class SettingsWidget(QtWidgets.QWidget):
 
                 if section == 'Arduino':
                     from Widgets.ArduinoWidgets import ArduinoController
-                    self.ArduinoController = ArduinoController(self, self.config, self.task_config['Arduino'])
+                    self.ArduinoController = ArduinoController(self, self.config, self.task_config['Arduino'], self.box)
                     self.Controllers.append(self.ArduinoController)
 
                 if section == 'Bonsai':
                     from Widgets.BonsaiWidgets import BonsaiController
-                    self.BonsaiController = BonsaiController(self, self.config, self.task_config['Bonsai'])
+                    self.BonsaiController = BonsaiController(self, self.config, self.task_config['Bonsai'], self.box)
                     self.Controllers.append(self.BonsaiController)
 
-                if section == 'CameraCalib':
-                    from Widgets.CameraCalibrationWidget import CameraCalibrationWidget
-                    self.CamCalib = CameraCalibrationWidget(self, self.config, self.task_config['CameraCalib'])
+                # if section == 'CameraCalib':
+                #     from Widgets.CameraCalibrationWidget import CameraCalibrationWidget
+                #     self.CamCalib = CameraCalibrationWidget(self, self.config, self.task_config['CameraCalib'])
                     # self.Controllers.append(self.CamCalib)
 
                 # if section == 'LoadCell':
