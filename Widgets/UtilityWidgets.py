@@ -39,7 +39,10 @@ class ValueEdit(QtWidgets.QLineEdit):
         self.editingFinished.connect(self.edit_finished)
 
     def get_value(self):
-        self.value = np.array(self.text(), dtype=self.dtype)
+        try:
+            self.value = np.array(self.text(), dtype=self.dtype)
+        except:
+            utils.printer("invalid entry - discarding", mode='warning')
         return self.value
 
     def set_value(self, value):
