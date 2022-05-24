@@ -323,7 +323,7 @@ class ArduinoController(QtWidgets.QWidget):
             self.OnlineDataAnalyser.run()
 
         # external logging
-        fH = open(self.run_folder / 'arduino_log.txt', 'w')
+        self.arduino_log_fH = open(self.run_folder / 'arduino_log.txt', 'w')
 
         def read_from_port(ser):
             while ser.is_open:
@@ -339,7 +339,7 @@ class ArduinoController(QtWidgets.QWidget):
                     line = ''
 
                 if line is not '': # filtering out empty reads
-                    fH.write(line+os.linesep) # external logging
+                    self.arduino_log_fH.write(line+os.linesep) # external logging
                     self.serial_data_available.emit(line) # internal publishing
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
@@ -369,6 +369,10 @@ class ArduinoController(QtWidgets.QWidget):
                 self.connection.close()
             self.SerialMonitor.close()
         self.VariableController.close()
+        
+        # explicit - should fix windows bug where arduino_log.txt is not written
+        if hasattr(self, 'arduino_log_fH'):
+            self.arduino_log_fH.close() 
 
         # self.thread.join()
 
