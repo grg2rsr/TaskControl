@@ -106,6 +106,7 @@ int flip[][N_ODORS] = {{0, 1, 2, 3, 4},
                        {1, 2, 3, 4, 0}};
 
 int this_odor_flipped; // this is after flipping
+int i_flipped;
 bool odor_is_on[N_ODORS];
 // bool switch_odor_on[N_ODORS]; fwd declared in interface
 unsigned long t_odor_on[N_ODORS];
@@ -113,14 +114,17 @@ unsigned long t_odor_on[N_ODORS];
 void odor_valve_controller(){
     // the controller: iterate over all odorant valves and set their state accordingly
     for (int i = 0; i < N_ODORS; i++){
-        if (odor_is_on[i] == false && switch_odor_on[i] == true){
-            digitalWrite(ODOR_PINS[i], HIGH);
-            digitalWrite(ODOR_BALANCE_PIN, LOW);
+        i_flipped = flip[odorflip][i];
+        if (odor_is_on[i_flipped] == false && switch_odor_on[i] == true){
+            digitalWrite(ODOR_PINS[i_flipped], HIGH);
+            digitalWrite(ODOR_BALANCE_PIN, HIGH);
+            log_int("i", i);
+            log_int("i_flipped", i_flipped);
             log_int("this_odor", this_odor);
             log_int("this_odor_flipped", this_odor_flipped);
             log_code(ODOR_ON); // odor on
-            odor_is_on[i] = true;
-            t_odor_on[i] = now();
+            odor_is_on[i_flipped] = true;
+            t_odor_on[i_flipped] = now();
             switch_odor_on[i] = false;
         }
 
@@ -128,11 +132,36 @@ void odor_valve_controller(){
         if (odor_is_on[i] == true && now() - t_odor_on[i] > odor_on_dur){
             odor_is_on[i] = false;
             digitalWrite(ODOR_PINS[i], LOW);
-            digitalWrite(ODOR_BALANCE_PIN, HIGH);
+            digitalWrite(ODOR_BALANCE_PIN, LOW);
             log_code(ODOR_OFF); // odor on
         }
     }
 }
+
+// void odor_valve_controller(){
+//     // the controller: iterate over all odorant valves and set their state accordingly
+//     for (int i = 0; i < N_ODORS; i++){
+//         if (odor_is_on[i] == false && switch_odor_on[i] == true){
+//             digitalWrite(ODOR_PINS[i], HIGH);
+//             digitalWrite(ODOR_BALANCE_PIN, HIGH);
+//             log_int("i", i);
+//             log_int("this_odor", this_odor);
+//             log_int("this_odor_flipped", this_odor_flipped);
+//             log_code(ODOR_ON); // odor on
+//             odor_is_on[i] = true;
+//             t_odor_on[i] = now();
+//             switch_odor_on[i] = false;
+//         }
+
+//         // turn off if on for long enough
+//         if (odor_is_on[i] == true && now() - t_odor_on[i] > odor_on_dur){
+//             odor_is_on[i] = false;
+//             digitalWrite(ODOR_PINS[i], LOW);
+//             digitalWrite(ODOR_BALANCE_PIN, LOW);
+//             log_code(ODOR_OFF); // odor on
+//         }
+//     }
+// }
 
 /*
  
@@ -449,8 +478,9 @@ void finite_state_machine() {
             if (current_state != last_state){
                 state_entry_common();
                 // FIXME do some logging here
-                this_odor_flipped = flip[odorflip][this_odor];
-                switch_odor_on[this_odor_flipped] = true;
+                // this_odor_flipped = flip[odorflip][this_odor];
+                // switch_odor_on[this_odor_flipped] = true;
+                switch_odor_on[this_odor] = true;
             }
 
             // exit
@@ -534,7 +564,17 @@ void setup() {
     //  Serial1.begin(115200); // serial line for receiving (processed) loadcell X,Y
     srand(random(0,10000));
 
-    Serial.println("<AArduino is ready to receive commands>");
+    // making sure the pins are set to output mode
+    for (int i = 0; i < N_ODORS; i++){
+        pinMode(ODOR_PINS[i], OUTPUT);
+    }
+    pinMode(ODOR_BALANCE_PIN, OUTPUT);
+    pinMode(REWARD_VALVE_PIN, OUTPUT);
+
+    // TTL COM w camera
+    pinMode(CAM_SYNC_PIN,OUTPUT);
+
+    Serial.println("<Arduino is ready to receive commands>");
     delay(1000);
 }
 
@@ -546,6 +586,7 @@ void loop() {
     // Controllers
     reward_valve_controller();
     odor_valve_controller();
+    sync_pin_controller();
 
     // sample sensors
     read_lick();
