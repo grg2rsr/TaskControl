@@ -215,13 +215,16 @@ class ArduinoController(QtWidgets.QWidget):
 
         # setting the valve calibration factor
         utils.printer("setting valve calibration factors", 'task')
-        valves = [key for key in dict(self.box).keys() if key.startswith('valve_')]
-        for valve in valves:
-            try:
-                utils.printer('setting calibration factor of valve: %s = %s' % (valve, self.box[valve]), 'msg')
-                self.VariableController.VariableEditWidget.set_entry(valve, self.box[valve])
-            except:
-                utils.printer("can't set valve calibration factors of valve %s" % valve, 'error')
+        if 'valves' in self.box.sections():
+            valves = dict(self.box['valves']).keys()
+            for valve in valves:
+                try:
+                    utils.printer('setting calibration factor of valve: %s = %s' % (valve, self.box['valves'][valve]), 'msg')
+                    self.VariableController.VariableEditWidget.set_entry(valve, self.box['valves'][valve])
+                except:
+                    utils.printer("can't set valve calibration factors of valve %s" % valve, 'error')
+        else:
+            utils.printer("no valves found in box config", 'msg')
 
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
