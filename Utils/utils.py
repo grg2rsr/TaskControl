@@ -88,17 +88,22 @@ def select(objs, key, value):
 def groupby_dict(Df, Dict):
     return Df.groupby(list(Dict.keys())).get_group(tuple(Dict.values()))
 
-def printer(s, mode='msg'):
+def printer(s, mode='msg', obj=None):
     if mode == 'msg':
-        print(Fore.GREEN + s)
+        string = Fore.GREEN + s
     if mode == 'task':
-        print(Fore.CYAN + "\n--- %s ---" % s)
+        string = Fore.CYAN + "\n--- %s ---" % s
     if mode == 'error':
-        print(Fore.RED + "ERROR: %s" % s)
+        string = Fore.RED + "ERROR: %s" % s
     if mode == 'warning':
-        print(Fore.YELLOW + "WARNING: %s" % s)
+        string = Fore.YELLOW + "WARNING: %s" % s
     if mode == 'debug':
-        print(Fore.MAGENTA + "DEBUG: %s" % s)
+        string = Fore.MAGENTA + "DEBUG: %s" % s
+
+    if obj is not None:
+        string = ': '.join(obj.name, string)
+        
+    print(string)
 
 def get_boxes(folder):
     boxes = []
