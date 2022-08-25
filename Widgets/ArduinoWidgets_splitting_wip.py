@@ -36,12 +36,23 @@ from Widgets.UtilityWidgets import ValueEditFormLayout
 """
 
 class ArduinoController(QtWidgets.QWidget):
-    def __init__(self, name, com_port, baud_rate, parent=None): # FIXME really now read up on this parent issue
+    def __init__(self, name, parent, config, task_config, box):
+        """ 
+        parent is the parent
+        config is the main config for the computer that runs the task
+        task_config is the section of the task_config.ini -> specific to this controller
+        box is box that is being used
+        """
+        
+        # regarding the parent issue
+        # see here https://stackoverflow.com/questions/30354166/what-is-parent-for-in-qt
+
+
         super(ArduinoController, self).__init__(parent=parent)
         self.name = name
-        self.com_port = com_port
-        self.baud_rate = baud_rate
-        self.connection = None
+        self.com_port = box['com_port']
+        self.baud_rate = box['baud_rate']
+        self.box = box
     
     def initUI(self):
         # reupload sketch
@@ -62,40 +73,41 @@ class ArduinoController(QtWidgets.QWidget):
         self.Full_Layout.addWidget(FormWidget)
 
         self.setLayout(self.Full_Layout)
-        self.setWindowTitle(self.name) # FIXME change to self.name
+        self.setWindowTitle(self.name) # FIXME change to self.name?
 
         # settings
-        self.settings = QtCore.QSettings('TaskControl', 'ArduinoController') # FIXME not sure how to handle this - try self.name
+        self.settings = QtCore.QSettings('TaskControl', 'ArduinoController') # FIXME not sure how to handle this - TODO try self.name
         self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
         pass
 
-    def upload(self):
-        # replace whatever com port is in the platformio.ini with the one from task config
-        # FIXME hardcode change
-        self.pio_config_path = self.task_folder / "Arduino" / "platformio.ini"
+    def upload(self, run_folder=None):
+        """ run_folder specifies the folder where a) all the files are written for the 
+        upload, and b) all data is being logged """
+
+        # update platformio.ini with the correct com port from the box config
+        task_folder = Path(self.config['paths']['tasks_folder']) / self.config['current']['task']
+        self.pio_config_path = task_folder / self.name / "platformio.ini"
         pio_config = configparser.ConfigParser()
         pio_config.read(self.pio_config_path)
-
-        # get upload port
-        upload_port = self.box['connections']['FSM_arduino_port'] # FIXME hardcode change
-
         for section in pio_config.sections():
             if section.split(":")[0] == "env":
-                pio_config.set(section, "upload_port", upload_port)
+                pio_config.set(section, "upload_port", self.box[self.name]['com_port'])
 
         # write it
         with open(self.pio_config_path, 'w') as fH:
             pio_config.write(fH)
 
-
         # upload
-        utils.printer("uploading code on arduino", 'task') # FIXME add name
+        utils.printer(self.name + " :uploading code", 'task')
         prev_dir = Path.cwd()
 
-        os.chdir(self.task_folder / 'Arduino') # FIXME change those hardcodes
-        fH = open(self.run_folder / 'platformio_build_log.txt', 'w')
+        os.chdir(task_folder / self.name)
+        if run_folder is not None:
+            fH = open(run_folder / 'platformio_build_log.txt', 'w')
+        else:
+            fH = None
         platformio_cmd = self.config['system']['platformio_cmd']
         cmd = ' '.join([platformio_cmd, 'run', '--target', 'upload'])
         proc = subprocess.Popen(cmd, shell=True, stdout=fH) # ,stderr=fH)
@@ -104,15 +116,14 @@ class ArduinoController(QtWidgets.QWidget):
 
         os.chdir(prev_dir)
 
-        utils.printer("done", 'msg')
+        utils.printer("done uploading", 'msg', self)
 
     def connect(self):
-        """ establish serial connection with the arduino board """
-        # FIXME change those
-        com_port = self.box['connections']['FSM_arduino_port']
-        baud_rate = self.box['connections']['arduino_baud_rate']
+        """ establish serial connection """
+        com_port = self.box[self.name]['com_port']
+        baud_rate = self.box[self.name]['baud_rate']
         try:
-            utils.printer("initializing serial port: " + com_port, 'message')
+            utils.printer("initializing serial port: " + com_port, 'message', self)
             # ser = serial.Serial(port=com_port, baudrate=baud_rate, timeout=2)
             connection = serial.Serial(
                 port=com_port,
@@ -129,7 +140,7 @@ class ArduinoController(QtWidgets.QWidget):
             return connection
 
         except:
-            utils.printer("failed to connect to the FSM arduino", 'error')
+            utils.printer("failed to connect!", 'error', self)
             sys.exit()
 
     def reset_arduino(self):
@@ -142,12 +153,12 @@ class ArduinoController(QtWidgets.QWidget):
     def disconnect(self):
         pass
 
-    def Run(self):
+    def run(self, run_folder): # this requires run_folder to be propagated upon clicking the button! but makes sense
         # upload
         if self.reprogramCheckBox.checkState() == 2: # true when checked
-            self.upload()
+            self.upload(run_folder)
         else:
-            utils.printer("reusing previously uploaded sketch", 'msg')
+            utils.printer("reusing previously uploaded sketch", 'msg', self)
             
         # connect to serial port
         self.connection = self.connect()
@@ -172,7 +183,8 @@ class ArduinoController(QtWidgets.QWidget):
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()
         # FIXME
-        utils.printer("FIXME %s" % self.box['connections']['FSM_arduino_port'], 'msg')
+        # utils.printer("FIXME %s" % self.box['connections']['FSM_arduino_port'], 'msg')
+        utils.printer("running",'msg', self)
 
     def closeEvent(self, event):
         # if serial connection is open, reset arduino and close it
@@ -200,32 +212,38 @@ class ArduinoController(QtWidgets.QWidget):
         self.settings.setValue("pos", self.pos())
 
         # take care of the kids
-        # for Child in self.Children:
-        #     Child.close()
-        # self.close()
-
-
-
-
-
-
-
-
-
-
-
-
+        for Child in self.Children:
+            Child.close()
+        self.close()
 
 
 
 class FSMController(ArduinoController):
+    """ controls an arduino that runs the specific FSM """
     def __init__(self):
         super(FSMController, self).__init__(parent=parent)
 
     def initUI(self):
+        """ run / halt buttons """
         pass
 
-    def run(self):
+    def uplad(self, run_folder):
+        # building interface
+        utils.printer("generating interface.cpp", 'task', self)
+        
+        try: # catch this exception for downward compatibility
+            utils.printer("generating interface from: %s" % self.vars_path, 'msg')
+            utils.printer("using as template: %s" % self.task_config['interface_template_fname'], 'msg')
+            interface_template_fname = self.task_config['interface_template_fname']
+            interface_generator.run(self.vars_path, interface_template_fname)
+        except KeyError:
+            utils.printer("generating interface based on %s" % self.vars_path, 'msg')
+            interface_generator.run(self.vars_path)
+
+        super(FSMController, self).run()
+
+    def run(self, run_folder):
+
         super(FSMController, self).run()
     
     def send(self):
@@ -245,7 +263,7 @@ class SerialMonitor(QtWidgets.QWidget):
     pass
 
 class FSMSerialMonitor(SerialMonitor):
-    # decodes
+    # implements decoding functionality if event code map is passed
     pass
 
 class ArduinoController(QtWidgets.QWidget):
@@ -368,16 +386,7 @@ class ArduinoController(QtWidgets.QWidget):
         """ uploads the sketch specified in platformio.ini
         which is in turn specified in the task_config.ini """
 
-        # building interface
-        # utils.printer("generating interface.cpp", 'task')
-        # try: # catch this exception for downward compatibility
-        #     utils.printer("generating interface from: %s" % self.vars_path, 'msg')
-        #     utils.printer("using as template: %s" % self.task_config['interface_template_fname'], 'msg')
-        #     interface_template_fname = self.task_config['interface_template_fname']
-        #     interface_generator.run(self.vars_path, interface_template_fname)
-        # except KeyError:
-        #     utils.printer("generating interface based on %s" % self.vars_path, 'msg')
-        #     interface_generator.run(self.vars_path)
+        
 
         # uploading code onto arduino
 
