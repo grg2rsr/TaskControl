@@ -57,7 +57,6 @@ void read_lick(){
     }
 }
 
-
 /*
 ##     ##    ###    ##       ##     ## ########
 ##     ##   ## ##   ##       ##     ## ##
@@ -184,14 +183,44 @@ void sync_pin_controller(){
     // switch on
     if (switch_sync_pin == true){
         digitalWrite(CAM_SYNC_PIN, HIGH);
+        digitalWrite(SCOPE_SYNC_PIN, HIGH);
         sync_pin_is_on = true;
         switch_sync_pin = false;
         t_last_sync_pin_on = now();
     }
+
     // switch off
     if (sync_pin_is_on == true && now() - t_last_sync_pin_on > sync_pulse_dur){
         digitalWrite(CAM_SYNC_PIN, LOW);
+        digitalWrite(SCOPE_SYNC_PIN, LOW);
         sync_pin_is_on = false;
+    }
+}
+
+
+bool frame_trig_state = false;
+bool frame_trig_high = false;
+
+void read_frame(){
+    if (armed == true){
+        if (digitalRead(FRAME_TRIG_PIN) == true && frame_trig_state == false){
+            frame_trig_state = true;
+            log_code(FRAME_EVENT);
+        }
+        if (digitalRead(FRAME_TRIG_PIN) == false && frame_trig_state == true){
+            frame_trig_state = false;
+        }
+    }
+} 
+
+void scope_controller(){
+    if (scope_start == true){
+        armed = true;
+        log_int("armed",armed);
+        digitalWrite(SCOPE_START_PIN, HIGH);
+        delay(5);
+        digitalWrite(SCOPE_START_PIN, LOW);
+        scope_start = false;
     }
 }
 
@@ -315,15 +344,15 @@ int sample(float* p_des, int* counts, int n, int trial_counter, int adj_trial_th
 
 // move these to new file?
 // these need to be redefined
-unsigned long CS_US_time_delay[] = {0, 150, 300, 600}; 
+unsigned long CS_US_time_delay[] = {0, 1500, 3000, 6000}; 
 float weights_delay[] = {0.25, 0.25, 0.25, 0.25}; 
 float reward_magnitudes[] = {1, 2.75, 4.5, 6.25, 8}; 
-float weights_distribution[] = {0.55, 0, 0.45};  // distributions -> either no distribution, unimodal or bimodal
+float weights_distribution[] = {1.0, 0, 0};  // distributions -> either no distribution, unimodal or bimodal
 float weights_uni[] = {0.125, 0.225, 0.3, 0.225, 0.125}; 
 float weights_bi[] = {0.25, 0.167, 0.167, 0.167, 0.25};
 
-int odor_uni = 1;
-int odor_bi = 2;
+int odor_uni = 4;
+int odor_bi = 4;
 
 int n_delays = sizeof(weights_delay) / sizeof(weights_delay[0]);
 int n_distribution = sizeof(weights_distribution) / sizeof(weights_distribution[0]);
@@ -432,7 +461,7 @@ void finite_state_machine() {
                     break;
                 }
                 else { // check for lick block
-                    if (now() - t_last_lick_on > this_lick_block_dur && is_licking == false){
+                    if (now() - t_last_lick_on > this_lick_block_dur && is_licking == false){ // should be t_last_lick_off!!!
                         current_state = TRIAL_ENTRY_STATE;
                         break;
                     }
@@ -453,9 +482,6 @@ void finite_state_machine() {
                 switch_sync_pin = true;
                 sync_pin_controller(); // and call sync controller for enhanced temp prec.
 
-                // determine the type of trial:
-                get_trial_type(); // updates this_correct_side
-
                 // check for context switch
                 if (trial_counter > context_switch_trial && !context_is_switched) {
                     context_is_switched = true;
@@ -463,6 +489,10 @@ void finite_state_machine() {
                     weights_delay[remove_stim_ix] = 0;
                     normalize_p(weights_delay, n_delays);
                 }
+
+                // determine the type of trial:
+                get_trial_type(); // updates this_correct_side
+
                 trial_counter++;
                 log_int("trial_counter", trial_counter);
             }
@@ -496,7 +526,8 @@ void finite_state_machine() {
             }
             break;
 
-        case REWARD_AVAILABLE_STATE:
+        case REWARD_AVAILABLE_STATE:           
+            
             // state entry
             if (current_state != last_state){
                 state_entry_common();
@@ -504,7 +535,7 @@ void finite_state_machine() {
             }
 
             // update
-            if (current_state != last_state){
+            if (current_state == last_state){
                 if (is_licking){
                     log_code(REWARD_COLLECTED_EVENT);
                     current_state = REWARD_STATE;
@@ -571,8 +602,12 @@ void setup() {
     pinMode(ODOR_BALANCE_PIN, OUTPUT);
     pinMode(REWARD_VALVE_PIN, OUTPUT);
 
+    pinMode(SCOPE_START_PIN, OUTPUT);
+    pinMode(FRAME_TRIG_PIN, INPUT);
+
     // TTL COM w camera
     pinMode(CAM_SYNC_PIN,OUTPUT);
+    pinMode(SCOPE_SYNC_PIN,OUTPUT);
 
     Serial.println("<Arduino is ready to receive commands>");
     delay(1000);
@@ -587,12 +622,16 @@ void loop() {
     reward_valve_controller();
     odor_valve_controller();
     sync_pin_controller();
+    scope_controller();
+
 
     // sample sensors
     read_lick();
+    read_frame();
 
     // serial communication with main PC
     getSerialData();
     processSerialData();
+
 
 }

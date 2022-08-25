@@ -38,6 +38,7 @@ unsigned int REWARD_MISSED_EVENT = 33;
 unsigned int ODOR_ON = 41;
 unsigned int ODOR_OFF = 42;
 
+unsigned int FRAME_EVENT = 99;
 // unsigned int FIRST_TIMING_CUE_EVENT = 50;
 // unsigned int SECOND_TIMING_CUE_EVENT = 51;
 

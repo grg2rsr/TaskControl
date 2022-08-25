@@ -12,12 +12,11 @@ char buf[numChars];
 boolean newData = false;
 bool verbose = true;
 bool run = false;
-bool deliver_reward = false;
-bool present_reward_cue = false;
+bool deliver_reward_left = false;
+bool deliver_reward_right = false;
+bool present_reward_left_cue = false;
+bool present_reward_right_cue = false;
 bool punish = false;
-
-bool scope_start = false;
-bool switch_odor_on[N_ODORS];
 
 int current_state = 0; // WATCH OUT this is ini state
 
@@ -123,6 +122,35 @@ void processSerialData() {
 
         }
 
+        // UPD - update trial probs - HARDCODED for now, n trials
+        // format UPD 0 0.031 or similar
+        // if (strcmp(mode,"UPD")==0){
+            
+        //     char line[len-4+1];
+        //     strlcpy(line, receivedChars+4, len-4+1);
+
+        //     // get index of space
+        //     len = sizeof(line)/sizeof(char);
+        //     unsigned int split = 0;
+        //     for (unsigned int i = 0; i < numChars; i++){
+        //         if (line[i] == ' '){
+        //             split = i;
+        //             break;
+        //         }
+        //     }
+
+        //     // split by space
+        //     char varname[split+1];
+        //     strlcpy(varname, line, split+1);
+
+        //     char varvalue[len-split+1];
+        //     strlcpy(varvalue, line+split+1, len-split+1);
+
+        //     int ix = atoi(varname);
+        //     float p = atof(varvalue);
+        //     p_interval[ix] = p;
+        // }
+
         // CMD
         if (strcmp(mode,"CMD")==0){
             char CMD[len-4+1];
@@ -142,31 +170,17 @@ void processSerialData() {
             }
 
             if (strcmp(CMD,"r")==0){
-                deliver_reward = true;
-                present_reward_cue = true;
+                deliver_reward_left = true;
+                present_reward_left_cue = true;
             }
 
-            if (strcmp(CMD,"1")==0){
-                switch_odor_on[1] = true;
+            if (strcmp(CMD,"t")==0){
+                deliver_reward_right = true;
+                present_reward_right_cue = true;
             }
 
-            if (strcmp(CMD,"2")==0){
-                switch_odor_on[2] = true;
-            }
-
-            if (strcmp(CMD,"3")==0){
-                switch_odor_on[3] = true;
-            }
-
-            if (strcmp(CMD,"4")==0){
-                switch_odor_on[4] = true;
-            }
-
-            if (strcmp(CMD,"0")==0){
-                switch_odor_on[0] = true;
-            }
-            if (strcmp(CMD,"s")==0){
-                scope_start = true;
+            if (strcmp(CMD,"p")==0){
+                punish = true;
             }
         }
 

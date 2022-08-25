@@ -1,12 +1,12 @@
 
-unsigned long odor_on_dur = 250;
+unsigned long odor_on_dur = 1000;
 // unsigned long ITI_dur_mean = 7000;
 // unsigned long ITI_dur_min = 7000;
 // unsigned long ITI_dur_max = 9000;
 
-unsigned long ITI_dur_min = 700;
-unsigned long ITI_dur_mean = 800;
-unsigned long ITI_dur_max = 900;
+unsigned long ITI_dur_min = 8000;
+unsigned long ITI_dur_mean = 9000;
+unsigned long ITI_dur_max = 10000;
 
 unsigned long Lick_block_dur_min = 7000;
 unsigned long Lick_block_dur_mean = 8000;
@@ -22,7 +22,8 @@ int odorflip = 0;
 float valve_ul_ms = 0.115;
 float reward_magnitude = 1.0
 
-int context_switch_trial = 200;
+int context_switch_trial = 1000;
 int remove_stim_ix = 0;
-int fixed_reward_ix = 0;
-int fixed_delay_ix = 0;
+int fixed_reward_ix = 2;
+int fixed_delay_ix = 2;
+int armed = 0;

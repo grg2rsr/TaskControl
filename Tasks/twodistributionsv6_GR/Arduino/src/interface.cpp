@@ -16,6 +16,7 @@ bool deliver_reward = false;
 bool present_reward_cue = false;
 bool punish = false;
 
+bool scope_start = false;
 bool switch_odor_on[N_ODORS];
 
 int current_state = 0; // WATCH OUT this is ini state
@@ -170,6 +171,10 @@ void processSerialData() {
             log_int("fixed_delay_ix", fixed_delay_ix);
         }
 
+        if (strcmp(varname,"armed")==0){
+            log_int("armed", armed);
+        }
+
         }
 
         // SET
@@ -272,6 +277,10 @@ void processSerialData() {
             fixed_delay_ix = atoi(varvalue);
         }
 
+        if (strcmp(varname,"armed")==0){
+            armed = atoi(varvalue);
+        }
+
         }
 
         // CMD
@@ -315,6 +324,9 @@ void processSerialData() {
 
             if (strcmp(CMD,"0")==0){
                 switch_odor_on[0] = true;
+            }
+            if (strcmp(CMD,"s")==0){
+                scope_start = true;
             }
         }
 
