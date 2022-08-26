@@ -284,7 +284,7 @@ class EventCounter(QtWidgets.QScrollArea):
         self.Model = dict(zip(self.events, np.zeros(len(self.events), dtype='int32')))
         
         for i,event in enumerate(self.events):
-            self.FormLayout.addRow(event, QtWidgets.QLabel('    0'))
+            self.FormLayout.addRow(event, QtWidgets.QLabel('%5i' % 0))
         
         for i in range(len(self.events)):
             widget = self.FormLayout.itemAt(i, 1).widget()
@@ -311,7 +311,7 @@ class EventCounter(QtWidgets.QScrollArea):
             # update
             i = self.events.index(event)
             widget = self.FormLayout.itemAt(i, 1).widget()
-            widget.setText("%s" % self.Model[event])
+            widget.setText("%5i" % self.Model[event])
 
     def init(self):
         self.OnlineDataAnalyser = self.parent().ArduinoController.OnlineDataAnalyser
