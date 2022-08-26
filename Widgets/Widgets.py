@@ -42,7 +42,7 @@ class SettingsWidget(QtWidgets.QWidget):
     # FIXME does not have parent? - fix inheritance from TaskControl
     def __init__(self, main, config):
         super(SettingsWidget, self).__init__()
-        self.config = config # a configparser dict
+        self.sys_config = config # a configparser dict
         self.Controllers = [] # a list of all controllers
         self.Counters = []
         self.main = main # ref to the main
@@ -69,8 +69,8 @@ class SettingsWidget(QtWidgets.QWidget):
         self.setLayout(FormLayout)
 
         # Box selector
-        boxes = utils.get_boxes(self.config['paths']['boxes_folder'])
-        self.box_name = self.config['last']['box']
+        boxes = utils.get_boxes(self.sys_config['paths']['boxes_folder'])
+        self.box_name = self.sys_config['last']['box']
         self.BoxChoiceWidget = StringChoiceWidget(self, choices=boxes)
         self.BoxChoiceWidget.currentIndexChanged.connect(self.box_changed)
         try:
@@ -82,8 +82,8 @@ class SettingsWidget(QtWidgets.QWidget):
         self.box_changed() # enforce call
 
         # animal selector
-        self.Animals = utils.get_Animals(self.config['paths']['animals_folder'])
-        last_id = self.config['last']['animal']
+        self.Animals = utils.get_Animals(self.sys_config['paths']['animals_folder'])
+        last_id = self.sys_config['last']['animal']
         self.Animal, = [Animal for Animal in self.Animals if Animal.ID == last_id]
         display_names = [animal.display() for animal in self.Animals]
         self.AnimalChoiceWidget = StringChoiceWidget(self, choices=display_names)
@@ -96,8 +96,8 @@ class SettingsWidget(QtWidgets.QWidget):
         FormLayout.addRow('Animal', self.AnimalChoiceWidget)
 
         # task selector
-        tasks = utils.get_tasks(self.config['paths']['tasks_folder'])
-        self.task = self.config['last']['task']
+        tasks = utils.get_tasks(self.sys_config['paths']['tasks_folder'])
+        self.task = self.sys_config['last']['task']
         self.TaskChoiceWidget = StringChoiceWidget(self, choices=tasks)
         self.TaskChoiceWidget.currentIndexChanged.connect(self.task_changed)
         try:
@@ -185,8 +185,8 @@ class SettingsWidget(QtWidgets.QWidget):
         self.settings.setValue("pos", self.pos())
 
         # store current to last
-        for key, value in self.config['current'].items():
-            self.config['last'][key] = value
+        for key, value in self.sys_config['current'].items():
+            self.sys_config['last'][key] = value
 
         self.main.exit()
 
@@ -255,16 +255,16 @@ class SettingsWidget(QtWidgets.QWidget):
     def box_changed(self):
         print("called")
         # update current box
-        self.config['current']['box'] = self.BoxChoiceWidget.get_value()
-        self.box_name = self.config['current']['box']
-        self.box = configparser.ConfigParser()
-        box_config_path = Path(self.config['paths']['boxes_folder']) / (self.box_name + '.ini')
-        self.box.read(box_config_path)
+        self.sys_config['current']['box'] = self.BoxChoiceWidget.get_value()
+        self.box_name = self.sys_config['current']['box']
+        self.box_config = configparser.ConfigParser()
+        box_config_path = Path(self.sys_config['paths']['boxes_folder']) / (self.box_name + '.ini')
+        self.box_config.read(box_config_path)
         utils.printer("selected Box: %s" % self.box_name, 'msg')
         
     def animal_changed(self):
         current_id = self.AnimalChoiceWidget.get_value().split(' - ')[0]
-        self.config['current']['animal'] = current_id
+        self.sys_config['current']['animal'] = current_id
         self.Animal, = [Animal for Animal in self.Animals if Animal.ID == current_id]
 
         # TODO bring back via a button
@@ -273,7 +273,7 @@ class SettingsWidget(QtWidgets.QWidget):
         #     self.AnimalInfoWidget.close()
         #     self.Children.remove(self.AnimalInfoWidget)
 
-        # self.AnimalInfoWidget = AnimalInfoWidget(self, self.config, self.Animal)
+        # self.AnimalInfoWidget = AnimalInfoWidget(self, self.sys_config, self.Animal)
         # self.Children.append(self.AnimalInfoWidget)
 
         utils.printer("Animal: %s" % self.Animal.display(),'msg')
@@ -286,9 +286,9 @@ class SettingsWidget(QtWidgets.QWidget):
 
         else:
             # update current task
-            self.config['current']['task'] = self.TaskChoiceWidget.get_value()
-            self.task = self.config['current']['task']
-            self.task_folder = Path(self.config['paths']['tasks_folder']) / self.task
+            self.sys_config['current']['task'] = self.TaskChoiceWidget.get_value()
+            self.task = self.sys_config['current']['task']
+            self.task_folder = Path(self.sys_config['paths']['tasks_folder']) / self.task
             utils.printer("selected Task: %s" % self.task, 'msg')
 
             # parse task config file
@@ -312,22 +312,26 @@ class SettingsWidget(QtWidgets.QWidget):
 
                 if section == 'Arduino':
                     from Widgets.ArduinoWidgets import ArduinoController
-                    self.ArduinoController = ArduinoController(self, self.config, self.task_config['Arduino'], self.box)
+                    self.ArduinoController = ArduinoController(self, self.sys_config, self.task_config['Arduino'], self.box_config)
                     self.Controllers.append(self.ArduinoController)
 
                 if section == 'Bonsai':
                     from Widgets.BonsaiWidgets import BonsaiController
-                    self.BonsaiController = BonsaiController(self, self.config, self.task_config['Bonsai'], self.box)
+                    self.BonsaiController = BonsaiController(self, self.sys_config, self.task_config['Bonsai'], self.box_config)
                     self.Controllers.append(self.BonsaiController)
 
+                if section == 'TimeLogger':
+                    from Widgets.TimeLogger import TimeLogger
+                    self.TimeLoggerController = TimeLogger(self, self.sys_config, self.task_config['TimeLogger'], self.box_config)
+                    self.Controllers.append(self.TimeLoggerController)
                 # if section == 'CameraCalib':
                 #     from Widgets.CameraCalibrationWidget import CameraCalibrationWidget
-                #     self.CamCalib = CameraCalibrationWidget(self, self.config, self.task_config['CameraCalib'])
+                #     self.CamCalib = CameraCalibrationWidget(self, self.sys_config, self.task_config['CameraCalib'])
                     # self.Controllers.append(self.CamCalib)
 
                 # if section == 'LoadCell':
                     # from LoadCellWidgets import LoadCellController
-                #     self.LoadCellController = LoadCellController(self, self.config, self.task_config['LoadCell'])
+                #     self.LoadCellController = LoadCellController(self, self.sys_config, self.task_config['LoadCell'])
                 #     self.Controllers.append(self.LoadCellController)
 
                 # if section == 'Display':
@@ -337,35 +341,6 @@ class SettingsWidget(QtWidgets.QWidget):
             # after controllers, reinit counter
             self.init_counters()
 
-            # positioning
-            # self.position_widgets()
-
-    # def position_widgets(self):
-    #     print(self.size())
-    #     # policy = QtCore.Q
-    #     self.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed,
-    #                                              QtWidgets.QSizePolicy.Fixed))
-    #     # position controllers
-    #     # gap = int(self.config['ui']['small_gap'])
-    #     # utils.tile_Widgets([self] + self.Controllers, how="horizontally", gap=gap)
-    #     # for Controller in self.Controllers:
-    #     #     Controller.position()
-
-    #     # position counters
-    #     # gap = int(self.config['ui']['small_gap'])
-    #     # utils.scale_Widgets([self] + self.Counters, how="vertical", mode='min')
-    #     # utils.tile_Widgets([self] + self.Counters, how="vertically", gap=gap)
-
-
-    #     # def position(self):
-    #     #     # positioning on screen
-    #     #     gap = int(self.config['ui']['small_gap'])
-
-    #     #     # controllers
-    #     #     utils.tile_Widgets([self] + self.Controllers, how="horizontally", gap=gap)
-    #     #     for Controller in self.Controllers:
-    #     #         Controller.position()
-    #     pass
 
 """
  
@@ -384,7 +359,7 @@ class AnimalInfoWidget(QtWidgets.QWidget):
     def __init__(self, parent, config, Animal):
         super(AnimalInfoWidget, self).__init__(parent=parent)
         self.setWindowFlags(QtCore.Qt.Window)
-        self.config = config
+        self.sys_config = config
         self.Animal = Animal
         self.initUI()
 

@@ -21,7 +21,7 @@ class TaskControlApp(QtWidgets.QApplication):
         self.Settings_Widget = SettingsWidget(self, self.config)
 
         # hack - store default box settings
-        self.default_box_config = self.config['box']
+        # self.default_box_config = self.config['box']
 
         # on close - TODO check if obsolete with proper QT parent child structure
         self.setQuitOnLastWindowClosed(False)
@@ -30,8 +30,8 @@ class TaskControlApp(QtWidgets.QApplication):
 
     def onLastClosed(self):
         # restore box defaults
-        for key, value in self.default_box_config.items():
-            self.config['box'][key] = value
+        # for key, value in self.default_box_config.items():
+        #     self.config['box'][key] = value
 
         # write current config to disk
         with open(self.config_path, 'w') as fH:
@@ -40,7 +40,7 @@ class TaskControlApp(QtWidgets.QApplication):
 
 if __name__ == "__main__":
     import argparse
-    config_path = Path("configs")  / "config_box1.ini" # config ini has to be a local link
+    config_path = Path("configs")  / "config_open_lab_teensy.ini" # config ini has to be a local link
     
     # argparsing
     parser = argparse.ArgumentParser(description=' xXx Unified TaskControl xXx ')

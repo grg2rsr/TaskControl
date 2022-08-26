@@ -43,15 +43,15 @@ class ArduinoController(QtWidgets.QWidget):
     # here: https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html
     # and here: https://stackoverflow.com/questions/2970312/pyqt4-qtcore-pyqtsignal-object-has-no-attribute-connect
 
-    def __init__(self, parent, config, task_config, box):
+    def __init__(self, parent, sys_config, task_config, box_config):
         super(ArduinoController, self).__init__(parent=parent)
         self.name = "ArduinoController"
         
         # the original folder of the task
-        self.task_folder = Path(config['paths']['tasks_folder']) / config['current']['task']
-        self.config = config # this is just the paths
+        self.task_folder = Path(sys_config['paths']['tasks_folder']) / sys_config['current']['task']
+        self.sys_config = sys_config # this is just the paths
         self.task_config = task_config # this is the section of the task_config.ini ['Arduino']
-        self.box = box # this now holds all the connections
+        self.box_config = box_config # this now holds all the connections
 
         self.Children = []
 
@@ -69,7 +69,7 @@ class ArduinoController(QtWidgets.QWidget):
         # set up online data analyzer if defined in task_config
         if 'OnlineAnalysis' in dict(self.parent().task_config).keys():
             online_config = self.parent().task_config['OnlineAnalysis']
-            self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, config=online_config)
+            self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, online_config=online_config)
             
         # open serial monitor
         self.SerialMonitor = SerialMonitorWidget(self, code_map=self.code_map)
@@ -142,7 +142,7 @@ class ArduinoController(QtWidgets.QWidget):
             if self.connection.is_open:
                 self.connection.write(bytestr)
         else:
-            utils.printer("Arduino is not connected", 'error')
+            utils.printer("%s is not connected" % self.name, 'error')
 
     def send_raw(self, bytestr):
         """ sends bytestring """
@@ -150,7 +150,7 @@ class ArduinoController(QtWidgets.QWidget):
             if self.connection.is_open:
                 self.connection.write(bytestr)
         else:
-            utils.printer("Arduino is not connected", 'error')
+            utils.printer("%s is not connected" % self.name, 'error')
 
     def run_btn_clicked(self):
         if self.RunBtn.isChecked():
@@ -195,7 +195,7 @@ class ArduinoController(QtWidgets.QWidget):
         pio_config.read(self.pio_config_path)
 
         # get upload port
-        upload_port = self.box['connections']['FSM_arduino_port']
+        upload_port = self.box_config['FSM']['com_port']
 
         for section in pio_config.sections():
             if section.split(":")[0] == "env":
@@ -215,12 +215,12 @@ class ArduinoController(QtWidgets.QWidget):
 
         # setting the valve calibration factor
         utils.printer("setting valve calibration factors", 'task')
-        if 'valves' in self.box.sections():
-            valves = dict(self.box['valves']).keys()
+        if 'valves' in self.box_config.sections():
+            valves = dict(self.box_config['valves']).keys()
             for valve in valves:
                 try:
-                    utils.printer('setting calibration factor of valve: %s = %s' % (valve, self.box['valves'][valve]), 'msg')
-                    self.VariableController.VariableEditWidget.set_entry(valve, self.box['valves'][valve])
+                    utils.printer('setting calibration factor of valve: %s = %s' % (valve, self.box_config['valves'][valve]), 'msg')
+                    self.VariableController.VariableEditWidget.set_entry(valve, self.box_config['valves'][valve])
                 except:
                     utils.printer("can't set valve calibration factors of valve %s" % valve, 'error')
         else:
@@ -235,7 +235,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         os.chdir(self.task_folder / 'Arduino')
         fH = open(self.run_folder / 'platformio_build_log.txt', 'w')
-        platformio_cmd = self.config['system']['platformio_cmd']
+        platformio_cmd = self.sys_config['system']['platformio_cmd']
         cmd = ' '.join([platformio_cmd, 'run', '--target', 'upload'])
         proc = subprocess.Popen(cmd, shell=True, stdout=fH) # ,stderr=fH)
         proc.communicate()
@@ -247,13 +247,13 @@ class ArduinoController(QtWidgets.QWidget):
         shutil.copy(self.vars_path.with_suffix('.default'), self.vars_path)
         os.remove(self.vars_path.with_suffix('.default'))
 
-        utils.printer("done", 'msg')
+        utils.printer("upload successful", 'msg')
 
     def log_task(self, folder):
         """ copy the entire arduino folder to the logging folder """
         utils.printer("logging arduino code", 'task')
         src = self.task_folder
-        target = folder / self.config['current']['task']
+        target = folder / self.sys_config['current']['task']
         shutil.copytree(src, target)
 
     def reset_arduino(self, connection):
@@ -265,10 +265,10 @@ class ArduinoController(QtWidgets.QWidget):
         
     def connect(self):
         """ establish serial connection with the arduino board """
-        com_port = self.box['connections']['FSM_arduino_port']
-        baud_rate = self.box['connections']['arduino_baud_rate']
+        com_port = self.box_config['FSM']['com_port']
+        baud_rate = self.box_config['FSM']['baud_rate']
         try:
-            utils.printer("initializing serial port: " + com_port, 'message')
+            utils.printer("initializing serial port: " + com_port, 'msg')
             # ser = serial.Serial(port=com_port, baudrate=baud_rate, timeout=2)
             connection = serial.Serial(
                 port=com_port,
@@ -347,7 +347,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()
-        utils.printer("listening to FSM arduino on serial port %s" % self.box['connections']['FSM_arduino_port'], 'msg')
+        utils.printer("listening to FSM arduino on serial port %s" % self.box_config['FSM']['com_port'], 'msg')
 
         # start timer
         for counter in self.parent().Counters:
@@ -381,7 +381,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         # overwrite logged arduino vars file
         if hasattr(self, 'run_folder'):
-            target = self.run_folder / self.config['current']['task']  / 'Arduino' / 'src' / 'interface_variables.h'
+            target = self.run_folder / self.sys_config['current']['task']  / 'Arduino' / 'src' / 'interface_variables.h'
             if target.exists(): # bc close event is also triggered on task_changed
                 self.VariableController.write_variables(target)
 
@@ -482,13 +482,13 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
     def load_last_vars(self):
         """ try to get arduino variables from last run for the task 
         only loads, does not send! """
-        config = self.parent().config
+        sys_config = self.parent().sys_config
 
-        folder = Path(config['paths']['animals_folder']) / config['current']['animal']
+        folder = Path(sys_config['paths']['animals_folder']) / sys_config['current']['animal']
         SessionsDf = utils.get_sessions(folder)
 
         try:
-            previous_sessions = SessionsDf.groupby('task').get_group(config['current']['task'])
+            previous_sessions = SessionsDf.groupby('task').get_group(sys_config['current']['task'])
         except KeyError:
             utils.printer("trying to use last vars, but animal has not been run on this task before.",'error')
             return None
@@ -501,7 +501,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
         try:
             prev_session_path = Path(previous_sessions.iloc[ix]['path'])
-            prev_vars_path = prev_session_path / config['current']['task'] / "Arduino" / "src" / "interface_variables.h"
+            prev_vars_path = prev_session_path / sys_config['current']['task'] / "Arduino" / "src" / "interface_variables.h"
             if prev_vars_path.exists():
                 prev_vars = utils.parse_arduino_vars(prev_vars_path)
                 return prev_vars
@@ -628,17 +628,17 @@ class OnlineDataAnalyser(QtCore.QObject):
     trial_data_available = QtCore.pyqtSignal(pd.DataFrame, pd.DataFrame)
     decoded_data_available = QtCore.pyqtSignal(str)
 
-    def __init__(self, parent, CodesDf, config=None):
+    def __init__(self, parent, CodesDf, online_config=None):
         super(OnlineDataAnalyser, self).__init__(parent=parent)
         self.parent = parent
-        self.config = config
+        self.online_config = online_config
         
         self.CodesDf = CodesDf # required, path could be set in online analysis
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
         # get metrics
         try:
-            metrics = [m.strip() for m in self.config['online_metrics'].split(',')]
+            metrics = [m.strip() for m in self.online_config['online_metrics'].split(',')]
             mod = importlib.import_module('Utils.metrics')
             self.Metrics = [getattr(mod, metric) for metric in metrics]
         except KeyError:
@@ -646,12 +646,12 @@ class OnlineDataAnalyser(QtCore.QObject):
 
         # events
         try:
-            self.new_trial_event = self.config['new_trial_event']
+            self.new_trial_event = self.online_config['new_trial_event']
         except KeyError:
             self.new_trial_event = None
         
         try:
-            self.reward_events = [event.strip() for event in config['reward_event'].split(',')]
+            self.reward_events = [event.strip() for event in self.online_config['reward_event'].split(',')]
         except KeyError:
             self.reward_events = None
         
