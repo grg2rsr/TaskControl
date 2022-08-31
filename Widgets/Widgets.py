@@ -35,10 +35,9 @@ from Widgets.UtilityWidgets import StringChoiceWidget, ValueEditFormLayout, Pand
 
 class SettingsWidget(QtWidgets.QWidget):
     """
-    The main toplevel widget. Is parent of all controllers. Brings together all animal and task related information
-    some design notes:
-    each user has a profile which points to the folder of tasks and animals
+    toplevel UI element that is parent of everything else
     """
+
     # FIXME does not have parent? - fix inheritance from TaskControl
     def __init__(self, main, config):
         super(SettingsWidget, self).__init__()
@@ -48,7 +47,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.main = main # ref to the main
 
         # flags
-        self.running = False
+        self.is_running = False
 
         # Settings - to store window positions
         self.settings = QtCore.QSettings('TaskControl','SettingsWidget')
@@ -76,7 +75,7 @@ class SettingsWidget(QtWidgets.QWidget):
         try:
             self.BoxChoiceWidget.set_value(self.box_name)
         except:
-            # if task is not in list
+            # if box is not in list
             self.BoxChoiceWidget.set_value(boxes[0])
         FormLayout.addRow('Box', self.BoxChoiceWidget)
         self.box_changed() # enforce call
@@ -133,6 +132,7 @@ class SettingsWidget(QtWidgets.QWidget):
         FormLayout.addRow(self.online_vis_btn)
         self.online_vis_btn.setEnabled(False)
        
+        # TODO this seems obsolete? investigate
         # calling animal changed again to trigger correct positioning
         # self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
         # self.AnimalChoiceWidget.set_value(self.Animal.display())
@@ -156,6 +156,8 @@ class SettingsWidget(QtWidgets.QWidget):
                     utils.printer("initializing counter: %s" % counter, 'msg')
 
     def start_online_vis(self):
+        # TODO implement me
+
         # needs to 
         # cwd = os.getcwd()
         # os.chdir(self.task_folder)
@@ -171,12 +173,14 @@ class SettingsWidget(QtWidgets.QWidget):
     def closeEvent(self,event):
         """ reimplementation of closeEvent """
 
+        # if this widget is parent of all others, is this explicit calling necessary?
         for Controller in self.Controllers:
             Controller.close()
 
         for Counter in self.Counters:
             Counter.close()
 
+        # why is this not in Controllers?
         if hasattr(self,'CamCalib'):
             self.CamCalib.close()
 
@@ -196,8 +200,9 @@ class SettingsWidget(QtWidgets.QWidget):
         initialize folder structure
         runs all controllers
         """
+
         # flags
-        self.running = True
+        self.is_running = True
         
         # UI related
         self.RunBtn.setEnabled(False)
@@ -214,22 +219,24 @@ class SettingsWidget(QtWidgets.QWidget):
         utils.printer("Animal: %s - body weight: %s%%" % (self.Animal.display(), self.Animal.weight_ratio()),'msg')
 
         # make folder structure
-        date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # underscores in times bc colons kill windows paths ...
+        date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # cross platform compatible
         self.run_folder = self.Animal.folder  / '_'.join([date_time, self.task])
         os.makedirs(self.run_folder, exist_ok=True)
 
+        # run all controllers
         for Controller in self.Controllers:
             utils.printer("running controller: %s" % Controller.name, 'msg')
             Controller.Run(self.run_folder)
 
         # reset and start the counters
         for Counter in self.Counters:
+            utils.printer("initializing counter: %s" % Counter.name, 'msg')
             Counter.init()
 
     def Done(self):
         """ finishing the session """
         # Flags
-        self.running = False
+        self.is_running = False
 
         # UI
         self.DoneBtn.setEnabled(False)
@@ -280,7 +287,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
     def task_changed(self):
         # first check if task is running, if yes, don't do anything
-        if self.running == True:
+        if self.is_running == True:
             utils.printer("trying to change a running task", 'error')
             return None
 
@@ -310,9 +317,9 @@ class SettingsWidget(QtWidgets.QWidget):
             for section in self.task_config.sections():
                 utils.printer("initializing %s" % section, 'msg')
 
-                if section == 'Arduino':
-                    from Widgets.ArduinoWidgets import ArduinoController
-                    self.ArduinoController = ArduinoController(self, self.sys_config, self.task_config['Arduino'], self.box_config)
+                if section == 'FSM':
+                    from Widgets.ArduinoWidgets2 import ArduinoController
+                    self.ArduinoController = ArduinoController(self, self.sys_config, self.task_config['FSM'], self.box_config)
                     self.Controllers.append(self.ArduinoController)
 
                 if section == 'Bonsai':
@@ -321,9 +328,10 @@ class SettingsWidget(QtWidgets.QWidget):
                     self.Controllers.append(self.BonsaiController)
 
                 if section == 'TimeLogger':
-                    from Widgets.TimeLogger import TimeLogger
+                    from Widgets.TimeLogger2 import TimeLogger
                     self.TimeLoggerController = TimeLogger(self, self.sys_config, self.task_config['TimeLogger'], self.box_config)
                     self.Controllers.append(self.TimeLoggerController)
+                    
                 # if section == 'CameraCalib':
                 #     from Widgets.CameraCalibrationWidget import CameraCalibrationWidget
                 #     self.CamCalib = CameraCalibrationWidget(self, self.sys_config, self.task_config['CameraCalib'])

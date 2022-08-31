@@ -21,7 +21,180 @@ from scripts import interface_generator
 from Utils import behavior_analysis_utils as bhv
 
 from Widgets.UtilityWidgets import ValueEditFormLayout
+from Widgets.Connections import SerialConnection, SerialMonitorWidget
 
+class FSMSerialConnection(SerialConnection):
+    """ extents SerialConnection by: the hardcoded protocol of communictaion
+    -> to be replaced with the more general convention of ?VAR and VAR= """
+
+    def __init__(self, parent, com_port, baud_rate):
+        super(FSMSerialConnection, self).__init__(parent, com_port, baud_rate)
+        # self.name = parent.name
+
+    def query(self, var_name):
+        # here? yes - the implementation should be abstracted away in the 
+        # actual VariableController
+        #cmd = "?%s" % var_name
+        cmd = "GET %s" % var_name
+        self.send(cmd)
+
+    def send(self, command):
+        """ sends string command interface to arduino, interface compatible """
+        if hasattr(self, 'connection'):
+            if self.connection.is_open:
+                cmd = '<'+command+'>'
+                # bytestring conversion
+                bytestr = str.encode(cmd)
+                self.connection.write(bytestr)
+        else:
+            # TODO be more explicit what failed to be sent
+            utils.printer("%s is not connected" % self.name, 'error')
+
+    def send_variable(self, name, value):
+        if hasattr(self, 'connection'):
+            if self.connection.is_open:
+                # report
+                utils.printer("sending variable %s: %s" % (name, value))
+
+                # this is the hardcoded command sending definition
+                # cmd = '<SET %s %s>' % (name, value) 
+                # cmd = "%s=%s" % (name, value) # for the future
+                cmd = 'SET %s %s' % (name, value) 
+                self.send(cmd)
+                time.sleep(0.05) # grace period to guarantee successful sending
+
+    def run_FSM(self):
+        self.send('CMD RUN')
+
+    def halt_FSM(self):
+        self.send('CMD HALT')
+
+    def send_keystroke(self, key):
+        self.send("CMD " + key)
+
+"""
+ 
+  #######  ##    ## ##       #### ##    ## ########       ###    ##    ##    ###    ##       ##    ##  ######  ####  ######  
+ ##     ## ###   ## ##        ##  ###   ## ##            ## ##   ###   ##   ## ##   ##        ##  ##  ##    ##  ##  ##    ## 
+ ##     ## ####  ## ##        ##  ####  ## ##           ##   ##  ####  ##  ##   ##  ##         ####   ##        ##  ##       
+ ##     ## ## ## ## ##        ##  ## ## ## ######      ##     ## ## ## ## ##     ## ##          ##     ######   ##   ######  
+ ##     ## ##  #### ##        ##  ##  #### ##          ######### ##  #### ######### ##          ##          ##  ##        ## 
+ ##     ## ##   ### ##        ##  ##   ### ##          ##     ## ##   ### ##     ## ##          ##    ##    ##  ##  ##    ## 
+  #######  ##    ## ######## #### ##    ## ########    ##     ## ##    ## ##     ## ########    ##     ######  ####  ######  
+ 
+"""
+
+class OnlineFSMDecoder(QtCore.QObject):
+    decoded_data_available = QtCore.pyqtSignal(str)
+    var_data_available = QtCore.pyqtSignal(str,str)
+    other_data_available = QtCore.pyqtSignal(str)
+
+    def __init__(self, parent, CodesDf):
+        super(OnlineFSMDecoder, self).__init__(parent=parent)
+        self.name = "%s-OnlineFSMDecoder" % parent.name
+      
+        self.CodesDf = CodesDf # required, path could be set in online analysis
+        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
+
+    def on_data(self, line):
+        """ decodes """
+        try:
+            if line.startswith('<') and not line.startswith('<VAR'):
+                self.other_data_available.emit(line)
+
+            if line.startswith('<VAR'):
+                line_split = line[1:-1].split(' ')
+                name = line_split[1]
+                value = line_split[2]
+                self.var_data_available.emit(name, value)
+
+            if not line.startswith('<'):
+                code, t = line.split('\t')
+                decoded = self.code_map[code]
+
+                # publish
+                decoded_line = '\t'.join([decoded, t])
+                self.decoded_data_available.emit(decoded_line)
+        except:
+            utils.printer("could not decode line: %s" % line, "error")
+
+class OnlineFSMAnalyser(QtCore.QObject):
+    """ listens to serial port, analyzes arduino data as it comes in """
+    trial_data_available = QtCore.pyqtSignal(pd.DataFrame, pd.DataFrame)
+
+    def __init__(self, parent, FSMDecoder, online_config=None):
+        super(OnlineFSMAnalyser, self).__init__(parent=parent)
+        self.parent = parent
+        self.FSMDecoder = FSMDecoder
+        self.online_config = online_config
+        self.name = "%s-OnlineFSMAnalyser" % parent.name
+        
+        # get metrics
+        try:
+            metrics = [m.strip() for m in self.online_config['online_metrics'].split(',')]
+            mod = importlib.import_module('Utils.metrics')
+            self.Metrics = [getattr(mod, metric) for metric in metrics]
+        except KeyError:
+            self.Metrics = None
+            utils.printer("%s attempted to load online metrics, but failed" % self.name,"error")
+
+        # events
+        try:
+            self.new_trial_event = self.online_config['new_trial_event']
+        except KeyError:
+            self.new_trial_event = None
+            utils.printer("%s attempted to load new trial event, but failed" % self.name,"error")
+        
+        try:
+            self.reward_events = [event.strip() for event in self.online_config['reward_event'].split(',')]
+        except KeyError:
+            self.reward_events = None
+            utils.printer("%s attempted to load reward event, but failed" % self.name,"error")
+        
+        self.lines = []
+        self.SessionDf = None
+    
+    def run(self):
+        # needed like this because of init order
+        # FIXME TODO
+        # self.parent.serial_data_available.connect(self.update)
+        self.FSMDecoder.decoded_data_available.connect(self.update)
+
+    def parse(self, decoded_line):
+        event, t = decoded_line.split('\t')
+        t = int(t)
+        return event, t
+
+    def update(self, decoded_line):
+        self.lines.append(decoded_line)
+
+        event, t = self.parse(decoded_line)
+        # the event that separates the stream of data into chunks of trials
+        if event == self.new_trial_event:
+
+            # parse lines
+            TrialMetricsDf = None
+            try:
+                TrialDf = bhv.parse_lines(self.lines, code_map=None, parse_var=True)
+                # TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map, parse_var=True)
+                TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
+            except ValueError:  # TODO - investigate this! this was added with cue on reach and no mistakes
+                utils.printer('%s failed parse of lines into TrialDf' % self.name, 'error')
+                # utils.debug_trace()
+                pass 
+            
+            if TrialMetricsDf is not None:
+                if self.SessionDf is None: # on first
+                    self.SessionDf = TrialMetricsDf
+                else:
+                    self.SessionDf = pd.concat([self.SessionDf, TrialMetricsDf])
+                    self.SessionDf = self.SessionDf.reset_index(drop=True)
+
+                # emit data
+                self.trial_data_available.emit(TrialDf, TrialMetricsDf)
+
+                # restart lines with current line
+                self.lines = [decoded_line]
 
 """
  
@@ -37,7 +210,7 @@ from Widgets.UtilityWidgets import ValueEditFormLayout
 
 class ArduinoController(QtWidgets.QWidget):
     # initialize signals
-    serial_data_available = QtCore.pyqtSignal(str)
+    # serial_data_available = QtCore.pyqtSignal(str)
 
     # for an explanation how this works and behaves see
     # here: https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html
@@ -53,51 +226,65 @@ class ArduinoController(QtWidgets.QWidget):
         self.task_config = task_config # this is the section of the task_config.ini ['Arduino']
         self.box_config = box_config # this now holds all the connections
 
-        self.Children = []
-
-        # VariableController
-        self.vars_path = self.task_folder / 'Arduino' / 'src' / "interface_variables.h"
-
-        # Df = utils.parse_arduino_vars(self.vars_path) # initialize with the default variables
-        self.VariableController = ArduinoVariablesWidget(self)
-        self.Children.append(self.VariableController)
-
+        # TODO remove this hardcode, external into .ini
+        # also think about if this is the right place
         events_path = self.task_folder / 'Arduino' / 'src' / 'event_codes.h'
         CodesDf = utils.parse_code_map(events_path)
         self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
+        # Online decoder - resolves the codes into the event names
+        self.FSMDecoder = OnlineFSMDecoder(self, CodesDf)
+
+        # Online analyzer - builds on top of the decoder
         # set up online data analyzer if defined in task_config
-        if 'OnlineAnalysis' in dict(self.parent().task_config).keys():
-            online_config = self.parent().task_config['OnlineAnalysis']
-            self.OnlineDataAnalyser = OnlineDataAnalyser(self, CodesDf, online_config=online_config)
+        # TODO FIXME
+        # if 'OnlineAnalysis' in dict(self.parent().task_config).keys(): # ugly AF
+        online_config = self.parent().task_config['OnlineAnalysis']
+        self.OnlineFSMAnalyser = OnlineFSMAnalyser(self, self.FSMDecoder, online_config=online_config)
             
-        # open serial monitor
-        self.SerialMonitor = SerialMonitorWidget(self, code_map=self.code_map)
-        self.Children.append(self.SerialMonitor)
+        # Serial
+        com_port = self.box_config['FSM']['com_port']
+        baud_rate = int(self.box_config['FSM']['baud_rate'])
+        self.Serial = FSMSerialConnection(self, com_port, baud_rate)
+        self.SerialMonitor = SerialMonitorWidget(self)
+        self.Serial.data_available.connect(self.FSMDecoder.on_data)
+        self.FSMDecoder.decoded_data_available.connect(self.SerialMonitor.on_data)
+        self.FSMDecoder.other_data_available.connect(self.SerialMonitor.on_data)
+
+        # VariableController
+        # TODO remove this hardcode, external into .ini
+        self.vars_path = self.task_folder / 'Arduino' / 'src' / "interface_variables.h"
+        self.VariableController = ArduinoVariablesWidget(self)
 
         # Statemachine Monitor
-        self.StateMachineMonitor = StateMachineMonitorWidget(self, code_map=self.code_map)
-        self.Children.append(self.StateMachineMonitor)
-        
+        # self.StateMachineMonitor = StateMachineMonitorWidget(self, code_map=self.code_map)
         self.initUI()
     
     def initUI(self):
         # the formlayout
         self.setWindowFlags(QtCore.Qt.Window)
-        self.FormLayout = QtWidgets.QFormLayout()
-        self.FormLayout.setVerticalSpacing(10)
-        self.FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
+
+        self.Layout = QtWidgets.QVBoxLayout(self)
+        
+        self.ConnectionLabel = QtWidgets.QLabel()
+        self.ConnectionLabel.setText('not connected')
+        self.ConnectionLabel.setStyleSheet("background-color: gray")
+        self.ConnectionLabel.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.Layout.addWidget(self.ConnectionLabel)
+
+        FormLayout = QtWidgets.QFormLayout()
+        FormLayout.setVerticalSpacing(10)
+        FormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
 
         # reprogram
         self.reprogramCheckBox = QtWidgets.QCheckBox("reupload sketch")
         self.reprogramCheckBox.setChecked(True)
-        self.FormLayout.addRow(self.reprogramCheckBox)
+        FormLayout.addRow(self.reprogramCheckBox)
 
         FormWidget = QtWidgets.QWidget()
-        FormWidget.setLayout(self.FormLayout)
-
-        Full_Layout = QtWidgets.QVBoxLayout()
-        Full_Layout.addWidget(FormWidget)
+        FormWidget.setLayout(FormLayout)
+        self.Layout.addWidget(FormWidget)
 
         # start/stop button
         self.RunBtn = QtWidgets.QPushButton()
@@ -105,7 +292,7 @@ class ArduinoController(QtWidgets.QWidget):
         self.RunBtn.setCheckable(True)
         self.RunBtn.setText('Run')
         self.RunBtn.clicked.connect(self.run_btn_clicked)
-        Full_Layout.addWidget(self.RunBtn)
+        self.Layout.addWidget(self.RunBtn)
 
         # direct interaction
         self.SendLine = QtWidgets.QLineEdit()
@@ -115,13 +302,13 @@ class ArduinoController(QtWidgets.QWidget):
         Layout = QtWidgets.QHBoxLayout()
         Layout.addWidget(self.SendLine)
         Layout.addWidget(SendBtn)
-        Full_Layout.addLayout(Layout)
+        self.Layout.addLayout(Layout)
 
         # keyboard interaction
         Label = QtWidgets.QLabel('focus here to capture single keystrokes')
-        Full_Layout.addWidget(Label)
+        self.Layout.addWidget(Label)
 
-        self.setLayout(Full_Layout)
+        self.setLayout(self.Layout)
         self.setWindowTitle("Arduino controller")
 
         # settings
@@ -130,47 +317,25 @@ class ArduinoController(QtWidgets.QWidget):
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
         self.show()
 
-    def keyPressEvent(self, event):
-        """ reimplementation to send single keystrokes """
-        self.send("CMD " + event.text())
-
-    def send(self, command):
-        """ sends string command interface to arduino, interface compatible """
-        if hasattr(self, 'connection'):
-            cmd = '<'+command+'>'
-            bytestr = str.encode(cmd)
-            if self.connection.is_open:
-                self.connection.write(bytestr)
-        else:
-            utils.printer("%s is not connected" % self.name, 'error')
-
-    def send_raw(self, bytestr):
-        """ sends bytestring """
-        if hasattr(self, 'connection'):
-            if self.connection.is_open:
-                self.connection.write(bytestr)
-        else:
-            utils.printer("%s is not connected" % self.name, 'error')
-
     def run_btn_clicked(self):
         if self.RunBtn.isChecked():
-            # on startup, poll all vars
-            # self.VariableController.query()
-
-            # after being activated
-            self.send('CMD RUN')
+            self.Serial.run_FSM()
             self.RunBtn.setText('HALT')
             self.RunBtn.setStyleSheet("background-color: red")
 
         else: 
-            self.send('CMD HALT')
+            self.Serial.halt_FSM()
             self.RunBtn.setText('RUN')
             self.RunBtn.setStyleSheet("background-color: green")
+
+    def keyPressEvent(self, event):
+        """ reimplementation to send single keystrokes """
+        self.Serial.send_keystroke(event.text())
 
     def send_btn_clicked(self):
         """ send command entered in LineEdit """
         command = self.SendLine.text()
-        self.send(command)
+        self.Serial.send(command)
         
     def upload(self):
         """ uploads the sketch specified in platformio.ini
@@ -256,38 +421,6 @@ class ArduinoController(QtWidgets.QWidget):
         target = folder / self.sys_config['current']['task']
         shutil.copytree(src, target)
 
-    def reset_arduino(self, connection):
-        """ taken from https://stackoverflow.com/questions/21073086/wait-on-arduino-auto-reset-using-pyserial """
-        connection.setDTR(False) # reset
-        time.sleep(1) # sleep timeout length to drop all data
-        connection.flushInput()
-        connection.setDTR(True)
-        
-    def connect(self):
-        """ establish serial connection with the arduino board """
-        com_port = self.box_config['FSM']['com_port']
-        baud_rate = self.box_config['FSM']['baud_rate']
-        try:
-            utils.printer("initializing serial port: " + com_port, 'msg')
-            # ser = serial.Serial(port=com_port, baudrate=baud_rate, timeout=2)
-            connection = serial.Serial(
-                port=com_port,
-                baudrate=baud_rate,
-                bytesize=serial.EIGHTBITS,
-                parity=serial.PARITY_NONE,
-                stopbits=serial.STOPBITS_ONE,
-                timeout=1,
-                xonxoff=0,
-                rtscts=0
-                )
-
-            self.reset_arduino(connection)
-            return connection
-
-        except:
-            utils.printer("failed to connect to the FSM arduino", 'error')
-            sys.exit()
-
     def Run(self, folder):
         """ folder is the logging folder """
         # the folder that is used for storage
@@ -303,6 +436,7 @@ class ArduinoController(QtWidgets.QWidget):
             utils.printer("reusing previously uploaded sketch", 'msg')
 
         # last vars
+        # TODO move this to the VariableController itself?
         if self.VariableController.LastVarsCheckBox.checkState() == 2: # true when checked
             last_vars = self.VariableController.load_last_vars()
             if last_vars is not None:
@@ -318,36 +452,26 @@ class ArduinoController(QtWidgets.QWidget):
         self.VariableController.VariableEditWidget.setEnabled(True)
             
         # connect to serial port
-        self.connection = self.connect()
+        self.Serial.connect()
 
-        # start up the online data analyzer
-        if hasattr(self, 'OnlineDataAnalyser'):
+        if self.Serial.connection.is_open:
+            # UI stuff
+            self.ConnectionLabel.setText('connected')
+            self.ConnectionLabel.setStyleSheet("background-color: green")
+
+            # external logging
+            log_fname = self.task_config['log_fname']
+            self.log_fH = open(self.run_folder / log_fname, 'w')
+            self.Serial.data_available.connect(self.on_data)
+            
+            # starts the listener thread
+            self.Serial.reset()
+            self.Serial.listen()
+
+        # start up the online data analyser
+        if hasattr(self, 'OnlineFSMAnalyser'):
             utils.printer("starting online data analyser", 'msg')
-            self.OnlineDataAnalyser.run()
-
-        # external logging
-        self.arduino_log_fH = open(self.run_folder / 'arduino_log.txt', 'w')
-
-        def read_from_port(ser):
-            while ser.is_open:
-                try:
-                    line = ser.readline().decode('utf-8').strip()
-                except AttributeError:
-                    line = ''
-                except TypeError:
-                    line = ''
-                except serial.serialutil.SerialException:
-                    line = ''
-                except UnicodeDecodeError:
-                    line = ''
-
-                if line is not '': # filtering out empty reads
-                    self.arduino_log_fH.write(line+os.linesep) # external logging
-                    self.serial_data_available.emit(line) # internal publishing
-
-        self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
-        self.thread.start()
-        utils.printer("listening to FSM arduino on serial port %s" % self.box_config['FSM']['com_port'], 'msg')
+            self.OnlineFSMAnalyser.run()
 
         # start timer
         for counter in self.parent().Counters:
@@ -357,41 +481,40 @@ class ArduinoController(QtWidgets.QWidget):
         # now send variables
         time.sleep(3)
         self.VariableController.send_all_variables()
-    
+
+    def on_data(self, line):
+        self.log_fH.write(line+os.linesep)
+
     def stop(self):
         """ halts the FSM """
-        self.send('CMD HALT')
+        self.Serial.send('CMD HALT')
         self.RunBtn.setText('RUN')
         self.RunBtn.setStyleSheet("background-color: green")
 
     def closeEvent(self, event):
         # if serial connection is open, reset arduino and close it
-        if hasattr(self, 'connection'):
-            if self.connection.is_open:
-                self.reset_arduino(self.connection)
-                self.connection.close()
-            self.SerialMonitor.close()
-        self.VariableController.close()
-        
-        # explicit - should fix windows bug where arduino_log.txt is not written
-        if hasattr(self, 'arduino_log_fH'):
-            self.arduino_log_fH.close() 
+        if hasattr(self.Serial, 'connection'):
+            if self.Serial.connection.is_open:
+                self.Serial.disconnect()
 
-        # self.thread.join()
+        # explicit - should fix windows bug where arduino_log.txt is not written
+        if hasattr(self, 'log_fH'):
+            self.log_fH.close() 
 
         # overwrite logged arduino vars file
         if hasattr(self, 'run_folder'):
-            target = self.run_folder / self.sys_config['current']['task']  / 'Arduino' / 'src' / 'interface_variables.h'
+            target = self.run_folder / self.sys_config['current']['task']  / 'Arduino' / 'src' / 'interface_variables.h' # TODO FIXME HARDCODE
             if target.exists(): # bc close event is also triggered on task_changed
                 self.VariableController.write_variables(target)
+
+        # explicitly closing
+        self.SerialMonitor.close()
+        self.VariableController.close()
 
         # Write window size and position to config file
         self.settings.setValue("size", self.size())
         self.settings.setValue("pos", self.pos())
 
-        # take care of the kids
-        for Child in self.Children:
-            Child.close()
         self.close()
 
 
@@ -419,7 +542,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.initUI()
 
         # connect
-        parent.serial_data_available.connect(self.on_serial)
+        parent.FSMDecoder.var_data_available.connect(self.on_var_changed)
 
     def initUI(self):
         # contains a scroll area which contains the scroll widget
@@ -441,7 +564,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         SendBtn.setText('Send')
         SendBtn.clicked.connect(self.send_btn_clicked)
         self.Layout.addWidget(SendBtn)
-
+        
         # last variables functionality
         LastVarsBtn = QtWidgets.QPushButton(self)
         LastVarsBtn.setText('last session')
@@ -450,10 +573,9 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         DefaultVarsBtn = QtWidgets.QPushButton(self)
         DefaultVarsBtn.setText('default')
         DefaultVarsBtn.clicked.connect(self.use_default_vars)
-
         self.LastVarsCheckBox = QtWidgets.QCheckBox('automatic last')
         self.LastVarsCheckBox.setChecked(True)
-        LastVars = QtWidgets.QHBoxLayout(self)
+        LastVars = QtWidgets.QHBoxLayout()
         LastVars.addWidget(QtWidgets.QLabel("variables to use"))
         LastVars.addWidget(DefaultVarsBtn)
         LastVars.addWidget(LastVarsBtn)
@@ -494,7 +616,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             return None
 
         # to allow for this functionalty while task is running
-        if self.parent().parent().running:
+        if self.parent().parent().is_running:
             ix = -2
         else:
             ix = -1
@@ -538,31 +660,20 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             fH.writelines(lines)
 
     def send_variable(self, name, value):
-        # reading and writing from different threads apparently threadsafe
-        # https://stackoverflow.com/questions/8796800/pyserial-possible-to-write-to-serial-port-from-thread-a-do-blocking-reads-fro
+        # send 
+        self.parent().Serial.send_variable(name, value)
 
-        if hasattr(self.parent(), 'connection'):
-            # report
-            utils.printer("sending variable %s: %s" % (name, value))
-
-            # this is the hardcoded command sending definition
-            cmd = '<SET %s %s>' % (name, value) 
-            bytestr = str.encode(cmd)
-            self.parent().send_raw(bytestr)
-            time.sleep(0.05) # grace period to guarantee successful sending
-
-            # store
-            self.sent_variables.loc[self.sent_variables['name'] == name,'value'] = value
-
-        else:
-            utils.printer("trying to send variable %s to the FSM, but is not connected" % name, 'error')
+        # store
+        self.sent_variables.loc[self.sent_variables['name'] == name,'value'] = value
 
     def send_variables(self, names):
+        """ sending only the variables in names"""
         for name in names:
             row = self.VariableEditWidget.get_entry(name)
             self.send_variable(row['name'], row['value'])
 
     def send_all_variables(self):
+        """ sending all variables """
         Df = self.VariableEditWidget.get_entries()
         for i, row in Df.iterrows():
             self.send_variable(row['name'], row['value'])
@@ -589,21 +700,9 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.LastVarsCheckBox.setChecked(False)
         self.use_vars(default_vars)
 
-    def query(self):
-        """ report back all variable values 
-        the problem is that this causes a bug - arduino replies with <VAR and this triggers on_serial """
-        for name in self.Df['name'].values:
-            self.parent().send("GET "+name)
-            time.sleep(0.05)
-
-    def on_serial(self, line):
-        """ this is for updating the UI when arduino has changed a var (and reports it) """
-        if line.startswith('<VAR'):
-            line_split = line[1:-1].split(' ')
-            name = line_split[1]
-            value = line_split[2]
-            if name in self.VariableEditWidget.Df['name'].values:
-                self.VariableEditWidget.set_entry(name, value) # the lineedit should take care of the correct dtype
+    def on_var_changed(self, name, value):
+        if name in self.VariableEditWidget.Df['name'].values:
+            self.VariableEditWidget.set_entry(name, value)
 
     def closeEvent(self, event):
         """ reimplementation of closeEvent """
@@ -611,105 +710,26 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.settings.setValue("size", self.size())
         self.settings.setValue("pos", self.pos())
 
-"""
- 
-  #######  ##    ## ##       #### ##    ## ########       ###    ##    ##    ###    ##       ##    ##  ######  ####  ######  
- ##     ## ###   ## ##        ##  ###   ## ##            ## ##   ###   ##   ## ##   ##        ##  ##  ##    ##  ##  ##    ## 
- ##     ## ####  ## ##        ##  ####  ## ##           ##   ##  ####  ##  ##   ##  ##         ####   ##        ##  ##       
- ##     ## ## ## ## ##        ##  ## ## ## ######      ##     ## ## ## ## ##     ## ##          ##     ######   ##   ######  
- ##     ## ##  #### ##        ##  ##  #### ##          ######### ##  #### ######### ##          ##          ##  ##        ## 
- ##     ## ##   ### ##        ##  ##   ### ##          ##     ## ##   ### ##     ## ##          ##    ##    ##  ##  ##    ## 
-  #######  ##    ## ######## #### ##    ## ########    ##     ## ##    ## ##     ## ########    ##     ######  ####  ######  
- 
-"""
 
-class OnlineDataAnalyser(QtCore.QObject):
-    """ listens to serial port, analyzes arduino data as it comes in """
-    trial_data_available = QtCore.pyqtSignal(pd.DataFrame, pd.DataFrame)
-    decoded_data_available = QtCore.pyqtSignal(str)
 
-    def __init__(self, parent, CodesDf, online_config=None):
-        super(OnlineDataAnalyser, self).__init__(parent=parent)
-        self.parent = parent
-        self.online_config = online_config
-        
-        self.CodesDf = CodesDf # required, path could be set in online analysis
-        self.code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
-        # get metrics
-        try:
-            metrics = [m.strip() for m in self.online_config['online_metrics'].split(',')]
-            mod = importlib.import_module('Utils.metrics')
-            self.Metrics = [getattr(mod, metric) for metric in metrics]
-        except KeyError:
-            self.Metrics = None
 
-        # events
-        try:
-            self.new_trial_event = self.online_config['new_trial_event']
-        except KeyError:
-            self.new_trial_event = None
-        
-        try:
-            self.reward_events = [event.strip() for event in self.online_config['reward_event'].split(',')]
-        except KeyError:
-            self.reward_events = None
-        
-        self.lines = []
-        self.SessionDf = None
 
-    
-    def run(self):
-        # needed like this because of init order
-        self.parent.serial_data_available.connect(self.update)
 
-    def decode(self, line):
-        decoded = None
-        if not line.startswith('<'):
-            try:
-                code, t = line.split('\t')
-                t = float(t)
-                decoded = self.code_map[code]
 
-                # publish
-                to_send = '\t'.join([decoded, str(t)])
-                self.decoded_data_available.emit(to_send)
 
-            except:
-                pass
-        return decoded
 
-    def update(self, line):
-        self.lines.append(line)
 
-        decoded = self.decode(line)
 
-        if decoded is not None:
-            # the event that separates the stream of data into chunks of trials
-            if decoded == self.new_trial_event:
 
-                # parse lines
-                TrialMetricsDf = None
-                try:
-                    TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map, parse_var=True)
-                    TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
-                except ValueError:  # important TODO - investigate this! this was added with cue on reach and no mistakes
-                    utils.printer('failed parse of lines into TrialDf', 'error')
-                    # utils.debug_trace()
-                    pass 
-                
-                if TrialMetricsDf is not None:
-                    if self.SessionDf is None: # on first
-                        self.SessionDf = TrialMetricsDf
-                    else:
-                        self.SessionDf = pd.concat([self.SessionDf, TrialMetricsDf])
-                        self.SessionDf = self.SessionDf.reset_index(drop=True)
 
-                    # emit data
-                    self.trial_data_available.emit(TrialDf, TrialMetricsDf)
 
-                    # restart lines with current line
-                    self.lines = [line]
+
+
+
+
+
+
 
 """
  
@@ -723,185 +743,108 @@ class OnlineDataAnalyser(QtCore.QObject):
  
 """
 
-class SerialMonitorWidget(QtWidgets.QWidget):
-    """ just print the lines from the arduino into this window
-    open upon connect and received data
-    """
-
-    def __init__(self, parent, code_map):
-        super(SerialMonitorWidget, self).__init__(parent=parent)
-        self.setWindowFlags(QtCore.Qt.Window)
-        self.initUI()
-        self.lines = []
-        self.code_map = code_map
-        self.code_map_inv = dict(zip(code_map.values(), code_map.keys()))
-        
-        if 'display_event_filter' in dict(parent.task_config).keys():
-            self.filter = [event.strip() for event in parent.task_config['display_event_filter'].split(',')]
-        else:
-            self.filter = []
-
-        # connect to parent signals
-        parent.serial_data_available.connect(self.update)
-
-    def initUI(self):
-        # logging checkbox
-        self.Layout = QtWidgets.QVBoxLayout()
-        # self.update_CheckBox = QtWidgets.QCheckBox("update")
-        # self.update_CheckBox.setChecked(True)
-        # self.Layout.addWidget(self.update_CheckBox)
-        
-        # textbrowser
-        self.TextBrowser = QtWidgets.QTextBrowser(self)
-        self.Layout.addWidget(self.TextBrowser)
-
-        # all
-        self.setLayout(self.Layout)
-        self.setWindowTitle("Arduino monitor")
-
-        self.settings = QtCore.QSettings('TaskControl', 'SerialMonitor')
-        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
-        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
-        self.show()
-
-    def update(self, line):
-        if not True in [line.startswith(f) for f in self.filter]:
-            if not line.startswith('<'):
-                try:
-                    code = line.split('\t')[0]
-                    decoded = self.code_map[code]
-                    line = '\t'.join([decoded, line.split('\t')[1]])
-                except:
-                    utils.printer("Error dealing with line %s" % line, 'error')
-                    pass
-
-            # TODO deal with the history functionality
-            history_len = 100 # FIXME expose this property? or remove it. for now for debugging
-
-            if len(self.lines) < history_len:
-                self.lines.append(line)
-            else:
-                self.lines.append(line)
-                self.lines = self.lines[1:]
-
-            # print lines in window
-            sb = self.TextBrowser.verticalScrollBar()
-            sb_prev_value = sb.value()
-            self.TextBrowser.setPlainText('\n'.join(self.lines))
-            
-            # scroll to end
-            sb.setValue(sb.maximum())
-
-            # BUG does not work!
-            # if self.update_CheckBox.checkState() == 2:
-            #    sb.setValue(sb.maximum())
-            # else:
-            #     sb.setValue(sb_prev_value)
-
-    def closeEvent(self, event):
-        """ reimplementation of closeEvent """
-        # Write window size and position to config file
-        self.settings.setValue("size", self.size())
-        self.settings.setValue("pos", self.pos())
 
 
-class StateMachineMonitorWidget(QtWidgets.QWidget):
+
+
+# TODO get this functionality back
+# class StateMachineMonitorWidget(QtWidgets.QWidget):
     
-    def __init__(self, parent, code_map=None):
-        super(StateMachineMonitorWidget, self).__init__(parent=parent)
+#     def __init__(self, parent, code_map=None):
+#         super(StateMachineMonitorWidget, self).__init__(parent=parent)
 
-        # code_map related
-        self.code_map = code_map
+#         # code_map related
+#         self.code_map = code_map
         
-        # connect to parent signals
-        parent.serial_data_available.connect(self.update)
+#         # connect to parent signals
+#         parent.serial_data_available.connect(self.update)
 
-        self.initUI()
+#         self.initUI()
 
-    def initUI(self):
-        self.setWindowFlags(QtCore.Qt.Window)
+#     def initUI(self):
+#         self.setWindowFlags(QtCore.Qt.Window)
 
-        # layouting
-        self.Layout = QtWidgets.QVBoxLayout()
-        self.States_Layout = QtWidgets.QHBoxLayout()
-        self.Spans_Layout = QtWidgets.QHBoxLayout()
-        # self.Events_Layout = QtWidgets.QHBoxLayout()
-        self.Btns = []
+#         # layouting
+#         self.Layout = QtWidgets.QVBoxLayout()
+#         self.States_Layout = QtWidgets.QHBoxLayout()
+#         self.Spans_Layout = QtWidgets.QHBoxLayout()
+#         # self.Events_Layout = QtWidgets.QHBoxLayout()
+#         self.Btns = []
 
-        for code, full_name in self.code_map.items():
-            splits = full_name.split('_')
-            name = '_'.join(splits[:-1])
-            kind = splits[-1]
+#         for code, full_name in self.code_map.items():
+#             splits = full_name.split('_')
+#             name = '_'.join(splits[:-1])
+#             kind = splits[-1]
 
-            Btn = QtWidgets.QPushButton()
-            Btn.setText(name)
-            if kind == 'STATE':
-                Btn.setCheckable(False)
-                self.States_Layout.addWidget(Btn)
-            if kind == 'ON':
-                Btn.setCheckable(False)
-                self.Spans_Layout.addWidget(Btn)
-            # if kind == 'EVENT':
-            #     Btn.setCheckable(False)
-            #     self.Events_Layout.addWidget(Btn)
+#             Btn = QtWidgets.QPushButton()
+#             Btn.setText(name)
+#             if kind == 'STATE':
+#                 Btn.setCheckable(False)
+#                 self.States_Layout.addWidget(Btn)
+#             if kind == 'ON':
+#                 Btn.setCheckable(False)
+#                 self.Spans_Layout.addWidget(Btn)
+#             # if kind == 'EVENT':
+#             #     Btn.setCheckable(False)
+#             #     self.Events_Layout.addWidget(Btn)
 
-            self.Btns.append((full_name, Btn))
+#             self.Btns.append((full_name, Btn))
 
-        self.Layout.addLayout(self.States_Layout)
-        self.Layout.addLayout(self.Spans_Layout)
-        # self.Layout.addLayout(self.Events_Layout)
+#         self.Layout.addLayout(self.States_Layout)
+#         self.Layout.addLayout(self.Spans_Layout)
+#         # self.Layout.addLayout(self.Events_Layout)
 
-        self.setLayout(self.Layout)
-        self.setWindowTitle("State Machine Monitor")
+#         self.setLayout(self.Layout)
+#         self.setWindowTitle("State Machine Monitor")
 
-        self.settings = QtCore.QSettings('TaskControl', 'StateMachineMonitor')
-        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
-        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
-        self.show()
+#         self.settings = QtCore.QSettings('TaskControl', 'StateMachineMonitor')
+#         self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+#         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
+#         self.show()
 
-    def update(self, line):
-        try:
-            code, time = line.split('\t')
-            full_name = self.code_map[code]
+#     def update(self, line):
+#         try:
+#             code, time = line.split('\t')
+#             full_name = self.code_map[code]
 
-            # remove all color from events
-            if full_name.endswith("_EVENT") or full_name.endswith("_ON") or full_name.endswith("_OFF"):
-                for name, btn in self.Btns:
-                    if name.endswith('_EVENT'):
-                        btn.setStyleSheet("background-color: light gray")
+#             # remove all color from events
+#             if full_name.endswith("_EVENT") or full_name.endswith("_ON") or full_name.endswith("_OFF"):
+#                 for name, btn in self.Btns:
+#                     if name.endswith('_EVENT'):
+#                         btn.setStyleSheet("background-color: light gray")
 
-            # for states
-            if full_name.endswith("_STATE"):
-                # color all state buttons gray
-                for name, btn in self.Btns:
-                    if name.endswith("_STATE"):
-                        btn.setStyleSheet("background-color: light gray")
+#             # for states
+#             if full_name.endswith("_STATE"):
+#                 # color all state buttons gray
+#                 for name, btn in self.Btns:
+#                     if name.endswith("_STATE"):
+#                         btn.setStyleSheet("background-color: light gray")
 
-                # and color only active green
-                btn = [btn for name, btn in self.Btns if name==full_name][0]
-                btn.setStyleSheet("background-color: green")
+#                 # and color only active green
+#                 btn = [btn for name, btn in self.Btns if name==full_name][0]
+#                 btn.setStyleSheet("background-color: green")
 
-            # for spans
-            if full_name.endswith("_ON"):
-                btn = [btn for name, btn in self.Btns if name==full_name][0]
+#             # for spans
+#             if full_name.endswith("_ON"):
+#                 btn = [btn for name, btn in self.Btns if name==full_name][0]
 
-                if full_name.endswith("_ON"):
-                    btn.setStyleSheet("background-color: green")
+#                 if full_name.endswith("_ON"):
+#                     btn.setStyleSheet("background-color: green")
 
-            if  full_name.endswith("_OFF"):
-                btn = [btn for name, btn in self.Btns if name==full_name[:-3]+'ON'][0]
-                btn.setStyleSheet("background-color: light gray")
+#             if  full_name.endswith("_OFF"):
+#                 btn = [btn for name, btn in self.Btns if name==full_name[:-3]+'ON'][0]
+#                 btn.setStyleSheet("background-color: light gray")
             
-            # for events stay green until next line read
-            if  full_name.endswith("_EVENT"):
-                btn = [btn for name, btn in self.Btns if name==full_name][0]
-                btn.setStyleSheet("background-color: green")
+#             # for events stay green until next line read
+#             if  full_name.endswith("_EVENT"):
+#                 btn = [btn for name, btn in self.Btns if name==full_name][0]
+#                 btn.setStyleSheet("background-color: green")
             
-        except:
-            pass
+#         except:
+#             pass
 
-    def closeEvent(self, event):
-        """ reimplementation of closeEvent """
-        # Write window size and position to config file
-        self.settings.setValue("size", self.size())
-        self.settings.setValue("pos", self.pos())
+#     def closeEvent(self, event):
+#         """ reimplementation of closeEvent """
+#         # Write window size and position to config file
+#         self.settings.setValue("size", self.size())
+#         self.settings.setValue("pos", self.pos())

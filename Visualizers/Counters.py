@@ -28,6 +28,7 @@ class OutcomeCounter(QtWidgets.QWidget):
     """ """
     def __init__(self, parent, outcomes=None, split_by=None):
         super(OutcomeCounter, self).__init__(parent=parent)
+        self.name = "OutcomeCounter"
         self.setWindowFlags(QtCore.Qt.Window)
         self.TableView = QtWidgets.QTableView(self)
         self.Layout = QtWidgets.QVBoxLayout(self)
@@ -61,8 +62,9 @@ class OutcomeCounter(QtWidgets.QWidget):
         self.show()
 
     def init(self):
-        self.OnlineDataAnalyser = self.parent().ArduinoController.OnlineDataAnalyser
-        self.OnlineDataAnalyser.trial_data_available.connect(self.on_data)
+        self.parent().ArduinoController.OnlineFSMAnalyzer.trial_data_available.connect(self.on_data)
+        # self.OnlineDataAnalyser = self.parent().ArduinoController.OnlineDataAnalyser
+        # self.OnlineDataAnalyser.trial_data_available.connect(self.on_data)
     
     def on_data(self, TrialDf, TrialMetricsDf):
         side = metrics.get_correct_side(TrialDf).values[0]
@@ -108,7 +110,9 @@ class WaterCounter(QtWidgets.QWidget):
     """ """
     def __init__(self, parent):
         super(WaterCounter, self).__init__(parent=parent)
+        self.name = "WaterCounter"
         self.setWindowFlags(QtCore.Qt.Window)
+        self.setWindowTitle(self.name)
         self.Layout = QtWidgets.QVBoxLayout(self)
 
         # internal value and display
@@ -116,7 +120,7 @@ class WaterCounter(QtWidgets.QWidget):
         self.Value = QtGui.QLabel(str(self.current_amount))
         self.Label = QtGui.QLabel("consumed water (µl): ")
 
-        Row = QtWidgets.QHBoxLayout(self)
+        Row = QtWidgets.QHBoxLayout()
         Row.addWidget(self.Label)
         Row.addWidget(self.Value)
         self.Layout.addLayout(Row)
@@ -144,8 +148,7 @@ class WaterCounter(QtWidgets.QWidget):
         self.reset()
 
     def init(self):
-        self.OnlineDataAnalyser = self.parent().ArduinoController.OnlineDataAnalyser
-        self.OnlineDataAnalyser.decoded_data_available.connect(self.on_data)
+        self.parent().ArduinoController.FSMDecoder.decoded_data_available.connect(self.on_data)
 
     def start(self):
         pass
@@ -193,7 +196,9 @@ class Timer(QtWidgets.QWidget):
     """ a clock """
     def __init__(self, parent):
         super(Timer, self).__init__(parent=parent)
+        self.name = "Timer"
         self.setWindowFlags(QtCore.Qt.Window)
+        self.setWindowTitle(self.name)
         self.Layout = QtWidgets.QVBoxLayout(self)
 
         # a label
@@ -273,7 +278,9 @@ class EventCounter(QtWidgets.QScrollArea):
     """ simply counts all arduino events """
     def __init__(self, parent):
         super(EventCounter, self).__init__(parent=parent)
+        self.name = "EventCounter"
         self.setWindowFlags(QtCore.Qt.Window)
+        self.setWindowTitle(self.name)
         self.events = parent.ArduinoController.code_map.values()
 
         # filter out stuff
@@ -314,8 +321,7 @@ class EventCounter(QtWidgets.QScrollArea):
             widget.setText("%5i" % self.Model[event])
 
     def init(self):
-        self.OnlineDataAnalyser = self.parent().ArduinoController.OnlineDataAnalyser
-        self.OnlineDataAnalyser.decoded_data_available.connect(self.on_data)
+        self.parent().ArduinoController.FSMDecoder.decoded_data_available.connect(self.on_data)
 
     def start(self):
         pass
