@@ -318,7 +318,7 @@ class SettingsWidget(QtWidgets.QWidget):
                 utils.printer("initializing %s" % section, 'msg')
 
                 if section == 'FSM':
-                    from Widgets.ArduinoWidgets2 import ArduinoController
+                    from Widgets.ArduinoWidgets import ArduinoController
                     self.ArduinoController = ArduinoController(self, self.sys_config, self.task_config['FSM'], self.box_config)
                     self.Controllers.append(self.ArduinoController)
 
@@ -328,7 +328,7 @@ class SettingsWidget(QtWidgets.QWidget):
                     self.Controllers.append(self.BonsaiController)
 
                 if section == 'TimeLogger':
-                    from Widgets.TimeLogger2 import TimeLogger
+                    from Widgets.TimeLogger import TimeLogger
                     self.TimeLoggerController = TimeLogger(self, self.sys_config, self.task_config['TimeLogger'], self.box_config)
                     self.Controllers.append(self.TimeLoggerController)
                     
