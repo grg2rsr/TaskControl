@@ -57,8 +57,9 @@ class Syncer(object):
         self.graph = {}
         self.funcs = {}
 
+
     def check(self, A, B):
-        """ check consistency of all clock pulses and if possible fixes them """
+        """ check consistency of all clock pulses """
 
         for x in [A, B]:
             if self.data[x].shape[0] == 0:
@@ -66,36 +67,41 @@ class Syncer(object):
                 return False
 
         if self.data[A].shape[0] != self.data[B].shape[0]:
-
-            # Decide which is the reference to cut to
-            if self.data[A].shape[0] > self.data[B].shape[0]:
-                bigger = 'A'
-                t_bigger = self.data[A]
-                t_smaller = self.data[B]
-            else:
-                bigger = 'B'
-                t_bigger = self.data[B]
-                t_smaller = self.data[A]
-            utils.printer("sync problem - unequal number, %s has more sync signals" % bigger, 'warning')
+            utils.printer("sync problem - unequal number of sync signals", 'warning')
             utils.printer("Number in %s: %i" % (A, self.data[A].shape[0]),'warning')
             utils.printer("Number in %s: %i" % (B, self.data[B].shape[0]),'warning')
-
-            # Compute the difference
-            offset = np.argmax(np.correlate(np.diff(t_bigger), np.diff(t_smaller), mode='valid'))
-
-            # Cut the initial timestamps from the argument with more clock pulses
-            t_bigger = t_bigger[offset:t_smaller.shape[0]+offset]
-
-            if bigger == 'A':
-                self.data[A] = t_bigger
-                self.data[B] = t_smaller
-            else:
-                self.data[B] = t_bigger
-                self.data[A] = t_smaller
-            
-            return True
+            return False
+        
         else:
             return True
+
+
+    def fix(self, A, B):
+        """ fixes unequal number of timestamps for synchronization"""
+
+        # Decide which is the reference to cut to
+        if self.data[A].shape[0] > self.data[B].shape[0]:
+            bigger = 'A'
+            t_bigger = self.data[A]
+            t_smaller = self.data[B]
+        else:
+            bigger = 'B'
+            t_bigger = self.data[B]
+            t_smaller = self.data[A]
+            
+        # Compute the difference
+        offset = np.argmax(np.correlate(np.diff(t_bigger), np.diff(t_smaller), mode='valid'))
+
+        # Cut the initial timestamps from the argument with more clock pulses
+        t_bigger = t_bigger[offset:t_smaller.shape[0]+offset]
+
+        if bigger == 'A':
+            self.data[A] = t_bigger
+            self.data[B] = t_smaller
+        else:
+            self.data[B] = t_bigger
+            self.data[A] = t_smaller
+
 
     # def guess_p0(self, func, A, B):
     #     if func == lin:
@@ -137,9 +143,8 @@ class Syncer(object):
             a[1] = (data_B[-1] - data_B[0]) / (data_A[-1] - data_A[0])
             p0 = (*x0s, *a)
             bounds = (-np.inf,np.inf)
-            print(p0)
 
-        if func==linsin:
+        if func == linsin:
             m = (data_B[-1] - data_B[0]) / (data_A[-1] - data_A[0])
             b = data_A[0]
             A = 0
@@ -148,10 +153,10 @@ class Syncer(object):
             p0 = (b, m , A, w, phi)
             bounds = (np.array((-np.inf, -np.inf, 0, -np.inf, 0)), np.array((np.inf, np.inf, np.inf, np.inf, 2*np.pi)))
             # bounds = ((-np.inf, np.inf),(-np.inf, np.inf),(0, np.inf),(-np.inf, np.inf),(0, 2*np.pi))
-            print(p0)
 
         pfit = curve_fit(func, data_A, data_B, p0=p0, bounds=bounds)[0]
-        print(pfit)
+        # from scipy.stats import linregress
+        # pfit = linregress(data_A, data_B)[:2]
         return pfit
 
     def interp(self, A, B):
@@ -159,11 +164,15 @@ class Syncer(object):
 
     def sync(self, A, B, check=True, symmetric=True, func=lin, order=None):
         """ linreg sync of A to B """
+
         # check and abort if fails
         success = self.check(A, B)
         if not success:
-            utils.printer("not successsful")
-            return False
+            try:
+                self.fix(A,B)
+            except:
+                utils.printer("sync failed", mode='error')
+                return False
 
         pfit = self.fit(self.data[A], self.data[B], func=func, order=order)
 
@@ -191,16 +200,16 @@ class Syncer(object):
 
         return t
 
-    def _convert(self, t, A ,B):
-        func = self.interp(A, B)
-        return func(t)
-
     # def _convert(self, t, A ,B):
-    #     if (A,B) not in self.pairs:
-    #         self.sync(A,B)
-    #     pfit = self.pairs[(A,B)]
-    #     func = self.funcs[(A,B)]
-    #     return func(t, *pfit)
+    #     func = self.interp(A, B)
+    #     return func(t)
+
+    def _convert(self, t, A ,B):
+        if (A,B) not in self.pairs:
+            self.sync(A,B)
+        pfit = self.pairs[(A,B)]
+        func = self.funcs[(A,B)]
+        return func(t, *pfit)
 
     def _find_shortest_path(self, start, end, path=[]):
         # from https://www.python.org/doc/essays/graphs/
