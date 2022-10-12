@@ -21,7 +21,7 @@ from matplotlib.collections import LineCollection
  
 """
 
-def get_LogDf_from_path(log_path, return_check=False):
+def get_LogDf_from_path(log_path, return_check=False, return_vars=False):
     """ helper to infer task name and get code_map """
     # infer
     task_name = '_'.join(log_path.parent.name.split('_')[2:])
@@ -31,17 +31,14 @@ def get_LogDf_from_path(log_path, return_check=False):
     CodesDf = utils.parse_code_map(code_map_path)
     code_map = dict(zip(CodesDf['code'], CodesDf['name']))
 
+    LogDf, VarsDf = parse_arduino_log(log_path, code_map, return_check=return_check, return_vars=True)
+    
+    if return_vars:
+        return LogDf, VarsDf
+    else:
+        return LogDf
 
-    LogDf = parse_arduino_log(log_path, code_map, return_check=return_check)
-    # try:
-    #     LogDf = parse_arduino_log(log_path, code_map)
-    # except ValueError:
-    #     # Dealing with the earlier LogDfs not having X_tresh/Current_zone etc.
-    #     LogDf = parse_arduino_log(log_path, code_map, parse_var=False)
-
-    return LogDf
-
-def parse_arduino_log(log_path, code_map=None, parse_var=True, return_check=False):
+def parse_arduino_log(log_path, code_map=None, parse_var=True, return_check=False, return_vars=False):
     """ create a DataFrame representation of an arduino log. If a code map is passed 
     a corresponding decoded column will be created
 
@@ -70,11 +67,11 @@ def parse_arduino_log(log_path, code_map=None, parse_var=True, return_check=Fals
 
     if return_check == True:
         if all_good == True:
-            return parse_lines(valid_lines, code_map=code_map, parse_var=parse_var)
+            return parse_lines(valid_lines, code_map=code_map, parse_var=parse_var, return_vars=return_vars)
         else:
             return None
     else:
-        return parse_lines(valid_lines, code_map=code_map, parse_var=parse_var)
+        return parse_lines(valid_lines, code_map=code_map, parse_var=parse_var, return_vars=return_vars)
 
 # TODO merge this one with the CAM reader one
 def correct_wraparound(Df, col='t'):
@@ -86,7 +83,7 @@ def correct_wraparound(Df, col='t'):
         Df['t'].iloc[reversal_ind+1:] += _Df['t'].iloc[reversal_ind]
     return Df
 
-def parse_lines(lines, code_map=None, parse_var=False):
+def parse_lines(lines, code_map=None, parse_var=False, return_vars=False):
     """ parses a list of lines from arduino into a pd.DataFrame """
     LogDf = pd.DataFrame([line.split('\t') for line in lines if '\t' in line], columns=['code', 't'])
     LogDf['t'] = LogDf['t'].astype('float')
@@ -114,6 +111,9 @@ def parse_lines(lines, code_map=None, parse_var=False):
         LogDf = pd.concat([LogDf,VarDf])
         LogDf = LogDf.sort_values('t')
         LogDf = LogDf.reset_index(drop=True)
+
+        if return_vars:
+            return LogDf, VarDf
 
     return LogDf
 
@@ -360,6 +360,15 @@ def time_slice(Df, t_min, t_max, col='t', reset_index=True, mode='inclusive'):
 
     return Df.loc[binds]
 
+def times_slice(Df, times, pre, post, **kwargs):
+    """ helper """
+    return [time_slice(Df, t+pre, t+post, **kwargs) for t in times]
+
+def event_based_time_slice(Df, event, pre, post, col='name', on='t', **kwargs):
+    """ slice around and event """
+    times = Df.groupby(col).get_group(event)[on].values
+    return [times_slice(Df, t+pre, t+post, **kwargs) for t in times]
+
 def event_slice(Df, event_a, event_b, col='name', reset_index=True):
     """ helper function that slices Df along column name from event_a to event_b """
     try:
@@ -375,24 +384,6 @@ def event_slice(Df, event_a, event_b, col='name', reset_index=True):
         Df = Df.reset_index(drop=True)
 
     return Df
-
-def event_based_time_slice(Df, event, pre, post, col='name', on='t', Df_to_slice=None):
-    """ slice around and event """
-    
-    if Df_to_slice is None:
-        Df_to_slice = Df
-
-    Dfs = []
-    times = Df.groupby(col).get_group(event)[on].values
-    for t in times:
-        Dfs.append(time_slice(Df_to_slice, t+pre, t+post))
-    return Dfs
-
-    # Dfs = []
-    # times = Df.groupby(col).get_group(event)[on].values
-    # for t in times:
-    #     Dfs.append(time_slice(Df, t+pre, t+post))
-    # return Dfs
 
 def groupby_dict(Df, Dict):
     """ will turn obsolete ... """

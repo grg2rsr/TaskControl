@@ -290,3 +290,59 @@ def get_reward_collection_rt(TrialDf):
     except IndexError:
         var = np.NaN
     return pd.Series(var, name=var_name)
+
+    """
+    ######## ######## ##     ## ########     ##     ##    ###    ########   ######
+       ##    ##       ###   ### ##     ##    ###   ###   ## ##   ##     ## ##    ##
+       ##    ##       #### #### ##     ##    #### ####  ##   ##  ##     ## ##
+       ##    ######   ## ### ## ########     ## ### ## ##     ## ########   ######
+       ##    ##       ##     ## ##           ##     ## ######### ##              ##
+       ##    ##       ##     ## ##           ##     ## ##     ## ##        ##    ##
+       ##    ######## ##     ## ##           ##     ## ##     ## ##         ######
+    """
+
+
+def get_trial_type(TrialDf):
+    var_name = "this_trial_type"
+    try:
+        Df = TrialDf.groupby('var').get_group(var_name)
+        var = Df.iloc[0]['value']
+    except KeyError:
+        var = np.NaN
+
+    return pd.Series(var, name=var_name)
+
+def get_delay(TrialDf):
+    var_name = "this_delay"
+    try:
+        Df = TrialDf.groupby('var').get_group(var_name)
+        var = Df.iloc[0]['value']
+    except KeyError:
+        var = np.NaN
+
+    return pd.Series(var, name=var_name)
+
+def get_reward_magnitude(TrialDf):
+    var_name = "reward_magnitude"
+    try:
+        Df = TrialDf.groupby('var').get_group(var_name)
+        var = Df.iloc[0]['value']
+    except KeyError:
+        var = np.NaN
+
+    return pd.Series(var, name=var_name)
+
+def get_reward_time(TrialDf):
+    var_name = "reward_collection_time"
+    # event = "REWARD_COLLECTED_EVENT"
+    event = "REWARD_EVENT"
+    if event in TrialDf['name'].values:
+        try:
+            Df = TrialDf.groupby('name').get_group(event)
+            var = Df.iloc[0]['t']
+        except KeyError:
+            var = np.NaN
+    else:
+        var = np.NaN
+
+    return pd.Series(var, name=var_name)
