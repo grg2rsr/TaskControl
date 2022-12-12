@@ -367,7 +367,7 @@ def times_slice(Df, times, pre, post, **kwargs):
 def event_based_time_slice(Df, event, pre, post, col='name', on='t', **kwargs):
     """ slice around and event """
     times = Df.groupby(col).get_group(event)[on].values
-    return [times_slice(Df, t+pre, t+post, **kwargs) for t in times]
+    return times_slice(Df, times, pre, post, **kwargs)
 
 def event_slice(Df, event_a, event_b, col='name', reset_index=True):
     """ helper function that slices Df along column name from event_a to event_b """
