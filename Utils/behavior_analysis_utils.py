@@ -183,8 +183,9 @@ def filter_spans_to_event(LogDf, on_name, off_name, t_min=50, t_max=200, name=No
     # Add event to LogDf
     Event = pd.DataFrame(np.stack([['NA']*Spans.shape[0], Spans['t_on'].values, [name]*Spans.shape[0]]).T, columns=['code', 't', 'name'])
     Event['t'] = Event['t'].astype('float')
-    LogDf = LogDf.append(Event)
-    LogDf.sort_values('t')
+    LogDf = pd.concat([LogDf, Event])
+    LogDf = LogDf.sort_values('t')
+    LogDf = LogDf.reset_index()
 
     return LogDf
 
@@ -205,19 +206,24 @@ def get_spans_from_names(LogDf, on_name, off_name):
     like log2span although with arbitrary events
     this function takes care of above problems actually
     """
-    try:
-        ons = LogDf.groupby('name').get_group(on_name)
-        offs = LogDf.groupby('name').get_group(off_name)
-    except KeyError:
-        # thrown when name not in log - return empty Df
+    # check if both events are present
+    names = LogDf['name'].unique()
+    if not on_name in names and off_name in names:
+        # if not present, return empty dataframe (with correct columns)
         return pd.DataFrame(columns=['t_on', 't_off', 'dt'])
 
+    t_ons = np.sort(LogDf.groupby('name').get_group(on_name)['t'].values)
+    t_offs = np.sort(LogDf.groupby('name').get_group(off_name)['t'].values)
+
+    # if all on are later than off -> "case 5" (see notes) -> return empty
+    if t_ons[-1] < t_offs[0]:
+        return pd.DataFrame(columns=['t_on', 't_off', 'dt'])
+
+    # else actually do something    
     ts = []
-    for i, tup in enumerate(ons.itertuples()):
-        t_on = tup.t
-        binds = offs['t'] > t_on
-        if np.any(binds.values):
-            t_off = offs.iloc[np.argmax(binds.values)]['t']
+    for t_on in t_ons:
+        if np.any(t_offs > t_on): # this filters out argmax behaviour
+            t_off = t_offs[np.argmax(t_offs > t_on)]
             ts.append((t_on, t_off))
 
     SpansDf = pd.DataFrame(ts, columns=['t_on', 't_off'])
@@ -352,7 +358,7 @@ def time_slice(Df, t_min, t_max, col='t', reset_index=True, mode='inclusive'):
     vals = Df[col].values
     if mode == 'exclusive':
         binds = np.logical_and(vals > t_min, vals < t_max)
-    if mode is 'inclusive':
+    if mode == 'inclusive':
         binds = np.logical_and(vals >= t_min, vals <= t_max)
 
     if reset_index:
