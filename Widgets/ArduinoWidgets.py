@@ -216,7 +216,7 @@ class ArduinoController(QtWidgets.QWidget):
     # here: https://programmer.group/pyqt5-quick-start-pyqt5-signal-slot-mechanism.html
     # and here: https://stackoverflow.com/questions/2970312/pyqt4-qtcore-pyqtsignal-object-has-no-attribute-connect
 
-    def __init__(self, parent, sys_config, task_config, box_config):
+    def __init__(self, parent, sys_config, task_config, box_config, online_config=None):
         super(ArduinoController, self).__init__(parent=parent)
         self.name = "ArduinoController"
         
@@ -237,10 +237,8 @@ class ArduinoController(QtWidgets.QWidget):
 
         # Online analyzer - builds on top of the decoder
         # set up online data analyzer if defined in task_config
-        # TODO FIXME
-        # if 'OnlineAnalysis' in dict(self.parent().task_config).keys(): # ugly AF
-        online_config = self.parent().task_config['OnlineAnalysis']
-        self.OnlineFSMAnalyser = OnlineFSMAnalyser(self, self.FSMDecoder, online_config=online_config)
+        if online_config is not None:
+            self.OnlineFSMAnalyser = OnlineFSMAnalyser(self, self.FSMDecoder, online_config=online_config)
             
         # Serial
         com_port = self.box_config['FSM']['com_port']
@@ -454,7 +452,7 @@ class ArduinoController(QtWidgets.QWidget):
         # connect to serial port
         self.Serial.connect()
 
-        if self.Serial.connection.is_open:
+        if self.Serial.connection is not None and self.Serial.connection.is_open:
             # UI stuff
             self.ConnectionLabel.setText('connected')
             self.ConnectionLabel.setStyleSheet("background-color: green")
@@ -604,7 +602,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
     def load_last_vars(self):
         """ try to get arduino variables from last run for the task 
         only loads, does not send! """
-        sys_config = self.parent().sys_config
+        sys_config = self.parent().sys_config # FIXME !!! 
 
         folder = Path(sys_config['paths']['animals_folder']) / sys_config['current']['animal']
         SessionsDf = utils.get_sessions(folder)

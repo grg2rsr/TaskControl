@@ -12,12 +12,15 @@ from Utils import utils
 class StringChoiceWidget(QtWidgets.QComboBox):
     """ A QComboBox with convenience setter and getter """
 
-    def __init__(self, parent, choices):
+    def __init__(self, parent, choices, default=None):
         super(StringChoiceWidget, self).__init__(parent=parent)
         self.choices = choices
 
         for choice in self.choices:
             self.addItem(choice)
+        
+        if default is not None:
+            self.set_value(default)
 
     def get_value(self):
         return self.choices[self.currentIndex()]

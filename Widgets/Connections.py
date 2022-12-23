@@ -95,8 +95,12 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.initUI()
 
     def initUI(self):
-        # logging checkbox
         self.Layout = QtWidgets.QVBoxLayout()
+
+        # updating checkbox
+        self.updateCheckBox = QtWidgets.QCheckBox("reupload sketch")
+        self.updateCheckBox.setChecked(True)
+        self.Layout.addWidget(self.updateCheckBox)
         
         # textbrowser
         self.TextBrowser = QtWidgets.QTextBrowser(self)
@@ -132,14 +136,13 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         sb_prev_value = sb.value()
         self.TextBrowser.setPlainText('\n'.join(self.lines))
         
-        # scroll to end
-        sb.setValue(sb.maximum())
+        # sb.setValue(sb.maximum())
 
-        # BUG does not work!
-        # if self.update_CheckBox.checkState() == 2:
-        #    sb.setValue(sb.maximum())
-        # else:
-        #     sb.setValue(sb_prev_value)
+        if self.update_CheckBox.checkState() == 2:
+            # scroll to end
+           sb.setValue(sb.maximum())
+        else:
+            sb.setValue(sb_prev_value)
 
     def closeEvent(self, event):
         """ reimplementation of closeEvent """

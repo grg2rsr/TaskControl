@@ -73,7 +73,18 @@ def parse_arduino_log(log_path, code_map=None, parse_var=True, return_check=Fals
     else:
         return parse_lines(valid_lines, code_map=code_map, parse_var=parse_var, return_vars=return_vars)
 
-# TODO merge this one with the CAM reader one
+# %%
+# TODO test these - 5x more readable than the original one
+def correct_wraparound_np(A: np.ndarray):
+    ix = np.where(np.diff(A) < 0)[0]
+    for i in ix[::-1]:
+        A[i+1:] += A[i]
+    return A
+
+def correct_wraparound_Df(Df: pd.DataFrame, col='t'):
+    Df[col] = correct_wraparound_np(Df[col].values)
+    return Df
+
 def correct_wraparound(Df, col='t'):
     """ tests and corrects for time wraparound on column t """
     from copy import copy

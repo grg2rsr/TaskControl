@@ -54,6 +54,16 @@ class SettingsWidget(QtWidgets.QWidget):
         self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
 
+        # 
+        self.Boxes = utils.get_Boxes(self.sys_config['paths']['boxes_folder'])
+        self.Box, = utils.select(self.Boxes, name=self.sys_config['last']['box'])
+
+        self.Animals = utils.get_Animals(self.sys_config['paths']['animals_folder'])
+        self.Animal = utils.select(self.Animals, ID=self.sys_config['last']['animal'])
+
+        self.Tasks = utils.get_Tasks(self.sys_config['paths']['tasks_folder'])
+        self.Task = utils.select(self.Tasks, name=self.sys_config['last']['task'])
+
         self.initUI()
 
     def initUI(self):
@@ -68,43 +78,22 @@ class SettingsWidget(QtWidgets.QWidget):
         self.setLayout(FormLayout)
 
         # Box selector
-        boxes = utils.get_boxes(self.sys_config['paths']['boxes_folder'])
-        self.box_name = self.sys_config['last']['box']
-        self.BoxChoiceWidget = StringChoiceWidget(self, choices=boxes)
+        self.BoxChoiceWidget = StringChoiceWidget(self, choices=[box.name for box in self.Boxes])
         self.BoxChoiceWidget.currentIndexChanged.connect(self.box_changed)
-        try:
-            self.BoxChoiceWidget.set_value(self.box_name)
-        except:
-            # if box is not in list
-            self.BoxChoiceWidget.set_value(boxes[0])
         FormLayout.addRow('Box', self.BoxChoiceWidget)
         self.box_changed() # enforce call
 
-        # animal selector
-        self.Animals = utils.get_Animals(self.sys_config['paths']['animals_folder'])
-        last_id = self.sys_config['last']['animal']
-        self.Animal, = [Animal for Animal in self.Animals if Animal.ID == last_id]
-        display_names = [animal.display() for animal in self.Animals]
-        self.AnimalChoiceWidget = StringChoiceWidget(self, choices=display_names)
+        # Animal selector
+        self.AnimalChoiceWidget = StringChoiceWidget(self, choices=[animal.display() for animal in self.Animals])
         self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
-        try:
-            self.AnimalChoiceWidget.set_value(self.Animal.display())
-        except:
-            # if animal is not in list
-            self.AnimalChoiceWidget.set_value(self.Animals[0].display())
         FormLayout.addRow('Animal', self.AnimalChoiceWidget)
+        self.animal_changed() # enforce call
 
-        # task selector
-        tasks = utils.get_tasks(self.sys_config['paths']['tasks_folder'])
-        self.task = self.sys_config['last']['task']
-        self.TaskChoiceWidget = StringChoiceWidget(self, choices=tasks)
+        # Task selector
+        self.TaskChoiceWidget = StringChoiceWidget(self, choices=[task.name for task in self.Tasks])
         self.TaskChoiceWidget.currentIndexChanged.connect(self.task_changed)
-        try:
-            self.TaskChoiceWidget.set_value(self.task)
-        except:
-            # if task is not in list
-            self.TaskChoiceWidget.set_value(tasks[0])
         FormLayout.addRow('Task', self.TaskChoiceWidget)
+        self.task_changed() # enforce call
 
         # sep
         line = QtWidgets.QFrame(self)
@@ -139,16 +128,16 @@ class SettingsWidget(QtWidgets.QWidget):
                 
         # enforce function calls if first animal
         
-        self.animal_changed()
+        # self.animal_changed()
         # if animals.index(self.animal) == 0: # to call animal_changed even if the animal is the first in the list
         #     self.animal_changed()
-        if tasks.index(self.task) == 0: # enforce function call if first task
-            self.task_changed()
+        # if tasks.index(self.task) == 0: # enforce function call if first task
+        #     self.task_changed()
 
     def init_counters(self):
-        if 'OnlineAnalysis' in dict(self.task_config).keys():
-            if 'counters' in dict(self.task_config['OnlineAnalysis']).keys():
-                counters = [c.strip() for c in self.task_config['OnlineAnalysis']['counters'].split(',')]
+        if 'OnlineAnalysis' in dict(self.Task).keys():
+            if 'counters' in dict(self.Task['OnlineAnalysis']).keys():
+                counters = [c.strip() for c in self.Task['OnlineAnalysis']['counters'].split(',')]
                 for counter in counters:
                     mod = importlib.import_module('Visualizers.Counters')
                     C = getattr(mod, counter)
@@ -161,9 +150,9 @@ class SettingsWidget(QtWidgets.QWidget):
         # needs to 
         # cwd = os.getcwd()
         # os.chdir(self.task_folder)
-        # plotters =[p.strip() for p in self.task_config['Visualization']['plotters'].split(',')]
+        # plotters =[p.strip() for p in self.Task['Visualization']['plotters'].split(',')]
         # utils.debug_trace()
-        # module_name = self.task_config['Visualization']['visualizers']
+        # module_name = self.Task['Visualization']['visualizers']
         # mod = importlib.import_module(module_name)
         # # get registered plotters (how?)
         # # start them and connect them
@@ -215,12 +204,12 @@ class SettingsWidget(QtWidgets.QWidget):
         self.RunInfo = RunInfoPopup(self)
 
         utils.printer("RUN", 'task')
-        utils.printer("Task: %s" % self.task, 'msg')
+        utils.printer("Task: %s" % self.Task.name, 'msg')
         utils.printer("Animal: %s - body weight: %s%%" % (self.Animal.display(), self.Animal.weight_ratio()),'msg')
 
         # make folder structure
         date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # cross platform compatible
-        self.run_folder = self.Animal.folder  / '_'.join([date_time, self.task])
+        self.run_folder = self.Animal.folder  / '_'.join([date_time, self.Task.name])
         os.makedirs(self.run_folder, exist_ok=True)
 
         # run all controllers
@@ -260,19 +249,14 @@ class SettingsWidget(QtWidgets.QWidget):
         self.task_changed() # this reinitialized all controllers
 
     def box_changed(self):
-        print("called")
         # update current box
-        self.sys_config['current']['box'] = self.BoxChoiceWidget.get_value()
-        self.box_name = self.sys_config['current']['box']
-        self.box_config = configparser.ConfigParser()
-        box_config_path = Path(self.sys_config['paths']['boxes_folder']) / (self.box_name + '.ini')
-        self.box_config.read(box_config_path)
-        utils.printer("selected Box: %s" % self.box_name, 'msg')
-        
+        self.box_config = self.Boxes[self.BoxChoiceWidget.currentIndex()]
+        self.sys_config['current']['box'] = self.box_config.name
+        utils.printer("selected Box: %s" % self.box_config.name, 'msg')
+       
     def animal_changed(self):
-        current_id = self.AnimalChoiceWidget.get_value().split(' - ')[0]
-        self.sys_config['current']['animal'] = current_id
-        self.Animal, = [Animal for Animal in self.Animals if Animal.ID == current_id]
+        self.Animal = self.Animals[self.AnimalChoiceWidget.currentIndex()]
+        self.sys_config['current']['animal'] = self.Animal.ID
 
         # TODO bring back via a button
         # # displaying previous sessions info
@@ -286,68 +270,61 @@ class SettingsWidget(QtWidgets.QWidget):
         utils.printer("Animal: %s" % self.Animal.display(),'msg')
 
     def task_changed(self):
-        # first check if task is running, if yes, don't do anything
-        if self.is_running == True:
-            utils.printer("trying to change a running task", 'error')
-            return None
 
-        else:
-            # update current task
-            self.sys_config['current']['task'] = self.TaskChoiceWidget.get_value()
-            self.task = self.sys_config['current']['task']
-            self.task_folder = Path(self.sys_config['paths']['tasks_folder']) / self.task
-            utils.printer("selected Task: %s" % self.task, 'msg')
+        # update current task
+        self.Task = self.Tasks[self.TaskChoiceWidget.currentIndex()]
+        self.sys_config['current']['task'] = self.Task.name
+        utils.printer("selected Task: %s" % self.Task.name, 'msg')
+        
+        # take down all currently open controllers
+        for Controller in self.Controllers:
+            Controller.stop()
+            Controller.close()
+        self.Controllers = []
 
-            # parse task config file
-            self.task_config = configparser.ConfigParser()
-            self.task_config.read(self.task_folder / 'task_config.ini')
-            
-            # take down all currently open controllers
-            for Controller in self.Controllers:
-                Controller.stop()
-                Controller.close()
-            self.Controllers = []
+        for Counter in self.Counters:
+            Counter.stop()
+            Counter.close()
+        self.Counters = []
+        
+        # run each controller present in task config
+        for section in self.Task.sections():
+            utils.printer("initializing %s" % section, 'msg')
 
-            for Counter in self.Counters:
-                Counter.stop()
-                Counter.close()
-            self.Counters = []
-            
-            # run each controller present in task config
-            for section in self.task_config.sections():
-                utils.printer("initializing %s" % section, 'msg')
+            if section == 'FSM':
+                from Widgets.ArduinoWidgets import ArduinoController
+                if 'OnlineAnalysis' in dict(self.Task).keys():
+                    self.ArduinoController = ArduinoController(self, self.sys_config, self.Task['FSM'], self.Box, self.Task['OnlineAnalysis'])
+                else:
+                    self.ArduinoController = ArduinoController(self, self.sys_config, self.Task['FSM'], self.Box)
+                self.Controllers.append(self.ArduinoController)
 
-                if section == 'FSM':
-                    from Widgets.ArduinoWidgets import ArduinoController
-                    self.ArduinoController = ArduinoController(self, self.sys_config, self.task_config['FSM'], self.box_config)
-                    self.Controllers.append(self.ArduinoController)
+            if section == 'Bonsai':
+                from Widgets.BonsaiWidgets import BonsaiController
+                self.BonsaiController = BonsaiController(self, self.sys_config, self.Task['Bonsai'], self.Box)
+                self.Controllers.append(self.BonsaiController)
 
-                if section == 'Bonsai':
-                    from Widgets.BonsaiWidgets import BonsaiController
-                    self.BonsaiController = BonsaiController(self, self.sys_config, self.task_config['Bonsai'], self.box_config)
-                    self.Controllers.append(self.BonsaiController)
+            if section == 'TimeLogger':
+                from Widgets.TimeLogger import TimeLogger
+                self.TimeLoggerController = TimeLogger(self, self.sys_config, self.Task['TimeLogger'], self.Box)
+                self.Controllers.append(self.TimeLoggerController)
+                
+            # if section == 'CameraCalib':
+            #     from Widgets.CameraCalibrationWidget import CameraCalibrationWidget
+            #     self.CamCalib = CameraCalibrationWidget(self, self.sys_config, self.Task['CameraCalib'])
+                # self.Controllers.append(self.CamCalib)
 
-                if section == 'TimeLogger':
-                    from Widgets.TimeLogger import TimeLogger
-                    self.TimeLoggerController = TimeLogger(self, self.sys_config, self.task_config['TimeLogger'], self.box_config)
-                    self.Controllers.append(self.TimeLoggerController)
-                    
-                # if section == 'CameraCalib':
-                #     from Widgets.CameraCalibrationWidget import CameraCalibrationWidget
-                #     self.CamCalib = CameraCalibrationWidget(self, self.sys_config, self.task_config['CameraCalib'])
-                    # self.Controllers.append(self.CamCalib)
+            # if section == 'LoadCell':
+                # from LoadCellWidgets import LoadCellController
+            #     self.LoadCellController = LoadCellController(self, self.sys_config, self.Task['LoadCell'])
+            #     self.Controllers.append(self.LoadCellController)
 
-                # if section == 'LoadCell':
-                    # from LoadCellWidgets import LoadCellController
-                #     self.LoadCellController = LoadCellController(self, self.sys_config, self.task_config['LoadCell'])
-                #     self.Controllers.append(self.LoadCellController)
+            # if section == 'Display':
+            #     self.DisplayController = HardwareWidgets.DisplayController(self)
+            #     self.Controllers.append(self.DisplayController)
 
-                # if section == 'Display':
-                #     self.DisplayController = HardwareWidgets.DisplayController(self)
-                #     self.Controllers.append(self.DisplayController)
-
-            # after controllers, reinit counter
-            self.init_counters()
+        # after controllers, reinit counter
+        self.init_counters()
 
 
 """

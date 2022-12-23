@@ -117,8 +117,8 @@ class WaterCounter(QtWidgets.QWidget):
 
         # internal value and display
         self.current_amount = 0
-        self.Value = QtGui.QLabel(str(self.current_amount))
-        self.Label = QtGui.QLabel("consumed water (µl): ")
+        self.Value = QtWidgets.QLabel(str(self.current_amount))
+        self.Label = QtWidgets.QLabel("consumed water (µl): ")
 
         Row = QtWidgets.QHBoxLayout()
         Row.addWidget(self.Label)

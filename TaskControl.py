@@ -10,18 +10,13 @@ class TaskControlApp(QtWidgets.QApplication):
         super(TaskControlApp, self).__init__(*args)
 
         # read config.ini
-        self.config_path = Path(config_path)
-        self.config = configparser.ConfigParser()
-        self.config.read(self.config_path)
+        self.Sys = utils.Config(config_path)
 
         print(" --- this is TaskControl --- ")
         utils.printer("using config: %s" % config_path, 'msg')
 
         # launch GUI
-        self.Settings_Widget = SettingsWidget(self, self.config)
-
-        # hack - store default box settings
-        # self.default_box_config = self.config['box']
+        self.Settings_Widget = SettingsWidget(self, self.Sys)
 
         # on close - TODO check if obsolete with proper QT parent child structure
         self.setQuitOnLastWindowClosed(False)
@@ -29,13 +24,8 @@ class TaskControlApp(QtWidgets.QApplication):
         self.exec_()
 
     def onLastClosed(self):
-        # restore box defaults
-        # for key, value in self.default_box_config.items():
-        #     self.config['box'][key] = value
-
         # write current config to disk
-        with open(self.config_path, 'w') as fH:
-            self.config.write(fH)
+        self.Sys.save()
         self.exit()
 
 if __name__ == "__main__":

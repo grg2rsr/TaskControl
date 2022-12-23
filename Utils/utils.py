@@ -1,8 +1,10 @@
 import sys, os 
-import pandas as pd
-import scipy as sp 
-import pathlib
 from pathlib import Path
+from configparser import ConfigParser
+
+import numpy as np
+import pandas as pd
+
 from colorama import init, Fore
 init(autoreset=True)
 
@@ -17,24 +19,35 @@ init(autoreset=True)
   #######  ########   ######  ########  ######     ##     ######  
  
 """
-
 class Animal(object):
     def __init__(self, folder):
         self.folder = Path(folder) # just in case
-        self.meta = pd.read_csv(self.folder / 'animal_meta.csv')
-        self.update(dict(zip(self.meta.name, self.meta.value)))
+        for suffix in ['.csv','.ini']: # downward compatible
+            meta_path = (self.folder / 'animal_meta').with_suffix(suffix)
+            if meta_path.exists() and suffix == '.csv':
+                self.meta = pd.read_csv(meta_path)
+                self.update(dict(zip(self.meta.name, self.meta.value)))
+            
+            # TODO check and FIXME
+            if meta_path.exists() and suffix == '.ini':
+                self.meta = ConfigParser()
+                self.meta.read(meta_path)
+                # self.meta = dict(self.meta) # possible?
 
     def update(self, Dict):
+        """ dataclass like field / member access """
         for k,v in Dict.items():
             self.__dict__[k] = v
 
     def display(self):
+        """ this is not __repr__ because it is called explicitly """
         if 'Nickname' in self.__dict__.keys():
             return "%s - %s" % (self.ID, self.Nickname)
         else:
             return self.ID
 
     def weight_ratio(self):
+        # FIXME this doesn't work because of str
         try:
             return self.current_weight / self.weight
         except:
@@ -47,16 +60,82 @@ class Session(object):
     def __init__(self, folder):
         self.Animal = Animal(folder.parent)
         self.folder = Path(folder)
-        self.task = '_'.join(folder.stem.split('_')[2:])
-        self.date = folder.stem.split('_')[0]
-        self.time = folder.stem.split('_')[1]
-        self.SessionsDf = get_sessions(folder.parent)
-        self.total_days = self.SessionsDf.shape[0]
-        self.task_days = self.SessionsDf.groupby('task').get_group(self.task).shape[0]
-        self.day = list(self.SessionsDf['date'].values).index(self.date) + 1
+        self.task, self.date, self.time = parse_session_folder(self.folder)
+        
+        session_folders = get_session_folders(self.folder.parent)
+        self.total_days = len(session_folders)
+
+        self.task_days = np.sum([parse_session_folder(folder)[0] == self.task for folder in session_folders])
+
+        dates = np.sort([parse_session_folder(folder)[1] for folder in session_folders])
+        self.day = list(np.unique(dates)).index(self.date) + 1  # note - np.unique makes sure that days are not equal to number of sessions
+
 
     def __repr__(self):
         return ' - '.join([self.Animal.ID, self.Animal.Nickname, self.date, self.task, 'day: %s' % self.day])
+
+# class Sessions():
+#     def __init__(self, Sessions: list[Session]):
+#         self.Sessions = Sessions
+#         # generating Sessions.Df
+#         Dfs = []
+#         for Session in self.Sessions:
+#             # path = str(session)
+#             # folder_name = os.path.basename(path)
+#             # if folder_name == 'plots':
+#             #     continue
+#             # date = folder_name.split('_')[0]
+#             # time = folder_name.split('_')[1]
+#             # task = '_'.join(folder_name.split('_')[2:])
+#             Df= pd.DataFrame(dict(path=Session.folder,
+#                                   date=Session.date,
+#                                   time=Session.time,
+#                                   task=Session.task),
+#                                   index=[0])
+#             Dfs.append(Df)
+
+#         self.Df = pd.concat(Dfs)
+#         self.Df = Df.sort_values(['date','time'])
+#         self.Df = Df.reset_index()
+
+
+
+class Config(ConfigParser):
+    def __init__(self, ini_path: str):
+        super(Config, self).__init__()
+        self.ini_path = Path(ini_path)
+        self.read(ini_path)
+
+    def save(self):
+        with open(self.ini_path, 'w') as fH:
+            self.write(fH)
+
+class Box(Config):
+    def __init__(self, ini_path):
+        super(Box, self).__init__(ini_path)
+        self.name = ini_path.stem
+        # self.config = # read from the .ini
+        ...
+
+    def get_Animals(self):
+        """ returns all Animals that are in this box """
+        ...
+
+class Task(Config):
+    def __init__(self, ini_path):
+        super(Task, self).__init__(ini_path)
+        self.name = ini_path.parts[-2]
+        self.folder = ini_path.parent
+
+    def get_description(self):
+        ...
+
+    def get_version(self):
+        ...
+
+    def get_Animals(self):
+        """ returns all Animals that have been run on this task """
+        ...
 
 
 """
@@ -71,64 +150,80 @@ class Session(object):
  
 """
 
-def get_Animals(folder):
-    """ checks each folder in folder """
-    Animals = []
-    animals_folder = pathlib.Path(folder)
-    for path in animals_folder.iterdir():
-        if path.is_dir():
-            # is an animal folder?
-            if (path / 'animal_meta.csv').exists():
-                Animals.append(Animal(path))
-    return Animals
+# Animal
+def get_Animal_folders(folder: str) -> list:
+    """ iterates over dirs in folder and returns those 
+    that contain an animal_meta.csv """
+    animal_folders = []
+    for path in Path(folder).iterdir():
+        if path.is_dir() and (path / 'animal_meta.csv').exists():
+            animal_folders.append(path)
+    return animal_folders
 
-def select(objs, key, value):
-    return [obj for obj in objs if obj.__dict__[key] == value]
+def get_Animals(folder: str) -> list[Animal]:
+    """ returns a list of Animals (object) """
+    animal_folders = get_Animal_folders(folder)
+    return [Animal(animal_folder) for animal_folder in animal_folders]
 
-def groupby_dict(Df, Dict):
-    return Df.groupby(list(Dict.keys())).get_group(tuple(Dict.values()))
+# Box
+def get_boxes_ini_paths(folder: str) -> list:
+    """ gets all the paths to all boxes.ini from the folder """
+    boxes_ini_paths = []
+    for file in Path(folder).iterdir():
+        if not file.is_dir() and file.suffix == '.ini':
+            boxes_ini_paths.append(file)
+    return boxes_ini_paths
 
-def printer(s, mode='msg', obj=None):
-    if mode == 'msg':
-        string = Fore.GREEN + s
-    if mode == 'task':
-        string = Fore.CYAN + "\n--- %s ---" % s
-    if mode == 'error':
-        string = Fore.RED + "ERROR: %s" % s
-    if mode == 'warning':
-        string = Fore.YELLOW + "WARNING: %s" % s
-    if mode == 'debug':
-        string = Fore.MAGENTA + "DEBUG: %s" % s
+def get_Boxes(folder: str) -> list[Box]:
+    ini_paths = get_boxes_ini_paths(folder)
+    return [Box(ini_path) for ini_path in ini_paths]
 
-    if obj is not None:
-        string = ': '.join(obj.name, string)
-        
-    print(string)
+# Task
+def get_tasks_ini_paths(folder: str) -> list:
+    """  """
+    tasks_ini_paths = []
+    for subfolder in Path(folder).iterdir():
+        if subfolder.is_dir() and (subfolder/'task_config.ini').exists():
+            tasks_ini_paths.append(subfolder/'task_config.ini')
+    return tasks_ini_paths
 
-def get_boxes(folder):
-    boxes = []
-    boxes_folder = pathlib.Path(folder)
-    for file in boxes_folder.iterdir():
-        if not file.is_dir():
-            if file.suffix == '.ini':
-                boxes.append(file.stem)
-    return boxes
+def get_Tasks(folder: str) -> list[Task]:
+    tasks_ini_paths = get_tasks_ini_paths(folder)
+    return [Task(ini_path) for ini_path in tasks_ini_paths]
 
-def get_tasks(folder):
-    """ gets all valid tasks """
-    tasks = []
-    tasks_folder = pathlib.Path(folder)
-    for subfolder in tasks_folder.iterdir():
-        if subfolder.is_dir():
-            if os.path.exists(os.path.join(subfolder,'task_config.ini')):
-                tasks.append(os.path.basename(subfolder))
-    return tasks
-    
+# Sessions
+def get_session_folders(animal_folder: str) -> list:
+    """ """
+    session_folders = []
+    for subfolder in animal_folder.iterdir():
+        if subfolder.is_dir() and (subfolder / 'platformio_build_log.txt').exists():
+            session_folders.append(subfolder)
+    return session_folders
+
+def get_Sessions(animal_folder: str) -> list[Session]:
+    """ returns a list of Session objects, chronologically sorted """
+    session_folders = get_session_folders(animal_folder)
+    Sessions = [Session(session_folder) for session_folder in session_folders]
+
+    # sort into chronological order
+    order = np.argsort([S.date for S in Sessions])
+    Sessions = [Sessions[i] for i in order]
+
+    return Sessions
+
+def parse_session_folder(folder: str):
+    folder = Path(folder)
+    task = '_'.join(folder.stem.split('_')[2:])
+    date = folder.stem.split('_')[0]
+    time = folder.stem.split('_')[1]
+    return task, date, time
+
+# FIXME this needs proper fixing, and this function is actually called
 def get_sessions(folder):
     """ gets all sessions' logs, sorted by datetime in a Df """
     """ this should have more parsing ... """
     sessions = []
-    animal_folder = pathlib.Path(folder)
+    animal_folder = Path(folder)
     for subfolder in animal_folder.iterdir():
         if subfolder.is_dir():
             sessions.append(subfolder)
@@ -153,6 +248,42 @@ def get_sessions(folder):
 
     return Df
 
+def select(objs: list[object], **kwargs) -> list[object]:
+    """ filters list of object for key=value pairs
+    if multiple pairs are present, perform intersection """
+    objs_sel = objs
+    for key, value in kwargs.items():
+        objs_sel = [obj for obj in objs_sel if obj.__dict__[key] == value]
+    return objs_sel
+
+# %%
+def groupby_dict(Df, Dict):
+    # groupby using a dict
+    # strange that this isn't part of pandas
+    # does not work at all atm
+    return Df.groupby(list(Dict.keys())).get_group(tuple(Dict.values()))
+
+
+
+# %%
+
+def printer(s, mode='msg', obj=None):
+    if mode == 'msg':
+        string = Fore.GREEN + s
+    if mode == 'task':
+        string = Fore.CYAN + "\n--- %s ---" % s
+    if mode == 'error':
+        string = Fore.RED + "ERROR: %s" % s
+    if mode == 'warning':
+        string = Fore.YELLOW + "WARNING: %s" % s
+    if mode == 'debug':
+        string = Fore.MAGENTA + "DEBUG: %s" % s
+
+    if obj is not None:
+        string = ': '.join(obj.name, string)
+        
+    print(string)
+
 def debug_trace():
     """ Set a tracepoint in the Python debugger that works with Qt
     https://stackoverflow.com/a/1745965/4749250 """
@@ -161,6 +292,7 @@ def debug_trace():
     QtCore.pyqtRemoveInputHook()
     set_trace()
 
+# TODO never used!?
 def get_file_dialog(initial_dir="D:/TaskControl/Animals"):
     from tkinter import Tk
     from tkinter import filedialog
@@ -176,6 +308,7 @@ def get_file_dialog(initial_dir="D:/TaskControl/Animals"):
 
     return path
 
+# TODO never used!?
 def get_folder_dialog(initial_dir="D:/TaskControl/Animals"):
     from tkinter import Tk
     from tkinter import filedialog
@@ -191,7 +324,6 @@ def get_folder_dialog(initial_dir="D:/TaskControl/Animals"):
 
     return path
     
-
 """
  
  ########     ###    ########   ######  ######## ########  
@@ -203,8 +335,26 @@ def get_folder_dialog(initial_dir="D:/TaskControl/Animals"):
  ##        ##     ## ##     ##  ######  ######## ##     ## 
  
 """
-# this is the mapping from numpy letter codes to C style arduino compatible
-dtype_map = {
+
+from collections import UserDict
+
+class NotInvertibleException(Exception):
+    ...
+# implement checking
+class InvertibleMap(UserDict):
+    def __init__(self, Dict):
+        super(InvertibleMap, self).__init__(Dict)
+        
+        if self.has_duplicates(list(self.keys())) or self.has_duplicates(list(self.values())):
+            raise NotInvertibleException
+        else:
+            self.inv = dict(zip(self.values(), self.keys()))
+
+    def has_duplicates(self, elements: list) -> bool:
+        return any([elements.count(el) > 1 for el in elements])
+        
+# this is the mapping from C style dtype "words" to np letter abbreviations
+dtype_map = InvertibleMap({
             'int':'i4',
             'unsigned int':'u4',
             'long':'i8',
@@ -212,11 +362,11 @@ dtype_map = {
             'bool':'?',
             'float':'f4',
             'double':'f8',
-            }
+            })
 
 def parse_code_map(path):
-    # FIXME this needs a new name as well - and right now is unused!
-    """ a hacky parser """  
+    """ a hacky parser """ 
+    # 2do: return an InvertibleMap
     with open(path, 'r') as fH:
         lines = fH.readlines()
         lines = [line.strip() for line in lines]
@@ -267,7 +417,7 @@ def parse_arduino_vars(path):
             # elements = [elem.strip() for elem in elements] # whitespace removal
             name = elements[-1]
             dtype = ' '.join(elements[:-1])
-            value = sp.array(value, dtype=dtype_map[dtype])
+            value = np.array(value, dtype=dtype_map[dtype])
             parsed_vars.append(dict(name=name, value=value, dtype=dtype_map[dtype]))
         except:
             print('unreadable line: ',line)
@@ -277,13 +427,12 @@ def parse_arduino_vars(path):
     return Df.reset_index(drop=True)
 
 def Df2arduino_vars(Df):
-    # convert them into something that arduino lang understands
-    dtype_map_inv = dict(zip(dtype_map.values(),dtype_map.keys()))
+    """ converts a pd.DataFrame into a list of str for C/arduino """
 
     lines = []
     for i, row in Df.iterrows():
         line = []
-        line.append(dtype_map_inv[row['dtype']]) 
+        line.append(dtype_map.inv[row['dtype']]) 
         line.append(row['name'])
         line.append('=')
         if row['dtype'] == '?':
