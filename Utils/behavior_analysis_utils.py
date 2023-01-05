@@ -1,4 +1,3 @@
-import scipy as sp
 import pandas as pd
 import numpy as np
 import os 
@@ -540,8 +539,8 @@ def log_reg_sklearn(x, y, x_fit=None):
         cLR.fit(x[:, np.newaxis], y)
         y_fit = expit(x_fit * cLR.coef_ + cLR.intercept_).flatten()
     except ValueError:
-        y_fit = sp.zeros(x_fit.shape)
-        y_fit[:] = sp.nan
+        y_fit = np.zeros(x_fit.shape)
+        y_fit[:] = np.nan
 
     return y_fit, (cLR.coef_, cLR.intercept_)
 
