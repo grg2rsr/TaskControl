@@ -40,6 +40,7 @@ class SettingsWidget(QtWidgets.QWidget):
     # FIXME does not have parent? - fix inheritance from TaskControl
     def __init__(self, main, config):
         super(SettingsWidget, self).__init__()
+        self.name = "SettingsWidget"
         self.sys_config = config # a configparser dict
         self.Controllers = [] # a list of all controllers
         self.Counters = []
@@ -58,10 +59,10 @@ class SettingsWidget(QtWidgets.QWidget):
         self.Box, = utils.select(self.Boxes, name=self.sys_config['last']['box'])
 
         self.Animals = utils.get_Animals(self.sys_config['paths']['animals_folder'])
-        self.Animal = utils.select(self.Animals, ID=self.sys_config['last']['animal'])
+        self.Animal, = utils.select(self.Animals, ID=self.sys_config['last']['animal'])
 
         self.Tasks = utils.get_Tasks(self.sys_config['paths']['tasks_folder'])
-        self.Task = utils.select(self.Tasks, name=self.sys_config['last']['task'])
+        self.Task, = utils.select(self.Tasks, name=self.sys_config['last']['task'])
 
         self.initUI()
 
@@ -77,19 +78,19 @@ class SettingsWidget(QtWidgets.QWidget):
         self.setLayout(FormLayout)
 
         # Box selector
-        self.BoxChoiceWidget = StringChoiceWidget(self, choices=[box.name for box in self.Boxes])
+        self.BoxChoiceWidget = StringChoiceWidget(self, choices=[box.name for box in self.Boxes], default=self.Box.name)
         self.BoxChoiceWidget.currentIndexChanged.connect(self.box_changed)
         FormLayout.addRow('Box', self.BoxChoiceWidget)
         self.box_changed() # enforce call
 
         # Animal selector
-        self.AnimalChoiceWidget = StringChoiceWidget(self, choices=[animal.display() for animal in self.Animals])
+        self.AnimalChoiceWidget = StringChoiceWidget(self, choices=[animal.display() for animal in self.Animals], default=self.Animal.display())
         self.AnimalChoiceWidget.currentIndexChanged.connect(self.animal_changed)
         FormLayout.addRow('Animal', self.AnimalChoiceWidget)
         self.animal_changed() # enforce call
 
         # Task selector
-        self.TaskChoiceWidget = StringChoiceWidget(self, choices=[task.name for task in self.Tasks])
+        self.TaskChoiceWidget = StringChoiceWidget(self, choices=[task.name for task in self.Tasks], default=self.Task.name)
         self.TaskChoiceWidget.currentIndexChanged.connect(self.task_changed)
         FormLayout.addRow('Task', self.TaskChoiceWidget)
         self.task_changed() # enforce call

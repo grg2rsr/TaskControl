@@ -280,7 +280,7 @@ def printer(s, mode='msg', obj=None):
         string = Fore.MAGENTA + "DEBUG: %s" % s
 
     if obj is not None:
-        string = ': '.join(obj.name, string)
+        string = ': '.join([obj.name, string])
         
     print(string)
 
