@@ -26,7 +26,7 @@ from Utils import metrics
 
 class OutcomeCounter(QtWidgets.QWidget):
     """ """
-    def __init__(self, parent, outcomes=None, split_by=None):
+    def __init__(self, parent, online_config, outcomes=None, split_by=None):
         super(OutcomeCounter, self).__init__(parent=parent)
         self.name = "OutcomeCounter"
         self.setWindowFlags(QtCore.Qt.Window)
@@ -108,7 +108,7 @@ class OutcomeCounter(QtWidgets.QWidget):
 
 class WaterCounter(QtWidgets.QWidget):
     """ """
-    def __init__(self, parent):
+    def __init__(self, parent, online_config):
         super(WaterCounter, self).__init__(parent=parent)
         self.name = "WaterCounter"
         self.setWindowFlags(QtCore.Qt.Window)
@@ -125,7 +125,7 @@ class WaterCounter(QtWidgets.QWidget):
         Row.addWidget(self.Value)
         self.Layout.addLayout(Row)
 
-        self.reward_events = [p.strip() for p in self.parent().task_config['OnlineAnalysis']['reward_event'].split(',')]
+        self.reward_events = [p.strip() for p in online_config['reward_event'].split(',')]
         
         # self terminate
         Df = pd.DataFrame([['after (ul) ',  1000,   'int32']],
@@ -194,7 +194,7 @@ class WaterCounter(QtWidgets.QWidget):
 
 class Timer(QtWidgets.QWidget):
     """ a clock """
-    def __init__(self, parent):
+    def __init__(self, parent, online_config):
         super(Timer, self).__init__(parent=parent)
         self.name = "Timer"
         self.setWindowFlags(QtCore.Qt.Window)
@@ -276,7 +276,7 @@ class Timer(QtWidgets.QWidget):
 
 class EventCounter(QtWidgets.QScrollArea):
     """ simply counts all arduino events """
-    def __init__(self, parent):
+    def __init__(self, parent, online_config):
         super(EventCounter, self).__init__(parent=parent)
         self.name = "EventCounter"
         self.setWindowFlags(QtCore.Qt.Window)

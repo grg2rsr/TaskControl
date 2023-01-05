@@ -141,7 +141,7 @@ class SettingsWidget(QtWidgets.QWidget):
                 for counter in counters:
                     mod = importlib.import_module('Visualizers.Counters')
                     C = getattr(mod, counter)
-                    self.Counters.append(C(self))
+                    self.Counters.append(C(self, self.Task['OnlineAnalysis']))
                     utils.printer("initializing counter: %s" % counter, 'msg')
 
     def start_online_vis(self):
