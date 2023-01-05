@@ -1,0 +1,10 @@
+name: TaskControl
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pandas
+  - numpy
+  - pyqt=5.9.2
+  - pyserial
+  - colorama
