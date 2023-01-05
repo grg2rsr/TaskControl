@@ -5,6 +5,12 @@ dependencies:
   - python=3.10
   - pandas
   - numpy
+  - scipy
   - pyqt=5.9.2
   - pyserial
   - colorama
+  - tqdm
+  - matplotlib
+  - scikit-learn
+  - pyqtgraph
+  - seaborn
