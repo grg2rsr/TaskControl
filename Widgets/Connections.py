@@ -138,7 +138,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         
         # sb.setValue(sb.maximum())
 
-        if self.update_CheckBox.checkState() == 2:
+        if self.updateCheckBox.checkState() == 2:
             # scroll to end
            sb.setValue(sb.maximum())
         else:

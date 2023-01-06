@@ -87,6 +87,7 @@ class FSMSerialConnection(SerialConnection):
 class OnlineFSMDecoder(QtCore.QObject):
     decoded_data_available = QtCore.pyqtSignal(str)
     var_data_available = QtCore.pyqtSignal(str,str)
+    formatted_var_data_available = QtCore.pyqtSignal(str)
     other_data_available = QtCore.pyqtSignal(str)
 
     def __init__(self, parent, CodesDf):
@@ -107,6 +108,7 @@ class OnlineFSMDecoder(QtCore.QObject):
                 name = line_split[1]
                 value = line_split[2]
                 self.var_data_available.emit(name, value)
+                self.formatted_var_data_available.emit("%s=%s" % (name, value))
 
             if not line.startswith('<'):
                 code, t = line.split('\t')
@@ -248,6 +250,7 @@ class ArduinoController(QtWidgets.QWidget):
         self.Serial.data_available.connect(self.FSMDecoder.on_data)
         self.FSMDecoder.decoded_data_available.connect(self.SerialMonitor.on_data)
         self.FSMDecoder.other_data_available.connect(self.SerialMonitor.on_data)
+        self.FSMDecoder.formatted_var_data_available.connect(self.SerialMonitor.on_data)
 
         # VariableController
         # TODO remove this hardcode, external into .ini
