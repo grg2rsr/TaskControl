@@ -1,51 +1,37 @@
-# - this software is not useable yet -
-
 # A unified task control program
-## the problem:
-A task has a range of different hardware that needs to communicate with each other and each task has a range of different visualizers.
+Software to manage running "tasks" for in behavioral boxes for rodent/animal training with different tasks, boxes, animals, users, hardware etc., all offering a unified interface that allows to flexibly select the different components of the experiment and simply hitting the run button. Takes care of all the communication, data logging and storage. Allows for online visualization of the behavior, and bi-directional online communication with the state-machine and its variables that controls the task. 
 
-To make things more complicated:
+## the problems
 + animals can be run in different tasks
-+ different people can run the same animal
-+ a task has specific hardware and visualizers
-+ tasks need to be interactive and can change quickly in the design phase
++ different tasks can have different hardware
++ different experimentors can run the same animal
++ a task can require different visualizers
++ tasks are automatic, but need to be interactively controllable
 
 A unified system has to:
-+ interactive
++ support bi-directional communication with the hardware to allow for interactivity
 + be able to interface different hardware (=extensible)
-+ be portable
++ lightweight/portable to easily set up new training boxes
 
-things that need to be set in `.ini` files:
+## concepts
+TaskControl in itself is a top level python program that interacts with a series of Widgets
+### TaskControl components
++ Controllers - implement the hardware control and communication
++ OnlineAnalyzer - implements the analysis of the data stream
++ Monitors - visualize output from the controllers
 
-## the concept
-TaskControl is a top level python program that interacts with a series of Widgets
+A TaskControl instance selects Animal, Task, Box, (User)
++ Box - contains all general hardware connection based information (ports, etc.) (each computer is connected to several boxes)
++ Task - contains all task related hardware connections (e.g. pins for the arduino) (each box can run different tasks)
++ Animal - contains all animal history related information (training variables, for the future: pyrat interface)
 
-`profiles.ini` is a computer specific file.
-contains the specification of 
-+ paths to all system executables needed to launch the task (pio, bonsai ... )
-+ a list of users
-+ for each user: task folder and animals folder (can of course be shared across users)
-
-The main settings widget - select animal and task, worry not, hit run.
-upon run:
-
-the task has a `task_config.ini`
-which contains:
-a section for each hardwareWidget
-[Arudino]
-[Bonsai]
-etc ... 
-each section contains hardware relevant info (like com port, workflow path etc)
-
-Future: a section for each visualizer?
-[Visualization]
-paths to python scripts that visualize incoming data? need to be able to listen to the ports ... 
+## user specifications
+`profiles.ini`
+`task_config.ini`
 
 ## Detailed description of HardwareWidgets
 ### ArduinoController
 task_config.ini section contains obvious stuff
-+ baud rate
-+ com port
 
 but also: since arduino runs state machine
 + event_codes_fname.h
@@ -62,34 +48,5 @@ for this to work, the arduino code must contain (-> interface.cpp)
 and setup
 loop must extend:
 
-#### system must platformIO
-Task folder must contain Fulder called Arduino (Folder for each hardware, Bonsai etc)
-Arduino is a platformIO project folder with `platformio.ini` that specifies board, port etc.
-
-TODO -> this is doubly complicated? maybe this could be solved more elegantly that not the platformio.ini needs to be specced again ...
-
-
-VisualizationWidget
-HardwareWidget
-
-## task_config.ini
-each task needs one
-
-which has sections for each hardware
-each section has com port 
-
-arduino modifyable variables
-need to be registered (?)
-
-## visualizers
-definitely break generability
-VisWidgets.py to be placed in task folder?
-QtWidgets that implement whatever
-
-# animal metadata
-weight at training start
-current weight
-age
-date of training start
-think about const var column
-
+## requirements
+platformIO
