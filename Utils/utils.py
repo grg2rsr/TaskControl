@@ -268,6 +268,10 @@ def groupby_dict(Df, Dict):
 # %%
 
 def printer(s, mode='msg', obj=None):
+    # TODO replace / enhance this entire functionality
+    # by using the logging module
+    # https://stackoverflow.com/a/13733863
+
     if mode == 'msg':
         string = Fore.GREEN + s
     if mode == 'task':
@@ -309,6 +313,7 @@ def get_file_dialog(initial_dir="D:/TaskControl/Animals"):
     return path
 
 # TODO never used!?
+# also - use qt ... 
 def get_folder_dialog(initial_dir="D:/TaskControl/Animals"):
     from tkinter import Tk
     from tkinter import filedialog

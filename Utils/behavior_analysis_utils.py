@@ -74,11 +74,17 @@ def parse_arduino_log(log_path, code_map=None, parse_var=True, return_check=Fals
 
 # %%
 # TODO test these - 5x more readable than the original one
-def correct_wraparound_np(A: np.ndarray):
+def correct_wraparound_np(A: np.ndarray, max_val=None):
+    """ WARNING - without max_val cannot be used for irregularily
+    sampled data """
     ix = np.where(np.diff(A) < 0)[0]
-    for i in ix[::-1]:
-        A[i+1:] += A[i]
+    for i in ix[::-1]:  
+        if max_val is None:
+            A[i+1:] += A[i]
+        else:
+            A[i+1:] += max_val
     return A
+
 
 def correct_wraparound_Df(Df: pd.DataFrame, col='t'):
     Df[col] = correct_wraparound_np(Df[col].values)
@@ -198,6 +204,18 @@ def filter_spans_to_event(LogDf, on_name, off_name, t_min=50, t_max=200, name=No
     LogDf = LogDf.reset_index()
 
     return LogDf
+
+def add_event(LogDf, times, name):
+    """
+    adds an Event to the LogDf
+    """
+    EventsDf = pd.DataFrame(np.stack([['NA']*times.shape[0], times, [name]*times.shape[0]]).T, columns=['code', 't', 'name'])
+    EventsDf['t'] = EventsDf['t'].astype('float')
+    LogDf = pd.concat([LogDf, EventsDf])
+    LogDf = LogDf.sort_values('t')
+    LogDf = LogDf.reset_index(drop=True)
+    return LogDf
+
 
 """
  
@@ -376,9 +394,16 @@ def time_slice(Df, t_min, t_max, col='t', reset_index=True, mode='inclusive'):
 
     return Df.loc[binds]
 
-def times_slice(Df, times, pre, post, **kwargs):
+def times_slice(Df, times, pre, post, relative=False, **kwargs):
     """ helper """
-    return [time_slice(Df, t+pre, t+post, **kwargs) for t in times]
+    if relative:
+        return [time_slice(Df, t+pre, t+post, **kwargs)-t for t in times]
+    else:
+        return [time_slice(Df, t+pre, t+post, **kwargs) for t in times]
+
+# def times_slice(Df, times, pre, post, **kwargs):
+#     """ helper """
+#     return [time_slice(Df, t+pre, t+post, **kwargs) for t in times]
 
 def event_based_time_slice(Df, event, pre, post, col='name', on='t', **kwargs):
     """ slice around and event """
@@ -598,18 +623,21 @@ def log_reg(x, y, x_fit=None, fit_lapses=True):
     y_fit = fun(x_fit, *pfit.x)
     return y_fit, pfit.x
 
-def tolerant_mean(arrs):
-    'A mean that is tolerant to different sized arrays'
+def calc_rate(t_stamps, tvec, w):
+    """ everything in seconds!, rate is returned in Hz """
+    ix = np.digitize(t_stamps, tvec) -1 
+    rate = np.zeros(tvec.shape[0])
+    dt = np.diff(tvec)[0]
+    rate[ix] = 1
+    return np.convolve(rate, w, mode='same') / dt
 
-    max_length = np.max([arr.shape[0] for arr in arrs]) # get largest array
-
-    # suggestion
-    # A = np.zeros((len(arrs),max_length))
-    # A[:] = np.NaN
-    # for i, arr in enumerate(arrs):
-    #     A[:arr.shape[0],i] = arr
-    # return np.nanmean(A,axis=0)
-
-    arrs=[np.pad(arr, (0, max_length-arr.shape[0]), mode='constant', constant_values=np.nan) for arr in arrs] # pad every array until max_length to obtain square matrix
-
-    return np.nanmean(arrs, axis = 0)
+def event_rate(LogDf: pd.DataFrame, event_name: str, w: np.ndarray, dt: float):
+    """ returns rate of event over the entire session 
+    everything in seconds! """
+    Df = get_events_from_name(LogDf, event_name)
+    times = Df['t'].values/1e3
+    t_start = LogDf['t'].values[0]/1e3
+    t_stop = LogDf['t'].values[-1]/1e3
+    tvec = np.arange(t_start, t_stop, dt) 
+    event_rate = calc_rate(times, tvec, w)
+    return event_rate, tvec

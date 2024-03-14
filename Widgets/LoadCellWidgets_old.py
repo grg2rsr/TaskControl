@@ -26,18 +26,6 @@ import pyqtgraph as pg
  
 """
 
-# class LoadCellController(UPDconnection)
-
-"""
-loadcell controller uses an UDP connection
-all the reading is done there
-
-explicitly needs to know how many loadcells are attached
-UPD monitor
-
-"""
-
-
 class LoadCellController(QtWidgets.QWidget):
     """ 
     gets data from bonsai on a udp port

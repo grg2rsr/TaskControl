@@ -5,14 +5,66 @@ from PyQt5 import QtGui, QtCore
 import serial
 import time
 import threading
+import socket
+import struct
 
 from Utils import utils
 
-""" 
-NOTES
-bare minimum: more a monitor than a controller
-can be converted into a serial logger?
 """
+
+"""
+class UDPconnection(QtCore.QObject):
+    data_available = QtCore.pyqtSignal(list)
+
+    def __init__(self, parent, ip, port, fmt='>d'):
+        super(UDPconnection, self).__init__(parent=parent)
+        self.ip = ip
+        self.port = port
+        self.name = "%s-udp" % parent.name
+        self.fmt = fmt # in https://docs.python.org/3/library/struct.html fmt - default is one float. include endianness
+        self.active = False # check how this can be achieved
+
+    def connect(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+        self.sock.bind((self.ip, self.port))
+        self.sock.setblocking(False)
+        # old comment copied over:
+        # non-blocking mode: recv doesn't receive data, exception is raised
+        # well this might in the end be a bit pointless: first I set it to non-blocking to raise and 
+        # exception and then I let it pass w/o doing anything. Verify if necessary
+        return self.sock
+        
+    def listen(self):
+        def read_from_sock(sock):
+            size = struct.calcsize(self.fmt)
+            while not self.stopped: # check if this can be done via self.active flag that can be turned on and off (via GUI also)
+                try:
+                    # read data and publish it via a qt signal
+                    raw_read = sock.recv(size) # getting three doubles from bonsai
+                    read = struct.unpack(self.fmt, raw_read)
+                    self.data_available.emit(read)
+                except BlockingIOError:
+                    # FIXME at least do some logging!
+                    pass
+    
+        # start a the udp reader in a seperate thread
+        self.th_read = threading.Thread(target=read_from_sock, args=(self.sock, ))
+        self.th_read.start()
+        utils.printer("listening to %s on port %i:%i" % (self.name, self.ip, self.port))
+
+    # def reset(self):
+    #     self.connection.setDTR(False) # reset
+    #     time.sleep(1) # sleep timeout length to drop all data
+    #     self.connection.flushInput()
+    #     self.connection.setDTR(True)
+
+    def disconnect(self):
+        # TODO
+        # read https://stackoverflow.com/questions/409783/socket-shutdown-vs-socket-close
+        self.sock.close()
+
+
+
 
 class SerialConnection(QtCore.QObject):
     """ reads in a seperate thread, publishes data """
