@@ -26,27 +26,16 @@ A TaskControl instance selects Animal, Task, Box, (User)
 + Animal - contains all animal history related information (training variables, for the future: pyrat interface)
 
 ## user specifications
-`profiles.ini`
-`task_config.ini`
+### `profiles.ini`
+system related information
++ paths to executables
++ folders of data storage (animals, tasks ... )
 
-## Detailed description of HardwareWidgets
-### ArduinoController
-task_config.ini section contains obvious stuff
+### `task_config.ini`
+For each task - contains a section for each hardware element
+-> controllers are instantiated based on this file
 
-but also: since arduino runs state machine
-+ event_codes_fname.h
-contains the mapping of codes to events
-+ var_fname.h
-contains the (non-derived) variables that change interactively/training/testing stuff
-+ pio_ini_path
-the path to the platformio.ini file
-+ pin_map.h # check name
+### Boxes
+all hardware connections and ports are specified here
 
-#### ArduinoVariablesWidget
-UI to set live variables in the Arduino
-for this to work, the arduino code must contain (-> interface.cpp)
-and setup
-loop must extend:
-
-## requirements
-platformIO
+2do: explain with templates
