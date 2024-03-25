@@ -28,7 +28,7 @@ colors = dict(success="#72E043",
              left=mpl.cm.PiYG(0.05),
              right=mpl.cm.PiYG(0.95))
 
-def plot_choice_RTs(session_folder, save=None):
+def plot_choice_RTs(session_folder, save=None, bins=None):
     LogDf = bhv.get_LogDf_from_path(session_folder / 'arduino_log.txt')
     session_metrics = (metrics.get_start, metrics.get_choice_rt, metrics.has_choice, metrics.get_chosen_side, metrics.get_correct_side,
                     metrics.get_outcome)
@@ -40,7 +40,8 @@ def plot_choice_RTs(session_folder, save=None):
     sides = ['left','right']
     outcomes = ['correct','incorrect']
 
-    bins = sp.linspace(0, 3000, 40)
+    if bins is None:
+        bins = sp.linspace(0, 3000, 40)
 
     for i, side in enumerate(sides):
         for j, outcome in enumerate(outcomes):

@@ -29,22 +29,22 @@ colors = dict(success="#72E043",
               left=mpl.cm.PiYG(0.05),
               right=mpl.cm.PiYG(0.95))
 
-
 # actress
-Animal_path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03344_Actress"
+# Animal_path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03344_Actress"
 # secretary
 Animal_path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03345_Secretary"
 # nurse
-Animal_path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03346_Nurse"
+# Animal_path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03346_Nurse"
 # firefigher
-Animal_path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03437_Firefighter"
+# Animal_path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03437_Firefighter"
 # priest
-Animal_path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03440_Priest"
+# Animal_path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03440_Priest"
 # sailor
-Animal_path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03441_Sailor"
+# Animal_path = "/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-03441_Sailor"
 
 Animal = utils.Animal(Animal_path)
 SessionsDf = utils.get_sessions(Animal.folder)
+SessionsDf = SessionsDf.iloc[-7:]
 
 for i, row in SessionsDf.iterrows():
     session_folder = Path(row['path'])
@@ -86,17 +86,3 @@ for i, row in SessionsDf.iterrows():
 
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
-
-# spout_r = (376, 271)
-# spout_l = (372, 198)
-
-# spout_l = (361, 211)
-# spout_r = (365, 283)
-
-# w = 10 # px
-# sides = ['left','right']
-# for side, spout in zip(sides, [spout_l, spout_r]):
-#     x, y = spout
-#     xs = [x-w, x-w, x+w, x+w, x-w]
-#     ys = [y+w, y-w, y-w, y+w, y+w]
-#     axes.plot(xs,ys,color=colors[side])

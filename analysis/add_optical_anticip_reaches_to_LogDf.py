@@ -38,11 +38,12 @@ colors = dict(success="#72E043",
 Animals_folder = "/media/georg/htcondor/shared-paton/georg/Animals_reaching"
 Animals = utils.get_Animals(Animals_folder)
 
-Nicknames = ['Actress','Secretary','Nurse','Firefighter','Priest','Sailor']
+# Nicknames = ['Actress','Secretary','Nurse','Firefighter','Priest','Sailor']
+Nicknames = ['Secretary']
 
 for nickname in Nicknames:
     print("processing Animals: %s" % nickname)
-    Animal, = utils.select(Animals, "Nickname", nickname)
+    Animal, = utils.select(Animals, Nickname=nickname)
     SessionsDf = utils.get_sessions(Animal.folder)
 
     for i, row in SessionsDf.iterrows():
@@ -50,7 +51,7 @@ for nickname in Nicknames:
             session_folder = Path(row['path'])
             os.chdir(session_folder)
             if (session_folder / 'LogDf.csv').exists():
-                print("skipping %s " % % session_folder)
+                print("skipping %s " % session_folder)
             else:
                 print("processing folder %s" % session_folder)
 
@@ -112,5 +113,5 @@ for nickname in Nicknames:
                 LogDf = LogDf.sort_values('t')
                 LogDf = LogDf.reset_index(drop=True)
                 LogDf.to_csv(session_folder / 'LogDf.csv')
-            except:
-                print("ERROR didn't process %s" % session_folder)
+        except:
+            print("ERROR didn't process %s" % session_folder)

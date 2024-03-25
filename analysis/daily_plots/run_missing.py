@@ -45,7 +45,8 @@ from plot_bias_over_sessions import plot_bias_over_sessions
 
 # Nicknames = ['Lifeguard', 'Lumberjack', 'Teacher', 'Plumber', 'Poolboy', 'Policeman', 'Therapist']
 # Nicknames = ['Therapist', 'Teacher']
-Nicknames = ['Actress','Secretary','Nurse','Firefighter','Priest','Sailor']
+# Nicknames = ['Actress','Secretary','Nurse','Firefighter','Priest','Sailor']
+Nicknames = ['Secretary']
 task_name = 'interval_categorization_v1'
 
 # get animals by Nickname

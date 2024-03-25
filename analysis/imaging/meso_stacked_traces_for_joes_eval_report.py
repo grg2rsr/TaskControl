@@ -10,6 +10,9 @@ from pathlib import Path
 # %% load footprints
 # path = "/media/georg/data/mesoscope/first data/with behavior/2021-08-24_day1_overview/reshaped/memmap__d1_1128_d2_1068_d3_1_order_C_frames_3901_sel.hdf5"
 path = "/media/georg/data/mesoscope/first data/with behavior/2021-08-25_day2_square_1/reshaped/memmap__d1_1892_d2_2504_d3_1_order_C_frames_850_sel.hdf5"
+
+# split 0 
+path = "/media/georg/data/mesoscope/first data/with behavior/2021-08-25_day2_square_3/split_0/memmap__d1_1892_d2_626_d3_1_order_C_frames_7021__split_0_sel.hdf5"
 cnmf2 = cnmf.load_CNMF(path)
 
 # %% infer stuff 
@@ -74,7 +77,7 @@ axes.set_ylabel('cells')
 import seaborn as sns
 sns.despine(fig)
 fig.tight_layout()
-plt.savefig('stacked_lines_meso.png',dpi=600)
+# plt.savefig('stacked_lines_meso.png',dpi=600)
 
 # %% alternative using matshow
 fig, axes = plt.subplots(figsize=[4,4]) 

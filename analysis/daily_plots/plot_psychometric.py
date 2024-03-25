@@ -13,7 +13,6 @@ import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 166 # the screens in the viv
 
 sys.path.append('/home/georg/code/TaskControl')
-
 from Utils import behavior_analysis_utils as bhv
 from Utils import utils
 from Utils import metrics
@@ -68,10 +67,14 @@ def plot_psychometric(session_folder, N=1000, kind='true', fit_lapses=True, save
     # plot the fit
     y = SDf['chosen_side'].values == 'right'
     x = SDf['this_interval'].values
-    x_fit = np.linspace(0,3000,100)
+    x_fit = np.linspace(0,3000,500)
 
-    y_fit, p_fit = bhv.log_reg_cf(x, y, x_fit, fit_lapses=fit_lapses)
-    axes.plot(x_fit, y_fit,color='red', linewidth=2,alpha=0.75)
+    try:
+        y_fit, p_fit = bhv.log_reg_cf(x, y, x_fit, fit_lapses=fit_lapses)
+    except ValueError:
+        utils.printer("no trials for one side",'warning')
+        return None
+    axes.plot(x_fit, y_fit,color='red', linewidth=2, alpha=0.75)
 
     if fit_lapses:
         # add lapse rate as text to the axes
@@ -95,7 +98,7 @@ def plot_psychometric(session_folder, N=1000, kind='true', fit_lapses=True, save
                 P.append(p_fit)
             except RuntimeError:
                 pass
-    
+
         # filter out NaN cols
         R = R[:,~np.isnan(R[0,:])]
         R = R.T
@@ -141,13 +144,11 @@ def plot_psychometric(session_folder, N=1000, kind='true', fit_lapses=True, save
 
 # marquez last
 # session_folder = Path("/media/georg/data/reaching_dlc/marquez_last_session/2021-05-18_09-41-58_learn_to_fixate_discrete_v1")
-
-# plot_psychometric(session_folder, N=500, fit_lapses=True)
-# 
-
-
-
-
-
+# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02997_Therapist/2021-11-02_16-11-32_learn_to_choose_v2")
+# plot_psychometric(session_folder, kind='premature', N=500, fit_lapses=True)
+# # 
+# %matplotlib qt5
+# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02912_Teacher/2021-11-12_16-30-36_learn_to_choose_v2")
+# plot_psychometric(session_folder, kind='cued', N=100, fit_lapses=True)
 
 # %%

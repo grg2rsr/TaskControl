@@ -30,7 +30,8 @@ colors = dict(success="#72E043",
 def plot_reward_collection_rts(session_folder, save=None):
     LogDf = bhv.get_LogDf_from_path(session_folder / 'arduino_log.txt')
     session_metrics = (metrics.get_start, metrics.get_reward_collection_rt, metrics.has_choice, metrics.get_chosen_side, metrics.get_correct_side,
-                    metrics.get_outcome, metrics.get_autodeliver_trial, metrics.has_reward_collected)
+                      metrics.get_outcome, metrics.get_autodeliver_trial, metrics.has_reward_collected,
+                      metrics.get_choice_rt)
 
     SessionDf, TrialDfs = bhv.get_SessionDf(LogDf, session_metrics)
 
@@ -68,5 +69,5 @@ def plot_reward_collection_rts(session_folder, save=None):
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02994_Plumber/2021-10-26_11-20-23_learn_to_choose_v2")
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02909_Lifeguard/2021-10-26_09-50-35_learn_to_choose_v2")
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02994_Plumber/2021-10-26_11-20-23_learn_to_choose_v2")
+# session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02995_Poolboy/2021-10-19_12-29-57_learn_to_choose_v2")
 # plot_reward_collection_rts(session_folder)
-# %%

@@ -1,0 +1,628 @@
+# %%
+# %load_ext autoreload
+# %autoreload 2
+%matplotlib qt5
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from tqdm import tqdm
+import numpy as np
+from pathlib import Path
+import pandas as pd
+import sys, os
+import seaborn as sns
+sys.path.append('/home/georg/code/twop-tools')
+import twoplib
+sys.path.append('/home/georg/Projects/TaskControl/analysis/temp_future_maps')
+
+sys.path.append('/home/georg/Projects/TaskControl')
+from Utils import behavior_analysis_utils as bhv
+
+from my_logging import get_logger
+logger = get_logger(level='info')
+tqdm_disable = False
+
+from data_structures import Signal
+
+"""
+ 
+ ##     ## ######## ##       ########  ######## ########   ######  
+ ##     ## ##       ##       ##     ## ##       ##     ## ##    ## 
+ ##     ## ##       ##       ##     ## ##       ##     ## ##       
+ ######### ######   ##       ########  ######   ########   ######  
+ ##     ## ##       ##       ##        ##       ##   ##         ## 
+ ##     ## ##       ##       ##        ##       ##    ##  ##    ## 
+ ##     ## ######## ######## ##        ######## ##     ##  ######  
+ 
+"""
+
+def get_meta(folder):
+    """ potentially replace with JSON in the future """
+    with open(folder / 'meta.txt','r') as fH:
+        lines = [l.strip() for l in fH.readlines()]
+    meta = dict([l.split(' ') for l in lines])
+    return meta
+
+def get_bhv_folder_from_imaging_folder(imaging_folder, animals_folder):
+    # get the corresponding behavioral data
+    with open(imaging_folder / 'meta.txt','r') as fH:
+        lines = [l.strip() for l in fH.readlines()]
+    meta = dict([l.split(' ') for l in lines])
+    animal_ID = imaging_folder.parts[-2]
+    session_folder = animals_folder / animal_ID / meta['bhv_session_name']
+    return session_folder
+
+def get_imaging_and_bhv_data(folder, signal_fname):
+    """ returns dFF and SessionDf """
+
+    # get metadata
+    meta = get_meta(folder)
+
+    # get bhv
+    bhv_session_folder = animals_folder / animal_id / meta['bhv_session_name']
+
+    # get tvec
+    tvec = np.load(bhv_session_folder / "frame_timestamps_corr.npy")
+    if "tvec_start" in meta.keys():
+        tvec = tvec[ np.int32(meta['tvec_start']):-1] # -1 bc last frame sends trigger but is not saved
+    # dFF = np.load(folder / "suite2p" / "plane0" / 'spks.npy').T
+    dFF = np.load(folder / "suite2p" / "plane0" / signal_fname)
+
+    # check
+    if tvec.shape[0] != dFF.shape[0]:
+        print("tvec: %i" % tvec.shape[0])
+        print("dFF: %i" % dFF.shape[0])
+    else:
+        print("all good")
+
+    # FIXME IMPORTANT - this just drops the overhanging frames
+    if tvec.shape[0] > dFF.shape[0]:
+        print("tvec longer than dFF: %i,%i" % (tvec.shape[0], dFF.shape[0]))
+        tvec = tvec[:dFF.shape[0]] 
+    if tvec.shape[0] < dFF.shape[0]:
+        print("tvec shorter than dFF: %i,%i" % (tvec.shape[0], dFF.shape[0]))
+        dFF = dFF[:tvec.shape[0]] 
+
+    # get imaging data and bhv data
+    F = Signal(dFF, tvec)
+    SessionDf = pd.read_csv(bhv_session_folder / 'SessionDf.csv')
+
+    return F, SessionDf
+
+"""
+ 
+  ######  ######## ##       ##          ##     ## ######## ######## ########  ####  ######   ######  
+ ##    ## ##       ##       ##          ###   ### ##          ##    ##     ##  ##  ##    ## ##    ## 
+ ##       ##       ##       ##          #### #### ##          ##    ##     ##  ##  ##       ##       
+ ##       ######   ##       ##          ## ### ## ######      ##    ########   ##  ##        ######  
+ ##       ##       ##       ##          ##     ## ##          ##    ##   ##    ##  ##             ## 
+ ##    ## ##       ##       ##          ##     ## ##          ##    ##    ##   ##  ##    ## ##    ## 
+  ######  ######## ######## ########    ##     ## ########    ##    ##     ## ####  ######   ######  
+ 
+"""
+# new way: if it's not provided, create it. Otherwise add to the columns
+def get_suite2p_metrics(folder, UnitsDf=None, save=False):
+    if UnitsDf is None:
+        UnitsDf = pd.DataFrame([])
+    
+    # suite2p stats/iscell
+    s2p_folder = folder / "suite2p" / "plane0"
+    iscell = np.load(s2p_folder /'iscell.npy')
+    stat = np.load(s2p_folder / 'stat.npy', allow_pickle=True)
+
+    UnitsDf['iscell'] = iscell[:,0].astype('bool')
+    UnitsDf['iscell_p'] = iscell[:,1]
+    UnitsDf['skew'] = [s['skew'] for s in stat]
+
+    if save:
+        UnitsDf.to_csv(folder / 'UnitsDf.csv', index=False)
+
+    return UnitsDf
+
+def get_soma_coordinates(folder, UnitsDf=None, save=False):
+    """ as identified by suite2p, corrected by manual ref """
+
+    if UnitsDf is None:
+        UnitsDf = pd.DataFrame([])
+
+    # suite2p stats/iscell
+    s2p_folder = folder / "suite2p" / "plane0"
+    iscell = np.load(s2p_folder /'iscell.npy')
+    stat = np.load(s2p_folder / 'stat.npy', allow_pickle=True)
+
+    n_cells = len(stat)
+    coords = np.array([stat[i]['med'] for i in range(n_cells)])
+
+    # getting the manual metadata
+    meta = get_meta(folder)
+    
+    # correcting for fov position in the window
+    fov_pos = -1 * np.array([meta[k] for k in list('XYZ')]).astype('int32')
+
+    coords[:,0] += fov_pos[0]
+    coords[:,1] += fov_pos[1]
+    coords = np.concatenate([coords,np.repeat(fov_pos[2],n_cells)[:,np.newaxis]], axis=1)
+
+    UnitsDf['X'] = coords[:,0]
+    UnitsDf['Y'] = coords[:,1]
+    UnitsDf['Z'] = coords[:,2]
+    UnitsDf['D'] = np.int32(meta['D'])
+
+    if save:
+        UnitsDf.to_csv(folder / 'UnitsDf.csv', index=False)
+
+    return UnitsDf
+
+
+
+
+# %% adding slopes to UnitsDf
+
+def calc_slopes(folder, F, SessionDf, UnitsDf=None, save=False):
+    
+    # FIXME this is terribly specific
+    # and contains way too many hardcodes
+
+    if UnitsDf is None:
+        UnitsDf = pd.DataFrame([])
+
+    # calculating the slopes
+    F.reslice(SessionDf['t_on'].values, 0, 1500)
+    F.resort(SessionDf['this_delay'].values.astype('int32'))
+
+    n_cells = F.shape[1]
+    slopes = []
+    ps = []
+    from scipy.stats import linregress
+    for i in range(n_cells):
+        x = []
+        y  = []
+        for j, delay in enumerate([1500,3000,6000]):
+            vals = np.average(F.resorted[delay][:,i,:],axis=0)
+            y.append(vals)
+            x.append(np.repeat(delay, vals.shape[0]))
+        x = np.concatenate(x)
+        y = np.concatenate(y)
+        slopes.append(linregress(x,y)[0])
+        ps.append(linregress(x,y)[3])
+
+    slopes = np.array(slopes)
+    ps = np.array(ps)
+
+    # store
+    UnitsDf = pd.read_csv(folder / "UnitsDf.csv")
+    UnitsDf['slope'] = slopes
+    UnitsDf['slope_p'] = ps
+    
+    if save:
+        UnitsDf.to_csv(folder / 'UnitsDf.csv',index=False)
+
+    return UnitsDf
+
+def calc_variance(folder, F, SessionDf, UnitsDf=None, save=False):
+    
+    # FIXME this is terribly specific
+    # and contains way too many hardcodes
+
+    if UnitsDf is None:
+        UnitsDf = pd.DataFrame([])
+
+    # 
+
+    if save:
+        UnitsDf.to_csv(folder / 'UnitsDf.csv',index=False)
+
+    return UnitsDf
+
+
+
+
+def calc_lagreg_weights(folder, F, events, UnitsDf=None, save=False):
+    pass
+
+
+# %%
+
+
+"""
+ 
+    ###    ##    ##    ###    ##       ##    ##  ######  ####  ######  
+   ## ##   ###   ##   ## ##   ##        ##  ##  ##    ##  ##  ##    ## 
+  ##   ##  ####  ##  ##   ##  ##         ####   ##        ##  ##       
+ ##     ## ## ## ## ##     ## ##          ##     ######   ##   ######  
+ ######### ##  #### ######### ##          ##          ##  ##        ## 
+ ##     ## ##   ### ##     ## ##          ##    ##    ##  ##  ##    ## 
+ ##     ## ##    ## ##     ## ########    ##     ######  ####  ######  
+ 
+"""
+# %% folders
+# folders = "/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging_sessions_2/JJP-05425/folders"
+# folders = "/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging_sessions_2/JJP-05472/folders"
+
+folders = []
+folders.append(Path("/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging_sessions_2/JJP-05425/2023-03-08_JJP-05425_8"))
+folders.append(Path("/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging_sessions_2/JJP-05425/2023-03-09_JJP-05425_9"))
+folders.append(Path("/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging_sessions_2/JJP-05425/2023-03-10_JJP-05425_10"))
+
+folders = []
+folders.append(Path("/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging_sessions_2/JJP-05472/2023-03-08_JJP-05472_8"))
+folders.append(Path("/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging_sessions_2/JJP-05472/2023-03-09_JJP-05472_9"))
+folders.append(Path("/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging_sessions_2/JJP-05472/2023-03-10_JJP-05472_10"))
+
+animals_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging")
+animal_id = folders[0].parts[-2]
+
+
+# %% event triggered averages for cells
+read_UnitsDf = False
+
+for folder in tqdm(folders):
+    # get UnitsDf
+    if read_UnitsDf:
+        fname = folder / "UnitsDf.csv"
+        if fname.exists():
+            print("reading UnitsDf")
+            UnitsDf = pd.read_csv(fname)
+        else:
+            UnitsDf = None
+
+    UnitsDf = get_suite2p_metrics(folder)
+    UnitsDf = get_soma_coordinates(folder, UnitsDf=UnitsDf, save=True)
+
+    # get data
+    F, SessionDf = get_imaging_and_bhv_data(folder, 'Z.npy')
+    meta = get_meta(folder)
+    
+    # coordinates
+    UnitsDf = get_soma_coordinates(folder, UnitsDf=UnitsDf, save=True)
+
+    UnitsDf.to_csv(folder / 'UnitsDf.csv',index=False)
+    
+# %% 
+    # # calc slopes
+    # # UnitsDf = calc_slopes(folder, F, SessionDf)
+
+    # bhv_session_folder = animals_folder / animal_id / meta['bhv_session_name']
+    # LogDf = bhv.get_LogDf_from_path(bhv_session_folder / 'arduino_log.txt')
+
+    # # preprocessing
+    # LogDf = bhv.filter_spans_to_event(LogDf, "LICK_ON", "LICK_OFF", t_min = 5, t_max=200)
+    # LogDf = bhv.time_slice(LogDf, SessionDf.iloc[0]['t_on'], SessionDf.iloc[-1]['t_off'])
+
+    # # all events
+    # events = ['REWARD_EVENT','LICK_EVENT','ODOR_ON']
+    # for event, Df in bhv.get_events(LogDf, events).items():
+    #     # event = 'LICK_EVENT'
+    #     # Df = bhv.get_events(LogDf, events)[event]
+    #     # print(Df['t'].shape)
+    #     F.reslice(Df['t'].values, 0, 1000)
+    #     F.resliced.shape
+    #     name = event + '_mod_avg'
+    #     UnitsDf[name] = np.average(np.average(F.resliced, axis=-1), axis=0)
+
+    # UnitsDf.to_csv(folder / 'UnitsDf.csv',index=False)
+    
+
+"""
+ 
+ ########  ########    ###    ########     
+ ##     ## ##         ## ##   ##     ##    
+ ##     ## ##        ##   ##  ##     ##    
+ ########  ######   ##     ## ##     ##    
+ ##   ##   ##       ######### ##     ##    
+ ##    ##  ##       ##     ## ##     ##    
+ ##     ## ######## ##     ## ########     
+ 
+"""
+# %% read back all analysis
+UnitsDfs = []
+for folder in folders:
+    UnitsDf = pd.read_csv(folder / "UnitsDf.csv")
+    
+    # relative positions
+    # for d in list('XYZD'):
+    #     UnitsDf[d] = UnitsDf[d] - UnitsDf[d].mean()
+
+    UnitsDfs.append(UnitsDf)
+UnitsDfall = pd.concat(UnitsDfs)
+
+# %% 3d scatter location plot, colored by chosen var
+
+color_by = 'REWARD_EVENT_mod_avg'
+cmap='magma'
+
+# color_by = 'slope'
+# cmap='coolwarm_r'
+
+fig = plt.figure(figsize=[11,9])
+ax = fig.add_subplot(projection='3d')
+Df = UnitsDfall.groupby('iscell').get_group(True)
+color_values = Df[color_by]
+vmin, vmax = np.percentile(color_values, (5,95))
+
+from matplotlib import colors
+norm = colors.CenteredNorm()
+
+sc = ax.scatter(Df['X'],Df['Y'],Df['D'], c=color_values, s=6, cmap=cmap, norm=None, vmin=vmin, vmax=vmax)
+ax.set_title('%s\ncolored by: %s\n%i out of %i cells' % (animal_id, color_by, Df.shape[0], UnitsDfall.shape[0]))
+plt.colorbar(sc)
+
+
+# %% individual cell example
+folder = folders[1]
+
+F, SessionDf = get_imaging_and_bhv_data(folder, 'dff_no_neuropile_sub.npy')
+meta = get_meta(folder)
+
+# get UnitsDf
+UnitsDf = pd.read_csv(folder / "UnitsDf.csv")
+Df = UnitsDf.groupby('iscell').get_group(True)
+# %%
+
+# %%
+X = np.random.randn(100,2) * 2 
+Y = np.random.randn(100) + 1
+
+fig, axes = plt.subplots()
+
+from matplotlib import colors
+norm = colors.CenteredNorm()
+
+pc = axes.scatter(X[:,0],X[:,1],c=Y,cmap='coolwarm',norm=norm)
+plt.colorbar(pc)
+
+
+# %%
+
+# select a good cell
+
+Df = UnitsDf[UnitsDf.slope_p < 0.05]
+ix = np.argsort(Df.slope.values)[6] # the best
+unit_ix = Df.iloc[ix].name # ugly AF
+
+# slicing
+pre = -3000
+post = 11000
+F.reslice(SessionDf['t_on'].values, pre, post)
+labels = SessionDf['this_delay'].values.astype('int32')
+F.resort(labels)
+
+# plot
+fig, axes = plt.subplots(figsize=[10,4])
+colors = sns.color_palette('viridis',n_colors=4)
+delays = np.array([0,1500,3000,6000])
+for i, delay in enumerate(delays):
+    lw = 0.5 if delay == 0 else 1.5
+    axes.plot(F.t_slice, np.average(F.resorted[delay][:,unit_ix,:],axis=1),color=colors[i], label=delay, lw=lw)
+axes.legend()
+axes.set_xlabel('time (s)')
+axes.set_ylabel('dF/F (au)')
+sns.despine(fig)
+
+# %% cells as a function of classifier
+ths = np.linspace(0,1,100)
+# Df = UnitsDfall.groupby('iscell').get_group(True)
+fig, axes = plt.subplots(figsize=[4,5])
+y = np.array([np.sum(UnitsDfall['iscell_p'] > th) for th in ths])
+axes.plot(ths, y, '.')
+axes.set_ylabel('n cells')
+axes.set_xlabel('threshold')
+axes.axvline(0.5,linestyle=':',color='k',lw=0.5)
+sns.despine(fig)
+
+
+# %% plot for all slopes
+fig, axes = plt.subplots(figsize=[4,8])
+Df = UnitsDfall.groupby('iscell').get_group(True)
+# sig_ix = (Df['slope_p'] < 0.005).values
+# Df = Df[sig_ix]
+order = np.argsort(Df['slope'].values)
+x = np.arange(order.shape[0])
+color_values = Df['slope_p'].values[order]
+axes.scatter(x, Df['slope'].values[order],c=color_values,alpha=0.5,vmin=0,vmax=0.05, cmap='viridis_r')
+axes.axhline(0,lw=0.5,linestyle=':',color='k')
+axes.set_ylabel('slope')
+axes.set_title(animal_id)
+axes.set_ylim(-6e-5,6e-5)
+sns.despine(fig)
+# plt.plot(x[sig_ix], Df['slope'].values[order[sig_ix]],'.',alpha=1)
+
+# %% correlation of slope to X Y D
+Df = UnitsDfall.groupby('iscell').get_group(True)
+sig_ix = (Df['slope_p'] < 0.05).values
+Dfs = Df[sig_ix]
+sns.pairplot(Dfs, x_vars=['X','Y','D'], y_vars=['slope'])
+
+
+
+
+"""
+ 
+ ##      ## #### ########  
+ ##  ##  ##  ##  ##     ## 
+ ##  ##  ##  ##  ##     ## 
+ ##  ##  ##  ##  ########  
+ ##  ##  ##  ##  ##        
+ ##  ##  ##  ##  ##        
+  ###  ###  #### ##        
+ 
+"""
+# %% temporary segment tryingto fix the dff issues
+
+# delta F/F
+# def calc_dff(S, w2=500 ,p=8, verbose=False):
+
+#     # adding offset
+#     # S += np.absolute(S.min() * 2)
+
+#     # adding fixed offset
+#     S += 10000
+
+#     n_samples, n_cells = S.shape
+
+#     Fb = np.zeros((n_samples, n_cells))
+#     for i in tqdm(range(w2, n_samples-w2)):
+#         Fb[i] = np.percentile(S[i-w2:i+w2,:], p, axis=0)
+
+#     # pad TODO use np.pad()
+#     Fb[:w2] = Fb[w2]
+#     Fb[-w2:] = Fb[-w2-1]
+
+#     dff = (S - Fb) / Fb
+#     return dff
+
+def calc_dff(S, w2=500 ,p=8, verbose=False):
+
+    # adding offset
+    # S += np.absolute(S.min() * 2)
+
+    # adding fixed offset
+    S += 10000
+    n_samples, n_cells = S.shape
+
+    dFF = np.zeros((n_samples, n_cells))
+    for i in tqdm(range(w2, n_samples-w2)):
+        s = S[i-w2:i+w2,:]
+        Fb = np.percentile(s, p, axis=0)[np.newaxis,:]
+        dFF[i] = (S[i] - Fb) / Fb
+
+
+    dff = (S - Fb) / Fb
+    return dFF
+
+def calc_z(S, w2=500 ,verbose=False):
+
+    n_samples, n_cells = S.shape
+    Z = np.zeros((n_samples, n_cells))
+    for i in tqdm(range(w2, n_samples-w2)):
+        s = S[i-w2:i+w2,:]
+        Z[i] = (S[i] - np.average(s, axis=0)[np.newaxis,:]) / np.std(s, axis=0)[np.newaxis,:]
+        
+    return Z
+
+# %%
+folder = folders[0] # imaging folder
+UnitsDf = extract_soma_coordinates(folder)
+
+animals_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging")
+animal_id = folders[0].parts[-2]
+
+meta = get_meta(folder)
+bhv_session_folder = animals_folder / animal_id / meta['bhv_session_name']
+
+LogDf = bhv.get_LogDf_from_path(bhv_session_folder / 'arduino_log.txt')
+SessionDf = pd.read_csv(bhv_session_folder / 'SessionDf.csv')
+
+# preprocessing
+LogDf = bhv.filter_spans_to_event(LogDf, "LICK_ON", "LICK_OFF", t_min = 5, t_max=200)
+LogDf = bhv.time_slice(LogDf, SessionDf.iloc[0]['t_on'], SessionDf.iloc[-1]['t_off'])
+
+
+# the signal and the fixing
+tvec = np.load(bhv_session_folder / "frame_timestamps_corr.npy")
+
+F = np.load(folder / "suite2p" / "plane0" / "F.npy").T
+Fneu = np.load(folder / "suite2p" / "plane0" / "Fneu.npy").T
+
+t_max = tvec[10000]
+tvec = tvec[tvec < t_max]
+F = F[:10000,:]
+Fneu = Fneu[:10000,:]
+
+# %%
+
+dFF = calc_dff(F-1*Fneu, p=8)
+Z = calc_z(F-1*Fneu)
+# dFF = np.load(folder / "suite2p" / "plane0" / "dff_fixed_offset.npy")
+# tvec = tvec[:dFF.shape[0]]
+
+# all events
+event = 'REWARD_EVENT'
+EventDf = bhv.get_events_from_name(LogDf, event)
+EventDf = EventDf[EventDf['t'] < t_max]
+
+Sz = Signal(Z, tvec)
+SdFF = Signal(dFF, tvec)
+from copy import deepcopy
+
+Sz.reslice(EventDf['t'].values, 0, 1000)
+SdFF.reslice(EventDf['t'].values, 0, 1000)
+
+# %%
+name = event + '_mod_avg'
+UnitsDf[name] = np.average(np.average(S.resliced, axis=-1), axis=0)
+
+color_by = 'REWARD_EVENT_mod_avg'
+cmap='magma'
+
+# color_by = 'slope'
+# cmap='coolwarm_r'
+# %%
+fig = plt.figure(figsize=[11,9])
+ax = fig.add_subplot(projection='3d')
+# Df = UnitsDfall.groupby('iscell').get_group(True)
+Df = UnitsDf
+color_values = Df[color_by]
+vmin, vmax = np.percentile(color_values, (5,95))
+
+from matplotlib import colors
+norm = colors.CenteredNorm()
+
+sc = ax.scatter(Df['X'],Df['Y'],Df['D'], c=color_values, s=6, cmap=cmap, norm=None, vmin=vmin, vmax=vmax)
+# ax.set_title('%s\ncolored by: %s\n%i out of %i cells' % (animal_id, color_by, Df.shape[0], UnitsDf.shape[0]))
+plt.colorbar(sc)
+
+
+# %%
+N = 2000
+s = S[:N,:]
+
+fig, axes = plt.subplots()
+
+# tvec = np.linspace(pre, post, d.shape[0]) # does this guarantiee?
+yscl = 1
+# stacked traces plot: first dim is x, second dim is y
+for i in range(s.shape[1])[::-1]:
+    axes.fill_between(tvec[:N], np.zeros(s.shape[0]) * yscl + i, s[:,i] * yscl + i, alpha=1, color='white',zorder=-i,lw=0.7)
+    axes.plot(tvec[:N], s[:,i] * yscl + i, color='k', lw=0.5, alpha=0.8,zorder=-i)
+
+import seaborn as sns
+sns.despine(fig)
+fig.tight_layout()
+
+
+# %%
+fig, axes = plt.subplots()
+axes.matshow(s.T)
+
+# %%
+start = 0
+stop = 5000
+fig, axes = plt.subplots(nrows=3,sharex=True,sharey=True)
+axes[0].matshow(F[start:stop].T - 1*Fneu[start:stop].T)
+axes[1].matshow(dFF[start:stop].T)
+
+# smoothing z
+w = np.ones(5)
+w = w / w.sum()
+Zs = np.zeros(Z.shape)
+for i in range(Z.shape[1]):
+    Zs[:,i] = np.convolve(Z[:,i],w,mode='same')
+
+axes[2].matshow(Zs[start:stop].T,vmin=-3,vmax=3)
+
+
+# %%
+tvec = Sz.t
+s = Zs[:N]
+fig, axes = plt.subplots()
+# tvec = np.linspace(pre, post, d.shape[0]) # does this guarantiee?
+yscl = 1
+# stacked traces plot: first dim is x, second dim is y
+for i in range(s.shape[1])[::-1]:
+    axes.fill_between(tvec[:N], np.zeros(s.shape[0]), s[:,i] * yscl + i, alpha=1, color='white',zorder=-i,lw=0.7)
+    # axes.fill_between(tvec[:N], np.zeros(s.shape[0]) * yscl + i, s[:,i] * yscl + i, alpha=1, color='white',zorder=-i,lw=0.7)
+    axes.plot(tvec[:N], s[:,i] * yscl + i, color='k', lw=0.5, alpha=0.8,zorder=-i)
+
+import seaborn as sns
+sns.despine(fig)
+fig.tight_layout()

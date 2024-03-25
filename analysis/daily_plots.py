@@ -5,7 +5,7 @@
 
 # this should be changed ... 
 import sys, os
-sys.path.append('..')
+sys.path.append('/home/georg/code/TaskControl')
 from pathlib import Path
 import numpy as np
 import scipy as sp

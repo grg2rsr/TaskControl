@@ -33,10 +33,11 @@ colors = dict(success="#72E043",
 Animals_folder = "/media/georg/htcondor/shared-paton/georg/Animals_reaching"
 Animals = utils.get_Animals(Animals_folder)
 Nicknames = ['Actress','Secretary','Nurse','Firefighter','Priest','Sailor']
+Nicknames = ['Secretary']
 
 for nickname in Nicknames:
     print("processing Animals: %s" % nickname)
-    Animal, = utils.select(Animals, "Nickname", nickname)
+    Animal, = utils.select(Animals, Nickname=nickname)
     SessionsDf = utils.get_sessions(Animal.folder)
 
     w = 10
