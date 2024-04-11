@@ -51,23 +51,19 @@ def get_time_between(TrialDf: pd.DataFrame, event_a: str, event_b: str, name: st
         var = np.NaN
     return pd.Series(var, name=name)
 
-# boolean operations to implement
-# def is_greater_than(TrialDf: pd.DataFrame, var_name: str, val, rename: str = None):
-#     check_var = get_var(TrialDf, var_name).values[0] # ?
-#     if not pd.isna(check_var):
-#         if check_var > val:
-#             var = True
-#         else:
-#             var = False
-#     else:
-#         var = np.NaN
-#     name = rename if rename is not None else var_name
-#     return pd.Series(var, name=name)
-
-    # greater_than
-    # smaller_than
-    # is_between
-    # is_equal
+def var_is(TrialDf: pd.DataFrame, var_name: str, val, comp='is_greater', rename: str = None):
+    check_var = get_var(TrialDf, var_name)[0]
+    if not pd.isna(check_var):
+        if comp == 'is_greater':
+            var = True if check_var > val else False
+        if comp == 'is_smaller':
+            var = True if check_var < val else False
+        if comp == 'is_equal':
+            var = True if check_var == val else False
+    else:
+        var = np.NaN
+    name = rename if rename is not None else var_name
+    return pd.Series(var, name=name)
 
 """
  
