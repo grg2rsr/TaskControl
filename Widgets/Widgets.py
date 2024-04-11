@@ -145,21 +145,26 @@ class SettingsWidget(QtWidgets.QWidget):
                     utils.printer("initializing counter: %s" % counter, 'msg')
 
     def start_online_vis(self):
-        # TODO implement me
+        from Visualizers import TaskVis_mpl # hardcoded backend for now
+        plotters = []
+        for key in dict(self.Task).keys():
+            if key.startswith('Plot:'):
+                plot_dict = dict(self.Task[key])
+                # convert all 'sub' dicts
+                for pkey in plot_dict.keys():
+                    if pkey.endswith('kwargs'):
+                        plot_dict[pkey] = eval('dict(%s)' % plot_dict[pkey])
 
-        # needs to 
-        # cwd = os.getcwd()
-        # os.chdir(self.task_folder)
-        # plotters =[p.strip() for p in self.Task['Visualization']['plotters'].split(',')]
-        # utils.debug_trace()
-        # module_name = self.Task['Visualization']['visualizers']
-        # mod = importlib.import_module(module_name)
-        # # get registered plotters (how?)
-        # # start them and connect them
-        # os.chdir(cwd)
+                plotters.append((key.split(':')[1], plot_dict))
+
+        self.plot_windows = []
+        if len(plotters) > 0:
+            for plotter in plotters: # now: one window for each plotter
+                vis = TaskVis_mpl.SessionVis(self, plotter, self.ArduinoController.OnlineFSMAnalyser)
+                self.plot_windows.append(vis) # to avoid garbage collection
         pass
 
-    def closeEvent(self,event):
+    def closeEvent(self, event):
         """ reimplementation of closeEvent """
 
         # if this widget is parent of all others, is this explicit calling necessary?

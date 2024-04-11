@@ -134,7 +134,7 @@ class OnlineFSMAnalyser(QtCore.QObject):
         # get metrics
         try:
             metrics = [m.strip() for m in self.online_config['online_metrics'].split(',')]
-            mod = importlib.import_module('Utils.metrics')
+            mod = importlib.import_module('Utils.user_metrics') # <- this has to be either metrics partial
             self.Metrics = [getattr(mod, metric) for metric in metrics]
         except KeyError:
             self.Metrics = None

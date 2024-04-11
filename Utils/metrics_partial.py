@@ -5,65 +5,6 @@ from Utils import utils
 
 """
  
-  ######  ##        #######   ######  ##     ## ########  ########  ######  
- ##    ## ##       ##     ## ##    ## ##     ## ##     ## ##       ##    ## 
- ##       ##       ##     ## ##       ##     ## ##     ## ##       ##       
- ##       ##       ##     ##  ######  ##     ## ########  ######    ######  
- ##       ##       ##     ##       ## ##     ## ##   ##   ##             ## 
- ##    ## ##       ##     ## ##    ## ##     ## ##    ##  ##       ##    ## 
-  ######  ########  #######   ######   #######  ##     ## ########  ######  
- 
-"""
-
-"""
-these can be drastically reduced in number and complexity 
-by using closures
-"""
-
-# def has_var(TrialDf, var_name):
-#     # returns True or False if var_name is in TrialDf
-#     def _has(TrialDf):
-#         if var_name in TrialDf['name'].values:
-#             var = True
-#         else:
-#             var = False    
- 
-#         return pd.Series(var, name=var_name)
-#     return _has
-
-
-# def get_var(TrialDf, var_name, dtype=None, rename=None):
-#     # closure for fetching a var
-#     def _get(TrialDf):
-#         # var_name = "this_delay"
-#         try:
-#             Df = TrialDf.groupby('var').get_group(var_name)
-#             if dtype is not None:
-#                 var = Df.iloc[0]['value'].astype(dtype)
-#             else:
-#                 var = Df.iloc[0]['value']
-#         except KeyError:
-#             var = np.NaN
-
-#         name = rename if rename is not None else var_name
-#         return pd.Series(var, name=name)
-
-#     return _get
-
-# def get_time_between(TrialDf, event_a, event_b, name):
-#     def _get_time_between(TrialDf):
-#         try:
-#             Df = event_slice(TrialDf, event_a, event_b)
-#             var = Df.iloc[-1]['t'] - Df.iloc[0]['t']
-#         except IndexError:
-#             var = np.NaN
-#         return pd.Series(var, name=name)
-    
-#     return _get_time_between(TrialDf)
-
-
-"""
- 
  ########     ###    ########  ######## ####    ###    ##       
  ##     ##   ## ##   ##     ##    ##     ##    ## ##   ##       
  ##     ##  ##   ##  ##     ##    ##     ##   ##   ##  ##       
@@ -89,6 +30,7 @@ def has_var(TrialDf: pd.DataFrame, var_name: str = None, rename: str = None):
 
 def get_var(TrialDf: pd.DataFrame, var_name: str, dtype: str = None, rename: str = None):
     try:
+    # if has_var(TrialDf, var_name).values[0]: # replace
         Df = TrialDf.groupby('var').get_group(var_name)
         if dtype is not None:
             var = Df.iloc[0]['value'].astype(dtype)
@@ -108,8 +50,24 @@ def get_time_between(TrialDf: pd.DataFrame, event_a: str, event_b: str, name: st
     except IndexError:
         var = np.NaN
     return pd.Series(var, name=name)
-   
 
+# boolean operations to implement
+# def is_greater_than(TrialDf: pd.DataFrame, var_name: str, val, rename: str = None):
+#     check_var = get_var(TrialDf, var_name).values[0] # ?
+#     if not pd.isna(check_var):
+#         if check_var > val:
+#             var = True
+#         else:
+#             var = False
+#     else:
+#         var = np.NaN
+#     name = rename if rename is not None else var_name
+#     return pd.Series(var, name=name)
+
+    # greater_than
+    # smaller_than
+    # is_between
+    # is_equal
 
 """
  
@@ -122,16 +80,16 @@ def get_time_between(TrialDf: pd.DataFrame, event_a: str, event_b: str, name: st
   ######  ##     ##  #######  ####  ######  ######## 
  
 """
-# has_choice = partial(has_var, TrialDf, var_name="CHOICE_EVENT", rename='has_choice')
-def has_choice(TrialDf):
-    var_name = 'has_choice'
+has_choice = partial(has_var, var_name="CHOICE_EVENT", rename='has_choice')
+# def has_choice(TrialDf):
+#     var_name = 'has_choice'
 
-    if "CHOICE_EVENT" in TrialDf['name'].values:
-        var = True
-    else:
-        var = False    
+#     if "CHOICE_EVENT" in TrialDf['name'].values:
+#         var = True
+#     else:
+#         var = False    
  
-    return pd.Series(var, name=var_name)
+#     return pd.Series(var, name=var_name)
 
 # has_anticipatory_reach = partial(has_var, TrialDf, var_name="ANTICIPATORY_REACH_EVENT", rename='has_anticip_reach')
 def has_anticipatory_reach(TrialDf):
@@ -391,18 +349,15 @@ def get_premature_rt(TrialDf):
         var = np.NaN
     return pd.Series(var, name=var_name)
 
-# get_choice_rt = partial(get_time_between, TrialDf,
-#                       event_a="CHOICE_STATE",
-#                       event_b="CHOICE_EVENT",
-#                       name="choice_rt")
-def get_choice_rt(TrialDf):
-    var_name = "choice_rt"
-    try:
-        Df = event_slice(TrialDf, "CHOICE_STATE", "CHOICE_EVENT")
-        var = Df.iloc[-1]['t'] - Df.iloc[0]['t']
-    except IndexError:
-        var = np.NaN
-    return pd.Series(var, name=var_name)
+get_choice_rt = partial(get_time_between, event_a="CHOICE_STATE", event_b="CHOICE_EVENT", name="choice_rt")
+# def get_choice_rt(TrialDf):
+#     var_name = "choice_rt"
+#     try:
+#         Df = event_slice(TrialDf, "CHOICE_STATE", "CHOICE_EVENT")
+#         var = Df.iloc[-1]['t'] - Df.iloc[0]['t']
+#     except IndexError:
+#         var = np.NaN
+#     return pd.Series(var, name=var_name)
 
 def get_reward_collection_rt(TrialDf):
     var_name = "reward_collection_rt"
