@@ -116,6 +116,17 @@ class LinePlot(MatplotlibPlot):
         self.line.set_xdata(xdata)
         self.line.set_Ydata(ydata)
 
+class SeabornScatter(MatplotlibPlot):
+    def __init__(self, axes, deco_kwargs, seaborn_kwargs):
+        super(SeabornScatter, self).__init__(axes, deco_kwargs)
+        self.kwargs = seaborn_kwargs
+        self.axes = axes
+        sns.scatter(ax=axes, **seaborn_kwargs)
+
+    def update(self, SessionDf):
+        plt.sca(self.axes)
+        plt.cla()
+        sns.scatter(ax=self.axes, **self.seaborn_kwargs)
 
 # OLD CODE
 # class ScatterPlot(object):
