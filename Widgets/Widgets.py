@@ -149,13 +149,13 @@ class SettingsWidget(QtWidgets.QWidget):
         plotters = []
         for key in dict(self.Task).keys():
             if key.startswith('Plot:'):
-                plot_dict = dict(self.Task[key])
+                plot_config = dict(self.Task[key])
                 # convert all 'sub' dicts
-                for pkey in plot_dict.keys():
+                for pkey in plot_config.keys():
                     if pkey.endswith('kwargs'):
-                        plot_dict[pkey] = eval('dict(%s)' % plot_dict[pkey])
+                        plot_config[pkey] = eval('dict(%s)' % plot_config[pkey])
 
-                plotters.append((key.split(':')[1], plot_dict))
+                plotters.append((key.split(':')[1], plot_config))
 
         self.plot_windows = []
         if len(plotters) > 0:

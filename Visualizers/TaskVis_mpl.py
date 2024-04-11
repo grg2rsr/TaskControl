@@ -58,7 +58,7 @@ class SessionVis(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
-        self.plotter = plotter # is a tuple (str plot_type, plot_dict)
+        self.plotter = plotter # is a tuple (str plot_type, plot_config)
 
         self.init()
         self.show()
@@ -69,33 +69,30 @@ class SessionVis(QtWidgets.QWidget):
 
 
     def init(self):
-        # right now: put ONE plot in the ax
-        plot_type, plot_dict = self.plotter
-        if plot_type == 'LinePlot': # HARDCODE
-            deco = plot_dict['deco_kwargs'] if 'deco_kwargs' in plot_dict.keys() else None
-            line = plot_dict['line_kwargs'] if 'line_kwargs' in plot_dict.keys() else None
-            self.Plotter = LinePlot(self.axes, plot_dict['x'], plot_dict['y'], deco_kwargs=deco, line_kwargs=line)
-
+        plot_type, plot_config = self.plotter
+        match plot_type: # HARDCODED names
+            case 'LinePlot':
+                self.Plotter = LinePlot(self.axes, plot_config['x'], plot_config['y'], line_kwargs=plot_config['plot_kwargs'])
+            case 'ScatterPlot':
+                self.Plotter = ScatterPlot(self.axes, scatter_kwargs=plot_config['plot_kwargs'])
+            case 'SeabornScatter':
+                self.Plotter = SeabornScatter(seaborn_kwargs=plot_config['plot_kwargs'])
+        
+        self.decorate(plot_config['deco_kwargs'])
         self.fig.tight_layout()
 
     def on_data(self, TrialDf, TrialMetricsDf):
         if  self.OnlineDataAnalyser.SessionDf is not None: # FIXME
-            SessionDf = self.OnlineDataAnalyser.SessionDf
-            # this is necessary because, future plotters might want to access TrialDf
-            if self.plotter[0] == 'LinePlot': # HARDCODE
-                self.Plotter.update(SessionDf)
+            self.Plotter.update(self.OnlineDataAnalyser.SessionDf)
+            # this call signature might change
+            # might necessary because, future plotters might want to access TrialDf
+            # if self.plotter[0] == 'LinePlot': # HARDCODE
         else:
             # TODO at least print a warning of some sort
             pass
         self.Canvas.draw()
 
-class MatplotlibPlot(object):
-    def __init__(self, axes, deco_kwargs):
-        self.axes = axes
-        self.decorate(deco_kwargs)
-    
     def decorate(self, kwargs):
-        # can easily be extended
         if 'title' in kwargs:
             self.axes.set_title(kwargs['title'])
         if 'xlabel' in kwargs:
@@ -103,22 +100,35 @@ class MatplotlibPlot(object):
         if 'ylabel' in kwargs:
             self.axes.set_ylabel(kwargs['ylabel'])
 
-class LinePlot(MatplotlibPlot):
-    def __init__(self, axes, x_name, y_name, deco_kwargs, line_kwargs):
-        super(LinePlot, self).__init__(axes, deco_kwargs)
+
+class LinePlot(object):
+    def __init__(self, axes, x_name, y_name, line_kwargs):
         self.x_name = x_name
         self.y_name = y_name
-        self.line, = self.axes.plot([], [], **line_kwargs)
+        self.line, = axes.plot([], [], **line_kwargs)
 
     def update(self, SessionDf):
         xdata = SessionDf[self.x_name]
         ydata = SessionDf[self.y_name]
         self.line.set_xdata(xdata)
-        self.line.set_Ydata(ydata)
+        self.line.set_ydata(ydata)
 
-class SeabornScatter(MatplotlibPlot):
-    def __init__(self, axes, deco_kwargs, seaborn_kwargs):
-        super(SeabornScatter, self).__init__(axes, deco_kwargs)
+
+class ScatterPlot(object):
+    def __init__(self, axes, x_name, y_name, scatter_kwargs):
+        self.x_name = x_name
+        self.y_name = y_name
+        self.scatter = axes.scatter([], [], **scatter_kwargs)
+
+    def update(self, SessionDf):
+        data = np.concatenate([SessionDf[self.x_name].values[:,np.newaxis],
+                               SessionDf[self.y_name].values[:,np.newaxis]],
+                               axis=1)
+        self.scatter.set_offsets(data)
+
+
+class SeabornScatter(object):
+    def __init__(self, axes, seaborn_kwargs):
         self.kwargs = seaborn_kwargs
         self.axes = axes
         sns.scatter(ax=axes, **seaborn_kwargs)
@@ -126,7 +136,7 @@ class SeabornScatter(MatplotlibPlot):
     def update(self, SessionDf):
         plt.sca(self.axes)
         plt.cla()
-        sns.scatter(ax=self.axes, **self.seaborn_kwargs)
+        sns.scatter(data=SessionDf, ax=self.axes, **self.seaborn_kwargs)
 
 # OLD CODE
 # class ScatterPlot(object):
