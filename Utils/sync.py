@@ -14,6 +14,9 @@ from Utils import utils
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
 
+import logging
+logger = logging.getLogger(__name__)
+
 """
  
   ######  ##    ## ##    ##  ######      ######  ##          ###     ######   ######  
@@ -63,13 +66,13 @@ class Syncer(object):
 
         for x in [A, B]:
             if self.data[x].shape[0] == 0:
-                utils.printer("sync failed - %s is empty" % x, 'error')
+                logger.critical("sync failed - %s is empty" % x)
                 return False
 
         if self.data[A].shape[0] != self.data[B].shape[0]:
-            utils.printer("sync problem - unequal number of sync signals", 'warning')
-            utils.printer("Number in %s: %i" % (A, self.data[A].shape[0]),'warning')
-            utils.printer("Number in %s: %i" % (B, self.data[B].shape[0]),'warning')
+            logger.warning("sync problem - unequal number of sync signals")
+            logger.warning("Number in %s: %i" % (A, self.data[A].shape[0]))
+            logger.warning("Number in %s: %i" % (B, self.data[B].shape[0]))
             return False
         
         else:
@@ -171,7 +174,7 @@ class Syncer(object):
             try:
                 self.fix(A,B)
             except:
-                utils.printer("sync failed", mode='error')
+                logger.critical("sync failed")
                 return False
 
         pfit = self.fit(self.data[A], self.data[B], func=func, order=order)

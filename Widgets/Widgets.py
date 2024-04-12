@@ -20,6 +20,9 @@ from Visualizers.TaskVis_mpl import SessionVis
 from Widgets.Popups import RunInfoPopup
 from Widgets.UtilityWidgets import StringChoiceWidget, ValueEditFormLayout, PandasModel
 
+import logging
+logger = logging.getLogger(__name__)
+
 """
  
  ##     ##    ###    #### ##    ##    ##      ## #### ##    ## ########   #######  ##      ## 
@@ -142,7 +145,7 @@ class SettingsWidget(QtWidgets.QWidget):
                     mod = importlib.import_module('Visualizers.Counters')
                     C = getattr(mod, counter)
                     self.Counters.append(C(self, self.Task['OnlineAnalysis']))
-                    utils.printer("initializing counter: %s" % counter, 'msg')
+                    logger.debug("initializing counter: %s" % counter)
 
     def start_online_vis(self):
         from Visualizers import TaskVis_mpl # hardcoded backend for now
@@ -208,9 +211,9 @@ class SettingsWidget(QtWidgets.QWidget):
         # animal popup
         self.RunInfo = RunInfoPopup(self)
 
-        utils.printer("RUN", 'task')
-        utils.printer("Task: %s" % self.Task.name, 'msg')
-        utils.printer("Animal: %s - body weight: %s%%" % (self.Animal.display(), self.Animal.weight_ratio()),'msg')
+        logger.info("RUN") # _TASK_
+        logger.info("Task: %s" % self.Task.name)
+        logger.info("Animal: %s - body weight: %s%%" % (self.Animal.display(), self.Animal.weight_ratio()))
 
         # make folder structure
         date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # cross platform compatible
@@ -219,12 +222,12 @@ class SettingsWidget(QtWidgets.QWidget):
 
         # run all controllers
         for Controller in self.Controllers:
-            utils.printer("running controller: %s" % Controller.name, 'msg')
+            logger.info("running controller: %s" % Controller.name)
             Controller.Run(self.run_folder)
 
         # reset and start the counters
         for Counter in self.Counters:
-            utils.printer("initializing counter: %s" % Counter.name, 'msg')
+            logger.debug("initializing counter: %s" % Counter.name)
             Counter.init()
 
     def Done(self):
@@ -257,7 +260,7 @@ class SettingsWidget(QtWidgets.QWidget):
         # update current box
         self.box_config = self.Boxes[self.BoxChoiceWidget.currentIndex()]
         self.sys_config['current']['box'] = self.box_config.name
-        utils.printer("selected Box: %s" % self.box_config.name, 'msg')
+        logger.info("selected Box: %s" % self.box_config.name)
        
     def animal_changed(self):
         self.Animal = self.Animals[self.AnimalChoiceWidget.currentIndex()]
@@ -272,14 +275,14 @@ class SettingsWidget(QtWidgets.QWidget):
         # self.AnimalInfoWidget = AnimalInfoWidget(self, self.sys_config, self.Animal)
         # self.Children.append(self.AnimalInfoWidget)
 
-        utils.printer("Animal: %s" % self.Animal.display(),'msg')
+        logger.info("Animal: %s" % self.Animal.display())
 
     def task_changed(self):
 
         # update current task
         self.Task = self.Tasks[self.TaskChoiceWidget.currentIndex()]
         self.sys_config['current']['task'] = self.Task.name
-        utils.printer("selected Task: %s" % self.Task.name, 'msg')
+        logger.info("selected Task: %s" % self.Task.name)
         
         # take down all currently open controllers
         for Controller in self.Controllers:
@@ -294,7 +297,7 @@ class SettingsWidget(QtWidgets.QWidget):
         
         # run each controller present in task config
         for section in self.Task.sections():
-            utils.printer("initializing %s" % section, 'msg')
+            logger.debug("initializing %s" % section)
 
             if section == 'FSM':
                 from Widgets.ArduinoWidgets import ArduinoController

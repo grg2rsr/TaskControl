@@ -5,6 +5,9 @@ import subprocess
 from pathlib import Path
 from Utils import utils
 
+import logging
+logger = logging.getLogger(__name__)
+
 class BonsaiController(QtWidgets.QWidget):
     """ a Widget without UI that launches a bonsai sketch """
     
@@ -47,7 +50,7 @@ class BonsaiController(QtWidgets.QWidget):
 
         command = ' '.join([str(bonsai_exe),str(bonsai_workflow),"--start",parameters,"&"])
 
-        utils.printer("bonsai command: %s " % command, 'msg')
+        logger.info("bonsai command: %s " % command)
         log = open(save_path.with_name('bonsai_log.txt') ,'w')
         theproc = subprocess.Popen(command, shell = True, stdout=log, stderr=log)
         # theproc.communicate() # this hangs shell on windows machines, TODO check if this is true for linux

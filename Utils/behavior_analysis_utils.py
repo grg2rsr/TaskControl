@@ -7,7 +7,8 @@ import datetime
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
-
+import logging
+logger = logging.getLogger(__name__)
 """
  
  ########     ###    ########   ######  ######## ########  
@@ -57,7 +58,7 @@ def parse_arduino_log(log_path, code_map=None, parse_var=True, return_check=Fals
             valid_lines.append(line)
         else:
             invalid_lines.append(line)
-            utils.printer("bad line in log: %i: %s" % (i, line),"error")
+            logger.warning("bad line in log: %i: %s" % (i, line))
 
     if len(invalid_lines) == 0:
         all_good = True
@@ -84,7 +85,6 @@ def correct_wraparound_np(A: np.ndarray, max_val=None):
         else:
             A[i+1:] += max_val
     return A
-
 
 def correct_wraparound_Df(Df: pd.DataFrame, col='t'):
     Df[col] = correct_wraparound_np(Df[col].values)

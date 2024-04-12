@@ -10,9 +10,9 @@ import struct
 
 from Utils import utils
 
-"""
+import logging
+logger = logging.getLogger(__name__)
 
-"""
 class UDPconnection(QtCore.QObject):
     data_available = QtCore.pyqtSignal(list)
 
@@ -50,7 +50,7 @@ class UDPconnection(QtCore.QObject):
         # start a the udp reader in a seperate thread
         self.th_read = threading.Thread(target=read_from_sock, args=(self.sock, ))
         self.th_read.start()
-        utils.printer("listening to %s on port %i:%i" % (self.name, self.ip, self.port))
+        logger.info("listening to %s on port %i:%i" % (self.name, self.ip, self.port))
 
     # def reset(self):
     #     self.connection.setDTR(False) # reset
@@ -78,7 +78,7 @@ class SerialConnection(QtCore.QObject):
 
     def connect(self):
         try:
-            utils.printer("connecting %s on port %s - %i: " % (self.name, self.com_port, self.baud_rate), 'msg')
+            logger.info("connecting %s on port %s - %i: " % (self.name, self.com_port, self.baud_rate))
             self.connection = serial.Serial(
                                 port=self.com_port,
                                 baudrate=self.baud_rate,
@@ -91,7 +91,7 @@ class SerialConnection(QtCore.QObject):
                                 )
 
         except:
-            utils.printer("failed to connect %s on port %s - %i" % (self.name, self.com_port, self.baud_rate), 'error')
+            logger.error("failed to connect %s on port %s - %i" % (self.name, self.com_port, self.baud_rate))
             self.connection = None
             pass
 
@@ -116,7 +116,7 @@ class SerialConnection(QtCore.QObject):
 
         self.thread = threading.Thread(target=read_from_port, args=(self.connection, ))
         self.thread.start()
-        utils.printer("listening to %s on port %s - %i" % (self.name, self.com_port, self.baud_rate))
+        logger.info("listening to %s on port %s - %i" % (self.name, self.com_port, self.baud_rate))
 
     def reset(self):
         self.connection.setDTR(False) # reset

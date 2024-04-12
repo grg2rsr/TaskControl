@@ -23,6 +23,9 @@ from Utils import behavior_analysis_utils as bhv
 from Widgets.UtilityWidgets import ValueEditFormLayout
 from Widgets.Connections import SerialConnection, SerialMonitorWidget
 
+import logging
+logger = logging.getLogger(__name__)
+
 class FSMSerialConnection(SerialConnection):
     """ extents SerialConnection by: the hardcoded protocol of communictaion
     -> to be replaced with the more general convention of ?VAR and VAR= """
@@ -48,13 +51,13 @@ class FSMSerialConnection(SerialConnection):
                 self.connection.write(bytestr)
         else:
             # TODO be more explicit what failed to be sent
-            utils.printer("%s is not connected" % self.name, 'error')
+            logger.error("%s is not connected" % self.name)
 
     def send_variable(self, name, value):
         if hasattr(self, 'connection'):
             if self.connection.is_open:
                 # report
-                utils.printer("sending variable %s: %s" % (name, value))
+                logger.info("sending variable %s: %s" % (name, value))
 
                 # this is the hardcoded command sending definition
                 # cmd = '<SET %s %s>' % (name, value) 
@@ -118,7 +121,7 @@ class OnlineFSMDecoder(QtCore.QObject):
                 decoded_line = '\t'.join([decoded, t])
                 self.decoded_data_available.emit(decoded_line)
         except:
-            utils.printer("could not decode line: %s" % line, "error")
+            logger.warning("could not decode line: %s" % line)
 
 class OnlineFSMAnalyser(QtCore.QObject):
     """ listens to serial port, analyzes arduino data as it comes in """
@@ -138,20 +141,20 @@ class OnlineFSMAnalyser(QtCore.QObject):
             self.Metrics = [getattr(mod, metric) for metric in metrics]
         except KeyError:
             self.Metrics = None
-            utils.printer("%s attempted to load online metrics, but failed" % self.name,"error")
+            logger.error("%s attempted to load online metrics, but failed" % self.name)
 
         # events
         try:
             self.new_trial_event = self.online_config['new_trial_event']
         except KeyError:
             self.new_trial_event = None
-            utils.printer("%s attempted to load new trial event, but failed" % self.name,"error")
+            logger.error("%s attempted to load new trial event, but failed" % self.name)
         
         try:
             self.reward_events = [event.strip() for event in self.online_config['reward_event'].split(',')]
         except KeyError:
             self.reward_events = None
-            utils.printer("%s attempted to load reward event, but failed" % self.name,"error")
+            logger.error("%s attempted to load reward event, but failed" % self.name)
         
         self.lines = []
         self.SessionDf = None
@@ -181,7 +184,7 @@ class OnlineFSMAnalyser(QtCore.QObject):
                 # TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map, parse_var=True)
                 TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
             except ValueError:  # TODO - investigate this! this was added with cue on reach and no mistakes
-                utils.printer('%s failed parse of lines into TrialDf' % self.name, 'error')
+                logger.error('%s failed parse of lines into TrialDf' % self.name)
                 # utils.debug_trace()
                 pass 
             
@@ -343,14 +346,14 @@ class ArduinoController(QtWidgets.QWidget):
         which is in turn specified in the task_config.ini """
 
         # building interface
-        utils.printer("generating interface.cpp", 'task')
+        logger.info("generating interface.cpp") # _TASK_
         try: # catch this exception for downward compatibility
-            utils.printer("generating interface from: %s" % self.vars_path, 'msg')
-            utils.printer("using as template: %s" % self.task_config['interface_template_fname'], 'msg')
+            logger.info("generating interface from: %s" % self.vars_path)
+            logger.info("using as template: %s" % self.task_config['interface_template_fname'])
             interface_template_fname = self.task_config['interface_template_fname']
             interface_generator.run(self.vars_path, interface_template_fname)
         except KeyError:
-            utils.printer("generating interface based on %s" % self.vars_path, 'msg')
+            logger.info("generating interface based on %s" % self.vars_path)
             interface_generator.run(self.vars_path)
 
         # uploading code onto arduino
@@ -380,23 +383,23 @@ class ArduinoController(QtWidgets.QWidget):
         shutil.copy(self.vars_path, self.vars_path.with_suffix('.default'))
 
         # setting the valve calibration factor
-        utils.printer("setting valve calibration factors", 'task')
+        logger.info("setting valve calibration factors") # _TASK_
         if 'valves' in self.box_config.sections():
             valves = dict(self.box_config['valves']).keys()
             for valve in valves:
                 try:
-                    utils.printer('setting calibration factor of valve: %s = %s' % (valve, self.box_config['valves'][valve]), 'msg')
+                    logger.info('setting calibration factor of valve: %s = %s' % (valve, self.box_config['valves'][valve]))
                     self.VariableController.VariableEditWidget.set_entry(valve, self.box_config['valves'][valve])
                 except:
-                    utils.printer("can't set valve calibration factors of valve %s" % valve, 'error')
+                    logger.error("can't set valve calibration factors of valve %s" % valve)
         else:
-            utils.printer("no valves found in box config", 'msg')
+            logger.info("no valves found in box config")
 
         # overwriting vars
         self.VariableController.write_variables(self.vars_path)
 
         # upload
-        utils.printer("uploading code on arduino", 'task')
+        logger.info("uploading code on arduino") # _TASK_
         prev_dir = Path.cwd()
 
         os.chdir(self.task_folder / 'Arduino')
@@ -413,11 +416,11 @@ class ArduinoController(QtWidgets.QWidget):
         shutil.copy(self.vars_path.with_suffix('.default'), self.vars_path)
         os.remove(self.vars_path.with_suffix('.default'))
 
-        utils.printer("upload successful", 'msg')
+        logger.info("upload successful")
 
     def log_task(self, folder):
         """ copy the entire arduino folder to the logging folder """
-        utils.printer("logging arduino code", 'task')
+        logger.info("logging arduino code")
         src = self.task_folder
         target = folder / self.sys_config['current']['task']
         shutil.copytree(src, target)
@@ -434,7 +437,7 @@ class ArduinoController(QtWidgets.QWidget):
         if self.reprogramCheckBox.checkState() == 2: # true when checked
             self.upload()
         else:
-            utils.printer("reusing previously uploaded sketch", 'msg')
+            logger.info("reusing previously uploaded sketch")
 
         # last vars
         # TODO move this to the VariableController itself?
@@ -444,12 +447,12 @@ class ArduinoController(QtWidgets.QWidget):
                 current_vars = self.VariableController.Df
                 if self.VariableController.check_vars(last_vars, current_vars):
                     self.VariableController.use_last_vars()
-                    utils.printer("using variables from last session", 'msg')
+                    logger.info("using variables from last session")
                 else:
                     self.VariableController.use_default_vars()
-                    utils.printer("attemped use variables from last session, but they are unequal. Using default instead", 'warning')
+                    logger.warning("attemped use variables from last session, but they are unequal. Using default instead")
             else:
-                utils.printer("attempted to use variables from last session, but couldn't find. Using default instead", 'warning')
+                logger.warning("attempted to use variables from last session, but couldn't find. Using default instead")
         self.VariableController.VariableEditWidget.setEnabled(True)
             
         # connect to serial port
@@ -471,7 +474,7 @@ class ArduinoController(QtWidgets.QWidget):
 
         # start up the online data analyser
         if hasattr(self, 'OnlineFSMAnalyser'):
-            utils.printer("starting online data analyser", 'msg')
+            logger.info("starting online data analyser")
             self.OnlineFSMAnalyser.run()
 
         # start timer
@@ -599,7 +602,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             default_vars = utils.parse_arduino_vars(vars_path)
             return default_vars
         except:
-            utils.printer("failed to load default variables",'error')
+            logger.error("failed to load default variables")
             return None 
 
     def load_last_vars(self):
@@ -613,7 +616,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         try:
             previous_sessions = SessionsDf.groupby('task').get_group(sys_config['current']['task'])
         except KeyError:
-            utils.printer("trying to use last vars, but animal has not been run on this task before.",'error')
+            logger.error("trying to use last vars, but animal has not been run on this task before.")
             return None
 
         # to allow for this functionalty while task is running
@@ -629,7 +632,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
                 prev_vars = utils.parse_arduino_vars(prev_vars_path)
                 return prev_vars
             else:
-                utils.printer("didn't find variables from last session", "error")
+                logger.error("didn't find variables from last session")
                 return None
 
         except IndexError:
@@ -638,7 +641,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
 
     def check_vars(self, Df_a, Df_b):
         if not np.all(Df_a['name'].sort_values().values == Df_b['name'].sort_values().values):
-            utils.printer("unequal variable names between last session and this session", 'error')
+            logger.error("unequal variable names between last session and this session")
             return False
         else:
             return True

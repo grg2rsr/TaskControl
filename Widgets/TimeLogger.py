@@ -20,6 +20,9 @@ from Utils import utils
 import time
 from Widgets.Connections import SerialConnection, SerialMonitorWidget
 
+import logging
+logger = logging.getLogger(__name__)
+
 class TimeLogger(QtWidgets.QWidget):
 
     def __init__(self, parent, sys_config, task_config, box_config):
@@ -85,7 +88,7 @@ class TimeLogger(QtWidgets.QWidget):
             self.Serial.reset()
             self.Serial.listen()
         else:
-            utils.printer("trying to listen to %s on port %s - %i, but serial connection is not open" % (self.name, self.com_port, self.baud_rate), "warning")
+            logger.error("trying to listen to %s on port %s - %i, but serial connection is not open" % (self.name, self.com_port, self.baud_rate))
 
     def stop(self):
         """ not implemented """

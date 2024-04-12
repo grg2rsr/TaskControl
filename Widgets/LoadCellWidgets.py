@@ -14,6 +14,9 @@ import time
 
 import pyqtgraph as pg 
 
+import logging
+logger = logging.getLogger(__name__)
+
 """
  
   ######   #######  ##    ## ######## ########   #######  ##       ##       ######## ########  
@@ -108,7 +111,7 @@ class LoadCellController(QtWidgets.QWidget):
         com_port = self.config['connections']['arduino_data_port']
         baud_rate = self.config['connections']['arduino_baud_rate']
 
-        utils.printer("initializing 2nd serial port to arduino: " + com_port,'msg')
+        logger.info("initializing 2nd serial port to arduino: " + com_port)
         try:
             ser = serial.Serial(port=com_port, baudrate=baud_rate, timeout=2)
             ser.setDTR(False) # reset: https://stackoverflow.com/questions/21073086/wait-on-arduino-auto-reset-using-pyserial
@@ -118,7 +121,7 @@ class LoadCellController(QtWidgets.QWidget):
             return ser
 
         except:
-            utils.printer("Could not open 2nd serial connection to the arduino!",'error')
+            logger.error("Could not open 2nd serial connection to the arduino!")
             sys.exit()
 
 
