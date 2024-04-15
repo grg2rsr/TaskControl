@@ -24,7 +24,7 @@ pattern: checks are implemented by the primities
 
 def has_var(TrialDf: pd.DataFrame, var_name: str = None, rename: str = None):
     # returns True or False if var_name is in TrialDf
-    if var_name in TrialDf['name'].values:
+    if var_name in TrialDf['var'].values or var_name in TrialDf['name'].values:
         var = True
     else:
         var = False    
@@ -378,7 +378,7 @@ def get_reward_collection_rt(TrialDf):
     """
 
 
-get_trial_type = partial(get_var, var_name="this_delay")
+get_trial_type = partial(get_var, var_name="this_trial_type")
 # def get_trial_type(TrialDf):
 #     var_name = "this_trial_type"
 #     try:
@@ -387,7 +387,7 @@ get_trial_type = partial(get_var, var_name="this_delay")
 #     except KeyError:
 #         var = np.NaN
 
-    # return pd.Series(var, name=var_name)
+#     return pd.Series(var, name=var_name)
 
 get_delay = partial(get_var, var_name="this_delay")
 # def get_delay(TrialDf):
