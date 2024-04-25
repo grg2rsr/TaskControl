@@ -74,9 +74,9 @@ class SessionVis(QtWidgets.QWidget):
             case 'LinePlot':
                 self.Plotter = LinePlot(self.axes, plot_config['x'], plot_config['y'], line_kwargs=plot_config['plot_kwargs'])
             case 'ScatterPlot':
-                self.Plotter = ScatterPlot(self.axes, scatter_kwargs=plot_config['plot_kwargs'])
+                self.Plotter = ScatterPlot(self.axes, plot_config['x'], plot_config['y'], scatter_kwargs=plot_config['plot_kwargs'])
             case 'SeabornScatter':
-                self.Plotter = SeabornScatter(seaborn_kwargs=plot_config['plot_kwargs'])
+                self.Plotter = SeabornScatter(axes=self.axes, seaborn_kwargs=plot_config['plot_kwargs'])
         
         self.decorate(plot_config['deco_kwargs'])
         self.fig.tight_layout()
@@ -87,6 +87,8 @@ class SessionVis(QtWidgets.QWidget):
             # this call signature might change
             # might necessary because, future plotters might want to access TrialDf
             # if self.plotter[0] == 'LinePlot': # HARDCODE
+            self.axes.relim()
+            self.axes.autoscale_view(True, True, True)
         else:
             # TODO at least print a warning of some sort
             pass
@@ -105,20 +107,29 @@ class LinePlot(object):
     def __init__(self, axes, x_name, y_name, line_kwargs):
         self.x_name = x_name
         self.y_name = y_name
+        self.axes = axes
         self.line, = axes.plot([], [], **line_kwargs)
+        # self.axes.autoscale(enable=True)
 
     def update(self, SessionDf):
-        xdata = SessionDf[self.x_name]
-        ydata = SessionDf[self.y_name]
-        self.line.set_xdata(xdata)
-        self.line.set_ydata(ydata)
-
+        xdata = SessionDf[self.x_name].values
+        ydata = SessionDf[self.y_name].values
+        self.line.set_data(xdata, ydata)
+        
+        # self.line.set_xdata(xdata)
+        # self.line.set_ydata(ydata)
+        # logger.debug('LinePlot update called')
+        # self.axes.set_xlim((np.min(xdata), np.max(xdata)))
+        # self.axes.set_ylim((np.min(ydata), np.max(ydata)))
+        # self.axes.autoscale_view()
 
 class ScatterPlot(object):
     def __init__(self, axes, x_name, y_name, scatter_kwargs):
         self.x_name = x_name
         self.y_name = y_name
+        self.axes = axes
         self.scatter = axes.scatter([], [], **scatter_kwargs)
+
 
     def update(self, SessionDf):
         data = np.concatenate([SessionDf[self.x_name].values[:,np.newaxis],
@@ -126,17 +137,17 @@ class ScatterPlot(object):
                                axis=1)
         self.scatter.set_offsets(data)
 
-
 class SeabornScatter(object):
     def __init__(self, axes, seaborn_kwargs):
         self.kwargs = seaborn_kwargs
         self.axes = axes
-        sns.scatter(ax=axes, **seaborn_kwargs)
+        sns.scatterplot(ax=axes) # , **seaborn_kwargs)
 
     def update(self, SessionDf):
-        plt.sca(self.axes)
-        plt.cla()
-        sns.scatter(data=SessionDf, ax=self.axes, **self.seaborn_kwargs)
+        # plt.sca(self.axes)
+        # self.axes.remove()
+        # utils.debug_trace()
+        self.axes = sns.scatterplot(data=SessionDf, ax=self.axes, **self.kwargs)
 
 # OLD CODE
 # class ScatterPlot(object):

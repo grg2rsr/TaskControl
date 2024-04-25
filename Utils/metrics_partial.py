@@ -22,9 +22,17 @@ pattern: checks are implemented by the primities
  
 """
 
+def has_event(TrialDf: pd.DataFrame, event_name: str = None, rename: str = None):
+    if event_name in TrialDf['name'].values:
+        var = True
+    else:
+        var = False    
+    name = rename if rename is not None else 'has_%s' % event_name
+    return pd.Series(var, name=name)
+
 def has_var(TrialDf: pd.DataFrame, var_name: str = None, rename: str = None):
     # returns True or False if var_name is in TrialDf
-    if var_name in TrialDf['var'].values or var_name in TrialDf['name'].values:
+    if var_name in TrialDf['var'].values:
         var = True
     else:
         var = False    
@@ -45,7 +53,7 @@ def get_var(TrialDf: pd.DataFrame, var_name: str, dtype: str = None, rename: str
     return pd.Series(var, name=name)
 
 def get_time_between(TrialDf: pd.DataFrame, event_a: str, event_b: str, name: str) -> pd.Series:
-    if has_var(TrialDf, event_a)[0] and has_var(TrialDf, event_b)[0]:
+    if has_event(TrialDf, event_a)[0] and has_event(TrialDf, event_b)[0]:
         Df = event_slice(TrialDf, event_a, event_b)
         var = Df.iloc[-1]['t'] - Df.iloc[0]['t']
     else:
@@ -66,6 +74,8 @@ def var_is(TrialDf: pd.DataFrame, var_name: str, comp='is_greater', value=0, ren
     name = rename if rename is not None else '%s_%s' % (var_name, comp)
     return pd.Series(var, name=name)
 
+is_long = partial(var_is, var_name='this_LED_ON_dur', value=700, rename='is_long')
+init_time = partial(get_time_between, event_a="TRIAL_AVAILABLE_STATE", event_b="DELAY_STATE", name='init_time')
 """
  
   ######  ##     ##  #######  ####  ######  ######## 
@@ -77,7 +87,7 @@ def var_is(TrialDf: pd.DataFrame, var_name: str, comp='is_greater', value=0, ren
   ######  ##     ##  #######  ####  ######  ######## 
  
 """
-has_choice = partial(has_var, var_name="CHOICE_EVENT", rename='has_choice')
+has_choice = partial(has_event, event_name="CHOICE_EVENT", rename='has_choice')
 # def has_choice(TrialDf):
 #     var_name = 'has_choice'
 
@@ -88,7 +98,7 @@ has_choice = partial(has_var, var_name="CHOICE_EVENT", rename='has_choice')
  
 #     return pd.Series(var, name=var_name)
 
-has_anticipatory_reach = partial(has_var, var_name="ANTICIPATORY_REACH_EVENT", rename='has_anticip_reach')
+has_anticipatory_reach = partial(has_event, event_name="ANTICIPATORY_REACH_EVENT", rename='has_anticip_reach')
 # def has_anticipatory_reach(TrialDf):
 #     var_name = 'has_anticip_reach'
 #     if "ANTICIPATORY_REACH_EVENT" in TrialDf['name'].values:
@@ -98,7 +108,7 @@ has_anticipatory_reach = partial(has_var, var_name="ANTICIPATORY_REACH_EVENT", r
  
 #     return pd.Series(var, name=var_name)
 
-has_premature_choice = partial(has_var, var_name="PREMATURE_CHOICE_EVENT", rename="has_premature_choice")
+has_premature_choice = partial(has_event, event_name="PREMATURE_CHOICE_EVENT", rename="has_premature_choice")
 # def has_premature_choice(TrialDf):
 #     var_name = "has_premature_choice"
 #     if "PREMATURE_CHOICE_EVENT" in TrialDf['name'].values:
@@ -108,7 +118,7 @@ has_premature_choice = partial(has_var, var_name="PREMATURE_CHOICE_EVENT", renam
  
 #     return pd.Series(var, name=var_name)
 
-has_reward_collected = partial(has_var, var_name="REWARD_COLLECTED_EVENT", rename="has_reward_collected")
+has_reward_collected = partial(has_event, event_name="REWARD_COLLECTED_EVENT", rename="has_reward_collected")
 # def has_reward_collected(TrialDf):
 #     var_name = "has_reward_collected"
 #     if "REWARD_COLLECTED_EVENT" in TrialDf['name'].values:
@@ -117,7 +127,7 @@ has_reward_collected = partial(has_var, var_name="REWARD_COLLECTED_EVENT", renam
 #         var = False    
  
 #     return pd.Series(var, name=var_name)
-has_autodelivered_reward = partial(has_var, var_name="REWARD_AUTODELIVERED_EVENT", rename="has_autodelivered_reward")
+has_autodelivered_reward = partial(has_event, event_name="REWARD_AUTODELIVERED_EVENT", rename="has_autodelivered_reward")
 # def has_autodelivered_reward(TrialDf):
 #     var_name = "has_autodelivered_reward"
 #     if "REWARD_AUTODELIVERED_EVENT" in TrialDf['name'].values:
@@ -326,6 +336,9 @@ def get_start(TrialDf):
 def get_stop(TrialDf):
     return pd.Series(TrialDf.iloc[-1]['t'], name='t_off')
 
+def get_trial_dur(TrialDf):
+    dt = TrialDf.iloc[-1]['t'] - TrialDf.iloc[0]['t']
+    return pd.Series(dt, name='dt')
 
 get_init_rt = partial(get_time_between, event_a="TRIAL_AVAILABLE_EVENT", event_b="TRIAL_ENTRY_EVENT", name="init_rt")
 # def get_init_rt(TrialDf):

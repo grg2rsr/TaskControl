@@ -87,6 +87,12 @@ class FSMSerialConnection(SerialConnection):
  
 """
 
+""" TODO
+move this to it's own file
+-> defines the implementation for the FSM and
+should not care how that one is implemented
+"""
+
 class OnlineFSMDecoder(QtCore.QObject):
     decoded_data_available = QtCore.pyqtSignal(str)
     var_data_available = QtCore.pyqtSignal(str,str)
@@ -174,19 +180,17 @@ class OnlineFSMAnalyser(QtCore.QObject):
         self.lines.append(decoded_line)
 
         event, t = self.parse(decoded_line)
+        
         # the event that separates the stream of data into chunks of trials
         if event == self.new_trial_event:
 
             # parse lines
             TrialMetricsDf = None
             try:
-                TrialDf = bhv.parse_lines(self.lines, code_map=None, parse_var=True)
-                # TrialDf = bhv.parse_lines(self.lines, code_map=self.code_map, parse_var=True)
+                TrialDf = bhv.parse_lines(self.lines, code_map=None, parse_var=True, decoded=True)
                 TrialMetricsDf = bhv.parse_trial(TrialDf, self.Metrics)
-            except ValueError:  # TODO - investigate this! this was added with cue on reach and no mistakes
-                logger.error('%s failed parse of lines into TrialDf' % self.name)
-                # utils.debug_trace()
-                pass 
+            except ValueError:
+                logger.error('Failed to parse of lines into TrialDf')
             
             if TrialMetricsDf is not None:
                 if self.SessionDf is None: # on first
@@ -261,7 +265,7 @@ class ArduinoController(QtWidgets.QWidget):
         self.VariableController = ArduinoVariablesWidget(self)
 
         # Statemachine Monitor
-        # self.StateMachineMonitor = StateMachineMonitorWidget(self, code_map=self.code_map)
+        self.StateMachineMonitor = StateMachineMonitorWidget(self, self.code_map)
         self.initUI()
     
     def initUI(self):
@@ -366,6 +370,7 @@ class ArduinoController(QtWidgets.QWidget):
         # get upload port
         upload_port = self.box_config['FSM']['com_port']
 
+        # FIXME - this works on arduino, but not for Teensy`
         for section in pio_config.sections():
             if section.split(":")[0] == "env":
                 pio_config.set(section, "upload_port", upload_port)
@@ -514,6 +519,7 @@ class ArduinoController(QtWidgets.QWidget):
         # explicitly closing
         self.SerialMonitor.close()
         self.VariableController.close()
+        self.StateMachineMonitor.close()
 
         # Write window size and position to config file
         self.settings.setValue("size", self.size())
@@ -640,8 +646,13 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
             return None
 
     def check_vars(self, Df_a, Df_b):
-        if not np.all(Df_a['name'].sort_values().values == Df_b['name'].sort_values().values):
+        # number of variables are not the same
+        if Df_a.shape[0] != Df_b.shape[0]:
             logger.error("unequal variable names between last session and this session")
+            return False
+        # variables have different names
+        if not np.all(Df_a['name'].sort_values().values == Df_b['name'].sort_values().values):
+            logger.error("equal number of variables, but different names")
             return False
         else:
             return True
@@ -714,27 +725,6 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.settings.setValue("size", self.size())
         self.settings.setValue("pos", self.pos())
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 """
  
  ##     ##  #######  ##    ## #### ########  #######  ########  
@@ -747,108 +737,69 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
  
 """
 
-
-
-
-
-# TODO get this functionality back
-# class StateMachineMonitorWidget(QtWidgets.QWidget):
+class StateMachineMonitorWidget(QtWidgets.QWidget):
     
-#     def __init__(self, parent, code_map=None):
-#         super(StateMachineMonitorWidget, self).__init__(parent=parent)
+    def __init__(self, parent, code_map=None):
+        super(StateMachineMonitorWidget, self).__init__(parent=parent)
+        self.code_map = code_map
 
-#         # code_map related
-#         self.code_map = code_map
-        
-#         # connect to parent signals
-#         parent.serial_data_available.connect(self.update)
+        # connect to parent signals
+        parent.FSMDecoder.decoded_data_available.connect(self.on_data)
 
-#         self.initUI()
+        self.initUI()
 
-#     def initUI(self):
-#         self.setWindowFlags(QtCore.Qt.Window)
+    def initUI(self):
+        self.setWindowFlags(QtCore.Qt.Window)
 
-#         # layouting
-#         self.Layout = QtWidgets.QVBoxLayout()
-#         self.States_Layout = QtWidgets.QHBoxLayout()
-#         self.Spans_Layout = QtWidgets.QHBoxLayout()
-#         # self.Events_Layout = QtWidgets.QHBoxLayout()
-#         self.Btns = []
+        # layouting
+        self.Layout = QtWidgets.QVBoxLayout()
+        self.States_Layout = QtWidgets.QHBoxLayout()
+        self.Btns = []
 
-#         for code, full_name in self.code_map.items():
-#             splits = full_name.split('_')
-#             name = '_'.join(splits[:-1])
-#             kind = splits[-1]
+        for code, full_name in self.code_map.items():
+            splits = full_name.split('_')
+            name = '_'.join(splits[:-1])
+            kind = splits[-1]
 
-#             Btn = QtWidgets.QPushButton()
-#             Btn.setText(name)
-#             if kind == 'STATE':
-#                 Btn.setCheckable(False)
-#                 self.States_Layout.addWidget(Btn)
-#             if kind == 'ON':
-#                 Btn.setCheckable(False)
-#                 self.Spans_Layout.addWidget(Btn)
-#             # if kind == 'EVENT':
-#             #     Btn.setCheckable(False)
-#             #     self.Events_Layout.addWidget(Btn)
+            Btn = QtWidgets.QPushButton()
+            Btn.setText(name)
+            if kind == 'STATE':
+                Btn.setCheckable(False)
+                self.States_Layout.addWidget(Btn)
 
-#             self.Btns.append((full_name, Btn))
+            self.Btns.append((full_name, Btn))
 
-#         self.Layout.addLayout(self.States_Layout)
-#         self.Layout.addLayout(self.Spans_Layout)
-#         # self.Layout.addLayout(self.Events_Layout)
+        self.Layout.addLayout(self.States_Layout)
 
-#         self.setLayout(self.Layout)
-#         self.setWindowTitle("State Machine Monitor")
+        self.setLayout(self.Layout)
+        self.setWindowTitle("State Machine Monitor")
 
-#         self.settings = QtCore.QSettings('TaskControl', 'StateMachineMonitor')
-#         self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
-#         self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
-#         self.show()
+        self.settings = QtCore.QSettings('TaskControl', 'StateMachineMonitor')
+        self.resize(self.settings.value("size", QtCore.QSize(270, 225)))
+        self.move(self.settings.value("pos", QtCore.QPoint(10, 10)))
 
-#     def update(self, line):
-#         try:
-#             code, time = line.split('\t')
-#             full_name = self.code_map[code]
+        self.show()
 
-#             # remove all color from events
-#             if full_name.endswith("_EVENT") or full_name.endswith("_ON") or full_name.endswith("_OFF"):
-#                 for name, btn in self.Btns:
-#                     if name.endswith('_EVENT'):
-#                         btn.setStyleSheet("background-color: light gray")
+    def on_data(self, line):
+        try:
+            name, time = line.split('\t')
+            # for states
+            if name.endswith("_STATE"):
+                # color all state buttons gray
+                for _, btn in self.Btns:
+                    # if name_.endswith("_STATE"):
+                    btn.setStyleSheet("background-color: light gray")
 
-#             # for states
-#             if full_name.endswith("_STATE"):
-#                 # color all state buttons gray
-#                 for name, btn in self.Btns:
-#                     if name.endswith("_STATE"):
-#                         btn.setStyleSheet("background-color: light gray")
+                # and color only active green
+                btn = [btn for name_, btn in self.Btns if name_==name][0]
+                btn.setStyleSheet("background-color: green")
+           
+        except:
+            logging.warning("StateMachineMonitorWidget does not know what to do with line %s" % line)
+            pass
 
-#                 # and color only active green
-#                 btn = [btn for name, btn in self.Btns if name==full_name][0]
-#                 btn.setStyleSheet("background-color: green")
-
-#             # for spans
-#             if full_name.endswith("_ON"):
-#                 btn = [btn for name, btn in self.Btns if name==full_name][0]
-
-#                 if full_name.endswith("_ON"):
-#                     btn.setStyleSheet("background-color: green")
-
-#             if  full_name.endswith("_OFF"):
-#                 btn = [btn for name, btn in self.Btns if name==full_name[:-3]+'ON'][0]
-#                 btn.setStyleSheet("background-color: light gray")
-            
-#             # for events stay green until next line read
-#             if  full_name.endswith("_EVENT"):
-#                 btn = [btn for name, btn in self.Btns if name==full_name][0]
-#                 btn.setStyleSheet("background-color: green")
-            
-#         except:
-#             pass
-
-#     def closeEvent(self, event):
-#         """ reimplementation of closeEvent """
-#         # Write window size and position to config file
-#         self.settings.setValue("size", self.size())
-#         self.settings.setValue("pos", self.pos())
+    def closeEvent(self, event):
+        """ reimplementation of closeEvent """
+        # Write window size and position to config file
+        self.settings.setValue("size", self.size())
+        self.settings.setValue("pos", self.pos())

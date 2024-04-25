@@ -99,7 +99,7 @@ def correct_wraparound(Df, col='t'):
         Df['t'].iloc[reversal_ind+1:] += _Df['t'].iloc[reversal_ind]
     return Df
 
-def parse_lines(lines, code_map=None, parse_var=False, return_vars=False):
+def parse_lines(lines, code_map=None, parse_var=False, return_vars=False, decoded=False):
     """ parses a list of lines from arduino into a pd.DataFrame """
     LogDf = pd.DataFrame([line.split('\t') for line in lines if '\t' in line], columns=['code', 't'])
     LogDf['t'] = LogDf['t'].astype('float')
@@ -112,6 +112,10 @@ def parse_lines(lines, code_map=None, parse_var=False, return_vars=False):
     # decode
     if code_map is not None:
         LogDf['name'] = [code_map[code] for code in LogDf['code']]
+
+    if decoded:
+        LogDf['name'] = LogDf['code']
+        LogDf['code'] = np.NaN
 
     if parse_var:
         var_lines = [line.strip() for line in lines if line.startswith('<VAR')]

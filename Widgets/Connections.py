@@ -150,7 +150,7 @@ class SerialMonitorWidget(QtWidgets.QWidget):
         self.Layout = QtWidgets.QVBoxLayout()
 
         # updating checkbox
-        self.updateCheckBox = QtWidgets.QCheckBox("reupload sketch")
+        self.updateCheckBox = QtWidgets.QCheckBox("update")
         self.updateCheckBox.setChecked(True)
         self.Layout.addWidget(self.updateCheckBox)
         
