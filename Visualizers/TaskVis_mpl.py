@@ -70,16 +70,15 @@ class SessionVis(QtWidgets.QWidget):
 
     def init(self):
         plot_type, plot_config = self.plotter
-        match plot_type: # HARDCODED names
-            case 'LinePlot':
-                self.Plotter = LinePlot(self.axes, plot_config['x'], plot_config['y'], line_kwargs=plot_config['plot_kwargs'])
-            case 'ScatterPlot':
-                self.Plotter = ScatterPlot(self.axes, plot_config['x'], plot_config['y'], scatter_kwargs=plot_config['plot_kwargs'])
-            case 'SeabornScatter':
-                self.Plotter = SeabornScatter(axes=self.axes, seaborn_kwargs=plot_config['plot_kwargs'])
-        
+
+        if plot_type == 'LinePlot':
+            self.Plotter = LinePlot(self.axes, plot_config['x'], plot_config['y'], line_kwargs=plot_config['plot_kwargs'])
+        else:
+            self.Plotter = SeabornPlot(kind=plot_type, axes=self.axes, seaborn_kwargs=plot_config['plot_kwargs'])
+
         self.decorate(plot_config['deco_kwargs'])
         self.fig.tight_layout()
+        sns.despine(self.fig)
 
     def on_data(self, TrialDf, TrialMetricsDf):
         if  self.OnlineDataAnalyser.SessionDf is not None: # FIXME
@@ -115,39 +114,18 @@ class LinePlot(object):
         xdata = SessionDf[self.x_name].values
         ydata = SessionDf[self.y_name].values
         self.line.set_data(xdata, ydata)
-        
-        # self.line.set_xdata(xdata)
-        # self.line.set_ydata(ydata)
-        # logger.debug('LinePlot update called')
-        # self.axes.set_xlim((np.min(xdata), np.max(xdata)))
-        # self.axes.set_ylim((np.min(ydata), np.max(ydata)))
-        # self.axes.autoscale_view()
 
-class ScatterPlot(object):
-    def __init__(self, axes, x_name, y_name, scatter_kwargs):
-        self.x_name = x_name
-        self.y_name = y_name
-        self.axes = axes
-        self.scatter = axes.scatter([], [], **scatter_kwargs)
-
-
-    def update(self, SessionDf):
-        data = np.concatenate([SessionDf[self.x_name].values[:,np.newaxis],
-                               SessionDf[self.y_name].values[:,np.newaxis]],
-                               axis=1)
-        self.scatter.set_offsets(data)
-
-class SeabornScatter(object):
-    def __init__(self, axes, seaborn_kwargs):
+class SeabornPlot(object):
+    def __init__(self, axes, kind, seaborn_kwargs):
         self.kwargs = seaborn_kwargs
+        self.plotting_fun = getattr(sns,kind)
         self.axes = axes
-        sns.scatterplot(ax=axes) # , **seaborn_kwargs)
+        self.plotting_fun(ax=axes) # , **seaborn_kwargs)
 
     def update(self, SessionDf):
-        # plt.sca(self.axes)
-        # self.axes.remove()
-        # utils.debug_trace()
-        self.axes = sns.scatterplot(data=SessionDf, ax=self.axes, **self.kwargs)
+        self.axes.clear()
+        self.axes = self.plotting_fun(data=SessionDf, ax=self.axes, **self.kwargs)
+
 
 # OLD CODE
 # class ScatterPlot(object):
