@@ -41,7 +41,7 @@ class SessionVis(QtWidgets.QWidget):
     # FIXME add controls
     """Ultimately, this is a QWidget (as well as a Figureself.CanvasAgg, etc.)."""
 
-    def __init__(self, parent, plotter, OnlineDataAnalyser, width=9, height=8):
+    def __init__(self, parent, plot_type, plot_config, OnlineDataAnalyser, width=9, height=8):
         super(SessionVis, self).__init__()
 
         # figure init
@@ -58,9 +58,7 @@ class SessionVis(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
-        self.plotter = plotter # is a tuple (str plot_type, plot_config)
-
-        self.init()
+        self.init(plot_type, plot_config)
         self.show()
 
         # connect signals
@@ -68,8 +66,7 @@ class SessionVis(QtWidgets.QWidget):
         OnlineDataAnalyser.trial_data_available.connect(self.on_data)
 
 
-    def init(self):
-        plot_type, plot_config = self.plotter
+    def init(self, plot_type, plot_config):
 
         if plot_type == 'LinePlot':
             self.Plotter = LinePlot(self.axes, plot_config['x'], plot_config['y'], line_kwargs=plot_config['plot_kwargs'])
@@ -87,7 +84,7 @@ class SessionVis(QtWidgets.QWidget):
             # might necessary because, future plotters might want to access TrialDf
             # if self.plotter[0] == 'LinePlot': # HARDCODE
             self.axes.relim()
-            self.axes.autoscale_view(True, True, True)
+            self.axes.autoscale_view(True, True, True) # FIXME
         else:
             # TODO at least print a warning of some sort
             pass
@@ -118,7 +115,7 @@ class LinePlot(object):
 class SeabornPlot(object):
     def __init__(self, axes, kind, seaborn_kwargs):
         self.kwargs = seaborn_kwargs
-        self.plotting_fun = getattr(sns,kind)
+        self.plotting_fun = getattr(sns, kind)
         self.axes = axes
         self.plotting_fun(ax=axes) # , **seaborn_kwargs)
 
