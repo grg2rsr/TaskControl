@@ -10,6 +10,7 @@ int last_state = -1; // whatever other state
 unsigned long max_future = 4294967295; // 2**32 -1
 unsigned long t_state_entry = max_future;
 
+unsigned long r;
 /*
 ########  ######  ##     ##
 ##       ##    ## ###   ###
@@ -40,6 +41,8 @@ void finite_state_machine() {
             if (current_state != last_state){
                 digitalWrite(LED_PIN, LOW);
                 state_entry_common();
+                r = random(0,1000);
+                log_ulong("r", r);
             }
 
             // the update loop

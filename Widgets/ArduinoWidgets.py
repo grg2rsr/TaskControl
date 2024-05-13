@@ -95,7 +95,7 @@ should not care how that one is implemented
 
 class OnlineFSMDecoder(QtCore.QObject):
     decoded_data_available = QtCore.pyqtSignal(str)
-    var_data_available = QtCore.pyqtSignal(str,str)
+    var_data_available = QtCore.pyqtSignal(str,str,str)
     formatted_var_data_available = QtCore.pyqtSignal(str)
     other_data_available = QtCore.pyqtSignal(str)
 
@@ -116,7 +116,8 @@ class OnlineFSMDecoder(QtCore.QObject):
                 line_split = line[1:-1].split(' ')
                 name = line_split[1]
                 value = line_split[2]
-                self.var_data_available.emit(name, value)
+                t = line_split[3]
+                self.var_data_available.emit(name, value, t)
                 self.formatted_var_data_available.emit("%s=%s" % (name, value))
 
             if not line.startswith('<'):
@@ -170,11 +171,18 @@ class OnlineFSMAnalyser(QtCore.QObject):
         # FIXME TODO
         # self.parent.serial_data_available.connect(self.update)
         self.FSMDecoder.decoded_data_available.connect(self.update)
+        self.FSMDecoder.var_data_available.connect(self.update_var)
 
     def parse(self, decoded_line):
         event, t = decoded_line.split('\t')
         t = int(t)
         return event, t
+
+    def update_var(self, name, value, t):
+        line = "<VAR %s %s %s>" % (name, value, t)
+        # this is the WORST hack - bringing it back to the original
+        # format because the parse_lines function expects it like this ... 
+        self.lines.append(line)
 
     def update(self, decoded_line):
         self.lines.append(decoded_line)
@@ -258,6 +266,7 @@ class ArduinoController(QtWidgets.QWidget):
         self.FSMDecoder.decoded_data_available.connect(self.SerialMonitor.on_data)
         self.FSMDecoder.other_data_available.connect(self.SerialMonitor.on_data)
         self.FSMDecoder.formatted_var_data_available.connect(self.SerialMonitor.on_data)
+        # self.FSMDecoder.var_data_available.connect(self.SerialMonitor.on_data)
 
         # VariableController
         # TODO remove this hardcode, external into .ini
@@ -330,7 +339,6 @@ class ArduinoController(QtWidgets.QWidget):
             self.Serial.run_FSM()
             self.RunBtn.setText('HALT')
             self.RunBtn.setStyleSheet("background-color: red")
-
         else: 
             self.Serial.halt_FSM()
             self.RunBtn.setText('RUN')
@@ -715,7 +723,7 @@ class ArduinoVariablesWidget(QtWidgets.QWidget):
         self.LastVarsCheckBox.setChecked(False)
         self.use_vars(default_vars)
 
-    def on_var_changed(self, name, value):
+    def on_var_changed(self, name, value, t):
         if name in self.VariableEditWidget.Df['name'].values:
             self.VariableEditWidget.set_entry(name, value)
 
