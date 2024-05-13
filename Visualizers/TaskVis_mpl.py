@@ -118,6 +118,7 @@ class SeabornPlot(object):
         self.plotting_fun = getattr(sns, kind)
         self.axes = axes
         self.plotting_fun(ax=axes) # , **seaborn_kwargs)
+        self.axes.autoscale(enable=False)
 
     def update(self, SessionDf):
         self.axes.clear()
