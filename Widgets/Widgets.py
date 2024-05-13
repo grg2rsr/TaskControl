@@ -154,7 +154,7 @@ class SettingsWidget(QtWidgets.QWidget):
         plotter_keys = [key for key in dict(self.Task).keys() if key.startswith('Plot:')]
 
         for plotter_key in plotter_keys:
-            plot_config = self.Task[plotter_key]
+            plot_config = dict(self.Task[plotter_key])
             plot_type = plotter_key.split(":")[1]
             # converting to dicts
             kwargs_keys = [key for key in plot_config.keys() if key.endswith("kwargs")]
@@ -162,23 +162,6 @@ class SettingsWidget(QtWidgets.QWidget):
                 plot_config[key] = eval('dict(%s)' % plot_config[key])
             vis = TaskVis_mpl.SessionVis(self, plot_type, plot_config, self.ArduinoController.OnlineFSMAnalyser)
             self.plot_windows.append(vis) # to avoid garbage collection
-
-        # for key in dict(self.Task).keys():
-        #     if key.startswith('Plot:'): # filter for plots
-        #         plot_config = dict(self.Task[key])
-        #         # convert all 'sub' dicts
-        #         for pkey in plot_config.keys():
-        #             if pkey.endswith('kwargs'):
-        #                 plot_config[pkey] = eval('dict(%s)' % plot_config[pkey])
-
-        #         plotters.append((key.split(':')[1], plot_config))
-
-        # self.plot_windows = []
-        # if len(plotters) > 0:
-        #     for plotter in plotters: # now: one window for each plotter
-        #         vis = TaskVis_mpl.SessionVis(self, plotter, self.ArduinoController.OnlineFSMAnalyser)
-        #         self.plot_windows.append(vis) # to avoid garbage collection
-        # pass
 
     def closeEvent(self, event):
         """ reimplementation of closeEvent """
