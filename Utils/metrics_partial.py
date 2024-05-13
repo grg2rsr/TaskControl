@@ -77,6 +77,7 @@ def var_is(TrialDf: pd.DataFrame, var_name: str, comp='is_greater', value=0, ren
 is_long = partial(var_is, var_name='this_LED_ON_dur', value=700, rename='is_long')
 init_time = partial(get_time_between, event_a="TRIAL_AVAILABLE_STATE", event_b="DELAY_STATE", name='init_time')
 get_r = partial(get_var, var_name='r', rename='r')
+r_is_greater = partial(var_is, var_name='r', comp='is_greater', value=500, rename='r_greater')
 """
  
   ######  ##     ##  #######  ####  ######  ######## 

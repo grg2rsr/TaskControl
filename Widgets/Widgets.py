@@ -155,7 +155,7 @@ class SettingsWidget(QtWidgets.QWidget):
 
         for plotter_key in plotter_keys:
             plot_config = dict(self.Task[plotter_key])
-            plot_type = plotter_key.split(":")[1]
+            plot_type = plotter_key.split(":")[-1]
             # converting to dicts
             kwargs_keys = [key for key in plot_config.keys() if key.endswith("kwargs")]
             for key in kwargs_keys:
