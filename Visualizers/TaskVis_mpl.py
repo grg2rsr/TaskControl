@@ -98,7 +98,6 @@ class SessionVis(QtWidgets.QWidget):
         if 'ylabel' in kwargs:
             self.axes.set_ylabel(kwargs['ylabel'])
 
-
 class LinePlot(object):
     def __init__(self, axes, x_name, y_name, line_kwargs):
         self.x_name = x_name
@@ -123,6 +122,17 @@ class SeabornPlot(object):
     def update(self, SessionDf):
         self.axes.clear()
         self.axes = self.plotting_fun(data=SessionDf, ax=self.axes, **self.kwargs)
+
+class CurveFitPlot(object):
+    """ fits a curve to x and y """
+    def __init__(self, axes, x_name, y_name):
+        self.x_name = x_name
+        self.y_name = y_name
+        self.axes = axes
+
+    def update(self, SessionDf):
+        xdata = SessionDf[self.x_name].values
+        ydata = SessionDf[self.y_name].values
 
 
 # OLD CODE
