@@ -1,5 +1,6 @@
 import sys, os
 import configparser
+import argparse
 from pathlib import Path
 from PyQt5 import QtWidgets
 from Widgets.Widgets import SettingsWidget
@@ -10,7 +11,7 @@ import logging
 
 class TaskControlApp(QtWidgets.QApplication):
     def __init__(self, *args, config_path=None):
-        super(TaskControlApp, self).__init__(*args)
+        super().__init__(*args)
 
         # read config.ini
         self.Sys = utils.Config(config_path)
@@ -19,7 +20,7 @@ class TaskControlApp(QtWidgets.QApplication):
         logger = logging.getLogger()
         # log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         log_fmt = "%(asctime)s - %(levelname)s - %(message)s"
-        date_fmt = '%Y-%m-%d %H:%M:%S'
+        date_fmt = "%Y-%m-%d %H:%M:%S"
         # formatter = logging.Formatter(log_fmt, datefmt=date_fmt)
         formatter = logging_tools.ColorFormatter(log_fmt, date_fmt)
 
@@ -27,7 +28,7 @@ class TaskControlApp(QtWidgets.QApplication):
         stream_handler = logging.StreamHandler()
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
-        logger.setLevel(logging.INFO) # <- this needs to be set as a default argument
+        logger.setLevel(logging.INFO)  # <- this needs to be set as a default argument
         logger.info(" --- this is TaskControl --- ")
         logger.debug("using config: %s" % config_path)
 
@@ -44,13 +45,21 @@ class TaskControlApp(QtWidgets.QApplication):
         self.Sys.save()
         self.exit()
 
+
 if __name__ == "__main__":
-    import argparse
-    config_path = Path("configs")  / "config_open_lab_teensy.ini" # config ini has to be a local link
-    
+    config_path = (
+        Path("configs") / "config_open_lab_teensy.ini"
+    )  # config ini has to be a local link
+
     # argparsing
-    parser = argparse.ArgumentParser(description=' xXx Unified TaskControl xXx ')
-    parser.add_argument("-p", default=config_path, action='store', dest="config_path", help='set the path to the config.ini file')
+    parser = argparse.ArgumentParser(description=" xXx Unified TaskControl xXx ")
+    parser.add_argument(
+        "-p",
+        default=config_path,
+        action="store",
+        dest="config_path",
+        help="set the path to the config.ini file",
+    )
     args = parser.parse_args()
 
     # run the application

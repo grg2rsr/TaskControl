@@ -1,5 +1,6 @@
 import matplotlib
-matplotlib.use('Qt5Agg')
+
+matplotlib.use("Qt5Agg")
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
@@ -8,7 +9,6 @@ from PyQt5 import QtWidgets
 
 
 import seaborn as sns
-
 
 
 """
@@ -21,25 +21,32 @@ https://stackoverflow.com/questions/48140576/matplotlib-toolbar-in-a-pyqt5-appli
 # outcomes = ['correct', 'incorrect', 'premature', 'missed']
 
 # some hardcoded colors
-colors = dict(success="#72E043", 
-              reward="#3CE1FA", 
-              correct="#72E043", 
-              incorrect="#F56057", 
-              premature="#9D5DF0", 
-              missed="#F7D379")
+colors = dict(
+    success="#72E043",
+    reward="#3CE1FA",
+    correct="#72E043",
+    incorrect="#F56057",
+    premature="#9D5DF0",
+    missed="#F7D379",
+)
+
 
 class SessionVis(QtWidgets.QWidget):
     # FIXME add controls
     """Ultimately, this is a QWidget (as well as a Figureself.CanvasAgg, etc.)."""
 
-    def __init__(self, parent, plot_type, plot_config, OnlineDataAnalyser, width=9, height=8):
+    def __init__(
+        self, parent, plot_type, plot_config, OnlineDataAnalyser, width=9, height=8
+    ):
         super(SessionVis, self).__init__()
 
         # figure init
         self.fig, self.axes = plt.subplots()
 
         self.Canvas = FigureCanvas(self.fig)
-        self.Canvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.Canvas.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         self.Canvas.updateGeometry()
 
         Toolbar = NavigationToolbar(self.Canvas, self)
@@ -56,45 +63,53 @@ class SessionVis(QtWidgets.QWidget):
         self.OnlineDataAnalyser = OnlineDataAnalyser
         OnlineDataAnalyser.trial_data_available.connect(self.on_data)
 
-
     def init(self, plot_type, plot_config):
-
-        if plot_type == 'LinePlot':
-            self.Plotter = LinePlot(self.axes, plot_config['x'], plot_config['y'], line_kwargs=plot_config['plot_kwargs'])
+        if plot_type == "LinePlot":
+            self.Plotter = LinePlot(
+                self.axes,
+                plot_config["x"],
+                plot_config["y"],
+                line_kwargs=plot_config["plot_kwargs"],
+            )
         else:
-            self.Plotter = SeabornPlot(kind=plot_type, axes=self.axes, seaborn_kwargs=plot_config['plot_kwargs'])
+            self.Plotter = SeabornPlot(
+                kind=plot_type,
+                axes=self.axes,
+                seaborn_kwargs=plot_config["plot_kwargs"],
+            )
 
-        self.decorate(plot_config['deco_kwargs'])
+        self.decorate(plot_config["deco_kwargs"])
         self.fig.tight_layout()
         sns.despine(self.fig)
 
     def on_data(self, TrialDf, TrialMetricsDf):
-        if  self.OnlineDataAnalyser.SessionDf is not None: # FIXME
+        if self.OnlineDataAnalyser.SessionDf is not None:  # FIXME
             self.Plotter.update(self.OnlineDataAnalyser.SessionDf)
             # this call signature might change
             # might necessary because, future plotters might want to access TrialDf
             # if self.plotter[0] == 'LinePlot': # HARDCODE
             self.axes.relim()
-            self.axes.autoscale_view(True, True, True) # FIXME
+            self.axes.autoscale_view(True, True, True)  # FIXME
         else:
             # TODO at least print a warning of some sort
             pass
         self.Canvas.draw()
 
     def decorate(self, kwargs):
-        if 'title' in kwargs:
-            self.axes.set_title(kwargs['title'])
-        if 'xlabel' in kwargs:
-            self.axes.set_xlabel(kwargs['xlabel'])
-        if 'ylabel' in kwargs:
-            self.axes.set_ylabel(kwargs['ylabel'])
+        if "title" in kwargs:
+            self.axes.set_title(kwargs["title"])
+        if "xlabel" in kwargs:
+            self.axes.set_xlabel(kwargs["xlabel"])
+        if "ylabel" in kwargs:
+            self.axes.set_ylabel(kwargs["ylabel"])
+
 
 class LinePlot(object):
     def __init__(self, axes, x_name, y_name, line_kwargs):
         self.x_name = x_name
         self.y_name = y_name
         self.axes = axes
-        self.line, = axes.plot([], [], **line_kwargs)
+        (self.line,) = axes.plot([], [], **line_kwargs)
         # self.axes.autoscale(enable=True)
 
     def update(self, SessionDf):
@@ -102,20 +117,23 @@ class LinePlot(object):
         ydata = SessionDf[self.y_name].values
         self.line.set_data(xdata, ydata)
 
+
 class SeabornPlot(object):
     def __init__(self, axes, kind, seaborn_kwargs):
         self.kwargs = seaborn_kwargs
         self.plotting_fun = getattr(sns, kind)
         self.axes = axes
-        self.plotting_fun(ax=axes) # , **seaborn_kwargs)
+        self.plotting_fun(ax=axes)  # , **seaborn_kwargs)
         self.axes.autoscale(enable=False)
 
     def update(self, SessionDf):
         self.axes.clear()
         self.axes = self.plotting_fun(data=SessionDf, ax=self.axes, **self.kwargs)
 
+
 class CurveFitPlot(object):
-    """ fits a curve to x and y """
+    """fits a curve to x and y"""
+
     def __init__(self, axes, x_name, y_name):
         self.x_name = x_name
         self.y_name = y_name
@@ -212,7 +230,7 @@ class CurveFitPlot(object):
 #         self.axes.set_ylim(-0.1, 1.1)
 #         self.axes.set_yticks([])
 #         self.axes.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True))
-     
+
 #     def update(self, SessionDf):
 #         try:
 #             x = SessionDf.index[-1]
@@ -226,8 +244,8 @@ class CurveFitPlot(object):
 
 # class ChoiceRTPlot(object):
 #     def __init__(self, axes):
-#         self.axes = axes        
-        
+#         self.axes = axes
+
 #         # choice RT
 #         self.axes.set_title('choice RT')
 #         self.axes.set_xlabel('choice trial #')
@@ -245,12 +263,12 @@ class CurveFitPlot(object):
 #             self.scatter.set_data(x, y)
 #             self.axes.set_xlim(0.5, x.shape[0]+0.5)
 #             # self.choices_rt_scatter.axes.set_ylim(0, sp.percentile(y, 95))
-            
+
 
 # class SuccessratePlot(object):
 #     def __init__(self, axes):
 #         self.hist = 5
-#         self.axes = axes        
+#         self.axes = axes
 #         self.axes.set_title('success rate')
 #         self.axes.set_xlabel('trial #')
 #         self.axes.set_ylabel('fraction')
@@ -267,69 +285,65 @@ class CurveFitPlot(object):
 #         x = SessionDf.index.values + 1
 #         y = np.cumsum(SessionDf['successful'].values) / (SessionDf.index.values + 1)
 #         y_filt = SessionDf['successful'].rolling(self.hist).mean().values
-        
+
 #         self.line.set_data(x, y)
 #         self.line_filt.set_data(x, y_filt)
 #         self.axes.set_xlim(0.5, x.shape[0]+0.5)
 
 
-
-
-
-
 # psychmetric
 
-        # psychometric
-        # ax = self.axes[1, 2]
-        # ax.set_title('psychometric')
-        # # ax.set_ylabel('p')
-        # ax.set_xlabel('interval (ms)')
-        # ax.set_yticks([0, 1])
-        # ax.set_yticklabels(['short', 'long'])
-        # ax.set_ylabel('choice')
-        # ax.axvline(1500, linestyle=':', alpha=0.5, lw=1, color='k')
-        # self.psych_choices, = ax.plot([], [], '.', color='k', alpha=0.5)
-        # self.psych_fit, = ax.plot([], [], lw=2, color='r')
-        # self.poly = None # fill for error model
+# psychometric
+# ax = self.axes[1, 2]
+# ax.set_title('psychometric')
+# # ax.set_ylabel('p')
+# ax.set_xlabel('interval (ms)')
+# ax.set_yticks([0, 1])
+# ax.set_yticklabels(['short', 'long'])
+# ax.set_ylabel('choice')
+# ax.axvline(1500, linestyle=':', alpha=0.5, lw=1, color='k')
+# self.psych_choices, = ax.plot([], [], '.', color='k', alpha=0.5)
+# self.psych_fit, = ax.plot([], [], lw=2, color='r')
+# self.poly = None # fill for error model
 
 
-            # get only the subset with choices
-            # if True in SessionDf['has_choice'].values:
-            #     SDf = SessionDf.groupby('has_choice').get_group(True)
-            #     y = SDf['choice'].values == 'right'
-            #     x = SDf['this_interval'].values
+# get only the subset with choices
+# if True in SessionDf['has_choice'].values:
+#     SDf = SessionDf.groupby('has_choice').get_group(True)
+#     y = SDf['choice'].values == 'right'
+#     x = SDf['this_interval'].values
 
-            #     # choices
-            #     self.psych_choices.set_data(x, y)
+#     # choices
+#     self.psych_choices.set_data(x, y)
 
-            #     # logistic regression
-            #     x_fit = sp.linspace(0, 3000, 50)
+#     # logistic regression
+#     x_fit = sp.linspace(0, 3000, 50)
 
-            #     try:
-            #         # y_fit = sp.zeros(x_fit.shape[0])
-            #         y_fit = bhv.log_reg(x, y, x_fit)
-            #         self.psych_fit.set_data(x_fit, y_fit)
-            #     except ValueError:
-            #         pass
-                
-            #     try:
-            #         # error model
-            #         # if x.shape[0] > 5:
-            #         #     utils.debug_trace()
-            #         bias = y.sum() / y.shape[0] # right side bias
-            #         N = 50
-            #         R = sp.array([bhv.log_reg(x, sp.rand(x.shape[0]) < bias, x_fit) for i in range(N)])
+#     try:
+#         # y_fit = sp.zeros(x_fit.shape[0])
+#         y_fit = bhv.log_reg(x, y, x_fit)
+#         self.psych_fit.set_data(x_fit, y_fit)
+#     except ValueError:
+#         pass
 
-            #         alpha = .05 * 100
-            #         R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
+#     try:
+#         # error model
+#         # if x.shape[0] > 5:
+#         #     utils.debug_trace()
+#         bias = y.sum() / y.shape[0] # right side bias
+#         N = 50
+#         R = sp.array([bhv.log_reg(x, sp.rand(x.shape[0]) < bias, x_fit) for i in range(N)])
 
-            #         if self.poly is not None:
-            #             self.poly.remove()
+#         alpha = .05 * 100
+#         R_pc = sp.percentile(R, (alpha, 100-alpha), 0)
 
-            #         self.poly = self.psych_fit.axes.fill_between(x_fit, R_pc[0], R_pc[1], color='black', alpha=0.5)
+#         if self.poly is not None:
+#             self.poly.remove()
 
-            #     except ValueError:
-            #         pass
+#         self.poly = self.psych_fit.axes.fill_between(x_fit, R_pc[0], R_pc[1], color='black', alpha=0.5)
 
-            #     self.psych_choices.axes.set_xlim(0, 3000)
-            #     self.psych_choices.axes.set_ylim(-0.1, 1.1)
+#     except ValueError:
+#         pass
+
+#     self.psych_choices.axes.set_xlim(0, 3000)
+#     self.psych_choices.axes.set_ylim(-0.1, 1.1)

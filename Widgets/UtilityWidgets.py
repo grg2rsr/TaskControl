@@ -5,10 +5,12 @@ import numpy as np
 
 
 import logging
+
 logger = logging.getLogger(__name__)
 
+
 class StringChoiceWidget(QtWidgets.QComboBox):
-    """ A QComboBox with convenience setter and getter """
+    """A QComboBox with convenience setter and getter"""
 
     def __init__(self, parent, choices, default=None):
         super(StringChoiceWidget, self).__init__(parent=parent)
@@ -16,7 +18,7 @@ class StringChoiceWidget(QtWidgets.QComboBox):
 
         for choice in self.choices:
             self.addItem(choice)
-        
+
         if default is not None:
             self.set_value(default)
 
@@ -31,7 +33,7 @@ class StringChoiceWidget(QtWidgets.QComboBox):
 
 
 class ValueEdit(QtWidgets.QLineEdit):
-    """ a QLineEdit that keeps track of the numpy dtype and returns accordingly """
+    """a QLineEdit that keeps track of the numpy dtype and returns accordingly"""
 
     def __init__(self, value, dtype, parent):
         super(ValueEdit, self).__init__(parent=parent)
@@ -53,21 +55,22 @@ class ValueEdit(QtWidgets.QLineEdit):
     def edit_finished(self):
         self.set_value(self.get_value())
 
+
 class ValueEditFormLayout(QtWidgets.QWidget):
-    """ a QFormLayout consisting of ValueEdit rows, to be initialized with a pd.DataFrame 
-    with columns name and value, optional dtype (numpy letter codes) """
+    """a QFormLayout consisting of ValueEdit rows, to be initialized with a pd.DataFrame
+    with columns name and value, optional dtype (numpy letter codes)"""
 
     def __init__(self, parent, DataFrame=None):
         super(ValueEditFormLayout, self).__init__(parent=parent)
-        self.Df = DataFrame # model
+        self.Df = DataFrame  # model
 
         # if DataFrame does not contain a dtype column, set it to strings
-        if 'dtype' not in self.Df.columns:
-            maxlen = max([len(el) for el in self.Df['name']])
-            self.Df['dtype'] = 'U'+str(maxlen)
+        if "dtype" not in self.Df.columns:
+            maxlen = max([len(el) for el in self.Df["name"]])
+            self.Df["dtype"] = "U" + str(maxlen)
 
         self.initUI()
-    
+
     def initUI(self):
         self.FormLayout = QtWidgets.QFormLayout(self)
         self.FormLayout.setVerticalSpacing(10)
@@ -75,40 +78,42 @@ class ValueEditFormLayout(QtWidgets.QWidget):
 
         # init the view
         for i, row in self.Df.iterrows():
-            self.FormLayout.addRow(row['name'], ValueEdit(row['value'], row['dtype'], self.parent()))
+            self.FormLayout.addRow(
+                row["name"], ValueEdit(row["value"], row["dtype"], self.parent())
+            )
 
     def set_entry(self, name, value):
-        """ controller function - update both view and model """
-        if name not in list(self.Df['name']):
+        """controller function - update both view and model"""
+        if name not in list(self.Df["name"]):
             logger.warning("trying to set variable %s, but is not part of model" % name)
             # self.Df.loc[name,'value'] = value
 
         else:
             # get index
-            ix = list(self.Df['name']).index(name)
-            
-            # update model 
+            ix = list(self.Df["name"]).index(name)
+
+            # update model
             # dtype = self.FormLayout.itemAt(ix,1).widget().dtype
-            dtype = self.Df.loc[ix,'dtype'] # dtype is part of the model
-            self.Df.loc[ix,'value'] = np.array(value, dtype=dtype) # explicit cast
-            
+            dtype = self.Df.loc[ix, "dtype"]  # dtype is part of the model
+            self.Df.loc[ix, "value"] = np.array(value, dtype=dtype)  # explicit cast
+
             # update view
-            self.FormLayout.itemAt(ix,1).widget().set_value(value)
+            self.FormLayout.itemAt(ix, 1).widget().set_value(value)
 
     def set_entries(self, Df):
-        """ make sure elsewhere that this is only called with valid Dfs? """
+        """make sure elsewhere that this is only called with valid Dfs?"""
         # update the model
         # self.Df = Df
 
         # update the view
         for i, row in Df.iterrows():
-            self.Df[row['name']] = row['value']
-            self.set_entry(row['name'], row['value'])
+            self.Df[row["name"]] = row["value"]
+            self.set_entry(row["name"], row["value"])
 
     def get_entry(self, name):
         # controller function - returns a pd.Series
         self.update_model()
-        ix = list(self.Df['name']).index(name)
+        ix = list(self.Df["name"]).index(name)
         return self.Df.loc[ix]
 
     def get_entries(self):
@@ -116,16 +121,17 @@ class ValueEditFormLayout(QtWidgets.QWidget):
         return self.Df
 
     def update_model(self):
-        """ updates model based on UI entries """
+        """updates model based on UI entries"""
         for i in range(self.FormLayout.rowCount()):
             label = self.FormLayout.itemAt(i, 0).widget()
             widget = self.FormLayout.itemAt(i, 1).widget()
             self.set_entry(label.text(), widget.get_value())
 
     def setEnabled(self, value):
-         for i in range(self.FormLayout.rowCount()):
+        for i in range(self.FormLayout.rowCount()):
             widget = self.FormLayout.itemAt(i, 1).widget()
             widget.setEnabled(value)
+
 
 class TerminateEdit(QtWidgets.QWidget):
     def __init__(self, parent, DataFrame=None):
@@ -144,7 +150,7 @@ class TerminateEdit(QtWidgets.QWidget):
         self.selfTerminateEdit = ValueEditFormLayout(self.parent(), DataFrame=DataFrame)
         self.FormLayout.addRow(self.selfTerminateEdit)
         self.selfTerminateEdit.setEnabled(False)
-    
+
     def TerminateCheckBoxToggle(self, state):
         if state == 0:
             self.selfTerminateEdit.setEnabled(True)
@@ -154,18 +160,22 @@ class TerminateEdit(QtWidgets.QWidget):
             self.selfTerminateEdit.setEnabled(False)
             self.is_enabled = True
 
+
 class PandasModel(QtCore.QAbstractTableModel):
     """
     Class to populate a table view with a pandas dataframe
     source: https://stackoverflow.com/questions/31475965/fastest-way-to-populate-qtableview-from-pandas-data-frame
     """
+
     def __init__(self, data, parent=None):
         QtCore.QAbstractTableModel.__init__(self, parent)
         self.setDf(data)
 
-    def setData(self,*args):
+    def setData(self, *args):
         super().setData(*args)
-        self.dataChanged.emit(self.index(0,0), self.index(self._data.shape[0], self._data.shape[1]))
+        self.dataChanged.emit(
+            self.index(0, 0), self.index(self._data.shape[0], self._data.shape[1])
+        )
         return True
 
     def setDf(self, data):
@@ -187,6 +197,7 @@ class PandasModel(QtCore.QAbstractTableModel):
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
             return self._data.columns[col]
         return None
+
 
 # class PandasModel(QtGui.QStandardItemModel):
 #     """ modified from this post https://stackoverflow.com/a/63708391 """
@@ -219,18 +230,19 @@ class PandasModel(QtCore.QAbstractTableModel):
 #                 index = QtCore.QModelIndex().sibling(i,j)
 #                 val = Df.iloc[i,j]
 #                 super().setData(index, val, 2)
-                
+
 #     def setData(self,*args):
 #         super().setData(*args)
 #         self.dataChanged.emit(self.index(0,0), self.index(self._data.shape[0], self._data.shape[1]))
 #         return True
 
-    # def set_data(self, Df):
-    #     self._data = Df
-    #     self.dataChanged.emit(self.index(0,0), self.index(Df.shape[0],Df.shape[1]))
-        # for i in range(   Df.shape[0]):
-        #     for j in range(Df.shape[1]):
-        #         self.dataChanged.emit(self.index(i,j), self.index(i,j))
+# def set_data(self, Df):
+#     self._data = Df
+#     self.dataChanged.emit(self.index(0,0), self.index(Df.shape[0],Df.shape[1]))
+# for i in range(   Df.shape[0]):
+#     for j in range(Df.shape[1]):
+#         self.dataChanged.emit(self.index(i,j), self.index(i,j))
+
 
 class ArrayModel(QtCore.QAbstractTableModel):
     """
@@ -239,9 +251,10 @@ class ArrayModel(QtCore.QAbstractTableModel):
 
     also check here: https://www.pythonguis.com/faq/editing-pyqt-tableview/
     """
+
     def __init__(self, array, row_labels, col_labels, parent=None):
-        # super(ArrayModel).__init__(self, parent) # this doesn't work 
-        QtCore.QAbstractTableModel.__init__(self, parent) # this does. No idea why
+        # super(ArrayModel).__init__(self, parent) # this doesn't work
+        QtCore.QAbstractTableModel.__init__(self, parent)  # this does. No idea why
 
         # self.set_data(array, row_labels, col_labels)
         self.array = array
@@ -255,7 +268,9 @@ class ArrayModel(QtCore.QAbstractTableModel):
     #     return True
 
     def update(self):
-        self.dataChanged.emit(self.index(0,0), self.index(self.array.shape[0], self.array.shape[1]))
+        self.dataChanged.emit(
+            self.index(0, 0), self.index(self.array.shape[0], self.array.shape[1])
+        )
 
     def setData(self, index, value, role):
         if role == QtCore.EditRole:
@@ -264,7 +279,9 @@ class ArrayModel(QtCore.QAbstractTableModel):
             # except ValueError:
             #     return False
             self.array[index.row(), index.column()] = value
-            self.dataChanged.emit(self.index(0,0), self.index(self.array.shape[0], self.array.shape[1]))
+            self.dataChanged.emit(
+                self.index(0, 0), self.index(self.array.shape[0], self.array.shape[1])
+            )
             return True
         return False
 
@@ -277,7 +294,7 @@ class ArrayModel(QtCore.QAbstractTableModel):
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if index.isValid():
             if role == QtCore.Qt.DisplayRole:
-                return str(self.array[index.row(),index.column()])
+                return str(self.array[index.row(), index.column()])
         return None
 
     def headerData(self, col, orientation, role):
