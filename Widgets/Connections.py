@@ -1,6 +1,5 @@
-import sys, os
 from PyQt5 import QtWidgets
-from PyQt5 import QtGui, QtCore
+from PyQt5 import QtCore
 
 import serial
 import time
@@ -8,7 +7,6 @@ import threading
 import socket
 import struct
 
-from Utils import utils
 
 import logging
 logger = logging.getLogger(__name__)

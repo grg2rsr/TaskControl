@@ -1,13 +1,8 @@
-from PyQt5 import QtGui, QtCore
-from PyQt5.QtCore import Qt
+from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 
-import sys
-import pandas as pd
-import scipy as sp
 import numpy as np
 
-from Utils import utils
 
 import logging
 logger = logging.getLogger(__name__)

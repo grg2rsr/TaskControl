@@ -1,11 +1,9 @@
 # %%
-import sys, os
+import sys
+import os
 from pathlib import Path
 import numpy as np
-import scipy as sp
-import pandas as pd
 import seaborn as sns
-from tqdm import tqdm
 
 from matplotlib import pyplot as plt
 import matplotlib as mpl
@@ -16,7 +14,6 @@ sys.path.append('/home/georg/code/TaskControl')
 
 from Utils import behavior_analysis_utils as bhv
 from Utils import utils
-from Utils import metrics
 
 def plot_bias_over_sessions(Animal_folder, task_name, save=None):
     Animal = utils.Animal(Animal_folder)

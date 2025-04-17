@@ -4,7 +4,6 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 
 import scipy as sp

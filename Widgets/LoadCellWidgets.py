@@ -1,10 +1,6 @@
-import sys, os
-from PyQt5 import QtGui, QtCore
+import sys
+from PyQt5 import QtCore
 from PyQt5 import QtWidgets
-import Widgets
-import utils
-import subprocess
-from pathlib import Path
 import socket 
 import struct
 import threading

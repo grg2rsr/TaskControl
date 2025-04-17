@@ -1,13 +1,9 @@
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
 import scipy as sp
 import numpy as np
 import pandas as pd
 import cv2
 import seaborn as sns
-from pathlib import Path
-from Utils import behavior_analysis_utils as bhv
-from copy import copy
 
 """
  

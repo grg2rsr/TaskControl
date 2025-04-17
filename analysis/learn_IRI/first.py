@@ -1,12 +1,8 @@
 # %% imports
-import sys, os
-from pathlib import Path
+import sys
 import numpy as np
-import scipy as sp
 from scipy.signal import gaussian
 import pandas as pd
-import seaborn as sns
-from tqdm import tqdm
 
 from matplotlib import pyplot as plt
 import matplotlib as mpl
@@ -18,8 +14,6 @@ sys.path.append('/home/georg/Projects/TaskControl')
 from Utils import behavior_analysis_utils as bhv
 from Utils import utils
 from Utils import metrics_partial as metrics
-from Utils import sync
-from functools import partial
 
 # %% path setup
 animals_folder = "/media/georg/htcondor/shared-paton/georg/Animals_licking"

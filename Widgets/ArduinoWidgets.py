@@ -1,5 +1,5 @@
-import sys, os
-from PyQt5 import QtGui, QtCore
+import os
+from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 import configparser
 import importlib
@@ -8,14 +8,10 @@ from copy import copy
 from pathlib import Path
 import subprocess
 import shutil
-import serial
 import time
-import threading
 import pandas as pd
-import scipy as sp
 import numpy as np
 
-from Widgets import Widgets
 from Utils import utils
 from scripts import interface_generator
 from Utils import behavior_analysis_utils as bhv

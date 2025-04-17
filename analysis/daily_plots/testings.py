@@ -1,13 +1,9 @@
 # %%
-import sys, os
+import sys
 from pathlib import Path
 import numpy as np
-import scipy as sp
 import pandas as pd
-import seaborn as sns
-from tqdm import tqdm
 
-from matplotlib import pyplot as plt
 import matplotlib as mpl
 # mpl.rcParams['figure.dpi'] = 331 # laptop
 mpl.rcParams['figure.dpi'] = 166 # the screens in the viv
@@ -15,9 +11,7 @@ mpl.rcParams['figure.dpi'] = 166 # the screens in the viv
 sys.path.append('/home/georg/Projects/TaskControl')
 
 from Utils import behavior_analysis_utils as bhv
-from Utils import utils
 from Utils import metrics
-from Utils import sync
 
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02994_Plumber/2021-10-14_11-50-48_learn_to_choose_v2")
 # session_folder = Path("/media/georg/htcondor/shared-paton/georg/Animals_reaching/JJP-02911_Lumberjack/2021-11-03_13-02-12_learn_to_choose_v2")

@@ -1,11 +1,8 @@
 # %%
-import sys, os
-from pathlib import Path
+import sys
+import os
 import numpy as np
-import scipy as sp
-import pandas as pd
 import seaborn as sns
-from tqdm import tqdm
 
 from matplotlib import pyplot as plt
 import matplotlib as mpl
@@ -16,7 +13,6 @@ sys.path.append('/home/georg/code/TaskControl')
 
 from Utils import behavior_analysis_utils as bhv
 from Utils import utils
-from Utils import metrics
 from Utils import sync
 
 def plot_init_hist(session_folder, save=None):

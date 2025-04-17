@@ -1,24 +1,15 @@
-import sys, os
+import sys
+import os
 from pathlib import Path
-from tqdm import tqdm
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from matplotlib.patches import Rectangle
-import seaborn as sns
 
-import scipy as sp
-import numpy as np
 import pandas as pd
-import cv2
 
 sys.path.append('/home/georg/code/TaskControl')
 from Utils import utils
-from Utils import behavior_analysis_utils as bhv
 from Utils import dlc_analysis_utils as dlc
-import Utils.metrics as metrics
-from Utils.sync import Syncer
 
 colors = dict(success="#72E043", 
               reward="#3CE1FA", 

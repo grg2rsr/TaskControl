@@ -2,22 +2,14 @@ import matplotlib
 matplotlib.use('Qt5Agg')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 
-import scipy as sp
 import numpy as np
-import time
 
-import pandas as pd
-import seaborn as sns
 
-from Utils import utils
-from Utils import behavior_analysis_utils as bhv
 
 
 """

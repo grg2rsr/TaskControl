@@ -1,9 +1,6 @@
-import sys, os
-from PyQt5 import QtGui, QtCore
 from PyQt5 import QtWidgets
 import subprocess
 from pathlib import Path
-from Utils import utils
 
 import logging
 logger = logging.getLogger(__name__)

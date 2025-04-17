@@ -1,7 +1,7 @@
 # python me to generate an interface.cpp based on the variables in `init_variables.h`
 import pandas as pd
 import scipy as sp
-import sys,os
+import sys
 from pathlib import Path
 
 dtype_map = {

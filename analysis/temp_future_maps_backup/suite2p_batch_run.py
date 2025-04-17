@@ -1,11 +1,9 @@
 # %% 
 import numpy as np
 from pathlib import Path
-import sys, os
-import logging
+import sys
+import os
 import suite2p
-import copy
-from tqdm import tqdm
 
 from my_logging import get_logger
 logger = get_logger(level="INFO")

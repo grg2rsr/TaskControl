@@ -5,20 +5,14 @@
 import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 166
 from matplotlib import pyplot as plt
-from matplotlib.collections import LineCollection
-from matplotlib import cm 
 from matplotlib import patches
-from scipy import signal
 
-from sklearn.linear_model import LogisticRegression
 import sys
 sys.path.append('..')
 
 from Utils import behavior_analysis_utils as bhv
 import pandas as pd
 # this should be changed ... 
-import itertools
-from pathlib import Path
 import scipy as sp
 import numpy as np
 import seaborn as sns
@@ -102,10 +96,10 @@ def plot_psth(EventsDf, t_ref, bins=None, axes=None, how='fill', **kwargs):
         values.append(times.values) # get number of licks from EventsDf
     values = np.concatenate(values)
 
-    if how is 'steps':
+    if how == 'steps':
         counts, bins = np.histogram(values,bins=bins)
         axes.step(bins[1:], counts, **kwargs)
-    if how is 'fill':
+    if how == 'fill':
         axes.hist(values,bins=bins,**kwargs)
     axes.set_xlabel('time (ms)')
     axes.set_ylabel('count')
@@ -871,7 +865,7 @@ def autocorr_forces(LoadCellDf,TrialDfs, first_event, second_event, axes=None):
     if axes is None:
         fig, axes = plt.subplots(ncols=2, figsize=(6,3))
 
-    from numpy.fft import fft, ifft; import time
+    from numpy.fft import fft, ifft 
 
     Fxs,Fys,_ = bhv.get_FxFy_window_between_events(LoadCellDf, TrialDfs, first_event, second_event, pad_with = 0)
     

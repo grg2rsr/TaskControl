@@ -1,14 +1,14 @@
-import sys, os
+import sys
+import os
 from pathlib import Path
 sys.path.append('..')
 
-from PyQt5 import QtGui, QtCore
+from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 
 import numpy as np
 import cv2
 import PySpin
-from Utils import utils
 
 class CameraCalibrationWidget(QtWidgets.QWidget):
     def __init__(self, parent, config, task_config):

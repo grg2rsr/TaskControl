@@ -1,11 +1,9 @@
 # %% imports
-import sys, os
+import sys
 from pathlib import Path
 import numpy as np
-import scipy as sp
 import pandas as pd
 import seaborn as sns
-from tqdm import tqdm
 
 from matplotlib import pyplot as plt
 import matplotlib as mpl
@@ -17,7 +15,6 @@ sys.path.append('/home/georg/Projects/TaskControl')
 from Utils import behavior_analysis_utils as bhv
 from Utils import utils
 from Utils import metrics_partial as metrics
-from Utils import sync
 from functools import partial
 
 # %% path setup
@@ -116,7 +113,6 @@ for i,delay in enumerate(delays):
     lick_rates_delay[delay] = np.array(lick_rates_delay[delay])
 
 # %% plotting raster
-import seaborn as sns
 
 n_delays = delays.shape[0]
 delay_colors = sns.color_palette('deep', n_colors=n_delays)

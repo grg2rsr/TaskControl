@@ -1,24 +1,16 @@
-import sys, os
-from pathlib import Path
-import configparser
+import os
 from datetime import datetime
 import importlib
 
-import numpy as np
-import pandas as pd
 
-from PyQt5 import QtGui, QtCore
+from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 
 from Utils import utils
-from Utils import behavior_analysis_utils as bhv
-from Utils import metrics
 
-from Visualizers.TaskVis_pg  import TrialsVis
-from Visualizers.TaskVis_mpl import SessionVis
 
 from Widgets.Popups import RunInfoPopup
-from Widgets.UtilityWidgets import StringChoiceWidget, ValueEditFormLayout, PandasModel
+from Widgets.UtilityWidgets import StringChoiceWidget, PandasModel
 
 import logging
 logger = logging.getLogger(__name__)

@@ -1,5 +1,4 @@
-from pathlib import Path
-import sys, os
+import sys
 import deeplabcut as dlc
 
 """ 

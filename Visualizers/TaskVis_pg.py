@@ -1,4 +1,4 @@
-from PyQt5 import QtGui, QtCore
+from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 
 import scipy as sp
@@ -8,11 +8,9 @@ from sklearn.linear_model import LogisticRegression
 from scipy.special import expit
 
 # import visualization as vis
-import pandas as pd
 import seaborn as sns
 
 from Utils import behavior_analysis_utils as bhv
-from Utils import utils
 
 # """
 # matplotlib in qt5

@@ -1,11 +1,9 @@
 # this should be changed ... 
-import sys, os
-from pathlib import Path
+import sys
+import os
 import numpy as np
-import scipy as sp
 import pandas as pd
 import seaborn as sns
-from tqdm import tqdm
 
 from matplotlib import pyplot as plt
 import matplotlib as mpl
