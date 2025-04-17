@@ -1,17 +1,19 @@
 import sys
-sys.path.append('..')
+
+sys.path.append("..")
 from copy import copy
 
 import numpy as np
 import pandas as pd
 
-sys.path.append('..')
+sys.path.append("..")
 from Utils import behavior_analysis_utils as bhv
 
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 """
@@ -25,14 +27,19 @@ logger = logging.getLogger(__name__)
   ######     ##    ##    ##  ######      ######  ######## ##     ##  ######   ######  
  
 """
+
+
 def lin(x, b, m):
     return m * x + b
 
-def sin(x, A, w, phi):
-    return A*np.sin(x*w+phi)
 
-def linsin(x, b, m ,A, w, phi):
+def sin(x, A, w, phi):
+    return A * np.sin(x * w + phi)
+
+
+def linsin(x, b, m, A, w, phi):
     return lin(x, b, m) + sin(x, A, w, phi)
+
 
 # def quad(x, x0, a, b, c):
 #     return a*(x-x0)**2 + b*(x-x0) + c
@@ -44,12 +51,14 @@ def linsin(x, b, m ,A, w, phi):
 #     # print(len(a))
 #     return np.sum([a[i]*(x-x0)**i for i in range(len(a))])
 
+
 def polyv(x, *args):
-    n = int(len(args)/2)
+    n = int(len(args) / 2)
     x0 = args[:n]
     a = args[n:]
-    return np.sum(np.array([a[i]*(x-x0[i])**i for i in range(len(a))]),axis=0)
-    
+    return np.sum(np.array([a[i] * (x - x0[i]) ** i for i in range(len(a))]), axis=0)
+
+
 class Syncer(object):
     def __init__(self):
         self.data = {}
@@ -57,9 +66,8 @@ class Syncer(object):
         self.graph = {}
         self.funcs = {}
 
-
     def check(self, A, B):
-        """ check consistency of all clock pulses """
+        """check consistency of all clock pulses"""
 
         for x in [A, B]:
             if self.data[x].shape[0] == 0:
@@ -71,37 +79,37 @@ class Syncer(object):
             logger.warning("Number in %s: %i" % (A, self.data[A].shape[0]))
             logger.warning("Number in %s: %i" % (B, self.data[B].shape[0]))
             return False
-        
+
         else:
             return True
 
-
     def fix(self, A, B):
-        """ fixes unequal number of timestamps for synchronization"""
+        """fixes unequal number of timestamps for synchronization"""
 
         # Decide which is the reference to cut to
         if self.data[A].shape[0] > self.data[B].shape[0]:
-            bigger = 'A'
+            bigger = "A"
             t_bigger = self.data[A]
             t_smaller = self.data[B]
         else:
-            bigger = 'B'
+            bigger = "B"
             t_bigger = self.data[B]
             t_smaller = self.data[A]
-            
+
         # Compute the difference
-        offset = np.argmax(np.correlate(np.diff(t_bigger), np.diff(t_smaller), mode='valid'))
+        offset = np.argmax(
+            np.correlate(np.diff(t_bigger), np.diff(t_smaller), mode="valid")
+        )
 
         # Cut the initial timestamps from the argument with more clock pulses
-        t_bigger = t_bigger[offset:t_smaller.shape[0]+offset]
+        t_bigger = t_bigger[offset : t_smaller.shape[0] + offset]
 
-        if bigger == 'A':
+        if bigger == "A":
             self.data[A] = t_bigger
             self.data[B] = t_smaller
         else:
             self.data[B] = t_bigger
             self.data[A] = t_smaller
-
 
     # def guess_p0(self, func, A, B):
     #     if func == lin:
@@ -124,16 +132,14 @@ class Syncer(object):
     #         d = A[0]
     #         return (x0,a,b,c,d)
 
-
     def fit(self, data_A, data_B, func=lin, order=None):
-
         # guess p0
         if func == lin:
             m = (data_B[-1] - data_B[0]) / (data_A[-1] - data_A[0])
             b = data_A[0]
             p0 = (b, m)
-            bounds = (-np.inf,np.inf)
-        
+            bounds = (-np.inf, np.inf)
+
         if func == polyv:
             x0 = (data_A.max() - data_A.min()) / 2
             x0s = np.ones(order) * x0
@@ -142,7 +148,7 @@ class Syncer(object):
             a[0] = data_A[0]
             a[1] = (data_B[-1] - data_B[0]) / (data_A[-1] - data_A[0])
             p0 = (*x0s, *a)
-            bounds = (-np.inf,np.inf)
+            bounds = (-np.inf, np.inf)
 
         if func == linsin:
             m = (data_B[-1] - data_B[0]) / (data_A[-1] - data_A[0])
@@ -150,8 +156,11 @@ class Syncer(object):
             A = 0
             w = 0
             phi = 0
-            p0 = (b, m , A, w, phi)
-            bounds = (np.array((-np.inf, -np.inf, 0, -np.inf, 0)), np.array((np.inf, np.inf, np.inf, np.inf, 2*np.pi)))
+            p0 = (b, m, A, w, phi)
+            bounds = (
+                np.array((-np.inf, -np.inf, 0, -np.inf, 0)),
+                np.array((np.inf, np.inf, np.inf, np.inf, 2 * np.pi)),
+            )
             # bounds = ((-np.inf, np.inf),(-np.inf, np.inf),(0, np.inf),(-np.inf, np.inf),(0, 2*np.pi))
 
         pfit = curve_fit(func, data_A, data_B, p0=p0, bounds=bounds)[0]
@@ -160,24 +169,24 @@ class Syncer(object):
         return pfit
 
     def interp(self, A, B):
-        return interp1d(self.data[A], self.data[B], fill_value='extrapolate')
+        return interp1d(self.data[A], self.data[B], fill_value="extrapolate")
 
     def sync(self, A, B, check=True, symmetric=True, func=lin, order=None):
-        """ linreg sync of A to B """
+        """linreg sync of A to B"""
 
         # check and abort if fails
         success = self.check(A, B)
         if not success:
             try:
-                self.fix(A,B)
+                self.fix(A, B)
             except:
                 logger.critical("sync failed")
                 return False
 
         pfit = self.fit(self.data[A], self.data[B], func=func, order=order)
 
-        self.pairs[(A,B)] = pfit
-        self.funcs[(A,B)] = func
+        self.pairs[(A, B)] = pfit
+        self.funcs[(A, B)] = func
 
         if A in self.graph:
             self.graph[A].append(B)
@@ -186,14 +195,14 @@ class Syncer(object):
 
         if symmetric:
             self.sync(B, A, symmetric=False)
-            
+
         return True
 
     def convert(self, t, A, B, match_dtype=True):
         path = self._find_shortest_path(A, B)
 
-        for i in range(1,len(path)):
-            t = self._convert(t, path[i-1], path[i])
+        for i in range(1, len(path)):
+            t = self._convert(t, path[i - 1], path[i])
 
         if match_dtype:
             t = t.astype(self.data[B].dtype)
@@ -204,11 +213,11 @@ class Syncer(object):
     #     func = self.interp(A, B)
     #     return func(t)
 
-    def _convert(self, t, A ,B):
-        if (A,B) not in self.pairs:
-            self.sync(A,B)
-        pfit = self.pairs[(A,B)]
-        func = self.funcs[(A,B)]
+    def _convert(self, t, A, B):
+        if (A, B) not in self.pairs:
+            self.sync(A, B)
+        pfit = self.pairs[(A, B)]
+        func = self.funcs[(A, B)]
         return func(t, *pfit)
 
     def _find_shortest_path(self, start, end, path=[]):
@@ -231,7 +240,7 @@ class Syncer(object):
         import matplotlib.pyplot as plt
         import seaborn as sns
 
-        fig, axes = plt.subplots(ncols=len(self.pairs),figsize=[14,4])
+        fig, axes = plt.subplots(ncols=len(self.pairs), figsize=[14, 4])
         for i, pair in enumerate(self.pairs):
             A, B = pair
             if plot_residuals:
@@ -239,9 +248,9 @@ class Syncer(object):
                 y = self.data[B]
                 yhat = self._convert(self.data[A], A, B)
                 res = y - yhat
-                axes[i].plot(x, res, 'o')
+                axes[i].plot(x, res, "o")
             else:
-                axes[i].plot(self.data[A], self.data[B], 'o')
+                axes[i].plot(self.data[A], self.data[B], "o")
                 t = np.linspace(self.data[A][0], self.data[A][-1], 100)
                 axes[i].plot(t, t * m + b, alpha=0.5, lw=1)
 
@@ -250,11 +259,10 @@ class Syncer(object):
             axes[i].set_ylabel(B)
 
         for ax in axes:
-            ax.axhline(0,linestyle=':',color='k',lw=1,alpha=0.75)
+            ax.axhline(0, linestyle=":", color="k", lw=1, alpha=0.75)
         sns.despine(fig)
         fig.tight_layout()
 
-        
 
 """
  
@@ -268,41 +276,43 @@ class Syncer(object):
  
 """
 
+
 def get_arduino_sync(log_path, sync_event_name="TRIAL_ENTRY_EVENT"):
     LogDf = bhv.get_LogDf_from_path(log_path)
     SyncDf = bhv.get_events_from_name(LogDf, sync_event_name)
     return SyncDf
 
+
 def parse_harp_sync(csv_path, trig_len=1, ttol=0.2):
-    harp_sync = pd.read_csv(csv_path, names=['t']).values.flatten()
+    harp_sync = pd.read_csv(csv_path, names=["t"]).values.flatten()
     t_sync_high = harp_sync[::2]
     t_sync_low = harp_sync[1::2]
 
     dts = np.array(t_sync_low) - np.array(t_sync_high)
-    good_timestamps = ~(np.absolute(dts-trig_len)>ttol)
+    good_timestamps = ~(np.absolute(dts - trig_len) > ttol)
     t_sync = np.array(t_sync_high)[good_timestamps]
-    SyncDf = pd.DataFrame(t_sync, columns=['t'])
+    SyncDf = pd.DataFrame(t_sync, columns=["t"])
     return SyncDf
 
-def parse_cam_sync(csv_path, offset=1, return_full=False):
-    """ csv_path is the video_sync_path, files called 
-    bonsai_harp_sync.csv """
 
-    Df = pd.read_csv(csv_path, names=['frame','t','GPIO'])
+def parse_cam_sync(csv_path, offset=1, return_full=False):
+    """csv_path is the video_sync_path, files called
+    bonsai_harp_sync.csv"""
+
+    Df = pd.read_csv(csv_path, names=["frame", "t", "GPIO"])
 
     # wraparound correct
     # Df = bhv.correct_wraparound(Df)
     _Df = copy(Df)
-    while np.any(np.diff(Df['t']) < 0):
-        reversal_ind = np.where(np.diff(Df['t']) < 0)[0][0]
-        Df['t'].iloc[reversal_ind+1:] += _Df['t'].iloc[reversal_ind]
+    while np.any(np.diff(Df["t"]) < 0):
+        reversal_ind = np.where(np.diff(Df["t"]) < 0)[0][0]
+        Df["t"].iloc[reversal_ind + 1 :] += _Df["t"].iloc[reversal_ind]
 
     ons = np.where(np.diff(Df.GPIO) > 1)[0]
-    offs = np.where(np.diff(Df.GPIO) < -1)[0] # can be used to check correct length
+    offs = np.where(np.diff(Df.GPIO) < -1)[0]  # can be used to check correct length
 
-    SyncDf = Df.iloc[ons+offset] # one frame offset
+    SyncDf = Df.iloc[ons + offset]  # one frame offset
     if return_full is False:
         return SyncDf
     else:
         return SyncDf, Df
-

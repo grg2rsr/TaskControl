@@ -5,10 +5,11 @@ import numpy as np
 
 from matplotlib import pyplot as plt
 import matplotlib as mpl
-# mpl.rcParams['figure.dpi'] = 331 # laptop
-mpl.rcParams['figure.dpi'] = 166 # the screens in the viv
 
-sys.path.append('/home/georg/Projects/TaskControl')
+# mpl.rcParams['figure.dpi'] = 331 # laptop
+mpl.rcParams["figure.dpi"] = 166  # the screens in the viv
+
+sys.path.append("/home/georg/Projects/TaskControl")
 
 from Utils import behavior_analysis_utils as bhv
 from Utils import utils
@@ -18,14 +19,16 @@ from functools import partial
 
 
 # %% path
-animal_folder = "/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging/JJP-05425"
+animal_folder = (
+    "/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging/JJP-05425"
+)
 # animal_folder = "/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging/JJP-05472"
 # animal_folder = "/media/georg/htcondor/shared-paton/georg/Animals_smelling_imaging/JJP-05475"
 animal_folder = Path(animal_folder)
 
 SessionsDf = utils.get_sessions(animal_folder)
-SessionsDf = SessionsDf.groupby('task').get_group('learn_to_lick_v2')
-session_folder = Path(SessionsDf.iloc[-1]['path']) # last session
+SessionsDf = SessionsDf.groupby("task").get_group("learn_to_lick_v2")
+session_folder = Path(SessionsDf.iloc[-1]["path"])  # last session
 
 # this becomes
 Sessions = utils.get_Sessions(animal)
@@ -34,29 +37,42 @@ Sessions = utils.get_Sessions(animal)
 print("analyzing %s" % session_folder)
 
 # %% get / preprocess data
-LogDf = bhv.get_LogDf_from_path(session_folder / 'arduino_log.txt')
-LogDf = bhv.filter_spans_to_event(LogDf, "LICK_ON", "LICK_OFF", t_min = 5, t_max=200)
+LogDf = bhv.get_LogDf_from_path(session_folder / "arduino_log.txt")
+LogDf = bhv.filter_spans_to_event(LogDf, "LICK_ON", "LICK_OFF", t_min=5, t_max=200)
 
 # metrics
 get_trial_type = partial(metrics.get_var, var_name="this_trial_type")
 get_delay = partial(metrics.get_var, var_name="this_delay")
 get_reward_magnitude = partial(metrics.get_var, var_name="reward_magnitude")
 
-session_metrics = (metrics.get_start, metrics.get_stop, get_trial_type,
-                   get_delay, get_reward_magnitude)
+session_metrics = (
+    metrics.get_start,
+    metrics.get_stop,
+    get_trial_type,
+    get_delay,
+    get_reward_magnitude,
+)
 
 # parse into trials
-SessionDf, TrialDfs = bhv.get_SessionDf(LogDf, session_metrics, trial_entry_event="TRIAL_ENTRY_EVENT")
+SessionDf, TrialDfs = bhv.get_SessionDf(
+    LogDf, session_metrics, trial_entry_event="TRIAL_ENTRY_EVENT"
+)
 
-# %% 
-reward_times = bhv.get_events_from_name(LogDf, "REWARD_EVENT")['t'].values
+# %%
+reward_times = bhv.get_events_from_name(LogDf, "REWARD_EVENT")["t"].values
 Dfs = bhv.event_based_time_slice(LogDf, "REWARD_EVENT", pre=-3000, post=3000)
 
 fig, axes = plt.subplots()
 for i, t in enumerate(reward_times):
     try:
-        lick_times_rel = Dfs[i].groupby('name').get_group("LICK_EVENT")['t'].values - t
-        axes.plot(lick_times_rel, np.ones(lick_times_rel.shape[0]) * i, '.', color='k', alpha=0.5)
+        lick_times_rel = Dfs[i].groupby("name").get_group("LICK_EVENT")["t"].values - t
+        axes.plot(
+            lick_times_rel,
+            np.ones(lick_times_rel.shape[0]) * i,
+            ".",
+            color="k",
+            alpha=0.5,
+        )
     except KeyError:
         pass
 

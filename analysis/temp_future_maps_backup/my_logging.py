@@ -2,22 +2,24 @@
 
 import logging
 
-class CustomFormatter(logging.Formatter):
 
+class CustomFormatter(logging.Formatter):
     grey = "\x1b[38;20m"
     teal = "\x1b[36;20m"
     yellow = "\x1b[33;20m"
     red = "\x1b[31;20m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
-    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+    format = (
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+    )
 
     FORMATS = {
         logging.DEBUG: grey + format + reset,
         logging.INFO: teal + format + reset,
         logging.WARNING: yellow + format + reset,
         logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
+        logging.CRITICAL: bold_red + format + reset,
     }
 
     def format(self, record):
@@ -26,16 +28,16 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def get_logger(level='debug'):
-    if level == 'debug':
+def get_logger(level="debug"):
+    if level == "debug":
         level = logging.DEBUG
-    if level == 'info':
+    if level == "info":
         level = logging.INFO
-    if level == 'warning':
+    if level == "warning":
         level = logging.WARNING
-    if level == 'error':
+    if level == "error":
         level = logging.ERROR
-    if level == 'critical':
+    if level == "critical":
         level = logging.CRITICAL
 
     # create logger with 'spam_application'
@@ -51,8 +53,9 @@ def get_logger(level='debug'):
     logger.addHandler(ch)
     return logger
 
-if __name__ == '__main__':
-    logger = get_logger(level='debug')
+
+if __name__ == "__main__":
+    logger = get_logger(level="debug")
     logger.debug("debug message")
     logger.info("info message")
     logger.warning("warning message")
