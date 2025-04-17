@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from configparser import ConfigParser
+from collections import UserDict
 
 import numpy as np
 import pandas as pd
@@ -374,8 +375,6 @@ def get_folder_dialog(initial_dir="D:/TaskControl/Animals"):
  ##        ##     ## ##     ##  ######  ######## ##     ## 
  
 """
-
-from collections import UserDict
 
 
 class NotInvertibleException(Exception): ...

@@ -1,6 +1,6 @@
 import pandas as pd
-from Utils.metrics_partial import *
 from functools import partial
+from Utils.metrics_partial import get_time_between
 
 
 def get_start(TrialDf):
